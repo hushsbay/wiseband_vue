@@ -41,7 +41,8 @@
             </div>
         </div>
         <div class="footer" @click="logout">
-            <div class="coButton, coMenu">로 그 아 웃</div>
+            <div class="coButton coMenu">로 그 아 웃</div>
+            <div class="coButton coMenu" style="background:darkgreen"><img :src="gst.html.getImageUrl('home_white.png')" class="coImg24"></div>
         </div>
     </div>
 </template>
