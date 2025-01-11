@@ -33,50 +33,47 @@
 
 <template>
     <div class="coMain">
-        <div class="header"></div>
-        <div class="grid coScrollable">
-            <div v-for="(item, idx) in menu" class="cell" @click="goMenu(idx)"> 
-                <div class="cellTop coHover"><img :src="gst.html.getImageUrl(item.IMG)" class="coImg64"></div>
-                <div class="cellBottom"><div class="cellSubBottom">{{ item.NM }}</div></div>
-            </div>
+        <div class="header">
+
         </div>
-        <div class="footer" @click="logout">
-            <div class="coButton coMenu">로 그 아 웃</div>
-            <div class="coButton coMenu" style="background:darkgreen"><img :src="gst.html.getImageUrl('home_white.png')" class="coImg24"></div>
+        <div class="body">
+            <div class="side">
+            
+            </div>
+            <div class="main">
+                <div class="content">
+                    
+                </div>
+                <div class="footer">
+            
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <style scoped>    
     .header {
-        height:50px;margin:10px;
-        border:1px solid dimgray;border-radius:20px;        
+        width:100%;min-height:50px;
+        background:lightgray;
+    }
+    .body {
+        width:100%;height:100%;display:flex;
+    }
+    .side {
+        min-width:50px;height:100%;display:flex;flex-direction:column;
+        background:darkgreen;        
+    }
+    .main {
+        width:100%;height:100%;display:flex;flex-direction:column;    
+    }
+    .content {
+        width:100%;height:100%;display:flex;
+        background:white;        
     }
     .footer {
-        height:50px;margin:10px;
-        display:flex;align-items:center;justify-content:center;
-        border:1px solid dimgray;border-radius:20px;cursor:pointer    
-    }
-    .grid {
-        padding:0 10px;
-        display:grid;grid-auto-rows:120px;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;
-        flex:1;overflow-y:auto;
-    }
-    .cell {
-        display:flex;flex-direction:column;
-        cursor:pointer;
-    }
-    .cellTop {
-        height:100%;
-        display:flex;justify-content:center;align-items:center;
-        border:1px solid darkgray;border-radius:5px;        
-    }
-    .cellBottom {
-        height:30px;width:100%; /*ellipsis가 나타나면 약간 왼쪽으로 치우친 느낌임 : 발생할 때만 동적으로 106%로 하면 center feel 구현됨*/
-        display:flex;justify-content:center;align-items:center;
-    }
-    .cellSubBottom { /*ellipsis 구현을 위해 필요한 클래스*/
-        overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-        color:dimgray;
+        width:calc(100% - 20px);min-height:50px;margin:auto 0 0 0;padding:0 10px;
+        display:flex;align-items:center;
+        background:lightyellow;        
     }
 </style>

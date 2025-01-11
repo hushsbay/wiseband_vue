@@ -10,7 +10,7 @@ html, body {
   -moz-text-size-adjust : none; /* 파이어폭스 */
 }
 
-#app { width:100%;height:100%;display:flex;justify-content:center; }
+#app { width:100%;height:100%; margin: 0; }
 input[type="text"] { height:22px; }
 input[type="search"] { width:150px;height:28px; }
 select { height:28px; }
@@ -18,7 +18,7 @@ select { height:28px; }
 /* 레이아웃 : 기본 (시작) : 그리드 메뉴처럼 좌우 윈도우사이즈를 달리해도 항상 가운데 위치하도록 함 (with #app) */
 
 .coMain {
-  width:100%;min-width:400px;max-width:1200px;height:100%;
+  width:100%;height:100%;
   display:flex;flex-direction:column;
 }
 
