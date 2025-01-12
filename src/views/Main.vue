@@ -38,25 +38,55 @@
         </div>
         <div class="body">
             <div class="side">
-                <div class="menu"> 
-                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
-                    <div class="menuText">홈</div>
+                <div class="sideTop">
+                    <div class="sideTop">
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
+                            <div class="menuText">홈</div>
+                        </div>
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_dm.png')"></div>
+                            <div class="menuText">DM</div>
+                        </div>
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_notify.png')"></div>
+                            <div class="menuText">내활동</div>
+                        </div>
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_later.png')"></div>
+                            <div class="menuText">나중에</div>
+                        </div>
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_play.png')"></div>
+                            <div class="menuText">자동화</div>
+                        </div>
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_file.png')"></div>
+                            <div class="menuText">파일</div>
+                        </div>
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
+                            <div class="menuText">임직원</div>
+                        </div>
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
+                            <div class="menuText">채널</div>
+                        </div>
+                    </div>
+                    <div  class="sideBottom">
+                        <div class="menu"> 
+                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')"></div>
+                            <div class="menuText">더보기</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="menu"> 
-                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_dm.png')"></div>
-                    <div class="menuText">DM</div>
-                </div>
-                <div class="menu"> 
-                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_notify.png')"></div>
-                    <div class="menuText">내활동</div>
-                </div>
-                <div class="menu"> 
-                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_later.png')"></div>
-                    <div class="menuText">나중에</div>
-                </div>
-                <div class="menu"> 
-                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
-                    <div class="menuText">채널</div>
+                <div  class="sideBottom">
+                    <div class="menu"> 
+                        <img class="menu32" :src="gst.html.getImageUrl('plus.png')">
+                    </div>
+                    <div class="menu"> 
+                        <img class="menu32" :src="gst.html.getImageUrl('user.png')">
+                    </div>
                 </div>
             </div>
             <div class="main">
@@ -77,12 +107,18 @@
         background:lightgray;
     }
     .body {
-        width:100%;height:100%;display:flex;
+        width:100%;height:100%;display:flex;overflow:hidden; /* hidden이 있어야 sidebar의 아랫공간이 always seen 가능 */
     }
     .side {
         min-width:70px;height:100%;
-        display:flex;flex-direction:column;align-items:center;
+        display:flex;flex-direction:column;align-items:center;justify-content:space-between;
         background:darkgreen;        
+    }
+    .sideTop {
+        display:flex;flex-direction:column;overflow:hidden;
+    }
+    .sideBottom { /* sidebar의 아랫공간이 always seen 가능하려면 body에 hidden이 필요함 */
+        display:flex;flex-direction:column;justify-content:flex-end;
     }
     .main {
         width:100%;height:100%;display:flex;flex-direction:column;    
@@ -97,11 +133,13 @@
         background:lightyellow;        
     }
     .menu { 
-        width:55px;height:55px;margin:8px 0px; 
-        display:flex;flex-direction:column;align-items:center;
+        width:55px;min-height:55px;margin:8px 0px; 
+        display:flex;flex-direction:column;justify-content:center;align-items:center;
         color:white;cursor:pointer; }
     .menuDiv { width:35px;height:35px; display:flex;flex-direction:column;align-items:center; }
     .menuImg { width:20px;height:20px;padding:6px;border-radius:8px; }
     .menuImg:hover { width:22px;height:22px;background-color:hsla(160, 100%, 37%, 0.5); }
     .menuText { font-size:12px;color:white;font-weight:bold }
+    .menu32 { width:32px;height:32px; }
+    .menu32:hover { width:36px;height:36px; }
 </style>
