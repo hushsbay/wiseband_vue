@@ -38,7 +38,26 @@
         </div>
         <div class="body">
             <div class="side">
-            
+                <div class="menu"> 
+                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
+                    <div class="menuText">홈</div>
+                </div>
+                <div class="menu"> 
+                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_dm.png')"></div>
+                    <div class="menuText">DM</div>
+                </div>
+                <div class="menu"> 
+                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_notify.png')"></div>
+                    <div class="menuText">내활동</div>
+                </div>
+                <div class="menu"> 
+                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_later.png')"></div>
+                    <div class="menuText">나중에</div>
+                </div>
+                <div class="menu"> 
+                    <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
+                    <div class="menuText">채널</div>
+                </div>
             </div>
             <div class="main">
                 <div class="content">
@@ -61,7 +80,8 @@
         width:100%;height:100%;display:flex;
     }
     .side {
-        min-width:50px;height:100%;display:flex;flex-direction:column;
+        min-width:70px;height:100%;
+        display:flex;flex-direction:column;align-items:center;
         background:darkgreen;        
     }
     .main {
@@ -72,8 +92,16 @@
         background:white;        
     }
     .footer {
-        width:calc(100% - 20px);min-height:50px;margin:auto 0 0 0;padding:0 10px;
+        width:calc(100% - 20px);min-height:40px;margin:auto 0 0 0;padding:0 10px;
         display:flex;align-items:center;
         background:lightyellow;        
     }
+    .menu { 
+        width:55px;height:55px;margin:8px 0px; 
+        display:flex;flex-direction:column;align-items:center;
+        color:white;cursor:pointer; }
+    .menuDiv { width:35px;height:35px; display:flex;flex-direction:column;align-items:center; }
+    .menuImg { width:20px;height:20px;padding:6px;border-radius:8px; }
+    .menuImg:hover { width:22px;height:22px;background-color:hsla(160, 100%, 37%, 0.5); }
+    .menuText { font-size:12px;color:white;font-weight:bold }
 </style>
