@@ -8,27 +8,40 @@
     const gst = GeneralStore()
     const router = useRouter()
 
-    const menu = ref([])
+    const menuDivOn = ref(false), menuDivPos = ref({ top:'0px', bottom:'0px' })
+
+    let prevX
     
     onMounted(async () => { 
         try {
-            const res = await axios.post("/menu/qry", { kind : "aaaa" }) //메뉴구분이 여럿일 수 있으므로 여기서는 aaaa로 설정한 것임
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return //rs.data 또는 rs.list로 받음
-            for (let item of rs.list) menu.value.push(item)
+            let popupMenu = document.querySelector('.popupMenu')
+            let menuDivAll = document.querySelectorAll('.menuDiv')
+            menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseenter', e => {
+                prevX = e.pageX //console.log(e.pageY + "====mouseenter===" + prevX + "@@@@" + menuDiv.offsetTop);
+                menuDivOn.value = true
+                const docHeight = document.documentElement.offsetHeight
+                if (menuDiv.offsetTop > 300) {
+                    menuDivPos.value.top = null
+                    menuDivPos.value.bottom = (docHeight - menuDiv.offsetTop - 150) + "px"
+                } else {
+                    menuDivPos.value.top = (menuDiv.offsetTop - 50) + "px"
+                    menuDivPos.value.bottom = null
+                } //console.log("menuDivPos.value.top:"+menuDivPos.value.top)
+            }))
+            menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseleave', e => {
+                if (e.pageX > prevX) {
+                    //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
+                } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
+                    menuDivOn.value = false
+                }
+            }))
+            popupMenu.addEventListener('mouseleave', e => {
+                menuDivOn.value = false
+            })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
-
-    function goMenu(idx) {
-        router.push({ name : 'menu', params : { menuId : menu.value[idx].ID }, query : { menuNm : menu.value[idx].NM, menuTyp : menu.value[idx].TYP } })
-    }
-
-    function logout() {
-        gst.auth.logout()
-        router.replace({ name : 'login' })
-    }
 </script>
 
 <template>
@@ -99,6 +112,115 @@
             </div>
         </div>
     </div>
+    <!-- <div v-show="menuDivOn" class="popupMenu" :style="menuDivPos">
+        <div style="min-width:60px;max-width:300px;display:flex;flex-direction:column;background:ivory;padding:10px;border:1px solid lightgray;border-radius:10px">
+            <div style="width:100%;display:flex;justify-content:center;align-items:center">
+                00000
+            </div>            
+        </div>
+    </div> -->
+    <div class="popupMenu">
+        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid lightgray;background:whitesmoke">
+            <div style="font-weight:bold">더보기</div>
+            <div>설정</div>
+        </div>
+        <div class="coScrollable" style="width:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
+                    <div class="menuDiv">
+                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    </div>
+                </div>
+                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
+                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
+                        DM
+                    </div>        
+                    <div style="width:100%;height:50%;display:flex;font-size:12px">
+                        가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                    </div>        
+                </div>
+            </div>
+            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
+                    <div class="menuDiv">
+                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    </div>
+                </div>
+                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
+                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
+                        DM
+                    </div>        
+                    <div style="width:100%;height:50%;display:flex;font-size:12px">
+                        가나다라 마바사
+                    </div>        
+                </div>
+            </div>
+            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
+                    <div class="menuDiv">
+                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    </div>
+                </div>
+                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
+                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
+                        DM
+                    </div>        
+                    <div style="width:100%;height:50%;display:flex;font-size:12px">
+                        가나다라 마바사
+                    </div>        
+                </div>
+            </div>
+            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
+                    <div class="menuDiv">
+                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    </div>
+                </div>
+                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
+                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
+                        DM
+                    </div>        
+                    <div style="width:100%;height:50%;display:flex;font-size:12px">
+                        가나다라 마바사
+                    </div>        
+                </div>
+            </div>
+            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
+                    <div class="menuDiv">
+                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    </div>
+                </div>
+                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
+                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
+                        DM
+                    </div>        
+                    <div style="width:100%;height:50%;display:flex;font-size:12px">
+                        가나다라 마바사
+                    </div>        
+                </div>
+            </div>
+            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
+                    <div class="menuDiv">
+                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    </div>
+                </div>
+                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
+                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
+                        DM
+                    </div>        
+                    <div style="width:100%;height:50%;display:flex;font-size:12px">
+                        가나다라 마바사
+                    </div>        
+                </div>
+            </div>
+        </div>
+        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-top:1px solid lightgray;background:whitesmoke">
+            <div style="font-weight:bold">추가</div>
+            <div>안내</div>
+        </div>        
+    </div>
 </template>
 
 <style scoped>    
@@ -136,10 +258,15 @@
         width:55px;min-height:55px;margin:8px 0px; 
         display:flex;flex-direction:column;justify-content:center;align-items:center;
         color:white;cursor:pointer; }
-    .menuDiv { width:35px;height:35px; display:flex;flex-direction:column;align-items:center; }
+    .menuDiv { width:35px;height:35px;display:flex;flex-direction:column;align-items:center; }
     .menuImg { width:20px;height:20px;padding:6px;border-radius:8px; }
     .menuImg:hover { width:22px;height:22px;background-color:hsla(160, 100%, 37%, 0.5); }
     .menuText { font-size:12px;color:white;font-weight:bold }
     .menu32 { width:32px;height:32px; }
     .menu32:hover { width:36px;height:36px; }
+    .popupMenu { /* 아래에서 제외든 top or bottom을 menuDivPos로 표시하고 있음 */
+        width:300px;height:364px;position:fixed;left:70px;top:100px;
+        display:flex;flex-direction:column;
+        background:white;z-index:9999;border:1px solid lightgray;border-radius:10px;box-shadow:2px 2px 2px grey
+    }
 </style>
