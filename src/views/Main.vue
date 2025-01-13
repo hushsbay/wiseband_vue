@@ -293,8 +293,8 @@
     }
     .popupMenu { /* 아래에서 제외든 top or bottom을 menuDivPos로 표시하고 있음 */
         width:300px;height:364px;position:fixed;left:70px;
-        display:flex;flex-direction:column;
-        background:var(--menu-color);z-index:9999;border:1px solid var(--border-color);box-shadow:2px 2px 2px var(--shadow-color)
+        display:flex;flex-direction:column;z-index:9999;
+        background:var(--menu-color);border:1px solid var(--border-color);border-radius:5px;box-shadow:2px 2px 2px var(--shadow-color)
     }
     .menu { 
         width:55px;min-height:55px;margin:8px 0px; 
