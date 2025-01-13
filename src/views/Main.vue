@@ -9,8 +9,9 @@
     const router = useRouter()
 
     const menuDivOn = ref(false), menuDivPos = ref({ top:'0px', bottom:'0px' })
+    const theMore = ref(false)
 
-    let prevX
+    let prevX, menuSeen = []
     
     onMounted(async () => { 
         try {
@@ -38,6 +39,22 @@
             popupMenu.addEventListener('mouseleave', e => {
                 menuDivOn.value = false
             })
+            window.addEventListener('resize', e => {
+                menuSeen = []
+                let sideTop = document.querySelector('#sideTop')
+                const sizeH = sideTop.offsetTop + sideTop.offsetHeight
+                let targetAll = document.querySelectorAll('.cntTarget')
+                targetAll.forEach(menuDiv => {
+                    if ((menuDiv.offsetTop + menuDiv.offsetHeight) <= sizeH) {
+                        menuSeen.push(menuDiv.id) //console.log(menuDiv.id+"@@@@")
+                    }
+                }) //console.log(targetAll.length+"@@@@@@"+menuSeen.length)
+                if (menuSeen.length < targetAll.length) {
+                    theMore.value = true //눈에 보이는 메뉴 갯수가 총 갯수보다 적으므로 가려져 있음. 따라서, 더보기 버튼 필요
+                } else {
+                    theMore.value = false
+                }
+            })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -52,48 +69,48 @@
         <div class="body">
             <div class="side">
                 <div class="sideTop">
-                    <div class="sideTop">
-                        <div class="menu"> 
+                    <div id="sideTop" class="sideTop">
+                        <div id="mnuHome" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
                             <div class="menuText">홈</div>
                         </div>
-                        <div class="menu"> 
+                        <div id="mnuDm" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_dm.png')"></div>
                             <div class="menuText">DM</div>
                         </div>
-                        <div class="menu"> 
+                        <div id="mnuMyAct" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_notify.png')"></div>
                             <div class="menuText">내활동</div>
                         </div>
-                        <div class="menu"> 
+                        <div id="mnuLater" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_later.png')"></div>
                             <div class="menuText">나중에</div>
                         </div>
-                        <div class="menu"> 
+                        <div id="mnuAuto" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_play.png')"></div>
                             <div class="menuText">자동화</div>
                         </div>
-                        <div class="menu"> 
+                        <div id="mnuFile" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_file.png')"></div>
                             <div class="menuText">파일</div>
                         </div>
-                        <div class="menu"> 
+                        <div id="mnuMember" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
                             <div class="menuText">임직원</div>
                         </div>
-                        <div class="menu"> 
+                        <div id="mnuChannel" class="menu cntTarget"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
                             <div class="menuText">채널</div>
                         </div>
                     </div>
-                    <div  class="sideBottom">
+                    <div v-show="theMore" class="sideBottom">
                         <div class="menu"> 
                             <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')"></div>
                             <div class="menuText">더보기</div>
                         </div>
                     </div>
                 </div>
-                <div  class="sideBottom">
+                <div class="sideBottom">
                     <div class="menu"> 
                         <img class="menu32" :src="gst.html.getImageUrl('plus.png')">
                     </div>
@@ -112,113 +129,131 @@
             </div>
         </div>
     </div>
-    <!-- <div v-show="menuDivOn" class="popupMenu" :style="menuDivPos">
-        <div style="min-width:60px;max-width:300px;display:flex;flex-direction:column;background:ivory;padding:10px;border:1px solid lightgray;border-radius:10px">
-            <div style="width:100%;display:flex;justify-content:center;align-items:center">
-                00000
-            </div>            
-        </div>
-    </div> -->
-    <div class="popupMenu">
-        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid lightgray;background:whitesmoke">
+    <div v-show="menuDivOn" class="popupMenu" :style="menuDivPos">
+        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid lightgray;background:white">
             <div style="font-weight:bold">더보기</div>
             <div>설정</div>
         </div>
         <div class="coScrollable" style="width:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
-            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                     <div class="menuDiv">
                         <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
-                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
-                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
-                        DM
+                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" title="테스트" style="margin-top:7px;font-weight:bold">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
-                    <div style="width:100%;height:50%;display:flex;font-size:12px">
-                        가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
                 </div>
             </div>
-            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                     <div class="menuDiv">
                         <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
-                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
-                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
-                        DM
+                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" title="테스트" style="margin-top:7px;font-weight:bold">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
-                    <div style="width:100%;height:50%;display:flex;font-size:12px">
-                        가나다라 마바사
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
                 </div>
             </div>
-            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                     <div class="menuDiv">
                         <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
-                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
-                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
-                        DM
+                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" title="테스트" style="margin-top:7px;font-weight:bold">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
-                    <div style="width:100%;height:50%;display:flex;font-size:12px">
-                        가나다라 마바사
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
                 </div>
             </div>
-            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                     <div class="menuDiv">
                         <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
-                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
-                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
-                        DM
+                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" title="테스트" style="margin-top:7px;font-weight:bold">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
-                    <div style="width:100%;height:50%;display:flex;font-size:12px">
-                        가나다라 마바사
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
                 </div>
             </div>
-            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                     <div class="menuDiv">
                         <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
-                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
-                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
-                        DM
+                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" title="테스트" style="margin-top:7px;font-weight:bold">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
-                    <div style="width:100%;height:50%;display:flex;font-size:12px">
-                        가나다라 마바사
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
                 </div>
             </div>
-            <div style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                     <div class="menuDiv">
                         <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
-                <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center">
-                    <div style="width:100%;height:50%;display:flex;padding-top:5px;font-weight:bold;">
-                        DM
+                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" title="테스트" style="margin-top:7px;font-weight:bold">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
-                    <div style="width:100%;height:50%;display:flex;font-size:12px">
-                        가나다라 마바사
+                    <div style="width:100%;display:flex;align-items:center">
+                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
+                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
+                        </div>
                     </div>        
                 </div>
             </div>
         </div>
-        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-top:1px solid lightgray;background:whitesmoke">
+        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-top:1px solid lightgray;background:white">
             <div style="font-weight:bold">추가</div>
-            <div>안내</div>
+            <div style="color:darkblue">안내</div>
         </div>        
     </div>
 </template>
@@ -258,15 +293,15 @@
         width:55px;min-height:55px;margin:8px 0px; 
         display:flex;flex-direction:column;justify-content:center;align-items:center;
         color:white;cursor:pointer; }
-    .menuDiv { width:35px;height:35px;display:flex;flex-direction:column;align-items:center; }
+    .menuDiv { width:35px;height:35px;display:flex;flex-direction:column;justify-content:center;align-items:center; }
     .menuImg { width:20px;height:20px;padding:6px;border-radius:8px; }
     .menuImg:hover { width:22px;height:22px;background-color:hsla(160, 100%, 37%, 0.5); }
     .menuText { font-size:12px;color:white;font-weight:bold }
     .menu32 { width:32px;height:32px; }
     .menu32:hover { width:36px;height:36px; }
     .popupMenu { /* 아래에서 제외든 top or bottom을 menuDivPos로 표시하고 있음 */
-        width:300px;height:364px;position:fixed;left:70px;top:100px;
+        width:300px;height:364px;position:fixed;left:70px;
         display:flex;flex-direction:column;
-        background:white;z-index:9999;border:1px solid lightgray;border-radius:10px;box-shadow:2px 2px 2px grey
+        background:white;z-index:9999;border:1px solid lightgray;box-shadow:2px 2px 2px grey
     }
 </style>
