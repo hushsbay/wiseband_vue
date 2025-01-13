@@ -16,8 +16,9 @@
     onMounted(async () => { 
         try {
             let popupMenu = document.querySelector('.popupMenu')
-            let menuDivAll = document.querySelectorAll('.menuDiv')
+            let menuDivAll = document.querySelectorAll('.coMenuDiv')
             menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseenter', e => {
+                debugger
                 prevX = e.pageX //console.log(e.pageY + "====mouseenter===" + prevX + "@@@@" + menuDiv.offsetTop);
                 menuDivOn.value = true
                 const docHeight = document.documentElement.offsetHeight
@@ -30,6 +31,7 @@
                 } //console.log("menuDivPos.value.top:"+menuDivPos.value.top)
             }))
             menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseleave', e => {
+                debugger
                 if (e.pageX > prevX) {
                     //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
                 } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
@@ -37,6 +39,7 @@
                 }
             }))
             popupMenu.addEventListener('mouseleave', e => {
+                debugger
                 menuDivOn.value = false
             })
             window.addEventListener('resize', e => {
@@ -71,42 +74,42 @@
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
                         <div id="mnuHome" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
-                            <div class="menuText">홈</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
+                            <div class="coMenuText">홈</div>
                         </div>
                         <div id="mnuDm" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_dm.png')"></div>
-                            <div class="menuText">DM</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_dm.png')"></div>
+                            <div class="coMenuText">DM</div>
                         </div>
                         <div id="mnuMyAct" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_notify.png')"></div>
-                            <div class="menuText">내활동</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_notify.png')"></div>
+                            <div class="coMenuText">내활동</div>
                         </div>
                         <div id="mnuLater" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_later.png')"></div>
-                            <div class="menuText">나중에</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_later.png')"></div>
+                            <div class="coMenuText">나중에</div>
                         </div>
                         <div id="mnuAuto" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_play.png')"></div>
-                            <div class="menuText">자동화</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_play.png')"></div>
+                            <div class="coMenuText">자동화</div>
                         </div>
                         <div id="mnuFile" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_file.png')"></div>
-                            <div class="menuText">파일</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_file.png')"></div>
+                            <div class="coMenuText">파일</div>
                         </div>
                         <div id="mnuMember" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
-                            <div class="menuText">임직원</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
+                            <div class="coMenuText">임직원</div>
                         </div>
                         <div id="mnuChannel" class="menu cntTarget"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
-                            <div class="menuText">채널</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
+                            <div class="coMenuText">채널</div>
                         </div>
                     </div>
                     <div v-show="theMore" class="sideBottom">
                         <div class="menu"> 
-                            <div class="menuDiv"><img class="menuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')"></div>
-                            <div class="menuText">더보기</div>
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')"></div>
+                            <div class="coMenuText">더보기</div>
                         </div>
                     </div>
                 </div>
@@ -130,15 +133,15 @@
         </div>
     </div>
     <div v-show="menuDivOn" class="popupMenu" :style="menuDivPos">
-        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid lightgray;background:white">
+        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border-color);background:white">
             <div style="font-weight:bold">더보기</div>
             <div>설정</div>
         </div>
         <div class="coScrollable" style="width:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
-            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="menuDiv">
-                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    <div class="coMenuContext">
+                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
                 <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
@@ -155,10 +158,10 @@
                 </div>
             </div>
 
-            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="menuDiv">
-                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    <div class="coMenuContext">
+                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
                 <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
@@ -174,10 +177,10 @@
                     </div>        
                 </div>
             </div>
-            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="menuDiv">
-                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    <div class="coMenuContext">
+                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
                 <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
@@ -193,10 +196,10 @@
                     </div>        
                 </div>
             </div>
-            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="menuDiv">
-                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    <div class="coMenuContext">
+                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
                 <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
@@ -212,10 +215,10 @@
                     </div>        
                 </div>
             </div>
-            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="menuDiv">
-                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    <div class="coMenuContext">
+                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
                 <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
@@ -231,10 +234,10 @@
                     </div>        
                 </div>
             </div>
-            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid lightgray">
+            <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
                 <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="menuDiv">
-                        <img class="menuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+                    <div class="coMenuContext">
+                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
                     </div>
                 </div>
                 <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
@@ -251,7 +254,7 @@
                 </div>
             </div>
         </div>
-        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-top:1px solid lightgray;background:white">
+        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-top:1px solid var(--border-color);background:var(--menu-color)">
             <div style="font-weight:bold">추가</div>
             <div style="color:darkblue">안내</div>
         </div>        
@@ -261,7 +264,7 @@
 <style scoped>    
     .header {
         width:100%;min-height:50px;
-        background:lightgray;
+        background:var(--primary-color);
     }
     .body {
         width:100%;height:100%;display:flex;overflow:hidden; /* hidden이 있어야 sidebar의 아랫공간이 always seen 가능 */
@@ -269,7 +272,7 @@
     .side {
         min-width:70px;height:100%;
         display:flex;flex-direction:column;align-items:center;justify-content:space-between;
-        background:darkgreen;        
+        background:var(--primary-color);
     }
     .sideTop {
         display:flex;flex-direction:column;overflow:hidden;
@@ -282,26 +285,21 @@
     }
     .content {
         width:100%;height:100%;display:flex;
-        background:white;        
     }
     .footer {
         width:calc(100% - 20px);min-height:40px;margin:auto 0 0 0;padding:0 10px;
         display:flex;align-items:center;
-        background:lightyellow;        
+        background:var(--footer-notify-color);        
+    }
+    .popupMenu { /* 아래에서 제외든 top or bottom을 menuDivPos로 표시하고 있음 */
+        width:300px;height:364px;position:fixed;left:70px;
+        display:flex;flex-direction:column;
+        background:var(--menu-color);z-index:9999;border:1px solid var(--border-color);box-shadow:2px 2px 2px var(--shadow-color)
     }
     .menu { 
         width:55px;min-height:55px;margin:8px 0px; 
         display:flex;flex-direction:column;justify-content:center;align-items:center;
-        color:white;cursor:pointer; }
-    .menuDiv { width:35px;height:35px;display:flex;flex-direction:column;justify-content:center;align-items:center; }
-    .menuImg { width:20px;height:20px;padding:6px;border-radius:8px; }
-    .menuImg:hover { width:22px;height:22px;background-color:hsla(160, 100%, 37%, 0.5); }
-    .menuText { font-size:12px;color:white;font-weight:bold }
+        color:var(--menu-color);cursor:pointer; }
     .menu32 { width:32px;height:32px; }
     .menu32:hover { width:36px;height:36px; }
-    .popupMenu { /* 아래에서 제외든 top or bottom을 menuDivPos로 표시하고 있음 */
-        width:300px;height:364px;position:fixed;left:70px;
-        display:flex;flex-direction:column;
-        background:white;z-index:9999;border:1px solid lightgray;box-shadow:2px 2px 2px grey
-    }
 </style>
