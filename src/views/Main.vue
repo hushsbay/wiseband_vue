@@ -97,14 +97,14 @@
                             <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_file.png')"></div>
                             <div class="coMenuText">파일</div>
                         </div>
-                        <div id="mnuMember" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
-                            <div class="coMenuText">임직원</div>
-                        </div>
                         <div id="mnuChannel" class="menu cntTarget"> 
                             <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
                             <div class="coMenuText">채널</div>
                         </div>
+                        <div id="mnuMember" class="menu cntTarget"> 
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
+                            <div class="coMenuText">임직원</div>
+                        </div>                        
                     </div>
                     <div v-show="theMore" class="sideBottom">
                         <div class="menu"> 
