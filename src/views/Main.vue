@@ -15,10 +15,15 @@
     
     onMounted(async () => { 
         try {
+
+            const res = await axios.post("/menu/qry", { kind : "side" })
+            const rs = gst.util.chkAxiosCode(res.data)
+            debugger
+            if (!rs) return //rs.data 또는 rs.list로 받음
+            
             let popupMenu = document.querySelector('.popupMenu')
             let menuDivAll = document.querySelectorAll('.coMenuDiv')
             menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseenter', e => {
-                debugger
                 prevX = e.pageX //console.log(e.pageY + "====mouseenter===" + prevX + "@@@@" + menuDiv.offsetTop);
                 menuDivOn.value = true
                 const docHeight = document.documentElement.offsetHeight
@@ -31,7 +36,6 @@
                 } //console.log("menuDivPos.value.top:"+menuDivPos.value.top)
             }))
             menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseleave', e => {
-                debugger
                 if (e.pageX > prevX) {
                     //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
                 } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
@@ -39,7 +43,6 @@
                 }
             }))
             popupMenu.addEventListener('mouseleave', e => {
-                debugger
                 menuDivOn.value = false
             })
             window.addEventListener('resize', e => {
