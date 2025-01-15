@@ -18,7 +18,6 @@
         try {
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
-            debugger
             if (!rs) return //rs.data 또는 rs.list로 받음            
             if (rs.data.showMore) showMore = true
             decideSeeMore()
@@ -86,42 +85,10 @@
             <div class="side">
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
-                        <div v-for="(row, idx) in list" @click="(e) => rowClick(e, row, idx)" :id="row.menu.ID" class="menu cntTarget">
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl(row.menu.IMG)"></div>
-                            <div class="coMenuText">{{ row.menu.NM }}</div>
-                        </div>
-                        <!--<div id="mnuHome" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
-                            <div class="coMenuText">홈</div>
-                        </div>
-                        <div id="mnuDm" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_dm.png')"></div>
-                            <div class="coMenuText">DM</div>
-                        </div>
-                        <div id="mnuMyAct" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_notify.png')"></div>
-                            <div class="coMenuText">내활동</div>
-                        </div>
-                        <div id="mnuLater" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_later.png')"></div>
-                            <div class="coMenuText">나중에</div>
-                        </div>
-                        <div id="mnuAuto" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_play.png')"></div>
-                            <div class="coMenuText">자동화</div>
-                        </div>
-                        <div id="mnuFile" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_file.png')"></div>
-                            <div class="coMenuText">파일</div>
-                        </div>
-                        <div id="mnuChannel" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_channel.png')"></div>
-                            <div class="coMenuText">채널</div>
-                        </div>
-                        <div id="mnuMember" class="menu cntTarget"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
-                            <div class="coMenuText">임직원</div>
-                        </div>-->                        
+                        <div v-for="(row, idx) in list" @click="(e) => rowClick(e, row, idx)" :id="row.ID" class="menu cntTarget">
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl(row.IMG)"></div>
+                            <div class="coMenuText">{{ row.NM }}</div>
+                        </div>                      
                     </div>
                     <div v-show="seeMore" class="sideBottom">
                         <div class="menu"> 
