@@ -10,53 +10,52 @@
 
     const menuDivOn = ref(false), menuDivPos = ref({ top:'0px', bottom:'0px' })
     const seeMore = ref(false)
-    const list = ref([])
+    const listSel = ref([]), listAll = ref([])
 
-    let showMore, prevX, menuSeen = []
+    let prevX, menuSeen = []
     
     onMounted(async () => { 
         try {
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return //rs.data 또는 rs.list로 받음            
-            if (rs.data.showMore) showMore = true
+            listAll.value = rs.list
+            listSel.value = rs.list.filter(x => x.USER_ID != null)
             decideSeeMore()
-            list.value = rs.list
-            let popupMenu = document.querySelector('.popupMenu')
-            let menuDivAll = document.querySelectorAll('.coMenuDiv')
-            menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseenter', e => {
-                prevX = e.pageX //console.log(e.pageY + "====mouseenter===" + prevX + "@@@@" + menuDiv.offsetTop);
-                menuDivOn.value = true
-                const docHeight = document.documentElement.offsetHeight
-                if (menuDiv.offsetTop > 300) {
-                    menuDivPos.value.top = null
-                    menuDivPos.value.bottom = (docHeight - menuDiv.offsetTop - 150) + "px"
-                } else {
-                    menuDivPos.value.top = (menuDiv.offsetTop - 50) + "px"
-                    menuDivPos.value.bottom = null
-                } //console.log("menuDivPos.value.top:"+menuDivPos.value.top)
-            }))
-            menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseleave', e => {
-                if (e.pageX > prevX) {
-                    //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
-                } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
-                    menuDivOn.value = false
-                }
-            }))
-            popupMenu.addEventListener('mouseleave', e => {
-                menuDivOn.value = false
-            })
-            window.addEventListener('resize', e => {
-                decideSeeMore()
-            })
+            window.addEventListener('resize', () => { decideSeeMore() })
+            //아래는 지우기 말기 (vue이전에 순수 javascript로 구현해 본 것임)
+            // let menuDivAll = document.querySelectorAll('.coMenuDiv')
+            // menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseenter', e => {
+            //     prevX = e.pageX //console.log(e.pageY + "====mouseenter===" + prevX + "@@@@" + menuDiv.offsetTop);
+            //     menuDivOn.value = true
+            //     const docHeight = document.documentElement.offsetHeight
+            //     if (menuDiv.offsetTop > 300) {
+            //         menuDivPos.value.top = null
+            //         menuDivPos.value.bottom = (docHeight - menuDiv.offsetTop - 150) + "px"
+            //     } else {
+            //         menuDivPos.value.top = (menuDiv.offsetTop - 50) + "px"
+            //         menuDivPos.value.bottom = null
+            //     } //console.log("menuDivPos.value.top:"+menuDivPos.value.top)
+            // }))
+            // menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseleave', e => {
+            //     if (e.pageX > prevX) {
+            //         //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
+            //     } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
+            //         menuDivOn.value = false
+            //     }
+            // }))
+            // let popupMenu = document.querySelector('.popupMenu')
+            // popupMenu.addEventListener('mouseleave', e => {
+            //     menuDivOn.value = false
+            // })            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
-    function decideSeeMore() { //개인설정에서 전체메뉴가 아닌 일부메뉴만 사이드바에 추가한 경우는 무조건 더보기 버튼이 보여야 함
-        if (showMore) {
-            if (!seeMore.value) seeMore.value = true
+    function decideSeeMore() {
+        if (listSel.value.length < listAll.value.length) { //개인설정에서 전체메뉴가 아닌 일부메뉴만 사이드바에 추가한 경우
+            if (!seeMore.value) seeMore.value = true //무조건 더보기 버튼이 보여야 함
         } else {
             menuSeen = []
             let sideTop = document.querySelector('#sideTop')
@@ -74,6 +73,28 @@
             }
         }
     }
+
+    function mouseEnter(e) {
+        prevX = e.pageX
+        const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
+        menuDivOn.value = true
+        const docHeight = document.documentElement.offsetHeight
+        if (menuDiv.offsetTop > 300) {
+            menuDivPos.value.top = null
+            menuDivPos.value.bottom = (docHeight - menuDiv.offsetTop - 150) + "px"
+        } else {
+            menuDivPos.value.top = (menuDiv.offsetTop - 50) + "px"
+            menuDivPos.value.bottom = null
+        } //console.log("menuDivPos.value.top:"+menuDivPos.value.top)
+    }
+
+    function mouseLeave(e) {
+        if (e.pageX > prevX) {
+            //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
+        } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
+            menuDivOn.value = false
+        }
+    }
 </script>
 
 <template>
@@ -85,15 +106,23 @@
             <div class="side">
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
-                        <div v-for="(row, idx) in list" @click="(e) => rowClick(e, row, idx)" :id="row.ID" class="menu cntTarget">
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl(row.IMG)"></div>
-                            <div class="coMenuText">{{ row.NM }}</div>
+                        <div v-for="(row, idx) in listSel" @click="(e) => rowClick(e, row, idx)" :id="row.ID" class="menu cntTarget">
+                            <div class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
+                                <img class="coMenuImg" :src="gst.html.getImageUrl(row.IMG)">
+                            </div>
+                            <div class="coMenuText">
+                                {{ row.NM }}
+                            </div>
                         </div>                      
                     </div>
                     <div v-show="seeMore" class="sideBottom">
                         <div class="menu"> 
-                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')"></div>
-                            <div class="coMenuText">더보기</div>
+                            <div class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
+                                <img class="coMenuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')">
+                            </div>
+                            <div class="coMenuText">
+                                더보기
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -116,7 +145,7 @@
             </div>
         </div>
     </div>
-    <div v-show="menuDivOn" class="popupMenu" :style="menuDivPos">
+    <div v-show="menuDivOn" class="popupMenu" :style="menuDivPos" @mouseleave="() => { menuDivOn = false }">
         <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border-color);background:white">
             <div style="font-weight:bold">더보기</div>
             <div>설정</div>
