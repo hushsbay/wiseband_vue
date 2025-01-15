@@ -9,18 +9,20 @@
     const router = useRouter()
 
     const menuDivOn = ref(false), menuDivPos = ref({ top:'0px', bottom:'0px' })
-    const theMore = ref(false)
+    const seeMore = ref(false)
+    const list = ref([])
 
-    let prevX, menuSeen = []
+    let showMore, prevX, menuSeen = []
     
     onMounted(async () => { 
         try {
-
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             debugger
-            if (!rs) return //rs.data 또는 rs.list로 받음
-            
+            if (!rs) return //rs.data 또는 rs.list로 받음            
+            if (rs.data.showMore) showMore = true
+            decideSeeMore()
+            list.value = rs.list
             let popupMenu = document.querySelector('.popupMenu')
             let menuDivAll = document.querySelectorAll('.coMenuDiv')
             menuDivAll.forEach(menuDiv => menuDiv.addEventListener('mouseenter', e => {
@@ -46,25 +48,33 @@
                 menuDivOn.value = false
             })
             window.addEventListener('resize', e => {
-                menuSeen = []
-                let sideTop = document.querySelector('#sideTop')
-                const sizeH = sideTop.offsetTop + sideTop.offsetHeight
-                let targetAll = document.querySelectorAll('.cntTarget')
-                targetAll.forEach(menuDiv => {
-                    if ((menuDiv.offsetTop + menuDiv.offsetHeight) <= sizeH) {
-                        menuSeen.push(menuDiv.id) //console.log(menuDiv.id+"@@@@")
-                    }
-                }) //console.log(targetAll.length+"@@@@@@"+menuSeen.length)
-                if (menuSeen.length < targetAll.length) {
-                    theMore.value = true //눈에 보이는 메뉴 갯수가 총 갯수보다 적으므로 가려져 있음. 따라서, 더보기 버튼 필요
-                } else {
-                    theMore.value = false
-                }
+                decideSeeMore()
             })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
+
+    function decideSeeMore() { //개인설정에서 전체메뉴가 아닌 일부메뉴만 사이드바에 추가한 경우는 무조건 더보기 버튼이 보여야 함
+        if (showMore) {
+            if (!seeMore.value) seeMore.value = true
+        } else {
+            menuSeen = []
+            let sideTop = document.querySelector('#sideTop')
+            const sizeH = sideTop.offsetTop + sideTop.offsetHeight
+            let targetAll = document.querySelectorAll('.cntTarget')
+            targetAll.forEach(menuDiv => {
+                if ((menuDiv.offsetTop + menuDiv.offsetHeight) <= sizeH) {
+                    menuSeen.push(menuDiv.id) //console.log(menuDiv.id+"@@@@")
+                }
+            }) //console.log(targetAll.length+"@@@@@@"+menuSeen.length)
+            if (menuSeen.length < targetAll.length) {
+                seeMore.value = true //눈에 보이는 메뉴 갯수가 총 갯수보다 적으므로 가려져 있음. 따라서, 더보기 버튼 필요
+            } else {
+                seeMore.value = false
+            }
+        }
+    }
 </script>
 
 <template>
@@ -76,7 +86,11 @@
             <div class="side">
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
-                        <div id="mnuHome" class="menu cntTarget"> 
+                        <div v-for="(row, idx) in list" @click="(e) => rowClick(e, row, idx)" :id="row.menu.ID" class="menu cntTarget">
+                            <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl(row.menu.IMG)"></div>
+                            <div class="coMenuText">{{ row.menu.NM }}</div>
+                        </div>
+                        <!--<div id="mnuHome" class="menu cntTarget"> 
                             <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_home.png')"></div>
                             <div class="coMenuText">홈</div>
                         </div>
@@ -107,9 +121,9 @@
                         <div id="mnuMember" class="menu cntTarget"> 
                             <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_member.png')"></div>
                             <div class="coMenuText">임직원</div>
-                        </div>                        
+                        </div>-->                        
                     </div>
-                    <div v-show="theMore" class="sideBottom">
+                    <div v-show="seeMore" class="sideBottom">
                         <div class="menu"> 
                             <div class="coMenuDiv"><img class="coMenuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')"></div>
                             <div class="coMenuText">더보기</div>
