@@ -10,7 +10,8 @@
 
     const popupMenuOn = ref(false), popupMenuPos = ref({ top:'0px', bottom:'0px' })
     const seeMore = ref(false)
-    const listAll = ref([]), listSel = ref([]), listUnSel = ref([]), listForMore = ref([])
+    const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel + listUnSel
+    let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel + listNotSeen (더보기에서의 수식이며 다른 경우는 수식이나 데이터가 다름)
 
     let prevX
     
@@ -55,34 +56,17 @@
     })
 
     function decideSeeMore() {
-        // if (listSel.value.length < listAll.value.length) { //개인설정에서 전체메뉴가 아닌 일부메뉴만 사이드바에 추가한 경우
-        //     if (!seeMore.value) seeMore.value = true //무조건 더보기 버튼이 보여야 함
-        // } else {
-        //     menuSeen = []
-        //     let sideTop = document.querySelector('#sideTop')
-        //     const sizeH = sideTop.offsetTop + sideTop.offsetHeight
-        //     let targetAll = document.querySelectorAll('.cntTarget')
-        //     targetAll.forEach(menuDiv => {
-        //         if ((menuDiv.offsetTop + menuDiv.offsetHeight) <= sizeH) {
-        //             menuSeen.push(menuDiv.id) //console.log(menuDiv.id+"@@@@")
-        //         }
-        //     }) //console.log(targetAll.length+"@@@@@@"+menuSeen.length)
-        //     if (menuSeen.length < targetAll.length) {
-        //         seeMore.value = true //눈에 보이는 메뉴 갯수가 총 갯수보다 적으므로 가려져 있음. 따라서, 더보기 버튼 필요
-        //     } else {
-        //         seeMore.value = false
-        //     }
-        // }
-        const menuNotSeen = []
+        listNotSeen.value = []
         const sideTop = document.querySelector('#sideTop')
         const sizeH = sideTop.offsetTop + sideTop.offsetHeight
         let targetAll = document.querySelectorAll('.cntTarget')
         targetAll.forEach(menuDiv => {
             if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) {
-                menuNotSeen.value.push(menuDiv.id) //console.log(menuDiv.id+"@@@@")
+                const found = listAll.value.find((item) => item.ID == menuDiv.id)
+                if (found) listNotSeen.value.push(found) //console.log(menuDiv.id+"@@@@")
             }
         })
-        if (listUnSel.value.length > 0 || menuNotSeen.value.length > 0) { //(사용자가 원래 선택하지 않은 메뉴 포함해) (화면이 작아진 후) 눈에 안 보이는 메뉴가 있으면 더보기 버튼 필요
+        if (listUnSel.value.length > 0 || listNotSeen.value.length > 0) { //(사용자가 원래 선택하지 않은 메뉴 포함해) (화면이 작아진 후) 눈에 안 보이는 메뉴가 있으면 더보기 버튼 필요
             seeMore.value = true
         } else {
             seeMore.value = false
@@ -92,6 +76,11 @@
     function mouseEnter(e) {
         prevX = e.pageX
         const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
+        if (menuDiv.id == "mnuSeeMore") {
+            listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value]
+        } else {
+            listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
+        }
         popupMenuOn.value = true
         const docHeight = document.documentElement.offsetHeight
         if (menuDiv.offsetTop > 300) {
@@ -100,7 +89,7 @@
         } else {
             popupMenuPos.value.top = (menuDiv.offsetTop - 50) + "px"
             popupMenuPos.value.bottom = null
-        } //console.log("popupMenuPos.value.top:"+popupMenuPos.value.top)
+        }
     }
 
     function mouseLeave(e) {
@@ -109,6 +98,14 @@
         } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
             popupMenuOn.value = false
         }
+    }
+
+    function sideClick(row, idx) {
+        alert(idx + "===" + JSON.stringify(row))
+    }
+
+    function listRowClick(row, idx) {
+        alert(idx + "===" + JSON.stringify(row))
     }
 </script>
 
@@ -121,7 +118,7 @@
             <div class="side">
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
-                        <div v-for="(row, idx) in listSel" @click="(e) => rowClick(e, row, idx)" :id="row.ID" class="menu cntTarget">
+                        <div v-for="(row, idx) in listSel" @click="(e) => sideClick(row, idx)" :id="row.ID" class="menu cntTarget">
                             <div class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
                                 <img class="coMenuImg" :src="gst.html.getImageUrl(row.IMG)">
                             </div>
@@ -132,7 +129,7 @@
                     </div>
                     <div v-show="seeMore" class="sideBottom">
                         <div class="menu"> 
-                            <div class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
+                            <div id="mnuSeeMore" class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
                                 <img class="coMenuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')">
                             </div>
                             <div class="coMenuText">
@@ -160,56 +157,39 @@
             </div>
         </div>
     </div>
-    <div v-show="popupMenuOn" class="popupMenu" :style="popupMenuPos" @mouseleave="() => { popupMenuOn = false }">
-        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border-color);background:white">
-            <div style="font-weight:bold">더보기</div>
-            <div>설정</div>
-        </div>
-        <div class="coScrollable" style="width:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
-            <div v-for="(row, idx) in listAll" @click="(e) => rowClick(e, row, idx)" :id="row.ID" class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
-                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="coMenuContext">
-                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl(row.IMG)">
-                    </div>
-                </div>
-                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
-                    <div style="width:100%;display:flex;align-items:center">
-                        <div class="coDotDot" style="margin-top:7px;font-weight:bold">
-                            {{ row.NM }}
-                        </div>
-                    </div>        
-                    <div style="width:100%;display:flex;align-items:center">
-                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
-                            {{ row.RMKS }}
-                        </div>
-                    </div>        
-                </div>                
+    <Transition>
+        <div v-show="popupMenuOn" class="popupMenu" :style="popupMenuPos" @mouseleave="() => { popupMenuOn = false }">
+            <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border-color);background:white">
+                <div style="font-weight:bold">더보기</div>
+                <!-- <div>설정</div> -->
             </div>
-            <!-- <div class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
-                <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                    <div class="coMenuContext">
-                        <img class="coMenuImg" style="background:lightsteelblue" :src="gst.html.getImageUrl('white_dm.png')">
+            <div class="coScrollable" style="width:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+                <div v-for="(row, idx) in listPopupMenu" @click="(e) => listRowClick(row, idx)" :id="row.ID" class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
+                    <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
+                        <div class="coMenuContext">
+                            <img class="coMenuImg" style="background:var(--second-color)" :src="gst.html.getImageUrl(row.IMG)">
+                        </div>
                     </div>
+                    <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
+                        <div style="width:100%;display:flex;align-items:center">
+                            <div class="coDotDot" style="margin-top:7px;font-weight:bold">
+                                {{ row.NM }}
+                            </div>
+                        </div>        
+                        <div style="width:100%;display:flex;align-items:center">
+                            <div class="coDotDot" style="margin-top:3px;font-size:12px">
+                                {{ row.RMKS }}
+                            </div>
+                        </div>        
+                    </div>                
                 </div>
-                <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
-                    <div style="width:100%;display:flex;align-items:center">
-                        <div class="coDotDot" title="테스트" style="margin-top:7px;font-weight:bold">
-                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
-                        </div>
-                    </div>        
-                    <div style="width:100%;display:flex;align-items:center">
-                        <div class="coDotDot" style="margin-top:3px;font-size:12px">
-                            가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사 가나다라 마바사
-                        </div>
-                    </div>        
-                </div>
-            </div>-->
+            </div>
+            <div style="width:calc(100% - 12px);height:30px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-top:1px solid var(--border-color);background:var(--bottom-color)">
+                <div style="color:steelblue;font-weight:bold">탐색막대 사용자지정</div>
+                <!-- <div style="color:darkblue">안내</div> -->
+            </div>        
         </div>
-        <div style="width:calc(100% - 12px);height:40px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-top:1px solid var(--border-color);background:var(--menu-color)">
-            <div style="font-weight:bold">추가</div>
-            <div style="color:darkblue">안내</div>
-        </div>        
-    </div>
+    </Transition>
 </template>
 
 <style scoped>    
@@ -242,10 +222,10 @@
         display:flex;align-items:center;
         background:var(--footer-notify-color);        
     }
-    .popupMenu { /* 아래에서 제외든 top or bottom을 popupMenuPos로 표시하고 있음 */
-        width:300px;height:364px;position:fixed;left:70px;
+    .popupMenu { /* 아래에서 없는(제외된) top or bottom을 popupMenuPos로 표시하고 있음 */
+        width:320px;height:380px;position:fixed;left:70px;
         display:flex;flex-direction:column;z-index:9999;
-        background:var(--menu-color);border:1px solid var(--border-color);border-radius:5px;box-shadow:2px 2px 2px var(--shadow-color)
+        background:var(--menu-color);border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px var(--shadow-color)
     }
     .menu { 
         width:55px;min-height:55px;margin:8px 0px; 
