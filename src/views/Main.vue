@@ -12,7 +12,7 @@
     const seeMore = ref(false)
     const listAll = ref([]), listSel = ref([]), listUnSel = ref([]), listForMore = ref([])
 
-    let prevX, menuSeen = []
+    let prevX
     
     onMounted(async () => { 
         try {
