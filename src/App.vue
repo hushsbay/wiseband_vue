@@ -6,5 +6,5 @@
 <template>
     <router-view />   
     <snackbar></snackbar>
-    <toast></toast>
+    <toast></toast>    
 </template>
