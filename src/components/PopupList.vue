@@ -1,12 +1,17 @@
 <script setup>
+    import { ref } from 'vue' 
+
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
-    const props = defineProps({ popupOn : Boolean, popupPos : Object, list : Array }) //props update 문제 유의
+    const props = defineProps({ popupOn: Boolean, popupPos: Object, list : Array, popupData: Object }) //props update 문제 유의
     const emits = defineEmits(["ev-click", "ev-leave"])
 
+    const borderLineBottom = ref('none') //기본값
+    if (props.popupData.lines) borderLineBottom.value = "1px solid var(--border-color)"
+
     function listRowClick(e, row, idx) { //alert(e.target.id + "===" + idx + "===" + JSON.stringify(row))
-        emits("ev-click", row, idx)
+        emits("ev-click", props.popupData.id, row, idx)
     }
 
     //아래는 지우기 말기 (vue말고 순수 javascript로 구현해 본 것임) : Main.vue에서 맨 처음 테스트
@@ -44,7 +49,9 @@
                 <div>설정</div>
             </div>
             <div class="coScrollable" style="width:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;">
-                <div v-for="(row, idx) in list" @click="(e) => listRowClick(e, row, idx)" :id="row.ID" class="coHover" style="width:100%;min-height:50px;display:flex;align-items:center;border-bottom:0px solid var(--border-color)">
+                <div v-for="(row, idx) in list" @click="(e) => listRowClick(e, row, idx)" :id="row.ID" class="coHover" 
+                    style="width:100%;min-height:50px;display:flex;align-items:center"
+                    :style="{ borderBottom: borderLineBottom }">
                     <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                         <div class="coMenuContext">
                             <img class="coMenuImg" style="background:var(--second-color)" :src="gst.html.getImageUrl(row.IMG)">

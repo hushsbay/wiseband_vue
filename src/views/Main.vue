@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted } from 'vue' 
+    import { ref, onMounted, nextTick } from 'vue' 
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -9,7 +9,8 @@
     const gst = GeneralStore()
     const router = useRouter()
 
-    const popupMenuOn = ref(false), popupMenuPos = ref({ top:'0px', bottom:'0px' })
+    const popupMenuOn = ref(false), popupMenuPos = ref({ top: '0px', bottom: '0px' })
+    const popupData = ref({ id: '', lines: false })
     const seeMore = ref(false)
     const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel + listUnSel
     let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel + listNotSeen (더보기에서의 수식이며 다른 경우는 수식이나 데이터가 다름)
@@ -20,12 +21,13 @@
         try {
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return //rs.data 또는 rs.list로 받음            
+            if (!rs) return    
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USER_ID != null)
             listUnSel.value = rs.list.filter(x => x.USER_ID == null)
+            window.addEventListener('resize', () => { decideSeeMore() })
+            await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
-            window.addEventListener('resize', () => { decideSeeMore() })          
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -35,7 +37,7 @@
         listNotSeen.value = []
         const sideTop = document.querySelector('#sideTop')
         const sizeH = sideTop.offsetTop + sideTop.offsetHeight
-        let targetAll = document.querySelectorAll('.cntTarget')
+        let targetAll = document.querySelectorAll('.cntTarget') //console.log(targetAll.length+"@@@")
         targetAll.forEach(menuDiv => {
             if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) {
                 const found = listAll.value.find((item) => item.ID == menuDiv.id.replace("Target", ""))
@@ -68,6 +70,7 @@
             popupMenuPos.value.top = (menuDiv.offsetTop - 50) + "px"
             popupMenuPos.value.bottom = null
         }
+        popupData.value.id = menuDiv.id
     }
 
     function mouseLeave(e) {
@@ -78,13 +81,32 @@
         }
     }
 
-    function sideClick(row, idx) {
-        alert(idx + "===" + JSON.stringify(row))
+    function sideClick(popupId, row, idx) {
+        clickPopupRow(popupId, row, idx)
     }
 
-    function clickPopupRow(row, idx) {
-        alert(idx + "@@@" + JSON.stringify(row))
+    function clickPopupRow(popupId, row, idx) {
         popupMenuOn.value = false
+        const obj = { row: row, idx: idx }
+        const id = (popupId == "mnuSeeMore") ? row.ID : popupId
+        procMenu[id].call(null, obj)
+    }
+
+    const procMenu = { //obj.idx and obj,row
+        ["mnuHome"] : (obj) => {
+            try {
+                alert("mnuHome====" + obj.idx + "@@@" + JSON.stringify(obj.row))
+            } catch (ex) {
+                gst.util.showEx(ex, true)
+            }
+        },
+        ["mnuDm"] : (obj) => {
+            try {
+                alert("mnuDm====" + obj.idx + "@@@" + JSON.stringify(obj.row))
+            } catch (ex) {
+                gst.util.showEx(ex, true)
+            }
+        },
     }
 </script>
 
@@ -97,7 +119,7 @@
             <div class="side">
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
-                        <div v-for="(row, idx) in listSel" @click="(e) => sideClick(row, idx)" :id="row.ID + 'Target'" class="menu cntTarget">
+                        <div v-for="(row, idx) in listSel" @click="(e) => sideClick(row.ID, row, idx)" :id="row.ID + 'Target'" class="menu cntTarget">
                             <div :id="row.ID" class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
                                 <img class="coMenuImg" :src="gst.html.getImageUrl(row.IMG)">
                             </div>
@@ -136,7 +158,9 @@
             </div>
         </div>
     </div>
-    <popup-list :popupOn="popupMenuOn" :popupPos="popupMenuPos" :list="listPopupMenu" @ev-click="clickPopupRow" @ev-leave="popupMenuOn=false"></popup-list> 
+    <popup-list :popupOn="popupMenuOn" :popupPos="popupMenuPos" :list="listPopupMenu" :popupData="popupData"
+        @ev-click="clickPopupRow" @ev-leave="popupMenuOn=false">
+    </popup-list> 
 </template>
 
 <style scoped>    
