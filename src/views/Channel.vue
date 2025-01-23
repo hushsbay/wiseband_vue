@@ -95,7 +95,7 @@
     const procMenu = { //obj.idx and obj,row
         ["mnuHome"] : (obj) => {
             try { //alert("mnuHome====" + obj.idx + "@@@" + JSON.stringify(obj.row))
-                router.push({ path : '/main/content' })
+            router.push({ path : '/portal/menu0002' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
@@ -186,12 +186,12 @@
         width:100%;height:100%;display:flex;flex-direction:column;    
     }
     .content {
-        width:100%;height:100%;display:flex;
+        width:100%;height:100%;display:flex;border:1px solid red
     }
     .footer {
         width:calc(100% - 20px);min-height:40px;margin:auto 0 0 0;padding:0 10px;
         display:flex;align-items:center;
-        background:var(--footer-notify-color);
+        background:var(--footer-notify-color);        
     }
     .menu { 
         width:55px;min-height:55px;margin:8px 0px; 
