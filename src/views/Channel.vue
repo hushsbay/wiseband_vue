@@ -32,50 +32,72 @@
             listChan.value = rs.list
             listChan.value.forEach((item) => {
                 item.exploded = true
-                procChanRow(item)
+                procChanRowImg(item)
             })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
-    function procChanRow(item) {
+    function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않음 (따라서 png로 별도 이미지 교체로 해결함)
         if (item.DEPTH == "1") {
             item.nodeImg = item.exploded ? "whitesmoke_expanded.png" : "whitesmoke_collapsed.png"
-            item.readonlyImg = ""
             item.notioffImg = ""
             item.bookmarkImg = ""
         } else {
             if (item.CHANID == null) {
                 item.nodeImg = "whitesmoke_channel.png"
-                item.readonlyImg = ""
                 item.notioffImg = ""
                 item.bookmarkImg = ""
                 item.CHANNM = "없음"
             } else {
-                item.nodeImg = (item.STATE == "A") ? "whitesmoke_channel.png" : "whitesmoke_lock.png"
-                item.readonlyImg = (item.KIND == "R") ? "whitesmoke_readonly.png" : ""
-                item.notioffImg = (item.NOTI == "X") ? "whitesmoke_notioff.png" : ""
-                item.bookmarkImg = (item.BOOKMARK == "Y") ? "whitesmoke_bookmark.png" : ""
+                item.nodeImg = (item.STATE == "A") ? "channel.png" : "lock.png"
+                item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
+                item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
+                const color = item.sel ? "violet_" : "whitesmoke_"
+                item.nodeImg = color + item.nodeImg
+                if (item.notioffImg) item.notioffImg = color + item.notioffImg
+                if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
             }
         }
     }
 
-    function chanClick(rowId, row, idx) {
+    function chanClick(row, idx) {
         if (row.DEPTH == "1") { //접기 or 펼치기
             if (row.exploded) {
                 row.exploded = false
             } else {
                 row.exploded = true
             }
-            procChanRow(row)
+            procChanRowImg(row)
             for (let i = idx + 1; i < listChan.value.length; i++) {
                 if (listChan.value[i].DEPTH == "1") break
                 listChan.value[i].exploded = row.exploded
             }
         } else {
-
+            for (let i = 0; i < listChan.value.length; i++) {
+                if (listChan.value[i].DEPTH == "2") {
+                    if (listChan.value[i].sel) {
+                        listChan.value[i].sel = false
+                        procChanRowImg(listChan.value[i])
+                    }
+                }
+            }
+            row.sel = true
+            procChanRowImg(row)
         }
+    }
+
+    function mouseEnter(row) {
+        if (row.sel) return
+        row.hover = true
+        procChanRowImg(row)
+    }
+
+    function mouseLeave(row) {
+        if (row.sel) return
+        row.hover = false
+        procChanRowImg(row)
     }
 
     function procExpCol(type) {
@@ -113,14 +135,15 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable">
-            <div v-for="(row, idx) in listChan" @click="(e) => chanClick(row.ID, row, idx)" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID">
-                <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" class="node"><!-- <div class="node" :style="{ padding: row.DEPTH == '1' ? '0 10px' : '0 30px' }"> -->
+            <div v-for="(row, idx) in listChan" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
+                @click="(e) => chanClick(row, idx)" @mouseenter="() => mouseEnter(row)" @mouseleave="() => mouseLeave(row)">
+                <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" 
+                    :class="['node', row.hover ? 'nodeHover' : '', , row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM">
                         <img class="coImg14" :src="gst.html.getImageUrl(row.nodeImg)">
                         {{ row.DEPTH == '1' ? row.GR_NM : row.CHANNM }}
                     </div>
                     <div class="nodeRight">
-                        <img v-if="row.readonlyImg" class="coImg14" :src="gst.html.getImageUrl(row.readonlyImg)" title="읽기전용">
                         <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
                         <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
                         <span v-if="row.OTHER">other</span>
@@ -154,14 +177,12 @@
     .node {
         width:calc(100% - 30px);min-height:36px;padding:0 10px;margin:0 5px;
         display:flex;align-items:center;justify-content:space-between;
-        font-size:15px;color:var(--text-white-color);
+        font-size:15px;color:var(--text-white-color);border-radius:5px;cursor:pointer;
     }
-    .nodeRight {
-        display:flex;align-items:center;justify-content:flex-end;
-    }
-    /* .node:hover { background-color:whitesmoke;color:black;cursor:pointer; }
-    #btnNew:hover { background-color:var(--primary-color);cursor:pointer; } */
-    .node:hover, .coImg20:hover { background:var(--second-hover-color);cursor:pointer; }
+    .nodeRight { display:flex;align-items:center;justify-content:flex-end; }
+    .coImg20:hover { background:var(--second-hover-color); }
+    .nodeHover { background:var(--second-hover-color); }
+    .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
     .chan_main {
         width:100%;height:100%;display:flex;
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;

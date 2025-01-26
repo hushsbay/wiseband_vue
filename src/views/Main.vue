@@ -90,6 +90,10 @@
         const obj = { row: row, idx: idx }
         const id = (popupId == "mnuSeeMore") ? row.ID : popupId
         procMenu[id].call(null, obj)
+        for (let i = 0; i < listSel.value.length; i++) {
+            if (listSel.value[i].sel) listSel.value[i].sel = false
+        }
+        row.sel = true
     }
 
     const procMenu = { //obj.idx and obj,row
@@ -121,7 +125,7 @@
                     <div id="sideTop" class="sideTop">
                         <div v-for="(row, idx) in listSel" @click="(e) => sideClick(row.ID, row, idx)" :id="row.ID + 'Target'" class="menu cntTarget">
                             <div :id="row.ID" class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
-                                <img class="coMenuImg" :src="gst.html.getImageUrl(row.IMG)">
+                                <img :class="['coMenuImg', row.sel ? 'coMenuImgSel' : '']" :src="gst.html.getImageUrl(row.IMG)">
                             </div>
                             <div class="coMenuText">
                                 {{ row.NM }}
