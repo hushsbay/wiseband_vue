@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import Login from '/src/views/Login.vue'
 import Main from '/src/views/Main.vue'
-import Content from '/src/views/Content.vue'
+import Channel from '/src/views/Channel.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL), //import.meta.env.BASE_URL => /로 표시됨
@@ -17,8 +17,8 @@ const router = createRouter({
             component: Main,
             children: [
                 {                    
-                    path: 'content',
-                    component: Content,
+                    path: 'channel',
+                    component: Channel,
                 //   children: [
                 //         {                    
                 //             path: 'menu0002_right',

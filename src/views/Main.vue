@@ -95,7 +95,7 @@
     const procMenu = { //obj.idx and obj,row
         ["mnuHome"] : (obj) => {
             try { //alert("mnuHome====" + obj.idx + "@@@" + JSON.stringify(obj.row))
-                router.push({ path : '/main/content' })
+                router.push({ path : '/main/channel' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
@@ -165,11 +165,12 @@
 
 <style scoped>    
     .header {
-        width:100%;min-height:50px;
+        width:100%;min-height:40px;
         background:var(--primary-color);
     }
     .body {
-        width:100%;height:100%;display:flex;overflow:hidden; /* hidden이 있어야 sidebar의 아랫공간이 always seen 가능 */
+        width:100%;height:100%;display:flex;
+        background:var(--primary-color);overflow:hidden; /* hidden이 있어야 sidebar의 아랫공간이 always seen 가능 */
     }
     .side {
         min-width:70px;height:100%;
@@ -183,14 +184,15 @@
         display:flex;flex-direction:column;justify-content:flex-end;
     }
     .main {
-        width:100%;height:100%;display:flex;flex-direction:column;    
+        width:100%;height:100%;display:flex;flex-direction:column;
     }
     .content {
-        width:100%;height:100%;display:flex;
+        width:calc(100% - 3px);height:100%;display:flex;margin-right:3px;margin-bottom:3px;
+        overflow:hidden;
     }
     .footer {
         width:calc(100% - 20px);min-height:40px;margin:auto 0 0 0;padding:0 10px;
-        display:flex;align-items:center;
+        display:none;align-items:center;
         background:var(--footer-notify-color);
     }
     .menu { 
