@@ -98,10 +98,9 @@
         } else {
             for (let i = 0; i < listChan.value.length; i++) {
                 if (listChan.value[i].DEPTH == "2") {
-                    if (listChan.value[i].sel) {
-                        listChan.value[i].sel = false
-                        procChanRowImg(listChan.value[i])
-                    }
+                    listChan.value[i].sel = false
+                    listChan.value[i].hover = false
+                    procChanRowImg(listChan.value[i])
                 }
             }
             row.sel = true
