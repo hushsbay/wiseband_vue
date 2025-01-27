@@ -11,14 +11,19 @@
 
     const popupMenuOn = ref(false), popupMenuPos = ref({ top: '0px', bottom: '0px' })
     const popupData = ref({ id: '', lines: false })
-    let kind = ref('my')
-    const listChan = ref([])
+    let kind = ref('my'), listChan = ref([])
+
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
+    let resizer, leftSide, rightSide, posX = 0, leftWidth = 0 //resizing 관련
 
     onMounted(async () => { 
         try {
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) kind.value = lastSelKind
             await getList()
+            resizer = document.getElementById('dragMe')
+            leftSide = resizer.previousElementSibling
+            rightSide = resizer.nextElementSibling
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -133,10 +138,45 @@
     function newMsg() {
         alert('newMsg')
     }
+
+    function mouseDownHandler(e) {
+        posX = e.clientX //마우스 위치 X값
+        leftWidth = leftSide.getBoundingClientRect().width //left Element에 Viewport상 width 값을 가져옴
+        document.addEventListener('mousemove', mouseMoveHandler)
+        document.addEventListener('mouseup', mouseUpHandler)
+    }
+
+    function mouseMoveHandler(e) {
+        //마우스가 움직이면 기존 초기 마우스 위치에서 현재 위치값과의 차이를 계산
+        const dx = e.clientX - posX
+        //크기 조절중 마우스 커서 변경 (class="resizer"에 적용하면 위치가 변경되면서 커서가 해제되기 때문에 body에 적용)
+        document.body.style.cursor = 'col-resize'
+        //이동중 양쪽 영역(왼쪽, 오른쪽)에서 마우스 이벤트와 텍스트 선택을 방지하기 위해 추가
+        leftSide.style.userSelect = 'none'
+        leftSide.style.pointerEvents = 'none'        
+        rightSide.style.userSelect = 'none'
+        rightSide.style.pointerEvents = 'none'        
+        //초기 width 값과 마우스 드래그 거리를 더한 뒤 상위요소(container) 너비 이용해 퍼센티지 구해 left의 width로 적용
+        //const newLeftWidth = ((leftWidth + dx) * 100) / resizer.parentNode.getBoundingClientRect().width
+        //leftSide.style.width = `${newLeftWidth}%`
+        chanSideWidth.value = `${leftWidth + dx}px`
+    }
+
+    function mouseUpHandler() { //모든 커서 관련 사항은 마우스 이동이 끝나면 제거됨
+        resizer.style.removeProperty('cursor')
+        document.body.style.removeProperty('cursor')
+        leftSide.style.removeProperty('user-select')
+        leftSide.style.removeProperty('pointer-events')
+        rightSide.style.removeProperty('user-select')
+        rightSide.style.removeProperty('pointer-events')
+        document.removeEventListener('mousemove', mouseMoveHandler)
+        document.removeEventListener('mouseup', mouseUpHandler)
+        localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
+    }
 </script>
 
 <template>
-    <div class="chan_side">
+    <div class="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
                 <select v-model="kind" style="background:var(--second-color);color:var(--text-white-color);border:none">
@@ -175,6 +215,7 @@
             </div>
         </div>
     </div>
+    <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main">
         <router-view />
     </div>
@@ -182,7 +223,7 @@
 
 <style scoped>    
     .chan_side {
-        min-width:240px;max-width:240px;height:100%;margin-right:3px;
+        height:100%; /* width는 resizing처리됨 */
         display:flex;flex-direction:column;background:var(--second-color);border-top-left-radius:10px;border-bottom-left-radius:10px;
     }
     .chan_side_top {
@@ -206,6 +247,9 @@
     .coImg20:hover { background:var(--second-hover-color); }
     .nodeHover { background:var(--second-hover-color); }
     .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
+    .resizer {
+        background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0*/
+    }
     .chan_main {
         width:100%;height:100%;display:flex;
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
