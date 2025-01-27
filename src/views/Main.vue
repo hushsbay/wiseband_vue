@@ -129,7 +129,7 @@
 
         </div>
         <div class="body">
-            <div class="side">
+            <div class="side" id="main_side"> <!--main_side는 Channel.vue에서 resizng에서 사용-->
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
                         <div v-for="(row, idx) in listSel" @click="(e) => sideClick(row.ID, row, idx)" :id="row.ID + 'Target'" class="menu cntTarget">

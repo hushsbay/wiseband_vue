@@ -13,17 +13,18 @@
     const popupData = ref({ id: '', lines: false })
     let kind = ref('my'), listChan = ref([])
 
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
-    let resizer, leftSide, rightSide, posX = 0, leftWidth = 0 //resizing 관련
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
+    let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0 //resizing 관련
 
     onMounted(async () => { 
         try {
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) kind.value = lastSelKind
             await getList()
-            resizer = document.getElementById('dragMe')
-            leftSide = resizer.previousElementSibling
-            rightSide = resizer.nextElementSibling
+            mainSide = document.getElementById('main_side') //Main.vue 참조
+            resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조
+            leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
+            rightSide = document.getElementById('chan_main') //resizer.nextElementSibling
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -140,26 +141,24 @@
     }
 
     function mouseDownHandler(e) {
-        posX = e.clientX //마우스 위치 X값
-        leftWidth = leftSide.getBoundingClientRect().width //left Element에 Viewport상 width 값을 가져옴
+        posX = e.clientX//마우스 위치 X값
+        leftWidth = leftSide.getBoundingClientRect().width
+        mainSideWidth = mainSide.getBoundingClientRect().width
         document.addEventListener('mousemove', mouseMoveHandler)
         document.addEventListener('mouseup', mouseUpHandler)
     }
 
-    function mouseMoveHandler(e) {
-        //마우스가 움직이면 기존 초기 마우스 위치에서 현재 위치값과의 차이를 계산
-        const dx = e.clientX - posX
-        //크기 조절중 마우스 커서 변경 (class="resizer"에 적용하면 위치가 변경되면서 커서가 해제되기 때문에 body에 적용)
-        document.body.style.cursor = 'col-resize'
-        //이동중 양쪽 영역(왼쪽, 오른쪽)에서 마우스 이벤트와 텍스트 선택을 방지하기 위해 추가
-        leftSide.style.userSelect = 'none'
+    async function mouseMoveHandler(e) {
+        const dx = e.clientX - posX //마우스가 움직이면 기존 초기 마우스 위치에서 현재 위치값과의 차이를 계산
+        document.body.style.cursor = 'col-resize' //크기 조절중 마우스 커서 변경 (resizer에 적용하면 위치가 변경되면서 커서가 해제되기 때문에 body에 적용)
+        leftSide.style.userSelect = 'none' //이동중 양쪽 영역(왼쪽, 오른쪽)에서 마우스 이벤트와 텍스트 선택을 방지하기 위해 추가 (4행)
         leftSide.style.pointerEvents = 'none'        
         rightSide.style.userSelect = 'none'
         rightSide.style.pointerEvents = 'none'        
+        chanSideWidth.value = `${leftWidth + dx + mainSideWidth}px` //아래 % 대신에 바로 px 적용
         //초기 width 값과 마우스 드래그 거리를 더한 뒤 상위요소(container) 너비 이용해 퍼센티지 구해 left의 width로 적용
         //const newLeftWidth = ((leftWidth + dx) * 100) / resizer.parentNode.getBoundingClientRect().width
         //leftSide.style.width = `${newLeftWidth}%`
-        chanSideWidth.value = `${leftWidth + dx}px`
     }
 
     function mouseUpHandler() { //모든 커서 관련 사항은 마우스 이동이 끝나면 제거됨
@@ -176,7 +175,7 @@
 </script>
 
 <template>
-    <div class="chan_side" :style="{ width: chanSideWidth }">
+    <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
                 <select v-model="kind" style="background:var(--second-color);color:var(--text-white-color);border:none">
@@ -216,7 +215,7 @@
         </div>
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
-    <div class="chan_main">
+    <div class="chan_main" id="chan_main">
         <router-view />
     </div>
 </template>
