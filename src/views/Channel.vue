@@ -11,18 +11,23 @@
 
     const popupMenuOn = ref(false), popupMenuPos = ref({ top: '0px', bottom: '0px' })
     const popupData = ref({ id: '', lines: false })
-    const kind = ref('my')
+    let kind = ref('my')
     const listChan = ref([])
-    
+
     onMounted(async () => { 
         try {
+            const lastSelKind = localStorage.wiseband_lastsel_kind
+            if (lastSelKind) kind.value = lastSelKind
             await getList()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
-    watch(kind, async () => { await getList() }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    watch(kind, async () => {
+        localStorage.wiseband_lastsel_kind = kind.value
+        await getList() 
+    }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
         try {            
@@ -30,9 +35,20 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             listChan.value = rs.list
-            listChan.value.forEach((item) => {
-                item.exploded = true
-                procChanRowImg(item)
+            const lastSelGrid = localStorage.wiseband_lastsel_grid
+            const lastSelChanid = localStorage.wiseband_lastsel_chanid
+            listChan.value.forEach((item, index) => {
+                if (item.GR_ID == lastSelGrid) {
+                    item.exploded = true
+                    if (item.CHANID == lastSelChanid) {
+                        chanClick(item, index)
+                    } else {
+                        procChanRowImg(item)
+                    }
+                } else {
+                    item.exploded = false
+                    procChanRowImg(item)
+                }                
             })
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -44,20 +60,24 @@
             item.nodeImg = item.exploded ? "whitesmoke_expanded.png" : "whitesmoke_collapsed.png"
             item.notioffImg = ""
             item.bookmarkImg = ""
+            item.otherImg = ""
         } else {
             if (item.CHANID == null) {
                 item.nodeImg = "whitesmoke_channel.png"
                 item.notioffImg = ""
                 item.bookmarkImg = ""
+                item.otherImg = ""
                 item.CHANNM = "없음"
             } else {
                 item.nodeImg = (item.STATE == "A") ? "channel.png" : "lock.png"
                 item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
                 item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
+                item.otherImg = (item.OTHER == "other") ? "other.png" : ""
                 const color = item.sel ? "violet_" : "whitesmoke_"
                 item.nodeImg = color + item.nodeImg
                 if (item.notioffImg) item.notioffImg = color + item.notioffImg
                 if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
+                if (item.otherImg) item.otherImg = color + item.otherImg
             }
         }
     }
@@ -74,6 +94,7 @@
                 if (listChan.value[i].DEPTH == "1") break
                 listChan.value[i].exploded = row.exploded
             }
+            if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
         } else {
             for (let i = 0; i < listChan.value.length; i++) {
                 if (listChan.value[i].DEPTH == "2") {
@@ -85,6 +106,8 @@
             }
             row.sel = true
             procChanRowImg(row)
+            localStorage.wiseband_lastsel_grid = row.GR_ID
+            localStorage.wiseband_lastsel_chanid = row.CHANID
         }
     }
 
@@ -104,6 +127,7 @@
         const exploded = (type == "E") ? true : false
         for (let i = 0; i < listChan.value.length; i++) {
             listChan.value[i].exploded = exploded
+            procChanRowImg(listChan.value[i])
         }
     }
 
@@ -146,7 +170,7 @@
                     <div class="nodeRight">
                         <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
                         <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
-                        <span v-if="row.OTHER">other</span>
+                        <img v-if="row.otherImg" class="coImg14" :src="gst.html.getImageUrl(row.otherImg)" title="다른 채널">
                     </div>
                 </div>
             </div>

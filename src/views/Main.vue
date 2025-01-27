@@ -28,6 +28,11 @@
             window.addEventListener('resize', () => { decideSeeMore() })
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
+            const lastSelMenu = localStorage.wiseband_lastsel_menu
+            let idx = -1
+            if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
+            idx = (idx == -1) ? 0 : idx
+            sideClick(listSel.value[idx].ID, listSel.value[idx], idx)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -85,15 +90,19 @@
         clickPopupRow(popupId, row, idx)
     }
 
+    //더보기 메뉴는 로컬에 저장하기 않는 전제임 (더보기 누르면 나오는 목록 클릭시 저장)
+    //row까지 받는 것은 좀 과하다 싶지만 일단 개발 편의 고려해 처리하고자 함
     function clickPopupRow(popupId, row, idx) {
         popupMenuOn.value = false
-        const obj = { row: row, idx: idx }
         const id = (popupId == "mnuSeeMore") ? row.ID : popupId
-        procMenu[id].call(null, obj)
+        const obj = { row: row, idx: idx }; procMenu[id].call(null, obj)
         for (let i = 0; i < listSel.value.length; i++) {
             if (listSel.value[i].sel) listSel.value[i].sel = false
         }
         row.sel = true
+        if (popupId != "mnuSeeMore" && popupId != localStorage.wiseband_lastsel_menu) {
+            localStorage.wiseband_lastsel_menu = popupId
+        }
     }
 
     const procMenu = { //obj.idx and obj,row

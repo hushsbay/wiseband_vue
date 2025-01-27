@@ -29,7 +29,8 @@ select { height:28px; }
 /* Slack 전용 : coMenuDiv는 육안으로 보이는 메뉴 여부에 사용하므로 주의 */
 .coMenuDiv, coMenuContext { width:35px;height:35px;display:flex;flex-direction:column;justify-content:center;align-items:center; }
 .coMenuImg { width:20px;height:20px;padding:6px;border-radius:8px; }
-.coMenuImg:hover, .coMenuImgSel { width:22px;height:22px;background:var(--second-color); }
+.coMenuImg:hover { width:22px;height:22px;background:var(--second-color); }
+.coMenuImgSel { width:22px;height:22px;background:dimgray; }
 .coMenuText { font-size:12px;color:var(--menu-color);font-weight:bold }
 
 /* 레이아웃 : 기본 (시작) : 그리드 메뉴처럼 좌우 윈도우사이즈를 달리해도 항상 가운데 위치하도록 함 (with #app) */
