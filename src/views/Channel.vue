@@ -116,6 +116,10 @@
         }
     }
 
+    function mouseright(row) {
+        
+    }
+
     function mouseEnter(row) {
         if (row.sel) return
         row.hover = true
@@ -196,8 +200,9 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable">
+        <div class="chan_side_main coScrollable"> <!-- @contextmenu.prevent 없이 @mousedown.right.stop.prevent 한번에 처리 -->
             <div v-for="(row, idx) in listChan" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
+                @mousedown.right.stop.prevent="() => mouseright(row)"
                 @click="(e) => chanClick(row, idx)" @mouseenter="() => mouseEnter(row)" @mouseleave="() => mouseLeave(row)">
                 <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" 
                     :class="['node', row.hover ? 'nodeHover' : '', , row.sel ? 'nodeSel' : '']">
