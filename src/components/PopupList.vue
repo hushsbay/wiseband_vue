@@ -84,8 +84,8 @@
     .v-enter-active, .v-leave-active { transition: opacity 0.5s ease; }
     .v-enter-from, .v-leave-to { opacity: 0; }
 
-    .popupMenu { /* 아래에서 없는(제외된) top or bottom을 popupPos로 표시하고 있음 */
-        width:320px;height:380px;position:fixed;left:70px;
+    .popupMenu { /* 아래 position,width,height등을 props.popupPos로 표시하고 있음
+        position:fixed;top:0px;bottom:0px;left:0px;right:0px;width:320px;height:380px;*/
         display:flex;flex-direction:column;z-index:9999;
         background:var(--menu-color);border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px var(--shadow-color)
     }

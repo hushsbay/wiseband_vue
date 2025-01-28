@@ -9,10 +9,12 @@
     const gst = GeneralStore()
     const router = useRouter()
 
-    const popupMenuOn = ref(false), popupMenuPos = ref({ top: '0px', bottom: '0px' })
+    const POPUPHEIGHT = 300
+    const popupMenuOn = ref(false) //아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top or bottom만 결정하면 됨) 
+    const popupMenuPos = ref({ position:'fixed', top:'0px', bottom:'0px', left:'70px', width:'320px', height:POPUPHEIGHT+'px' })
     const popupData = ref({ id: '', lines: false })
     const seeMore = ref(false)
-    const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel + listUnSel
+    const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel + listUnSel (더보기에서의 수식)
     let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel + listNotSeen (더보기에서의 수식이며 다른 경우는 수식이나 데이터가 다름)
 
     let prevX
@@ -68,11 +70,11 @@
         }
         popupMenuOn.value = true
         const docHeight = document.documentElement.offsetHeight
-        if (menuDiv.offsetTop > 300) {
+        if (menuDiv.offsetTop + POPUPHEIGHT > docHeight) {
             popupMenuPos.value.top = null
-            popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 150) + "px"
-        } else {
-            popupMenuPos.value.top = (menuDiv.offsetTop - 50) + "px"
+            popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 100) + "px"
+        } else { //100은 사이드메뉴아이템 높이인데 이 화면의 로직에서는 대략 산정해도 무리없음
+            popupMenuPos.value.top = (menuDiv.offsetTop - 100) + "px"
             popupMenuPos.value.bottom = null
         }
         popupData.value.id = menuDiv.id
