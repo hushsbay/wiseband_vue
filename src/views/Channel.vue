@@ -4,13 +4,18 @@
     import axios from 'axios'
 
     import GeneralStore from '/src/stores/GeneralStore.js'
-    import PopupList from "/src/components/PopupList.vue"
+    //import ContextMenu from "/src/components/ContextMenu.vue"
 
     const gst = GeneralStore()
     const router = useRouter()
 
-    const popupMenuOn = ref(false), popupMenuPos = ref({ top: '0px', bottom: '0px' })
-    const popupData = ref({ id: '', lines: false })
+    //const ctxOn = ref(false)
+    // const ctxData = ref({
+    //     ev: null, 
+    //     layout: {
+    //         position:'fixed', top:'100px', bottom:null, left:'370px', width:'320px', height:'320px'
+    //     }
+    // })
     let kind = ref('my'), listChan = ref([])
 
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
@@ -116,8 +121,9 @@
         }
     }
 
-    function mouseright(row) {
+    function mouseRight(e, row) {
         
+        gst.ctx.show(e)
     }
 
     function mouseEnter(row) {
@@ -200,11 +206,12 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable"> <!-- @contextmenu.prevent 없이 @mousedown.right.stop.prevent 한번에 처리 -->
+        <div class="chan_side_main coScrollable"> <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도
+            @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 <body>에서 막는 것으로 해결함 -->
             <div v-for="(row, idx) in listChan" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
-                @mousedown.right.stop.prevent="() => mouseright(row)"
-                @click="(e) => chanClick(row, idx)" @mouseenter="() => mouseEnter(row)" @mouseleave="() => mouseLeave(row)">
-                <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" 
+                @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" 
+                @mousedown.right="(e) => mouseRight(e, row)">
+                <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)"
                     :class="['node', row.hover ? 'nodeHover' : '', , row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM">
                         <img class="coImg14" :src="gst.html.getImageUrl(row.nodeImg)">
@@ -223,6 +230,7 @@
     <div class="chan_main" id="chan_main">
         <router-view />
     </div>
+    <!-- <context-menu :ctxData="ctxData"></context-menu> -->    
 </template>
 
 <style scoped>    

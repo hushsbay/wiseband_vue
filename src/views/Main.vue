@@ -126,7 +126,7 @@
 </script>
 
 <template>
-    <div class="coMain">
+    <div class="coMain" @click="gst.ctx.on=false">
         <div class="header">
 
         </div>

@@ -1,6 +1,6 @@
 import { ref, inject } from "vue"
 import { useRouter } from 'vue-router'
-import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시맘 사용)
+import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
 import axios from 'axios' 
 
 const GeneralStore = defineStore('General', () => {
@@ -74,6 +74,24 @@ const GeneralStore = defineStore('General', () => {
         done : "처리 완료",
         doneWithCnt : "처리 완료 : ",
         askDel : "삭제하시겠습니까?",
+    }
+
+    const ctx = { 
+
+        //Main.vue에서 <div class="coMain" @click="gst.ctx.on=false">처리하지 않으면 
+        //다른 곳을 클릭했을 때 right click한 ctx가 닫히면서 클릭한 이벤트가 바로 먹히지 않음        
+        on : false,
+        data : {
+            posX : 0,
+            posY : 0
+        },        
+        
+        show : function(e) {
+            this.data.posX = e.clientX
+            this.data.posY = e.clientY
+            this.on = true
+        }
+
     }
 
     const doc = {
@@ -373,7 +391,7 @@ const GeneralStore = defineStore('General', () => {
 
     return { 
         isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, snackBar, toast, 
-        auth, cons, doc, html, list, util
+        auth, cons, ctx, doc, html, list, util
     }
 
 })
