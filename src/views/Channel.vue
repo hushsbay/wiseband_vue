@@ -4,17 +4,11 @@
     import axios from 'axios'
 
     import GeneralStore from '/src/stores/GeneralStore.js'
+    import ContextMenu from "/src/components/ContextMenu.vue"
     
     const gst = GeneralStore()
     const router = useRouter()
 
-    //const ctxOn = ref(false)
-    // const ctxData = ref({
-    //     ev: null, 
-    //     layout: {
-    //         position:'fixed', top:'100px', bottom:null, left:'370px', width:'320px', height:'320px'
-    //     }
-    // })
     let kind = ref('my'), listChan = ref([])
 
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
@@ -122,17 +116,17 @@
 
     function mouseRight(e, row) { //row는 해당 채널 Object
         gst.ctx.menu = [
-            { id: "ctxCHanProperty", nm: "채널정보 보기", func: function(item, idx) { //item은 해당 컨텍스트 메뉴아이템
+            { nm: "채널정보 보기", func: function(item, idx) { //item은 해당 컨텍스트 메뉴아이템
                 alert(item.nm+"@@@@"+idx)
             }},
             { line: true },
-            { id: "ctxCHanCopy", nm: "복사", child: [
-                { id: "ctxCHanCopy0", nm: "채널복사", disable: true , func: function(item, idx) { 
+            { nm: "복사", child: [
+                { nm: "채널복사", disable: true , func: function(item, idx) { 
                     alert(item.nm+"####"+idx)
                 }},
-                { id: "ctxCHanCopy1", nm: "링크복사" }
+                { nm: "링크복사" }
             ]},
-            { id: "ctxCHanBookmark", nm: "즐겨찾기 설정", disable: true }
+            { nm: "즐겨찾기 설정", disable: true }
         ]
         gst.ctx.show(e)
     }
@@ -193,10 +187,6 @@
         document.removeEventListener('mouseup', mouseUpHandler)
         localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
     }
-
-    // function ctxMenuClick(row, idx) {
-    //     alert(row.nm)
-    // }
 </script>
 
 <template>
@@ -244,7 +234,8 @@
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main">
         <router-view />
-    </div>       
+    </div>
+    <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    
 </template>
 
 <style scoped>    

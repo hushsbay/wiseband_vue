@@ -81,10 +81,12 @@ const GeneralStore = defineStore('General', () => {
         //Main.vue에서 <div class="coMain" @click="gst.ctx.on=false">처리하지 않으면 
         //다른 곳을 클릭했을 때 right click한 ctx가 닫히면서 클릭한 이벤트가 바로 먹히지 않음        
         on : false,
+
         data : {
             posX : 0,
-            posY : 0
+            posY : 0,
         },
+
         menu : [],    
         
         show : function(e) {

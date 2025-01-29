@@ -1,20 +1,34 @@
 <script setup>
-    import { ref, watch } from 'vue' 
+    import { ref, watch, nextTick } from 'vue' 
 
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
     const emits = defineEmits(["ev-menu-click"])
 
-    let ctxStyle = ref({})
+    let ctxStyle = ref({}) //Parent 스타일
     let ctxChildOn = ref(false), ctxChildStyle = ref({}), ctxChildMenu = ref([])
 
     watch([gst.ctx], async () => {
         if (!gst.ctx.on) ctxChildOn.value = false
-        const posX = gst.ctx.data.posX
-        const posY = gst.ctx.data.posY
-        ctxStyle.value.left = posX + "px"
-        ctxStyle.value.top = posY + "px"  
+        let posX = gst.ctx.data.posX
+        let posY = gst.ctx.data.posY
+        await nextTick()
+        const docWidth = document.documentElement.offsetWidth
+        const docHeight = document.documentElement.offsetHeight
+        let ctxParent = document.getElementById('ctxParent')
+        const pWidth = ctxParent.offsetWidth
+        const pHeight = ctxParent.offsetHeight
+        if (posX + pWidth > docWidth) {
+            ctxStyle.value.left = (posX - pWidth) + "px"
+        } else {
+            ctxStyle.value.left = posX + "px"
+        }
+        if (posY + pHeight > docHeight) {
+            ctxStyle.value.top = (posY - pHeight) + "px"
+        } else {
+            ctxStyle.value.top = posY + "px"
+        }
     }, { immediate: true, deep: true })
     
     function rowClick(row, idx) {
@@ -28,31 +42,30 @@
             ctxChildOn.value = false
             gst.ctx.on = false //props가 아님. readonly도 아님
             emits("ev-menu-click", row, idx)
-        }
-        
+        }        
     }
 </script>
 
 <template>
-    <Transition>
-        <div v-show="gst.ctx.on" class="popupMenu" style="position:fixed;z-index:9999" :style="ctxStyle">
-            <div style="width:calc(100% - 12px);height:30px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border-color);background:white">
-                <div style="font-weight:bold">더보기</div>
-                <div>설정</div>
-            </div>
-            <div style="width:100%;display:flex;flex-direction:column;"><!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
-                <div v-for="(row, idx) in gst.ctx.menu" :id="row.id" class="coHover" 
-                    :style="{ color: row.disable ? 'dimgray' : '' }" @click.stop="() => rowClick(row, idx)">
-                    <div v-if="row.line">----------</div>
-                    <div v-if="row.child">{{ row.nm }} ></div>
-                    <div v-else>{{ row.nm }}</div>                    
-                </div> 
-            </div>
+    <div v-show="gst.ctx.on" id="ctxParent" class="popupMenu" 
+        style="position:fixed;min-width:200px;max-width:400px;z-index:9999" :style="ctxStyle">
+        <div style="width:calc(100% - 12px);height:30px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border-color);background:white">
+            <div style="font-weight:bold">더보기</div>
+            <div>설정</div>
         </div>
-    </Transition>
-    <div v-show="ctxChildOn" class="popupMenu" style="position:fixed" :style="ctxChildStyle">
         <div style="width:100%;display:flex;flex-direction:column;"><!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
-            <div v-for="(row, idx) in ctxChildMenu" :id="row.id" class="coHover" 
+            <div v-for="(row, idx) in gst.ctx.menu" class="coHover" 
+                :style="{ color: row.disable ? 'dimgray' : '' }" @click.stop="() => rowClick(row, idx)">
+                <div v-if="row.line">----------</div>
+                <div v-if="row.child">{{ row.nm }} ></div>
+                <div v-else>{{ row.nm }}</div>                    
+            </div> 
+        </div>
+    </div>
+    <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" 
+        style="position:fixed;min-width:200px;max-width:400px;" :style="ctxChildStyle">
+        <div style="width:100%;display:flex;flex-direction:column;"><!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
+            <div v-for="(row, idx) in ctxChildMenu" class="coHover" 
                 :style="{ color: row.disable ? 'dimgray' : '' }" @click.stop="() => rowClick(row, idx)">
                 <div v-if="row.line">----------</div>
                 <div v-if="row.child">{{ row.nm }} ></div>
@@ -63,9 +76,6 @@
 </template>
 
 <style scoped>
-
-    .v-enter-active, .v-leave-active { transition: opacity 0.5s ease; }
-    .v-enter-from, .v-leave-to { opacity: 0; }
 
     .popupMenu {
         display:flex;flex-direction:column;
