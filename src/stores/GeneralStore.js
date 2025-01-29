@@ -84,12 +84,18 @@ const GeneralStore = defineStore('General', () => {
         data : {
             posX : 0,
             posY : 0
-        },        
+        },
+        menu : [],    
         
         show : function(e) {
             this.data.posX = e.clientX
             this.data.posY = e.clientY
             this.on = true
+        },
+
+        proc : function(row, idx) {
+            if (typeof row.func != "function") return
+            row.func(row, idx)
         }
 
     }

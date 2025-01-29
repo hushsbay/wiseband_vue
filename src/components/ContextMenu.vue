@@ -4,28 +4,33 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
-    //const props = defineProps({ ctxOn: Boolean, ctxData: Object })
-    //const emits = defineEmits(["ev-click", "ev-out"])
+    const emits = defineEmits(["ev-menu-click"])
 
-    //const borderLineBottom = ref('none') //기본값
-    // if (props.popupData.lines) borderLineBottom.value = "1px solid var(--border-color)"
-    
     let ctxStyle = ref({})
+    let ctxChildOn = ref(false), ctxChildStyle = ref({}), ctxChildMenu = ref([])
 
-    watch(gst.ctx.data, async () => {
+    watch([gst.ctx], async () => {
+        if (!gst.ctx.on) ctxChildOn.value = false
         const posX = gst.ctx.data.posX
         const posY = gst.ctx.data.posY
         ctxStyle.value.left = posX + "px"
-        ctxStyle.value.top = posY + "px"        
+        ctxStyle.value.top = posY + "px"  
     }, { immediate: true, deep: true })
     
-    // function listRowClick(e, row, idx) { //alert(e.target.id + "===" + idx + "===" + JSON.stringify(row))
-    //     emits("ev-click", props.popupData.id, row, idx)
-    // }
-
-    // function focusOut() {
-    //     emits("ev-out")
-    // }
+    function rowClick(row, idx) {
+        if (row.line || row.disable) return
+        if (row.child) {
+            ctxChildMenu.value = row.child
+            ctxChildStyle.value.left = '300px'
+            ctxChildStyle.value.top = '300px'
+            ctxChildOn.value = true
+        } else {
+            ctxChildOn.value = false
+            gst.ctx.on = false //props가 아님. readonly도 아님
+            emits("ev-menu-click", row, idx)
+        }
+        
+    }
 </script>
 
 <template>
@@ -35,31 +40,26 @@
                 <div style="font-weight:bold">더보기</div>
                 <div>설정</div>
             </div>
-            <div style="width:100%;display:flex;flex-direction:column;">
-                <!-- <div v-for="(row, idx) in list" @click="(e) => listRowClick(e, row, idx)" :id="row.ID" class="coHover" 
-                    style="width:100%;min-height:30px;display:flex;align-items:center"
-                    :style="{ borderBottom: borderLineBottom }">
-                    <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
-                        <div class="coMenuContext">
-                            <img class="coMenuImg" style="background:var(--second-color)" :src="gst.html.getImageUrl(row.IMG)">
-                        </div>
-                    </div>
-                    <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column">
-                        <div style="width:100%;display:flex;align-items:center">
-                            <div class="coDotDot" style="margin-top:7px;font-weight:bold">
-                                {{ row.NM }}
-                            </div>
-                        </div>        
-                        <div style="width:100%;display:flex;align-items:center">
-                            <div class="coDotDot" style="margin-top:3px;font-size:12px">
-                                {{ row.RMKS }}
-                            </div>
-                        </div>        
-                    </div>                
-                </div> -->
+            <div style="width:100%;display:flex;flex-direction:column;"><!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
+                <div v-for="(row, idx) in gst.ctx.menu" :id="row.id" class="coHover" 
+                    :style="{ color: row.disable ? 'dimgray' : '' }" @click.stop="() => rowClick(row, idx)">
+                    <div v-if="row.line">----------</div>
+                    <div v-if="row.child">{{ row.nm }} ></div>
+                    <div v-else>{{ row.nm }}</div>                    
+                </div> 
             </div>
         </div>
     </Transition>
+    <div v-show="ctxChildOn" class="popupMenu" style="position:fixed" :style="ctxChildStyle">
+        <div style="width:100%;display:flex;flex-direction:column;"><!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
+            <div v-for="(row, idx) in ctxChildMenu" :id="row.id" class="coHover" 
+                :style="{ color: row.disable ? 'dimgray' : '' }" @click.stop="() => rowClick(row, idx)">
+                <div v-if="row.line">----------</div>
+                <div v-if="row.child">{{ row.nm }} ></div>
+                <div v-else>{{ row.nm }}</div>                    
+            </div> 
+        </div>
+    </div>
 </template>
 
 <style scoped>
