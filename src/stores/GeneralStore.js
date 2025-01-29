@@ -1,4 +1,4 @@
-import { ref, inject } from "vue"
+import { ref, inject, nextTick } from "vue"
 import { useRouter } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
 import axios from 'axios' 
@@ -85,11 +85,17 @@ const GeneralStore = defineStore('General', () => {
         data : {
             posX : 0,
             posY : 0,
+            type : null, //클릭 Target에서 LB(Left Bottom), LT(Left Top), RB(Right Bottom), RT(Right Top)
+            parentX : 0,
+            parentY : 0,
+            parentWidth : 0
         },
 
         menu : [],    
         
-        show : function(e) {
+        show : async function(e) {
+            this.on = false //child 메뉴 없애지 않으면 child 떠 있는채로 right click 먹히게 됨
+            await nextTick()
             this.data.posX = e.clientX
             this.data.posY = e.clientY
             this.on = true

@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, watch } from 'vue' 
+    import { ref, onMounted, watch, nextTick } from 'vue' 
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -114,20 +114,20 @@
         }
     }
 
-    function mouseRight(e, row) { //row는 해당 채널 Object
+    async function mouseRight(e, row) { //row는 해당 채널 Object
         gst.ctx.menu = [
             { nm: "채널정보 보기", func: function(item, idx) { //item은 해당 컨텍스트 메뉴아이템
                 alert(item.nm+"@@@@"+idx)
             }},
             { line: true },
             { nm: "복사", child: [
-                { nm: "채널복사", disable: true , func: function(item, idx) { 
+                { nm: "채널복사", disable: true, func: function(item, idx) { 
                     alert(item.nm+"####"+idx)
                 }},
                 { nm: "링크복사" }
             ]},
             { nm: "즐겨찾기 설정", disable: true }
-        ]
+        ]        
         gst.ctx.show(e)
     }
 
