@@ -88,7 +88,8 @@ const GeneralStore = defineStore('General', () => {
             type : null, //클릭 Target에서 LB(Left Bottom), LT(Left Top), RB(Right Bottom), RT(Right Top)
             parentX : 0,
             parentY : 0,
-            parentWidth : 0
+            parentWidth : 0,
+            header : '', //v-html로 받기
         },
 
         menu : [],    

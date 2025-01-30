@@ -10,7 +10,7 @@
   --menu-color:white;
   --shadow-color:gray;
   --footer-notify-color:beige;
-  --bottom-color:whitesmoke;  
+  --bottom-color:whitesmoke; /* 컨텍스트 메뉴에도 사용함 */  
 }
 
 html, body { 

@@ -53,9 +53,9 @@
             ctxChildStyle.value.left = (posX + gst.ctx.data.parentWidth + 3) +"px"
         }
         if (gst.ctx.data.type.endsWith("B")) {
-            ctxChildStyle.value.top = (posY - pHeight + 10) + "px"
+            ctxChildStyle.value.top = (posY - pHeight + 20) + "px"
         } else { //T
-            ctxChildStyle.value.top = (posY - 10) + "px"
+            ctxChildStyle.value.top = (posY - 20) + "px"
         }
     }, { immediate: true, deep: true })
     
@@ -73,40 +73,65 @@
     }
 </script>
 
-<template>
-    <div v-show="gst.ctx.on" id="ctxParent" class="popupMenu" 
-        style="position:fixed;min-width:150px;max-width:350px;z-index:9999" :style="ctxStyle">
-        <div style="width:calc(100% - 12px);height:30px;display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border-color);background:white">
-            <div style="font-weight:bold">더보기</div>
-            <div>설정</div>
+<template> <!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
+    <div v-show="gst.ctx.on" id="ctxParent" class="popupMenu" :style="ctxStyle">
+        <div v-if="gst.ctx.data.header" class="popupHeader">
+            <div v-html="gst.ctx.data.header" class="popupHeaderItem coDotDot"></div>
         </div>
-        <div style="width:100%;display:flex;flex-direction:column;"><!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
-            <div v-for="(row, idx) in gst.ctx.menu" class="coHover" 
-                :style="{ color: row.disable ? 'dimgray' : '' }" @click.stop="(e) => rowClick(e, row, idx)">
-                <div v-if="row.line">----------</div>
-                <div v-if="row.child">{{ row.nm }} ></div>
-                <div v-else>{{ row.nm }}</div>                    
-            </div> 
-        </div>
+        <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '' }" 
+            @click.stop="(e) => rowClick(e, row, idx)">
+            <div v-if="row.child" class="popupMenuItemChild coDotDot">
+                <div style="display:flex;align-items:center">
+                    <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
+                    <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
+                </div>
+                <div style="color:dimgray;margin-right:8px">></div>
+            </div>
+            <div v-else class="popupMenuItem coDotDot">
+                <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
+                <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
+            </div>                    
+        </div> 
     </div>
-    <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" 
-        style="position:fixed;min-width:150px;max-width:350px;" :style="ctxChildStyle">
-        <div style="width:100%;display:flex;flex-direction:column;"><!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
-            <div v-for="(row, idx) in ctxChildMenu" class="coHover" 
-                :style="{ color: row.disable ? 'dimgray' : '' }" @click.stop="(e) => rowClick(e, row, idx)">
-                <div v-if="row.line">----------</div>
-                <div v-if="row.child">{{ row.nm }} ></div>
-                <div v-else>{{ row.nm }}</div>                    
+    <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle">
+        <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '' }" 
+            @click.stop="(e) => rowClick(e, row, idx)">
+            <div class="popupMenuItem coDotDot">
+                <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
+                <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
             </div> 
-        </div>
+        </div> 
     </div>
 </template>
 
 <style scoped>
 
     .popupMenu {
+        position:fixed;min-width:150px;max-width:350px;z-index:9999;
         display:flex;flex-direction:column;
-        background:var(--menu-color);border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px var(--shadow-color)
+        background:var(--bottom-color);border:1px solid var(--border-color);border-radius:5px;
+        box-shadow:1px 1px 1px var(--shadow-color)
+    }
+
+    .popupHeader {
+        width:calc(100% - 12px);height:30px;padding:6px;
+        display:flex;justify-content:space-between;align-items:center;
+        border-bottom:1px solid var(--border-color)
+    }
+
+    .popupHeaderItem {
+        display:flex;align-items:center;
+        color:var(--primary-color);font-weight:bold
+    }
+
+    .popupMenuItem {
+        width:calc(100% - 8px);height:35px;padding-left:8px;
+        display:flex;align-items:center;border-bottom:1px solid var(--border-color)
+    }
+
+    .popupMenuItemChild {
+        width:calc(100% - 8px);height:35px;padding-left:8px;
+        display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color)
     }
 
 </style>
