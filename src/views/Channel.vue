@@ -117,23 +117,30 @@
     }
 
     async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        if (!row.CHANID) return
-        const img = row.nodeImg.replace(LIGHT, DARK)
-        gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + 
-                              "<span>" + row.CHANNM + "</span>"
-        gst.ctx.menu = [
-            { nm: "채널정보 보기", color: "darkgreen", func: function(item, idx) { //item은 해당 컨텍스트 메뉴아이템
-                alert(item.nm+"@@@@"+idx)
-            }},
-            { nm: "복사", img: DARK + "other.png", child: [
-                { nm: "채널복사", disable: true, func: function(item, idx) { 
-                    alert(item.nm+"####"+idx)
+        const img = row.nodeImg.replace(LIGHT, DARK)        
+        const nm = !row.CHANID ? row.GR_NM : row.CHANNM
+        gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
+        if (!row.CHANID) {            
+            gst.ctx.menu = [
+                { nm: "사용자 초대" },
+                { nm: "채널 생성" },
+                { nm: "환경 설정" }
+            ]
+        } else {
+            gst.ctx.menu = [
+                { nm: "채널정보 보기", color: "darkgreen", func: function(item, idx) {
+                    alert(item.nm+"@@@@"+idx)
                 }},
-                { nm: "링크복사", img: DARK + "other.png", color: "red" }
-            ]},
-            { nm: "즐겨찾기 설정", disable: true },
-            { nm: "채널 나가기", color: "red" }
-        ]
+                { nm: "복사", img: DARK + "other.png", child: [
+                    { nm: "채널 복사", disable: true, func: function(item, idx) { 
+                        alert(item.nm+"####"+idx)
+                    }},
+                    { nm: "링크 복사", img: DARK + "other.png", color: "red" }
+                ]},
+                { nm: "즐겨찾기 설정", disable: true },
+                { nm: "채널 나가기", color: "red" }
+            ]            
+        }
         gst.ctx.show(e)
     }
 
