@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, watch, nextTick } from 'vue' 
+    import { ref, onMounted, watch } from 'vue' 
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -8,6 +8,8 @@
     
     const gst = GeneralStore()
     const router = useRouter()
+
+    const LIGHT = "whitesmoke_", DARK = "violet_"
 
     let kind = ref('my'), listChan = ref([])
 
@@ -20,7 +22,7 @@
             if (lastSelKind) kind.value = lastSelKind
             await getList()
             mainSide = document.getElementById('main_side') //Main.vue 참조
-            resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조
+            resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
             leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
             rightSide = document.getElementById('chan_main') //resizer.nextElementSibling
         } catch (ex) {
@@ -59,15 +61,15 @@
         }
     }
 
-    function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않음 (따라서 png로 별도 이미지 교체로 해결함)
+    function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
         if (item.DEPTH == "1") {
-            item.nodeImg = item.exploded ? "whitesmoke_expanded.png" : "whitesmoke_collapsed.png"
+            item.nodeImg = item.exploded ? LIGHT + "expanded.png" : LIGHT + "collapsed.png"
             item.notioffImg = ""
             item.bookmarkImg = ""
             item.otherImg = ""
         } else {
             if (item.CHANID == null) {
-                item.nodeImg = "whitesmoke_channel.png"
+                item.nodeImg = LIGHT + "channel.png"
                 item.notioffImg = ""
                 item.bookmarkImg = ""
                 item.otherImg = ""
@@ -77,7 +79,7 @@
                 item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
                 item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
                 item.otherImg = (item.OTHER == "other") ? "other.png" : ""
-                const color = item.sel ? "violet_" : "whitesmoke_"
+                const color = item.sel ? DARK : LIGHT
                 item.nodeImg = color + item.nodeImg
                 if (item.notioffImg) item.notioffImg = color + item.notioffImg
                 if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
@@ -114,20 +116,20 @@
         }
     }
 
-    async function mouseRight(e, row) { //row는 해당 채널 Object
+    async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         if (!row.CHANID) return
-        const img = row.nodeImg.replace('whitesmoke_', 'violet_')
+        const img = row.nodeImg.replace(LIGHT, DARK)
         gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + 
                               "<span>" + row.CHANNM + "</span>"
         gst.ctx.menu = [
             { nm: "채널정보 보기", color: "darkgreen", func: function(item, idx) { //item은 해당 컨텍스트 메뉴아이템
                 alert(item.nm+"@@@@"+idx)
             }},
-            { nm: "복사", img: "violet_other.png", child: [
+            { nm: "복사", img: DARK + "other.png", child: [
                 { nm: "채널복사", disable: true, func: function(item, idx) { 
                     alert(item.nm+"####"+idx)
                 }},
-                { nm: "링크복사", img: "violet_other.png", color: "red" }
+                { nm: "링크복사", img: DARK + "other.png", color: "red" }
             ]},
             { nm: "즐겨찾기 설정", disable: true },
             { nm: "채널 나가기", color: "red" }
@@ -135,19 +137,19 @@
         gst.ctx.show(e)
     }
 
-    function mouseEnter(row) {
+    function mouseEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
         if (row.sel) return
         row.hover = true
         procChanRowImg(row)
     }
 
-    function mouseLeave(row) {
+    function mouseLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
         if (row.sel) return
         row.hover = false
         procChanRowImg(row)
     }
 
-    function procExpCol(type) {
+    function procExpCol(type) { //모두필치기/모두접기
         const exploded = (type == "E") ? true : false
         for (let i = 0; i < listChan.value.length; i++) {
             listChan.value[i].exploded = exploded
@@ -159,6 +161,7 @@
         alert('newMsg')
     }
 
+    //////////////////////////////////////마우스다운후 채널바 리사이징
     function mouseDownHandler(e) {
         posX = e.clientX//마우스 위치 X값
         leftWidth = leftSide.getBoundingClientRect().width
@@ -191,6 +194,7 @@
         document.removeEventListener('mouseup', mouseUpHandler)
         localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
     }
+    //////////////////////////////////////마우스다운후 채널바 리사이징
 </script>
 
 <template>
@@ -205,23 +209,21 @@
             </div>
             <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px;" @click="procExpCol('C')">
-                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_collapseall.png')" title="모두접기기">
+                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'collapseall.png')" title="모두접기기">
                 </div>
                 <div style="padding:5px;border-radius:8px;" @click="procExpCol('E')">
-                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_expandall.png')" title="모두펼치기">
+                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'expandall.png')" title="모두펼치기">
                 </div>
                 <div style="padding:5px;border-radius:8px;" @click="newMsg">
-                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_compose.png')" title="새메시지">
+                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'compose.png')" title="새메시지">
                 </div>
             </div>
         </div>
         <div class="chan_side_main coScrollable"> <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도
-            @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 <body>에서 막는 것으로 해결함 -->
+            @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 index.html <body>에서 막는 것으로 해결 -->
             <div v-for="(row, idx) in listChan" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
-                @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" 
-                @mousedown.right="(e) => mouseRight(e, row)">
-                <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)"
-                    :class="['node', row.hover ? 'nodeHover' : '', , row.sel ? 'nodeSel' : '']">
+                @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', , row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM">
                         <img class="coImg14" :src="gst.html.getImageUrl(row.nodeImg)">
                         {{ row.DEPTH == '1' ? row.GR_NM : row.CHANNM }}
@@ -269,7 +271,7 @@
     .nodeHover { background:var(--second-hover-color); }
     .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
     .resizer {
-        background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0*/
+        background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
     }
     .chan_main {
         width:100%;height:100%;display:flex;
