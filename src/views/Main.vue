@@ -10,8 +10,8 @@
     const router = useRouter()
 
     const POPUPHEIGHT = 300
-    const popupMenuOn = ref(false) //아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top or bottom만 결정하면 됨) 
-    const popupMenuPos = ref({ position:'fixed', top:'0px', bottom:'0px', left:'70px', width:'320px', height:POPUPHEIGHT+'px' })
+    const popupMenuOn = ref(false) //아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top만 결정하면 됨) 
+    const popupMenuPos = ref({ top:'0px', bottom:'0px', height:POPUPHEIGHT+'px' })
     const popupData = ref({ id: '', lines: false })
     const seeMore = ref(false)
     const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel + listUnSel (더보기에서의 수식)
@@ -44,14 +44,14 @@
         listNotSeen.value = []
         const sideTop = document.querySelector('#sideTop')
         const sizeH = sideTop.offsetTop + sideTop.offsetHeight
-        let targetAll = document.querySelectorAll('.cntTarget') //console.log(targetAll.length+"@@@")
+        let targetAll = document.querySelectorAll('.cntTarget') //더보기 제외 console.log(targetAll.length+"@@@")
         targetAll.forEach(menuDiv => {
-            if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) {
+            if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) { //사이드바에서 육안으로 안보이면 listNotSeen에 추가
                 const found = listAll.value.find((item) => item.ID == menuDiv.id.replace("Target", ""))
                 if (found) listNotSeen.value.push(found) //console.log(menuDiv.id+"@@@@")
             }
         })        
-        if (listUnSel.value.length > 0 || listNotSeen.value.length > 0) { //(사용자가 원래 선택하지 않은 메뉴 포함해) (화면이 작아진 후) 눈에 안 보이는 메뉴가 있으면 더보기 버튼 필요
+        if (listUnSel.value.length > 0 || listNotSeen.value.length > 0) { //(사용자가 원래 선택하지 않은 메뉴 포함해) (화면이 작아진 후) 안 보이는 메뉴가 있으면 더보기 버튼 필요
             seeMore.value = true
         } else {
             seeMore.value = false
@@ -93,11 +93,12 @@
     }
 
     //더보기 메뉴는 로컬에 저장하기 않는 전제임 (더보기 누르면 나오는 목록 클릭시 저장)
-    //row까지 받는 것은 좀 과하다 싶지만 일단 개발 편의 고려해 처리하고자 함
+    //row까지 argument로 받는 것은 좀 과하다 싶지만 일단 개발 편의 고려해 처리하고자 함
     function clickPopupRow(popupId, row, idx) {
         popupMenuOn.value = false
         const id = (popupId == "mnuSeeMore") ? row.ID : popupId
-        const obj = { row: row, idx: idx }; procMenu[id].call(null, obj)
+        const obj = { row: row, idx: idx }; 
+        procMenu[id].call(null, obj)
         for (let i = 0; i < listSel.value.length; i++) {
             if (listSel.value[i].sel) listSel.value[i].sel = false
         }
@@ -138,9 +139,7 @@
                             <div :id="row.ID" class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
                                 <img :class="['coMenuImg', row.sel ? 'coMenuImgSel' : '']" :src="gst.html.getImageUrl(row.IMG)">
                             </div>
-                            <div class="coMenuText">
-                                {{ row.NM }}
-                            </div>
+                            <div class="coMenuText">{{ row.NM }}</div>
                         </div>                      
                     </div>
                     <div v-show="seeMore" class="sideBottom">
@@ -148,19 +147,13 @@
                             <div id="mnuSeeMore" class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
                                 <img class="coMenuImg" :src="gst.html.getImageUrl('white_option_horizontal.png')">
                             </div>
-                            <div class="coMenuText">
-                                더보기
-                            </div>
+                            <div class="coMenuText">더보기</div>
                         </div>
                     </div>
                 </div>
                 <div class="sideBottom">
-                    <div class="menu"> 
-                        <img class="menu32" :src="gst.html.getImageUrl('plus.png')">
-                    </div>
-                    <div class="menu"> 
-                        <img class="menu32" :src="gst.html.getImageUrl('user.png')">
-                    </div>
+                    <div class="menu"><img class="menu32" :src="gst.html.getImageUrl('plus.png')"></div>
+                    <div class="menu"><img class="menu32" :src="gst.html.getImageUrl('user.png')"></div>
                 </div>
             </div>
             <div class="main">
