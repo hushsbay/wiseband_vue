@@ -65,7 +65,10 @@
             listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value]
         } else {
             const found = listAll.value.find((item) => item.ID == menuDiv.id)
-            if (!found || found.POPUP != "Y") return //팝업이 뜨지 않음
+            if (!found || found.POPUP != "Y") {
+                popupMenuOn.value = false //혹시 떠 있을 팝업 제거
+                return
+            }
             listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
         }
         popupMenuOn.value = true
