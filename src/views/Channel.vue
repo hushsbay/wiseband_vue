@@ -89,30 +89,35 @@
     }
 
     function chanClick(row, idx) {
-        if (row.DEPTH == "1") { //접기 or 펼치기
-            if (row.exploded) {
-                row.exploded = false
-            } else {
-                row.exploded = true
-            }
-            procChanRowImg(row)
-            for (let i = idx + 1; i < listChan.value.length; i++) {
-                if (listChan.value[i].DEPTH == "1") break
-                listChan.value[i].exploded = row.exploded
-            }
-            if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
-        } else {
-            for (let i = 0; i < listChan.value.length; i++) {
-                if (listChan.value[i].DEPTH == "2") {
-                    listChan.value[i].sel = false
-                    listChan.value[i].hover = false
-                    procChanRowImg(listChan.value[i])
+        try {
+            if (row.DEPTH == "1") { //접기 or 펼치기
+                if (row.exploded) {
+                    row.exploded = false
+                } else {
+                    row.exploded = true
                 }
+                procChanRowImg(row)
+                for (let i = idx + 1; i < listChan.value.length; i++) {
+                    if (listChan.value[i].DEPTH == "1") break
+                    listChan.value[i].exploded = row.exploded
+                }
+                if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
+            } else {
+                for (let i = 0; i < listChan.value.length; i++) {
+                    if (listChan.value[i].DEPTH == "2") {
+                        listChan.value[i].sel = false
+                        listChan.value[i].hover = false
+                        procChanRowImg(listChan.value[i])
+                    }
+                }
+                row.sel = true
+                procChanRowImg(row)
+                localStorage.wiseband_lastsel_grid = row.GR_ID
+                localStorage.wiseband_lastsel_chanid = row.CHANID
+                router.push({ path : '/main/channel/chan_body' })
             }
-            row.sel = true
-            procChanRowImg(row)
-            localStorage.wiseband_lastsel_grid = row.GR_ID
-            localStorage.wiseband_lastsel_chanid = row.CHANID
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 

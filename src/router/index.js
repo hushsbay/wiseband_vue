@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '/src/views/Login.vue'
 import Main from '/src/views/Main.vue'
 import Channel from '/src/views/Channel.vue'
+import ChannelBody from '/src/views/ChannelBody.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL), //import.meta.env.BASE_URL => /로 표시됨
@@ -12,6 +13,11 @@ const router = createRouter({
             redirect: '/main'
         },
         {
+            path: '/login',
+            name: 'login',
+            component: Login
+        },
+        {
             path: '/main',
             name: 'main',
             component: Main,
@@ -19,20 +25,15 @@ const router = createRouter({
                 {                    
                     path: 'channel',
                     component: Channel,
-                //   children: [
-                //         {                    
-                //             path: 'menu0002_right',
-                //             component: Menu0002Right,
-                //         }
-                //     ],
+                    children: [
+                        {                    
+                            path: 'chan_body',
+                            component: ChannelBody
+                        }
+                    ]
                 }
-            ],
-        },
-        {
-            path: '/login',
-            name: 'login',
-            component: Login
-        }
+            ]
+        }        
     ]
 })
 
