@@ -50,7 +50,7 @@
                 <span style="margin-left:5px">메시지</span> 
             </div>
             <div class="spanHover" style="display:flex;align-items:center;padding:5px 8px">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
         </div>
