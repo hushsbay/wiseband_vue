@@ -16,17 +16,17 @@
         try {
             chanid.value = route.params.chanid
             grid.value = route.params.grid
-            alert(chanid.value+"@@"+grid.value)
+            //alert(chanid.value+"@@"+grid.value)
             await getList()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
-    watch([chanid, grid], async () => {
-        alert(chanid.value+"##"+grid.value)
-        await getList() 
-    }) //, { immediate: true }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    // watch([chanid, grid], async () => {
+    //     alert(chanid.value+"##"+grid.value)
+    //     await getList() 
+    // }) //, { immediate: true }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
         try {

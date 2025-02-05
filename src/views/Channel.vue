@@ -256,7 +256,7 @@
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main">
-        <router-view />
+        <router-view :key="$route.fullPath"></router-view>
     </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    
 </template>
