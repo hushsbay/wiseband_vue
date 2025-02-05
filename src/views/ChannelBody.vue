@@ -1,17 +1,22 @@
 <script setup>
     import { ref, onMounted, watch } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     
     const gst = GeneralStore()
+    const route = useRoute()
     const router = useRouter()
+
+    let grid, chanid
 
     onMounted(async () => { 
         try {
-            
+            grid = route.query.grid
+            chanid = route.query.chanid
+            await getList()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -23,8 +28,10 @@
     // }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
-        try {            
-            
+        try {
+            const res = await axios.post("/chanmsg/qry", { grid : grid, chanid : chanid  })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }

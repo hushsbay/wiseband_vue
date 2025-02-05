@@ -114,7 +114,8 @@
                 procChanRowImg(row)
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID
-                router.push({ path : '/main/channel/chan_body' })
+                debugger
+                router.push({ path : '/main/channel/chan_body', query : { grid: row.GR_ID, chanid: row.CHANID }})
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
