@@ -19,8 +19,11 @@
     onMounted(async () => { 
         try {
             const lastSelKind = localStorage.wiseband_lastsel_kind
-            if (lastSelKind) kind.value = lastSelKind
-            await getList()
+            if (lastSelKind) {
+                kind.value = lastSelKind //watch에서 getList() 실행
+            } else {
+                await getList()
+            }
             mainSide = document.getElementById('main_side') //Main.vue 참조
             resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
             leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
@@ -114,7 +117,6 @@
                 procChanRowImg(row)
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID
-                debugger
                 router.push({ path : '/main/channel/chan_body', query : { grid: row.GR_ID, chanid: row.CHANID }})
             }
         } catch (ex) {

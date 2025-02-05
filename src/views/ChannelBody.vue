@@ -31,6 +31,7 @@
         try {
             const res = await axios.post("/chanmsg/qry", { grid : grid, chanid : chanid  })
             const rs = gst.util.chkAxiosCode(res.data)
+            debugger
             if (!rs) return            
         } catch (ex) {
             gst.util.showEx(ex, true)
