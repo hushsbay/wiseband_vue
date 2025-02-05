@@ -10,14 +10,14 @@
     const route = useRoute()
     const router = useRouter()
 
-    let grid = ref(''), chanid = ref('')
+    let grid = ref(''), chanid = ref(''), grnm = ref(''), channm = ref('')
 
     onMounted(async () => { 
         try {
             chanid.value = route.params.chanid
             grid.value = route.params.grid
             //alert(chanid.value+"@@"+grid.value)
-            await getList()
+            await getList()            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -34,9 +34,16 @@
             const rs = gst.util.chkAxiosCode(res.data)
             debugger
             if (!rs) return            
+            grnm.value = rs.data.chanmst.GR_NM
+            channm.value = rs.data.chanmst.CHANNM
+            document.title = channm.value
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    }
+
+    function test() {
+        history.go(-1)
     }
 </script>
 
@@ -44,9 +51,9 @@
     <div class="chan_center">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                0000000   
+                {{ grnm }} >> {{ channm }} ( {{ grid }} >> {{ chanid }} )
             </div>
-            <div class="chan_center_header_right">
+            <div class="chan_center_header_right" @click="test">
                 <span class="topMenu" style="padding:5px 10px;border:1px solid lightgray">멤버 11</span>
                 <span class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                     <img class="coImg20" :src="gst.html.getImageUrl('dimgray_option_vertical.png')">

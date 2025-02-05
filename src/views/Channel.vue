@@ -19,8 +19,9 @@
     onMounted(async () => { 
         try {
             const lastSelKind = localStorage.wiseband_lastsel_kind
+            debugger
             if (lastSelKind) {
-                kind.value = lastSelKind //watch에서 getList() 실행
+                //@kind.value = lastSelKind //watch에서 getList() 실행
             } else {
                 await getList()
             }
@@ -34,8 +35,8 @@
     })
 
     watch(kind, async () => {
-        localStorage.wiseband_lastsel_kind = kind.value
-        await getList() 
+        //@localStorage.wiseband_lastsel_kind = kind.value
+        //@await getList() 
     }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
