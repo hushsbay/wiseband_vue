@@ -27,7 +27,8 @@ const router = createRouter({
                     component: Channel,
                     children: [
                         {                    
-                            path: 'chan_body',
+                            path: 'chan_body/:chanid/:grid',
+                            name: 'chan_body', //path와 param는 같이 사용하지 못하므로 name 이용해야 함
                             component: ChannelBody
                         }
                     ]

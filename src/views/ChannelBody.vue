@@ -10,26 +10,27 @@
     const route = useRoute()
     const router = useRouter()
 
-    let grid, chanid
+    let grid = ref(''), chanid = ref('')
 
     onMounted(async () => { 
         try {
-            grid = route.query.grid
-            chanid = route.query.chanid
+            chanid.value = route.params.chanid
+            grid.value = route.params.grid
+            alert(chanid.value+"@@"+grid.value)
             await getList()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
-    // watch(kind, async () => {
-    //     localStorage.wiseband_lastsel_kind = kind.value
-    //     await getList() 
-    // }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    watch([chanid, grid], async () => {
+        alert(chanid.value+"##"+grid.value)
+        await getList() 
+    }) //, { immediate: true }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
         try {
-            const res = await axios.post("/chanmsg/qry", { grid : grid, chanid : chanid  })
+            const res = await axios.post("/chanmsg/qry", { grid : grid.value, chanid : chanid.value })
             const rs = gst.util.chkAxiosCode(res.data)
             debugger
             if (!rs) return            

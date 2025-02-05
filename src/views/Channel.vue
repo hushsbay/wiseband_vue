@@ -117,7 +117,9 @@
                 procChanRowImg(row)
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID
-                router.push({ path : '/main/channel/chan_body', query : { grid: row.GR_ID, chanid: row.CHANID }})
+                //alert(row.CHANID+"==="+row.CHANNM)
+                //router.push({ path : '/main/channel/chan_body', query : { grid: row.GR_ID, chanid: row.CHANID }})
+                router.push({ name : 'chan_body', params : { chanid: row.CHANID, grid: row.GR_ID }}) //path와 param는 같이 사용 X (name 이용)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
