@@ -161,7 +161,8 @@
             </div>
             <div class="main">
                 <div class="content">
-                    <router-view :key="$route.fullPath"></router-view>
+                    <!-- <router-view :key="$route.fullPath"></router-view> -->
+                    <router-view></router-view>
                 </div>
                 <div class="footer">
             
