@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, watch } from 'vue' 
+    import { ref, onMounted, watch, nextTick } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -32,15 +32,51 @@
         try {
             const res = await axios.post("/chanmsg/qry", { grid : grid.value, chanid : chanid.value })
             const rs = gst.util.chkAxiosCode(res.data)
-            debugger
+            //debugger
             if (!rs) return            
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             document.title = channm.value
-            msglist = rs.data.msglist            
+            msglist.value = rs.data.msglist            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    }
+
+    async function msgRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
+        // const img = row.nodeImg.replace(LIGHT, DARK)        
+        // const nm = !row.CHANID ? row.GR_NM : row.CHANNM
+        // gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
+        // if (!row.CHANID) {            
+        //     gst.ctx.menu = [
+        //         { nm: "사용자 초대" },
+        //         { nm: "채널 생성" },
+        //         { nm: "환경 설정" }
+        //     ]
+        // } else {
+        //     gst.ctx.menu = [
+        //         { nm: "채널정보 보기", color: "darkgreen", func: function(item, idx) {
+        //             alert(item.nm+"@@@@"+idx)
+        //         }},
+        //         { nm: "복사", img: DARK + "other.png", child: [
+        //             { nm: "채널 복사", disable: true, func: function(item, idx) { 
+        //                 alert(item.nm+"####"+idx)
+        //             }},
+        //             { nm: "링크 복사", img: DARK + "other.png", color: "red" }
+        //         ]},
+        //         { nm: "즐겨찾기 설정", disable: true },
+        //         { nm: "채널 나가기", color: "red" }
+        //     ]            
+        // }
+        // gst.ctx.show(e)
+    }
+
+    async function msgEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+        row.hover = true
+    }
+
+    function msgLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+        row.hover = false
     }
 
     function test() {
@@ -72,13 +108,49 @@
             </div>
         </div>
         <div class="chan_center_body">
-            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body"
-                @click="msgClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"
+                @mouseenter="msgEnter(row)" @mouseleave="msgLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
                 <div style="display:flex;align-items:center">
                     <img class="coImg32" :src="gst.html.getImageUrl('user.png')"><span style="margin-left:10px">{{ row.AUTHORNM }} {{ row.CDT }} </span>
                 </div>
                 <div style="display:flex;margin:10px">
                     <span>{{ row.BODY }}</span>
+                </div>
+                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
+                    <div v-for="(row1, idx1) in row.msgdtl" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px" :title="row1.NM">
+                        <img class="coImg18" :src="gst.html.getImageUrl('action_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT }}</span>
+                    </div>
+                    <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center" :title="row2.AUTHORNM">
+                        <img class="coImg18" :src="gst.html.getImageUrl('user.png')">
+                    </div>
+                    <div v-if="row.reply.length > 0" style="margin:0 5px;display:flex;align-items:center">
+                        댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
+                    </div>
+                </div>
+                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
+                    <div v-for="(row3, idx3) in row.msglink" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px">
+                        <a :href="row3.BODY"><span>{{ row3.BODY }}</span></a>
+                    </div>
+                </div>
+                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
+                    <div v-for="(row4, idx4) in row.msgfile" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px">
+                        <span>{{ row4.BODY }}</span>
+                    </div>
+                </div>
+                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
+                    <div v-for="(row5, idx5) in row.msgimg" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px">
+                        <img class="coImg64" :src="gst.html.getImageUrl('edms.png')">
+                    </div>
+                </div>
+                <div v-show="row.hover" class="msg_proc">
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_A.png')" title="체크중"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_C.png')" title="완료됨"></span>                    
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_Z.png')" title="제대로 완료함"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드에 댓글 달기"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_later.png')" title="나중에"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기"></span>
                 </div>
             </div>
             <div class="msg_body">
@@ -122,17 +194,7 @@
                 구름에 달 가듯이 가는 나그네 
                 구름에 달 가듯이 가는 나그네 
                 구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네
-                <div class="msg_proc">
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_checkbox.png')" title="완료됨"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_watching.png')" title="체크중"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_done.png')" title="제대로 완료함"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드에 댓글 달기"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_later.png')" title="나중에"></span>
-                    <span class="procMenu" style="margin-right:0px"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기"></span>
-                </div>
+                구름에 달 가듯이 가는 나그네                
             </div>
             <div class="msg_body">
                 메시지 테스트입니다. 5555
@@ -235,7 +297,7 @@
         position:relative;display:flex;flex-direction:column;margin:10px 0;border-bottom:1px solid lightgray
     }
     .msg_proc {
-        position:absolute;height:20px;right:15px;top:-15px;padding:5px 10px;
+        position:absolute;height:20px;right:15px;top:-5px;padding:5px 10px;z-index:9999;
         display:flex;align-items:center;
         background:white;border:1px solid lightgray;border-radius:5px
     }
