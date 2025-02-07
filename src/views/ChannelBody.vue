@@ -10,13 +10,13 @@
     const route = useRoute()
     const router = useRouter()
 
-    let grid = ref(''), chanid = ref(''), grnm = ref(''), channm = ref('')
+    let grid = ref(''), grnm = ref(''), chanid = ref(''), channm = ref('')
+    let msglist = ref([])
 
     onMounted(async () => { 
         try {
             chanid.value = route.params.chanid
             grid.value = route.params.grid
-            //alert(chanid.value+"@@"+grid.value)
             await getList()            
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -37,6 +37,7 @@
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             document.title = channm.value
+            msglist = rs.data.msglist            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -51,7 +52,7 @@
     <div class="chan_center">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                {{ grnm }} >> {{ channm }} ( {{ grid }} >> {{ chanid }} )
+                {{ grnm }} >> {{ channm }} [{{ chanid }}]
             </div>
             <div class="chan_center_header_right" @click="test">
                 <span class="topMenu" style="padding:5px 10px;border:1px solid lightgray">멤버 11</span>
@@ -71,6 +72,15 @@
             </div>
         </div>
         <div class="chan_center_body">
+            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body"
+                @click="msgClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                <div style="display:flex;align-items:center">
+                    <img class="coImg32" :src="gst.html.getImageUrl('user.png')"><span style="margin-left:10px">{{ row.AUTHORNM }} {{ row.CDT }} </span>
+                </div>
+                <div style="display:flex;margin:10px">
+                    <span>{{ row.BODY }}</span>
+                </div>
+            </div>
             <div class="msg_body">
                 메시지 테스트입니다. 1111
             </div>
@@ -206,8 +216,8 @@
         overflow:hidden
     }
     .chan_center_header_left {
-        width:70%;height:100%;display:flex;align-items:center;
-        border:0px solid red
+        width:80%;height:100%;display:flex;align-items:center;
+        font-weight:bold;border:0px solid red
     }
     .chan_center_header_right {
         width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;
@@ -222,7 +232,7 @@
         border:0px solid blue
     }
     .msg_body {
-        position:relative;display:flex;padding:5px;border-bottom:1px solid lightgray
+        position:relative;display:flex;flex-direction:column;margin:10px 0;border-bottom:1px solid lightgray
     }
     .msg_proc {
         position:absolute;height:20px;right:15px;top:-15px;padding:5px 10px;
