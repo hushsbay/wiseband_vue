@@ -120,8 +120,8 @@
             }
         },
         ["mnuDm"] : (obj) => {
-            try { //alert("mnuDm====" + obj.idx + "@@@" + JSON.stringify(obj.row))
-
+            try {
+                router.push({ path : '/main/test' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
