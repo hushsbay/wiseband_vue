@@ -1,30 +1,33 @@
 <script setup>
     import { ref, onMounted, watch } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     
     const gst = GeneralStore()
+    const route = useRoute()
     const router = useRouter()
 
     const LIGHT = "whitesmoke_", DARK = "violet_"
 
     let kind = ref('my'), listChan = ref([])
 
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
+    let chanSideWidth = '300px' //ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
     let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0 //resizing 관련
 
     onMounted(async () => { 
         try {
-            const lastSelKind = localStorage.wiseband_lastsel_kind
-            debugger
-            if (lastSelKind) {
+            document.title = "channel.vue"
+            console.log(route.fullPath+"@@@@@@@channel.vue")
+            //const lastSelKind = localStorage.wiseband_lastsel_kind
+            //debugger
+            //if (lastSelKind) {
                 //@kind.value = lastSelKind //watch에서 getList() 실행
-            } else {
-                await getList()
-            }
+            //} else {
+            //    await getList()
+            //}
             mainSide = document.getElementById('main_side') //Main.vue 참조
             resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
             leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
@@ -36,7 +39,7 @@
 
     watch(kind, async () => {
         //@localStorage.wiseband_lastsel_kind = kind.value
-        //@await getList() 
+        await getList() 
     }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
@@ -45,20 +48,20 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             listChan.value = rs.list
-            const lastSelGrid = localStorage.wiseband_lastsel_grid
-            const lastSelChanid = localStorage.wiseband_lastsel_chanid
+            //const lastSelGrid = localStorage.wiseband_lastsel_grid
+            //const lastSelChanid = localStorage.wiseband_lastsel_chanid
             listChan.value.forEach((item, index) => {
-                if (item.GR_ID == lastSelGrid) {
-                    item.exploded = true
-                    if (item.CHANID == lastSelChanid) {
-                        chanClick(item, index)
-                    } else {
-                        procChanRowImg(item)
-                    }
-                } else {
+                //if (item.GR_ID == lastSelGrid) {
+                //    item.exploded = true
+                //    if (item.CHANID == lastSelChanid) {
+                //        chanClick(item, index)
+                //    } else {
+                //        procChanRowImg(item)
+                //    }
+                //} else {
                     item.exploded = false
                     procChanRowImg(item)
-                }                
+                //}                
             })
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -105,7 +108,7 @@
                     if (listChan.value[i].DEPTH == "1") break
                     listChan.value[i].exploded = row.exploded
                 }
-                if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
+                //if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
             } else {
                 for (let i = 0; i < listChan.value.length; i++) {
                     if (listChan.value[i].DEPTH == "2") {
@@ -116,10 +119,10 @@
                 }
                 row.sel = true
                 procChanRowImg(row)
-                localStorage.wiseband_lastsel_grid = row.GR_ID
-                localStorage.wiseband_lastsel_chanid = row.CHANID
-                //alert(row.CHANID+"==="+row.CHANNM)
+                //localStorage.wiseband_lastsel_grid = row.GR_ID
+                //localStorage.wiseband_lastsel_chanid = row.CHANID
                 //router.push({ path : '/main/channel/chan_body', query : { grid: row.GR_ID, chanid: row.CHANID }})
+                console.log("router.push:" + row.CHANNM)
                 router.push({ name : 'chan_body', params : { chanid: row.CHANID, grid: row.GR_ID }}) //path와 param는 같이 사용 X (name 이용)
             }
         } catch (ex) {
@@ -210,7 +213,7 @@
         rightSide.style.removeProperty('pointer-events')
         document.removeEventListener('mousemove', mouseMoveHandler)
         document.removeEventListener('mouseup', mouseUpHandler)
-        localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
+        //localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
     }
     //////////////////////////////////////마우스다운후 채널바 리사이징
 </script>
@@ -257,6 +260,7 @@
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main">
+        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 여기 Channel.vue에서만 :key를 사용하는 이유는 ChannelBody.vue에서 설명 -->
         <router-view :key="$route.fullPath"></router-view>
     </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    

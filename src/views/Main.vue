@@ -1,12 +1,13 @@
 <script setup>
     import { ref, onMounted, nextTick } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupList from "/src/components/PopupList.vue"
 
     const gst = GeneralStore()
+    const route = useRoute()
     const router = useRouter()
 
     const POPUPHEIGHT = 300
@@ -21,6 +22,9 @@
     
     onMounted(async () => { 
         try {
+            document.title = "main.vue"
+            console.log(route.fullPath+"@@@@@@@main.vue")
+            //debugger
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return    
@@ -30,11 +34,11 @@
             window.addEventListener('resize', () => { decideSeeMore() })
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
-            const lastSelMenu = localStorage.wiseband_lastsel_menu
-            let idx = -1
-            if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
-            idx = (idx == -1) ? 0 : idx
-            sideClick(listSel.value[idx].ID, listSel.value[idx], idx)
+            //const lastSelMenu = localStorage.wiseband_lastsel_menu
+            //let idx = -1
+            //if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
+            //idx = (idx == -1) ? 0 : idx
+            //sideClick(listSel.value[idx].ID, listSel.value[idx], idx)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -106,9 +110,9 @@
             if (listSel.value[i].sel) listSel.value[i].sel = false
         }
         row.sel = true
-        if (popupId != "mnuSeeMore" && popupId != localStorage.wiseband_lastsel_menu) {
-            localStorage.wiseband_lastsel_menu = popupId
-        }
+        //if (popupId != "mnuSeeMore" && popupId != localStorage.wiseband_lastsel_menu) {
+        //    localStorage.wiseband_lastsel_menu = popupId
+        //}
     }
 
     const procMenu = { //obj.idx and obj,row
@@ -161,7 +165,7 @@
             </div>
             <div class="main">
                 <div class="content">
-                    <router-view :key="$route.fullPath"></router-view>
+                    <router-view />
                 </div>
                 <div class="footer">
             

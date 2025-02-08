@@ -13,8 +13,24 @@
     let grid = ref(''), grnm = ref(''), chanid = ref(''), channm = ref('')
     let msglist = ref([])
 
+    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Channel) > 손자(ChannelBody) 구조임
+    1. Channel.vue에서 <router-view />를 사용하면 그 자식인 여기 ChannelBody.vue가 한번만 마운트되고 
+       그 다음에 router.push해도 다시 마운트(아예 호출도) 안됨 : onMounted가 한번만 호출되고 끝.
+    2. 그런데, <router-view :key="$route.fullPath"></router-view>와 같이 :key속성을 사용하면 router.push할 때마다 다시 마운트됨
+    3. 그런데, Main.vue에서도 :key를 사용하면 Channel.vue에서 router.push할 때에도 Main.vue의 onMounted가 호출되어 문제가 됨
+    4. 따라서, 현재 구조에서는 여기 손자인 ChannelBody.vue를 호출하는 자식인 Channel.vue에서만 :key를 적용하면
+       슬랙과 똑같이 채널노드를 클릭할 때마다 라우팅되도록 할 수 있음
+       - 만일 손자 아래 증손자가 필요하고 그것도 라우팅으로 처리하려면 매우 복잡한 핸들링이 필요하므로
+       - 아예 증손자는 만들지 말든지 아니면 만들어도 라우틴이 아닌 비동기컴포넌트 호출(defineAsyncComponent)하기로 함
+       - 슬랙과 똑같이 만드는 목표이기 때문에 이런 라우팅을 했으며 그게 아니라면 애초부터 defineAsyncComponent()를 사용했을 것임
+       - 슬랙은 그 이유가 URL로 독자적으로 해당 채널을 부르는 페이지를 제공하려 했을 것인데 그것도 defineAsyncComponent()으로 안될 게 없을 것임
+    5. back()시 초기화되는 Vue의 특성상 back()시 이전 채널 선택 상태 복원, 이전 메시지 위치로 스크롤 등의 구현은 반드시 구현 필요
+       - <KeepAlive>가 Component의 이전 상태를 그대로 유지해 준다는데 파악 및 테스트가 필요함 
+    */
     onMounted(async () => { 
         try {
+            //console.log(route.fullPath+"@@@@@@@channelbody.vue")
+            console.log(chanid.value+"##channelbody.vue")
             chanid.value = route.params.chanid
             grid.value = route.params.grid
             await getList()            
@@ -24,9 +40,11 @@
     })
 
     // watch([chanid, grid], async () => {
-    //     alert(chanid.value+"##"+grid.value)
+    //     chanid.value = route.params.chanid
+    //     grid.value = route.params.grid
+    //     console.log(chanid.value+"##")
     //     await getList() 
-    // }) //, { immediate: true }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    // }, { immediate: true }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
         try {
