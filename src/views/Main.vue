@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick } from 'vue' 
+    import { ref, onMounted, nextTick, watch } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -19,12 +19,16 @@
     let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel + listNotSeen (더보기에서의 수식이며 다른 경우는 수식이나 데이터가 다름)
 
     let prevX
+
+    //아래 localStorage 이전에 SPA내에서 Home >> DM, A채널 >> B채널과 같이 내부적으로 이동시 이전 상태를 기억하는 것부터 먼저 처리하기
+    //localStorage를 사용하는 곳은 1. Main.vue(1) 2. Channel.vue(3) 총 4군데임 (save/recall)
+    //1. Main.vue = 1) 사이드 메뉴 2. Channel.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
     
-    onMounted(async () => { 
+    onMounted(async () => { //한번만 수행되고 Back()을 해도 여길 다시 실행하는 것은 최초 로드말고는 없음
         try {
-            document.title = "main.vue"
+            debugger
+            document.title = "Home"
             console.log(route.fullPath+"@@@@@@@main.vue")
-            //debugger
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return    
@@ -34,15 +38,19 @@
             window.addEventListener('resize', () => { decideSeeMore() })
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
-            //const lastSelMenu = localStorage.wiseband_lastsel_menu
-            //let idx = -1
-            //if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
-            //idx = (idx == -1) ? 0 : idx
-            //sideClick(listSel.value[idx].ID, listSel.value[idx], idx)
+            let idx = -1            
+            const lastSelMenu = localStorage.wiseband_lastsel_menu
+            if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
+            idx = (idx == -1) ? 0 : idx
+            sideClick(listSel.value[idx].ID, listSel.value[idx], idx)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
+
+    watch(gst.x, async () => {
+        displayMenuAsSelected(gst.x.home.menuSel) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
+    }, { deep : true}) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     function decideSeeMore() {
         listNotSeen.value = []
@@ -104,15 +112,26 @@
     function clickPopupRow(popupId, row, idx) {
         popupMenuOn.value = false
         const id = (popupId == "mnuSeeMore") ? row.ID : popupId
+        debugger
+        if (id == gst.x.home.menuSel) return
+        gst.x.home.menuSel = id
         const obj = { row: row, idx: idx }; 
         procMenu[id].call(null, obj)
         for (let i = 0; i < listSel.value.length; i++) {
             if (listSel.value[i].sel) listSel.value[i].sel = false
         }
         row.sel = true
-        //if (popupId != "mnuSeeMore" && popupId != localStorage.wiseband_lastsel_menu) {
-        //    localStorage.wiseband_lastsel_menu = popupId
-        //}
+        if (popupId != "mnuSeeMore") localStorage.wiseband_lastsel_menu = popupId
+    }
+
+    function displayMenuAsSelected(popupId) {
+        for (let i = 0; i < listSel.value.length; i++) {
+            if (listSel.value[i].ID == popupId) {
+                listSel.value[i].sel = true
+            } else {
+                listSel.value[i].sel = false
+            }
+        }
     }
 
     const procMenu = { //obj.idx and obj,row

@@ -1,5 +1,5 @@
 <script setup>
-    
+    document.title = "DM"
 </script>
 
 <template>

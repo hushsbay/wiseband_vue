@@ -14,20 +14,20 @@
 
     let kind = ref('my'), listChan = ref([])
 
-    let chanSideWidth = '300px' //ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
     let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0 //resizing 관련
 
-    onMounted(async () => { 
+    onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
-            document.title = "channel.vue"
-            console.log(route.fullPath+"@@@@@@@channel.vue")
-            //const lastSelKind = localStorage.wiseband_lastsel_kind
-            //debugger
-            //if (lastSelKind) {
-                //@kind.value = lastSelKind //watch에서 getList() 실행
-            //} else {
-            //    await getList()
-            //}
+            gst.x.home.menuSel = "mnuHome" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 ChannelBody.vue에 Balnk가 표시됨
+            document.title = "Channel"
+            console.log("==============channel.vue")
+            const lastSelKind = localStorage.wiseband_lastsel_kind
+            if (lastSelKind) {
+                kind.value = lastSelKind //watch에서 getList() 실행
+            } else {
+                await getList()
+            }
             mainSide = document.getElementById('main_side') //Main.vue 참조
             resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
             leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
@@ -38,7 +38,7 @@
     })
 
     watch(kind, async () => {
-        //@localStorage.wiseband_lastsel_kind = kind.value
+        localStorage.wiseband_lastsel_kind = kind.value
         await getList() 
     }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
@@ -48,20 +48,20 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             listChan.value = rs.list
-            //const lastSelGrid = localStorage.wiseband_lastsel_grid
-            //const lastSelChanid = localStorage.wiseband_lastsel_chanid
+            const lastSelGrid = localStorage.wiseband_lastsel_grid
+            const lastSelChanid = localStorage.wiseband_lastsel_chanid
             listChan.value.forEach((item, index) => {
-                //if (item.GR_ID == lastSelGrid) {
-                //    item.exploded = true
-                //    if (item.CHANID == lastSelChanid) {
-                //        chanClick(item, index)
-                //    } else {
-                //        procChanRowImg(item)
-                //    }
-                //} else {
+                if (item.GR_ID == lastSelGrid) {
+                   item.exploded = true
+                   if (item.CHANID == lastSelChanid) {
+                       chanClick(item, index)
+                   } else {
+                       procChanRowImg(item)
+                   }
+                } else {
                     item.exploded = false
                     procChanRowImg(item)
-                //}                
+                }                
             })
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -108,7 +108,7 @@
                     if (listChan.value[i].DEPTH == "1") break
                     listChan.value[i].exploded = row.exploded
                 }
-                //if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
+                if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
             } else {
                 for (let i = 0; i < listChan.value.length; i++) {
                     if (listChan.value[i].DEPTH == "2") {
@@ -119,9 +119,8 @@
                 }
                 row.sel = true
                 procChanRowImg(row)
-                //localStorage.wiseband_lastsel_grid = row.GR_ID
-                //localStorage.wiseband_lastsel_chanid = row.CHANID
-                //router.push({ path : '/main/channel/chan_body', query : { grid: row.GR_ID, chanid: row.CHANID }})
+                localStorage.wiseband_lastsel_grid = row.GR_ID
+                localStorage.wiseband_lastsel_chanid = row.CHANID
                 console.log("router.push:" + row.CHANNM)
                 router.push({ name : 'chan_body', params : { chanid: row.CHANID, grid: row.GR_ID }}) //path와 param는 같이 사용 X (name 이용)
             }
@@ -213,7 +212,7 @@
         rightSide.style.removeProperty('pointer-events')
         document.removeEventListener('mousemove', mouseMoveHandler)
         document.removeEventListener('mouseup', mouseUpHandler)
-        //localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
+        wiseband_lastsel_chansidewidth = chanSideWidth.value
     }
     //////////////////////////////////////마우스다운후 채널바 리사이징
 </script>

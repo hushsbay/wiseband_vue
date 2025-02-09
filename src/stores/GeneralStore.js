@@ -402,11 +402,29 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
+    const x = ref({
+
+        home : {
+            menuSel : null,
+        },
+
+        chan : {
+            comboSel : null,
+            nodeSel : null,
+            treeWidth : '300px'
+        },
+
+        dm : {
+
+        }
+
+    })
+
     ////////////////////////////////////////////////////////////////////////////////
 
     return { 
         isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, snackBar, toast, 
-        auth, cons, ctx, doc, html, list, util
+        auth, cons, ctx, doc, html, list, util, x
     }
 
 })
