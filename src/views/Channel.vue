@@ -19,15 +19,16 @@
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
-            gst.x.home.menuSel = "mnuHome" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 ChannelBody.vue에 Balnk가 표시됨
+            gst.selSideMenu = "mnuHome" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 ChannelBody.vue에 Balnk가 표시됨
             document.title = "Channel"
             console.log("==============channel.vue")
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) {
                 kind.value = lastSelKind //watch에서 getList() 실행
             } else {
-                await getList()
+                //await getList()
             }
+            await getList()
             mainSide = document.getElementById('main_side') //Main.vue 참조
             resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
             leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
@@ -37,10 +38,15 @@
         }
     })
 
-    watch(kind, async () => {
+    watch(kind, async () => { //gst.xxx일 경우 () => gst.xxx
         localStorage.wiseband_lastsel_kind = kind.value
         await getList() 
     }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+
+    watch([() => gst.selChanId, () => gst.selGrId], () => {
+        debugger 
+        displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
+    })
 
     async function getList() {
         try {            
@@ -126,6 +132,30 @@
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
+        }
+    }
+
+    function displayChanAsSelected(chanid, grid) {
+        for (let i = 0; i < listChan.value.length; i++) {
+            const row = listChan.value[i]
+            if (grid == row.GR_ID) {
+                row.exploded = true //dept1이든 2든 펼치기
+                if (row.DEPTH == "2") {
+                    if (chanid == row.CHANID) {
+                        row.sel = true
+                        localStorage.wiseband_lastsel_grid = row.GR_ID
+                        localStorage.wiseband_lastsel_chanid = row.CHANID
+                    } else {
+                        row.sel = false
+                    }
+                } else {
+                    localStorage.wiseband_lastsel_grid = row.GR_ID
+                }
+            } else { //row.exploded = false //사용자가 본 그대로 (접지 말고) 둬야 함
+                row.sel = false
+                row.hover = false
+            }
+            procChanRowImg(row)
         }
     }
 

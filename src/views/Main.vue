@@ -26,7 +26,6 @@
     
     onMounted(async () => { //한번만 수행되고 Back()을 해도 여길 다시 실행하는 것은 최초 로드말고는 없음
         try {
-            debugger
             document.title = "Home"
             console.log(route.fullPath+"@@@@@@@main.vue")
             const res = await axios.post("/menu/qry", { kind : "side" })
@@ -48,9 +47,9 @@
         }
     })
 
-    watch(gst.x, async () => {
-        displayMenuAsSelected(gst.x.home.menuSel) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
-    }, { deep : true}) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    watch(() => gst.selSideMenu, () => { //Channel.vue의 gst.selSideMenu = "mnuHome" 참조
+        displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
+    }, { deep : true }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     function decideSeeMore() {
         listNotSeen.value = []
@@ -112,16 +111,17 @@
     function clickPopupRow(popupId, row, idx) {
         popupMenuOn.value = false
         const id = (popupId == "mnuSeeMore") ? row.ID : popupId
-        debugger
-        if (id == gst.x.home.menuSel) return
-        gst.x.home.menuSel = id
-        const obj = { row: row, idx: idx }; 
-        procMenu[id].call(null, obj)
         for (let i = 0; i < listSel.value.length; i++) {
             if (listSel.value[i].sel) listSel.value[i].sel = false
         }
         row.sel = true
-        if (popupId != "mnuSeeMore") localStorage.wiseband_lastsel_menu = popupId
+        if (id == gst.selSideMenu) return
+        if (popupId != "mnuSeeMore") {
+            gst.selSideMenu = id
+            localStorage.wiseband_lastsel_menu = id
+        }
+        const obj = { row: row, idx: idx }
+        procMenu[id].call(null, obj)
     }
 
     function displayMenuAsSelected(popupId) {
@@ -132,6 +132,7 @@
                 listSel.value[i].sel = false
             }
         }
+        localStorage.wiseband_lastsel_menu = popupId
     }
 
     const procMenu = { //obj.idx and obj,row

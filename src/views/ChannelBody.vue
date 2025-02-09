@@ -10,7 +10,7 @@
     const route = useRoute()
     const router = useRouter()
 
-    let grid = ref(''), grnm = ref(''), chanid = ref(''), channm = ref('')
+    let grnm = ref(''), channm = ref('') //let grid = ref(''), grnm = ref(''), chanid = ref(''), channm = ref('')
     let msglist = ref([])
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Channel) > 손자(ChannelBody) 구조임
@@ -27,13 +27,14 @@
     5. back()시 초기화되는 Vue의 특성상 back()시 이전 채널 선택 상태 복원, 이전 메시지 위치로 스크롤 등의 구현은 반드시 구현 필요
        - <KeepAlive>가 Component의 이전 상태를 그대로 유지해 준다는데 파악 및 테스트가 필요함 
        - 사용자가 마지막으로 선택한 채널, 콤보박스 등은 localStorage로 구현되어 있는데 문제없는지 다시 테스트해보기로 함 */
+
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
-        try {
-            debugger
+        try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의
+            //gst.savChanCombo = "my"
             //console.log(route.fullPath+"@@@@@@@channelbody.vue")
-            console.log(chanid.value+"##channelbody.vue")
-            chanid.value = route.params.chanid
-            grid.value = route.params.grid
+            console.log("########channelbody.vue")
+            gst.selChanId = route.params.chanid //chanid.value = route.params.chanid
+            gst.selGrId = route.params.grid //grid.value = route.params.grid
             await getList()            
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -41,15 +42,17 @@
     })
 
     // watch([chanid, grid], async () => {
-    //     chanid.value = route.params.chanid
-    //     grid.value = route.params.grid
+    //     debugger
+    //     //chanid.value = route.params.chanid
+    //     //grid.value = route.params.grid
     //     console.log(chanid.value+"##")
     //     await getList() 
-    // }, { immediate: true }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    // }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
         try {
-            const res = await axios.post("/chanmsg/qry", { grid : grid.value, chanid : chanid.value })
+            //const res = await axios.post("/chanmsg/qry", { grid : grid.value, chanid : chanid.value })
+            const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
             const rs = gst.util.chkAxiosCode(res.data)
             //debugger
             if (!rs) return            
@@ -107,7 +110,7 @@
     <div class="chan_center">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                {{ grnm }} >> {{ channm }} [{{ chanid }}]
+                {{ grnm }} >> {{ channm }} [{{ gst.selChanId }}]
             </div>
             <div class="chan_center_header_right" @click="test">
                 <span class="topMenu" style="padding:5px 10px;border:1px solid lightgray">멤버 11</span>

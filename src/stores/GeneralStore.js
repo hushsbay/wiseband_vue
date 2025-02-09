@@ -19,6 +19,8 @@ const GeneralStore = defineStore('General', () => {
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
 
     ////////////////////////////////////////////////////////////////////////////////
+    let selSideMenu = ref(""), selChanId = ref(''), selGrId = ref('')//, savChanTreeWidth = ref('300px')
+    ////////////////////////////////////////////////////////////////////////////////
 
     const auth = {
 
@@ -402,29 +404,13 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const x = ref({
-
-        home : {
-            menuSel : null,
-        },
-
-        chan : {
-            comboSel : null,
-            nodeSel : null,
-            treeWidth : '300px'
-        },
-
-        dm : {
-
-        }
-
-    })
-
     ////////////////////////////////////////////////////////////////////////////////
 
     return { 
-        isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, snackBar, toast, 
-        auth, cons, ctx, doc, html, list, util, x
+        isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, 
+        selSideMenu, selChanId, selGrId,
+        snackBar, toast, 
+        auth, cons, ctx, doc, html, list, util
     }
 
 })
