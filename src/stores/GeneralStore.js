@@ -19,7 +19,7 @@ const GeneralStore = defineStore('General', () => {
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
 
     ////////////////////////////////////////////////////////////////////////////////
-    let selSideMenu = ref(""), selChanId = ref(''), selGrId = ref('')//, savChanTreeWidth = ref('300px')
+    let selSideMenu = ref(""), selChanId = ref(''), selGrId = ref('')
     ////////////////////////////////////////////////////////////////////////////////
 
     const auth = {

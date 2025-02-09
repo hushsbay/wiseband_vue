@@ -242,7 +242,7 @@
         rightSide.style.removeProperty('pointer-events')
         document.removeEventListener('mousemove', mouseMoveHandler)
         document.removeEventListener('mouseup', mouseUpHandler)
-        wiseband_lastsel_chansidewidth = chanSideWidth.value
+        localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
     }
     //////////////////////////////////////마우스다운후 채널바 리사이징
 </script>
