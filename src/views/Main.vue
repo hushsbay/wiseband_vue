@@ -138,7 +138,7 @@
     const procMenu = { //obj.idx and obj,row
         ["mnuHome"] : (obj) => {
             try { //alert("mnuHome====" + obj.idx + "@@@" + JSON.stringify(obj.row))
-                router.push({ path : '/main/channel' })
+                router.replace({ path : '/main/channel' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }

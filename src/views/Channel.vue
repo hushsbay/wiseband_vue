@@ -43,8 +43,7 @@
         await getList() 
     }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
-    watch([() => gst.selChanId, () => gst.selGrId], () => {
-        debugger 
+    watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
         displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
     })
 
