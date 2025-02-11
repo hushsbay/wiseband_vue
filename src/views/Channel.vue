@@ -44,6 +44,8 @@
     }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
+        //debugger
+        console.log(gst.selChanId + " == gst.selChanId########watch in channel.vue")
         displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
     })
 
@@ -289,7 +291,13 @@
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main">
         <!-- App.vue와 Main.vue에서는 :key를 안쓰고 여기 Channel.vue에서만 :key를 사용하는 이유는 ChannelBody.vue에서 설명 -->
-        <router-view :key="$route.fullPath"></router-view>
+        <!-- <router-view :key="$route.fullPath"></router-view> -->
+        <!-- <keep-alive><router-view :key="$route.fullPath"></router-view></keep-alive> 사용금지 Deprecated -->
+        <router-view v-slot="{ Component }">
+            <keep-alive>
+                <component :is="Component" :key="$route.fullPath" />
+            </keep-alive>
+        </router-view>
     </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    
 </template>

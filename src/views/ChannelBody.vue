@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, watch, nextTick } from 'vue' 
+    import { ref, onMounted, watch, watchEffect, nextTick } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -28,10 +28,38 @@
        - <KeepAlive>가 Component의 이전 상태를 그대로 유지해 준다는데 파악 및 테스트가 필요함 
        - 사용자가 마지막으로 선택한 채널, 콤보박스 등은 localStorage로 구현되어 있는데 문제없는지 다시 테스트해보기로 함 */
 
+    /* 위와 같이 처리했는데, ChannelBody.vue에서 Endless Scroll을 구현후 Back()시 초기상태로 되돌아가므로
+       해당 스크롤 포지션까지 돌아 가는 것을 구현하려면 <keep-alive>가 반드시 필요하게 됨
+       1. App.vue, Channel.vue, ChannelBody.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
+            <router-view v-slot="{ Component }">
+                <keep-alive>
+                    <component :is="Component" :key="$route.fullPath" /> :key속성을 router-view가 아닌 component에 넣어야 잘 동작함
+                </keep-alive>
+            </router-view>
+        2. 위에서 안되는 부분 (한마디로 이벤트를 찾아야 함)
+           1) login후 /main에서 멈춤 (화면 블랭크)
+           2) 채널 클릭시 펼쳐진 다른 그룹은 접혀짐
+           3) back()시 노드 선택 색상이 안움직이는데 변경 필요
+        3. 제일 중요한 부분은 채널 클릭시 ChannelBody.vue의 onMounted()가 여러번 누적적으로 증가 실행되어, named view로 해결 글도 있긴 한데 구조적으로 어려워,
+           App.vue, Channel.vue는 기존대로 <router-view />로 다시 돌리고, ChannelBody.vue만 <keep-alive 위처럼 적용하니 일단 누적 폭주는 없어져서
+           이 환경을 기본으로 문제들을 해결해 나가기로 함 (데이터 가져오기는 <keep-alive>가 지켜주나 스크롤포지션은 안지켜줌)
+           1) back()시 노드 선택 색상이 안움직이는데 변경 필요 - router.beforeEach((to, from)로 해결 완료
+           2) 채널내 라우팅은 해결했으나 홈 >> DM >> Back()시 ChannelBody.vue의 상태 복원은 안되고 있음
+              - :key="$route.fullPath"를 제거하니 폭주도 해결되고 상태 복원도 잘 됨
+                <router-view v-slot="{ Component }">
+                    <keep-alive>
+                        <component :is="Component" />
+                    </keep-alive>
+                </router-view>
+           3) 홈 >> DM >> Back()시 Main.vue의 홈으로의 선택 복원은 안되고 있음 : 이전 값으로의 코딩 처리
+           4) 홈 클릭시 ChannelBody.vue 블랭크 페이지 나옴 해결 필요
+    */
+
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의
             //gst.savChanCombo = "my"
             //console.log(route.fullPath+"@@@@@@@channelbody.vue")
+            //debugger
             console.log("########channelbody.vue")
             gst.selChanId = route.params.chanid //chanid.value = route.params.chanid
             gst.selGrId = route.params.grid //grid.value = route.params.grid
@@ -41,13 +69,12 @@
         }
     })
 
-    // watch([chanid, grid], async () => {
-    //     debugger
-    //     //chanid.value = route.params.chanid
-    //     //grid.value = route.params.grid
-    //     console.log(chanid.value+"##")
-    //     await getList() 
-    // }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    watchEffect(async () => {
+        console.log("########watch channelbody.vue")
+        //gst.selChanId = route.params.chanid //chanid.value = route.params.chanid
+        //gst.selGrId = route.params.grid //grid.value = route.params.grid
+        //await getList() 
+    }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
     async function getList() {
         try {
@@ -101,8 +128,15 @@
         row.hover = false
     }
 
-    function test() {
-        history.go(-1)
+    async function test() {
+        //history.go(-1)
+        const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
+        const rs = gst.util.chkAxiosCode(res.data)
+        if (!rs) return            
+        grnm.value = rs.data.chanmst.GR_NM
+        channm.value = rs.data.chanmst.CHANNM
+        document.title = channm.value
+        msglist.value = [...msglist.value, ...rs.data.msglist]
     }
 </script>
 
@@ -176,7 +210,7 @@
                 </div>
             </div>
             <div class="msg_body">
-                메시지 테스트입니다. 1111
+                메시지 테스트입니다. 1111 <input type="text" value="00000000" />
             </div>
             <div class="msg_body">
                 메시지 테스트입니다. 2222                
