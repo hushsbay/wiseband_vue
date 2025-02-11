@@ -19,9 +19,10 @@
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
-            gst.selSideMenu = "mnuHome" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 ChannelBody.vue에 Balnk가 표시됨
-            document.title = "Channel"
-            console.log("==============channel.vue")
+            //debugger
+            gst.selSideMenu = "mnuHome" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 HomeBody.vue에 Balnk가 표시됨
+            document.title = "Home"
+            console.log("==============home.vue")
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) {
                 kind.value = lastSelKind //watch에서 getList() 실행
@@ -45,9 +46,43 @@
 
     watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
         //debugger
-        console.log(gst.selChanId + " == gst.selChanId########watch in channel.vue")
+        console.log(gst.selChanId + " == gst.selChanId########watch in home.vue")
         displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
     })
+
+    watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
+        console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue")
+        loopListChan(gst.selGrId, gst.selChanId)
+        // listChan.value.forEach((item, index) => {
+        //     if (item.GR_ID == gst.selGrId) {
+        //         item.exploded = true
+        //         if (item.CHANID == gst.selChanId) {
+        //             chanClick(item, index)
+        //         } else {
+        //             procChanRowImg(item)
+        //         }
+        //     } else {
+        //         item.exploded = false
+        //         procChanRowImg(item)
+        //     }
+        // })
+    })
+
+    function loopListChan(grid, chanid) {
+        listChan.value.forEach((item, index) => {
+            if (item.GR_ID == grid) {
+                item.exploded = true
+                if (item.CHANID == chanid) {
+                    chanClick(item, index)
+                } else {
+                    procChanRowImg(item)
+                }
+            } else {
+                item.exploded = false
+                procChanRowImg(item)
+            }
+        })
+    }
 
     async function getList() {
         try {            
@@ -57,19 +92,20 @@
             listChan.value = rs.list
             const lastSelGrid = localStorage.wiseband_lastsel_grid
             const lastSelChanid = localStorage.wiseband_lastsel_chanid
-            listChan.value.forEach((item, index) => {
-                if (item.GR_ID == lastSelGrid) {
-                   item.exploded = true
-                   if (item.CHANID == lastSelChanid) {
-                       chanClick(item, index)
-                   } else {
-                       procChanRowImg(item)
-                   }
-                } else {
-                    item.exploded = false
-                    procChanRowImg(item)
-                }                
-            })
+            loopListChan(lastSelGrid, lastSelChanid)
+            // listChan.value.forEach((item, index) => {
+            //     if (item.GR_ID == lastSelGrid) {
+            //        item.exploded = true
+            //        if (item.CHANID == lastSelChanid) {
+            //            chanClick(item, index)
+            //        } else {
+            //            procChanRowImg(item)
+            //        }
+            //     } else {
+            //         item.exploded = false
+            //         procChanRowImg(item)
+            //     }                
+            // })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -129,7 +165,7 @@
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID
                 console.log("router.push:" + row.CHANNM)
-                router.push({ name : 'chan_body', params : { chanid: row.CHANID, grid: row.GR_ID }}) //path와 param는 같이 사용 X (name 이용)
+                router.push({ name : 'home_body', params : { chanid: row.CHANID, grid: row.GR_ID }}) //path와 param는 같이 사용 X (name 이용)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -290,7 +326,7 @@
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main">
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 여기 Channel.vue에서만 :key를 사용하는 이유는 ChannelBody.vue에서 설명 -->
+        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 여기 Home.vue에서만 :key를 사용하는 이유는 HomeBody.vue에서 설명 -->
         <!-- <router-view :key="$route.fullPath"></router-view> -->
         <!-- <keep-alive><router-view :key="$route.fullPath"></router-view></keep-alive> 사용금지 Deprecated -->
         <router-view v-slot="{ Component }">

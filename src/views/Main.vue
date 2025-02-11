@@ -21,11 +21,12 @@
     let prevX
 
     //아래 localStorage 이전에 SPA내에서 Home >> DM, A채널 >> B채널과 같이 내부적으로 이동시 이전 상태를 기억하는 것부터 먼저 처리하기
-    //localStorage를 사용하는 곳은 1. Main.vue(1) 2. Channel.vue(3) 총 4군데임 (save/recall)
-    //1. Main.vue = 1) 사이드 메뉴 2. Channel.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
+    //localStorage를 사용하는 곳은 1. Main.vue(1) 2. Hpme.vue(3) 총 4군데임 (save/recall)
+    //1. Main.vue = 1) 사이드 메뉴 2. Home.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
     
     onMounted(async () => { //한번만 수행되고 Back()을 해도 여길 다시 실행하는 것은 최초 로드말고는 없음
         try {
+            //debugger
             document.title = "Home"
             console.log(route.fullPath+"@@@@@@@main.vue")
             const res = await axios.post("/menu/qry", { kind : "side" })
@@ -47,7 +48,8 @@
         }
     })
 
-    watch(() => gst.selSideMenu, () => { //Channel.vue의 gst.selSideMenu = "mnuHome" 참조
+    watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
+        console.log(gst.selSideMenu + "============watch main.vue")
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
     }, { deep : true }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
 
@@ -135,17 +137,33 @@
         localStorage.wiseband_lastsel_menu = popupId
     }
 
+    function onGot(historyItems) {
+        for (const item of historyItems) {
+            console.log(item.url);
+            console.log(new Date(item.lastVisitTime));
+        }
+    }
+
     const procMenu = { //obj.idx and obj,row
         ["mnuHome"] : (obj) => {
             try { //alert("mnuHome====" + obj.idx + "@@@" + JSON.stringify(obj.row))
-                router.replace({ path : '/main/channel' })
+                router.replace({ path : '/main/home' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
         },
         ["mnuDm"] : (obj) => {
             try {
-                router.push({ path : '/main/test' })
+                router.push({ path : '/main/test' })                
+            } catch (ex) {
+                gst.util.showEx(ex, true)
+            }
+        },
+        ["mnuMyAct"] : (obj) => {
+            try {
+                //debugger
+                //history.search({ text: "" }).then(onGot);
+                history.pushState({ foo: 'bar' }, '', '/main/home')
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
@@ -159,7 +177,7 @@
 
         </div>
         <div class="body">
-            <div class="side" id="main_side"> <!--main_side는 Channel.vue에서 resizng에서 사용-->
+            <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizng에서 사용-->
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
                         <div v-for="(row, idx) in listSel" @click="(e) => sideClick(row.ID, row, idx)" :id="row.ID + 'Target'" class="menu cntTarget">

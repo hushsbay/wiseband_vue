@@ -10,15 +10,15 @@
     const route = useRoute()
     const router = useRouter()
 
-    let grnm = ref(''), channm = ref('') //let grid = ref(''), grnm = ref(''), chanid = ref(''), channm = ref('')
+    let grnm = ref(''), channm = ref('')
     let msglist = ref([])
 
-    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Channel) > 손자(ChannelBody) 구조임
-    1. Channel.vue에서 <router-view />를 사용하면 그 자식인 여기 ChannelBody.vue가 한번만 마운트되고 
+    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
+    1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
        그 다음에 router.push해도 다시 마운트(아예 호출도) 안됨 : onMounted가 한번만 호출되고 끝.
     2. 그런데, <router-view :key="$route.fullPath"></router-view>와 같이 :key속성을 사용하면 router.push할 때마다 다시 마운트됨
-    3. 그런데, Main.vue에서도 :key를 사용하면 Channel.vue에서 router.push할 때에도 Main.vue의 onMounted가 호출되어 문제가 됨
-    4. 따라서, 현재 구조에서는 여기 손자인 ChannelBody.vue를 호출하는 자식인 Channel.vue에서만 :key를 적용하면
+    3. 그런데, Main.vue에서도 :key를 사용하면 Home.vue에서 router.push할 때에도 Main.vue의 onMounted가 호출되어 문제가 됨
+    4. 따라서, 현재 구조에서는 여기 손자인 HomeBody.vue를 호출하는 자식인 Home.vue에서만 :key를 적용하면
        슬랙과 똑같이 채널노드를 클릭할 때마다 라우팅되도록 할 수 있음
        - 만일 손자 아래 증손자가 필요하고 그것도 라우팅으로 처리하려면 매우 복잡한 핸들링이 필요하므로
        - 아예 증손자는 만들지 말든지 아니면 만들어도 라우틴이 아닌 비동기컴포넌트 호출(defineAsyncComponent)하기로 함
@@ -28,39 +28,38 @@
        - <KeepAlive>가 Component의 이전 상태를 그대로 유지해 준다는데 파악 및 테스트가 필요함 
        - 사용자가 마지막으로 선택한 채널, 콤보박스 등은 localStorage로 구현되어 있는데 문제없는지 다시 테스트해보기로 함 */
 
-    /* 위와 같이 처리했는데, ChannelBody.vue에서 Endless Scroll을 구현후 Back()시 초기상태로 되돌아가므로
+    /* 위와 같이 처리했는데, HomeBody.vue에서 Endless Scroll을 구현후 Back()시 초기상태로 되돌아가므로
        해당 스크롤 포지션까지 돌아 가는 것을 구현하려면 <keep-alive>가 반드시 필요하게 됨
-       1. App.vue, Channel.vue, ChannelBody.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
+       1. App.vue, Home.vue, HomeBody.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
             <router-view v-slot="{ Component }">
                 <keep-alive>
                     <component :is="Component" :key="$route.fullPath" /> :key속성을 router-view가 아닌 component에 넣어야 잘 동작함
                 </keep-alive>
             </router-view>
-        2. 위에서 안되는 부분 (한마디로 이벤트를 찾아야 함)
-           1) login후 /main에서 멈춤 (화면 블랭크)
-           2) 채널 클릭시 펼쳐진 다른 그룹은 접혀짐
-           3) back()시 노드 선택 색상이 안움직이는데 변경 필요
-        3. 제일 중요한 부분은 채널 클릭시 ChannelBody.vue의 onMounted()가 여러번 누적적으로 증가 실행되어, named view로 해결 글도 있긴 한데 구조적으로 어려워,
-           App.vue, Channel.vue는 기존대로 <router-view />로 다시 돌리고, ChannelBody.vue만 <keep-alive 위처럼 적용하니 일단 누적 폭주는 없어져서
-           이 환경을 기본으로 문제들을 해결해 나가기로 함 (데이터 가져오기는 <keep-alive>가 지켜주나 스크롤포지션은 안지켜줌)
+        2. 위에서 안되는 부분
+           1) login후 /main에서 멈춤 (화면 블랭크) 2) 채널 클릭시 펼쳐진 다른 그룹은 접혀짐 3) back()시 노드 선택 색상이 안움직이는데 변경 필요
+        3. 제일 중요한 부분은 채널 클릭시 HomeBody.vue의 onMounted()가 여러번 누적적으로 증가 실행되어, named view로 해결 글도 있긴 한데 구조적으로 어려워,
+           App.vue, Home.vue는 기존대로 <router-view />로 다시 돌리고, HomeBody.vue만 <keep-alive 위처럼 적용하니 일단 누적 폭주는 없어져서
+           이 환경을 기본으로 문제들을 해결해 나가기로 함 (데이터 가져오기는 <keep-alive>가 지켜주나 스크롤포지션은 안지켜주는데 그 부분은 코딩으로 해결하면 됨)
            1) back()시 노드 선택 색상이 안움직이는데 변경 필요 - router.beforeEach((to, from)로 해결 완료
-           2) 채널내 라우팅은 해결했으나 홈 >> DM >> Back()시 ChannelBody.vue의 상태 복원은 안되고 있음
-              - :key="$route.fullPath"를 제거하니 폭주도 해결되고 상태 복원도 잘 됨
-                <router-view v-slot="{ Component }">
-                    <keep-alive>
-                        <component :is="Component" />
-                    </keep-alive>
-                </router-view>
-           3) 홈 >> DM >> Back()시 Main.vue의 홈으로의 선택 복원은 안되고 있음 : 이전 값으로의 코딩 처리
-           4) 홈 클릭시 ChannelBody.vue 블랭크 페이지 나옴 해결 필요
+        4. 채널내 라우팅은 해결했으나 홈 >> DM >> Back()시 HomeBody.vue의 상태 복원은 안되고 있음. :key="$route.fullPath" 제거후 폭주 해결. 상태 복원도 잘 됨
+            <router-view v-slot="{ Component }">
+                <keep-alive>
+                    <component :is="Component" />
+                </keep-alive>
+            </router-view>
+           1) 홈 >> DM >> Back()시 Main.vue의 홈 선택 복원은 안되고 있음 : router.beforeEach((to, from)로 해결 완료
+           2) 홈 클릭시 HomeBody.vue 블랭크 페이지 나옴 해결 필요 (이미 히스토리에 있으므로 안나오는데 슬랙은 그 상태로 다시 보여줌) : gst.selSideMenuTimeTag로 해결 완료
+        5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시
+           캐시를 부르거나 상태복원하는 것으로 구현 완료함
     */
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의
             //gst.savChanCombo = "my"
-            //console.log(route.fullPath+"@@@@@@@channelbody.vue")
+            //console.log(route.fullPath+"@@@@@@@homebody.vue")
             //debugger
-            console.log("########channelbody.vue")
+            console.log("########homebody.vue")
             gst.selChanId = route.params.chanid //chanid.value = route.params.chanid
             gst.selGrId = route.params.grid //grid.value = route.params.grid
             await getList()            
@@ -70,7 +69,7 @@
     })
 
     watchEffect(async () => {
-        console.log("########watch channelbody.vue")
+        console.log("########watch homebody.vue")
         //gst.selChanId = route.params.chanid //chanid.value = route.params.chanid
         //gst.selGrId = route.params.grid //grid.value = route.params.grid
         //await getList() 
