@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, watch, watchEffect, nextTick } from 'vue' 
+    import { ref, onMounted } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -50,41 +50,28 @@
             </router-view>
            1) 홈 >> DM >> Back()시 Main.vue의 홈 선택 복원은 안되고 있음 : router.beforeEach((to, from)로 해결 완료
            2) 홈 클릭시 HomeBody.vue 블랭크 페이지 나옴 해결 필요 (이미 히스토리에 있으므로 안나오는데 슬랙은 그 상태로 다시 보여줌) : gst.selSideMenuTimeTag로 해결 완료
-        5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시
-           캐시를 부르거나 상태복원하는 것으로 구현 완료함
+        5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 
+           router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함
     */
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
-        try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의
-            //gst.savChanCombo = "my"
-            //console.log(route.fullPath+"@@@@@@@homebody.vue")
-            //debugger
-            console.log("########homebody.vue")
-            gst.selChanId = route.params.chanid //chanid.value = route.params.chanid
-            gst.selGrId = route.params.grid //grid.value = route.params.grid
+        try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의 //console.log("########homebody.vue")
+            gst.selChanId = route.params.chanid
+            gst.selGrId = route.params.grid
             await getList()            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
-    watchEffect(async () => {
-        console.log("########watch homebody.vue")
-        //gst.selChanId = route.params.chanid //chanid.value = route.params.chanid
-        //gst.selGrId = route.params.grid //grid.value = route.params.grid
-        //await getList() 
-    }) //시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
-
     async function getList() {
         try {
-            //const res = await axios.post("/chanmsg/qry", { grid : grid.value, chanid : chanid.value })
             const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
             const rs = gst.util.chkAxiosCode(res.data)
-            //debugger
             if (!rs) return            
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
-            document.title = channm.value
+            document.title = channm.value + "[채널]"
             msglist.value = rs.data.msglist            
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -92,31 +79,7 @@
     }
 
     async function msgRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        // const img = row.nodeImg.replace(LIGHT, DARK)        
-        // const nm = !row.CHANID ? row.GR_NM : row.CHANNM
-        // gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
-        // if (!row.CHANID) {            
-        //     gst.ctx.menu = [
-        //         { nm: "사용자 초대" },
-        //         { nm: "채널 생성" },
-        //         { nm: "환경 설정" }
-        //     ]
-        // } else {
-        //     gst.ctx.menu = [
-        //         { nm: "채널정보 보기", color: "darkgreen", func: function(item, idx) {
-        //             alert(item.nm+"@@@@"+idx)
-        //         }},
-        //         { nm: "복사", img: DARK + "other.png", child: [
-        //             { nm: "채널 복사", disable: true, func: function(item, idx) { 
-        //                 alert(item.nm+"####"+idx)
-        //             }},
-        //             { nm: "링크 복사", img: DARK + "other.png", color: "red" }
-        //         ]},
-        //         { nm: "즐겨찾기 설정", disable: true },
-        //         { nm: "채널 나가기", color: "red" }
-        //     ]            
-        // }
-        // gst.ctx.show(e)
+        
     }
 
     async function msgEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
@@ -128,7 +91,6 @@
     }
 
     async function test() {
-        //history.go(-1)
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return            
@@ -171,8 +133,8 @@
                 <div style="display:flex;margin:10px">
                     <span>{{ row.BODY }}</span>
                 </div>
-                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
-                    <div v-for="(row1, idx1) in row.msgdtl" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px" :title="row1.NM">
+                <div class="msg_body_sub">
+                    <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM">
                         <img class="coImg18" :src="gst.html.getImageUrl('action_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT }}</span>
                     </div>
                     <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center" :title="row2.AUTHORNM">
@@ -182,18 +144,18 @@
                         댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
                     </div>
                 </div>
-                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
-                    <div v-for="(row3, idx3) in row.msglink" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px">
+                <div class="msg_body_sub">
+                    <div v-for="(row3, idx3) in row.msglink" class="msg_body_sub1">
                         <a :href="row3.BODY"><span>{{ row3.BODY }}</span></a>
                     </div>
                 </div>
-                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
-                    <div v-for="(row4, idx4) in row.msgfile" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px">
+                <div class="msg_body_sub">
+                    <div v-for="(row4, idx4) in row.msgfile" class="msg_body_sub1">
                         <span>{{ row4.BODY }}</span>
                     </div>
                 </div>
-                <div style="display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start">
-                    <div v-for="(row5, idx5) in row.msgimg" style="margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px">
+                <div class="msg_body_sub">
+                    <div v-for="(row5, idx5) in row.msgimg" class="msg_body_sub1">
                         <img class="coImg64" :src="gst.html.getImageUrl('edms.png')">
                     </div>
                 </div>
@@ -307,10 +269,10 @@
     <div class="chan_right">
         <div class="chan_right_header">
             <div class="chan_right_header_left">
-                00000   
+                   
             </div>
             <div class="chan_right_header_right">
-                11111
+                
             </div>
         </div>
         <div class="chan_right_body">
@@ -350,6 +312,12 @@
     }
     .msg_body {
         position:relative;display:flex;flex-direction:column;margin:10px 0;border-bottom:1px solid lightgray
+    }
+    .msg_body_sub {
+        display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start
+    }
+    .msg_body_sub1 {
+        margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px
     }
     .msg_proc {
         position:absolute;height:20px;right:15px;top:-5px;padding:5px 10px;z-index:9999;

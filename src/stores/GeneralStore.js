@@ -8,18 +8,17 @@ const GeneralStore = defineStore('General', () => {
     const router = useRouter()
     const $cookie = inject('$cookies')
 
+    let selSideMenu = ref(""), selSideMenuTimeTag = ref(""), selChanId = ref(''), selGrId = ref('')
+    const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
+    const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
+
+    ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
     const paging = ref({ //서버에 전송되어야 할 파라미터(pageRq)는 curPage/rowPerPage 2개임
         curPage : 1, rowPerPage : 20, pagePerNav : 5, totalRow : 0, totalPage : 0, curPageArr : [], savedPage : 0
     }) //위 savedPage와 아래 scrollPosRecall 2개는 (목록과 디테일이 분리된 .vue일 경우) 목록에서 디테일 열고 작업후 닫고 나서 기존 페이지 찾아 기존 위치로 스크롤링하기 위한 용도임
     
     const scrollPosRecall = { x : -1, y : -1 }
     let listIndex = ref(-1), isDoc = ref(false), docId = ref(null), isRead = ref(false), isEdit = ref(false), isNew = ref(false)
-    
-    const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
-    const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
-
-    ////////////////////////////////////////////////////////////////////////////////
-    let selSideMenu = ref(""), selSideMenuTimeTag = ref(""), selChanId = ref(''), selGrId = ref('')
     ////////////////////////////////////////////////////////////////////////////////
 
     const auth = {
@@ -111,7 +110,7 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const doc = {
+    const doc = { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
 
         open : function(strDocId, idx) {
             docId.value = strDocId
@@ -193,7 +192,7 @@ const GeneralStore = defineStore('General', () => {
 
     }
     
-    const list = {
+    const list = { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
 
         saveCurPage : function() {
             const _paging = paging.value
@@ -391,13 +390,13 @@ const GeneralStore = defineStore('General', () => {
             util.setSnack(msg, sec)
         },
 
-        codeQry : async function (strKind) {
+        codeQry : async function (strKind) { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
             const res = await axios.post("/code/qry", { kind: strKind })
             const rs = util.chkAxiosCode(res.data)
             return rs
         },
 
-        getCodeNm : function(arr, id) { //Z_CODE_TBL 관련 전용
+        getCodeNm : function(arr, id) { //Z_CODE_TBL 관련 전용 //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
             const found = arr.find((item) => item.ID == id)
             return (found) ? found.NM : null
         }

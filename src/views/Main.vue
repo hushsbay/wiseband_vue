@@ -16,19 +16,18 @@
     const popupData = ref({ id: '', lines: false })
     const seeMore = ref(false)
     const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel + listUnSel (더보기에서의 수식)
-    let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel + listNotSeen (더보기에서의 수식이며 다른 경우는 수식이나 데이터가 다름)
+    let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel + listNotSeen (더보기에서의 수식)
 
     let prevX
 
-    //아래 localStorage 이전에 SPA내에서 Home >> DM, A채널 >> B채널과 같이 내부적으로 이동시 이전 상태를 기억하는 것부터 먼저 처리하기
-    //localStorage를 사용하는 곳은 1. Main.vue(1) 2. Hpme.vue(3) 총 4군데임 (save/recall)
-    //1. Main.vue = 1) 사이드 메뉴 2. Home.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
+    //1. 아래 localStorage 처리 이전에 SPA내에서 Home >> DM 및 A채널 >> B채널과 같이 내부적으로 이동시 이전 상태를 기억하는 것부터 먼저 코딩하기
+    //2. localStorage를 사용하는 곳은 1. Main.vue(1) 2. Hpme.vue(3) 총 4군데임 (save/recall)
+    //   A) Main.vue = 1) 사이드 메뉴 
+    //   B) Home.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
     
     onMounted(async () => { //한번만 수행되고 Back()을 해도 여길 다시 실행하는 것은 최초 로드말고는 없음
         try {
-            //debugger
-            document.title = "Home"
-            console.log(route.fullPath+"@@@@@@@main.vue")
+            document.title = "WiSEBand 메인" //console.log(route.fullPath+"@@@@@@@main.vue")
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return    
@@ -49,25 +48,29 @@
     })
 
     watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
-        console.log(gst.selSideMenu + "============watch main.vue")
+        //console.log(gst.selSideMenu + "============watch main.vue")
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
-    }, { deep : true }) //immediate:true시 먼저 못읽는 경우도 발생할 수 있으므로 onMounted에서도 처리
+    })
 
     function decideSeeMore() {
-        listNotSeen.value = []
-        const sideTop = document.querySelector('#sideTop')
-        const sizeH = sideTop.offsetTop + sideTop.offsetHeight
-        let targetAll = document.querySelectorAll('.cntTarget') //더보기 제외 console.log(targetAll.length+"@@@")
-        targetAll.forEach(menuDiv => {
-            if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) { //사이드바에서 육안으로 안보이면 listNotSeen에 추가
-                const found = listAll.value.find((item) => item.ID == menuDiv.id.replace("Target", ""))
-                if (found) listNotSeen.value.push(found) //console.log(menuDiv.id+"@@@@")
+        try {
+            listNotSeen.value = []
+            const sideTop = document.querySelector('#sideTop')
+            const sizeH = sideTop.offsetTop + sideTop.offsetHeight
+            let targetAll = document.querySelectorAll('.cntTarget') //더보기 제외 console.log(targetAll.length+"@@@")
+            targetAll.forEach(menuDiv => {
+                if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) { //사이드바에서 육안으로 안보이면 listNotSeen에 추가
+                    const found = listAll.value.find((item) => item.ID == menuDiv.id.replace("Target", ""))
+                    if (found) listNotSeen.value.push(found) //console.log(menuDiv.id+"@@@@")
+                }
+            })        
+            if (listUnSel.value.length > 0 || listNotSeen.value.length > 0) { //(사용자가 원래 선택하지 않은 메뉴 포함해) (화면이 작아진 후) 안 보이는 메뉴가 있으면 더보기 버튼 필요
+                seeMore.value = true
+            } else {
+                seeMore.value = false
             }
-        })        
-        if (listUnSel.value.length > 0 || listNotSeen.value.length > 0) { //(사용자가 원래 선택하지 않은 메뉴 포함해) (화면이 작아진 후) 안 보이는 메뉴가 있으면 더보기 버튼 필요
-            seeMore.value = true
-        } else {
-            seeMore.value = false
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -111,19 +114,23 @@
     //더보기 메뉴는 로컬에 저장하기 않는 전제임 (더보기 누르면 나오는 목록 클릭시 저장)
     //row까지 argument로 받는 것은 좀 과하다 싶지만 일단 개발 편의 고려해 처리하고자 함
     function clickPopupRow(popupId, row, idx) {
-        popupMenuOn.value = false
-        const id = (popupId == "mnuSeeMore") ? row.ID : popupId
-        for (let i = 0; i < listSel.value.length; i++) {
-            if (listSel.value[i].sel) listSel.value[i].sel = false
+        try {
+            popupMenuOn.value = false
+            const id = (popupId == "mnuSeeMore") ? row.ID : popupId
+            for (let i = 0; i < listSel.value.length; i++) {
+                if (listSel.value[i].sel) listSel.value[i].sel = false
+            }
+            row.sel = true
+            if (id == gst.selSideMenu) return
+            if (popupId != "mnuSeeMore") {
+                gst.selSideMenu = id
+                localStorage.wiseband_lastsel_menu = id
+            }
+            const obj = { row: row, idx: idx }
+            procMenu[id].call(null, obj)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        row.sel = true
-        if (id == gst.selSideMenu) return
-        if (popupId != "mnuSeeMore") {
-            gst.selSideMenu = id
-            localStorage.wiseband_lastsel_menu = id
-        }
-        const obj = { row: row, idx: idx }
-        procMenu[id].call(null, obj)
     }
 
     function displayMenuAsSelected(popupId) {
@@ -137,16 +144,9 @@
         localStorage.wiseband_lastsel_menu = popupId
     }
 
-    function onGot(historyItems) {
-        for (const item of historyItems) {
-            console.log(item.url);
-            console.log(new Date(item.lastVisitTime));
-        }
-    }
-
-    const procMenu = { //obj.idx and obj,row
+    const procMenu = { //obj.idx and obj.row
         ["mnuHome"] : (obj) => {
-            try { //alert("mnuHome====" + obj.idx + "@@@" + JSON.stringify(obj.row))
+            try {
                 router.replace({ path : '/main/home' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
@@ -154,16 +154,14 @@
         },
         ["mnuDm"] : (obj) => {
             try {
-                router.push({ path : '/main/test' })                
+                router.push({ path : '/main/test' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
         },
         ["mnuMyAct"] : (obj) => {
             try {
-                //debugger
-                //history.search({ text: "" }).then(onGot);
-                history.pushState({ foo: 'bar' }, '', '/main/home')
+                router.push({ path : '/main/test' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
@@ -202,8 +200,7 @@
                 </div>
             </div>
             <div class="main">
-                <div class="content">
-                    <!-- <router-view /> -->
+                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
                     <router-view v-slot="{ Component }">
                         <keep-alive>
                             <component :is="Component" />
@@ -251,7 +248,7 @@
     .footer {
         width:calc(100% - 20px);min-height:40px;margin:auto 0 0 0;padding:0 10px;
         display:none;align-items:center;
-        background:var(--footer-notify-color);
+        background:beige;
     }
     .menu { 
         width:55px;min-height:55px;margin:8px 0px; 
