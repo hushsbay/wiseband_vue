@@ -153,7 +153,7 @@
                 </div>
                 <div class="msg_body_sub">
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM">
-                        <img class="coImg18" :src="gst.html.getImageUrl('action_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT }}</span>
+                        <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
                     </div>
                     <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center" :title="row2.AUTHORNM">
                         <img class="coImg18" :src="gst.html.getImageUrl('user.png')">
@@ -178,9 +178,9 @@
                     </div>
                 </div>
                 <div v-show="row.hover" class="msg_proc">
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_A.png')" title="체크중"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_C.png')" title="완료됨"></span>                    
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('action_Z.png')" title="제대로 완료함"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_watch.png')" title="알아보는중"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_check.png')" title="접수완료"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료"></span>
                     <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></span>
                     <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드에 댓글 달기"></span>
                     <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달"></span>
