@@ -12,6 +12,7 @@
 
     let grnm = ref(''), channm = ref('')
     let msglist = ref([])
+    let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네\n\r술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -89,6 +90,23 @@
     function msgLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
         row.hover = false
     }
+
+    async function saveMsg() {
+        //파일 및 이미지 업로드
+        //https://kimmangyu.tistory.com/entry/NestJS-File-upload
+        //https://velog.io/@danceintherain/Nestjs%EB%A1%9C-%EC%9D%B4%EB%AF%B8%EC%A7%80%ED%8C%8C%EC%9D%BC-%EC%97%85%EB%A1%9C%EB%93%9C-%EA%B5%AC%ED%98%84%ED%95%98%EA%B8%B0
+        const fd = new FormData()
+        fd.append("chanid", gst.selChanId)
+        fd.append("msgid", null)
+        fd.append("body", msgbody.value)
+        //fd.append("sub_link", linkArr)
+        //fd.append("sub_file", null)
+        //fd.append("sub_image", null)        
+        const res = await axios.post("/chanmsg/saveMsg", fd)
+        const rs = gst.util.chkAxiosCode(res.data)
+        debugger
+        if (!rs) return
+    } 
 
     async function test() {
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
@@ -254,7 +272,8 @@
         </div>
         <div class="chan_center_footer">
             <div class="editor_header">
-                <div style="display:flex;align-items:center;padding:3px 5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px">
+                <div style="display:flex;align-items:center;padding:3px 5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px"
+                    @click="saveMsg">
                     <img class="coImg24" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘 추가">
@@ -262,7 +281,7 @@
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일 추가">                
             </div>    
             <div class="editor_body" contenteditable="true" spellcheck="false">
-                구름에 달 가듯이 가는 나그네<br>술익는 마을마다 <span style="color:red;font-weight:bold">타는 저녁놀</span> Let's GoGo!!!
+                {{ msgbody }}
             </div>
         </div>
     </div>
