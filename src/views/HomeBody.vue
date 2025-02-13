@@ -92,20 +92,22 @@
     }
 
     async function saveMsg() {
-        //파일 및 이미지 업로드
+        //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리하기
         //https://kimmangyu.tistory.com/entry/NestJS-File-upload
         //https://velog.io/@danceintherain/Nestjs%EB%A1%9C-%EC%9D%B4%EB%AF%B8%EC%A7%80%ED%8C%8C%EC%9D%BC-%EC%97%85%EB%A1%9C%EB%93%9C-%EA%B5%AC%ED%98%84%ED%95%98%EA%B8%B0
-        const fd = new FormData()
+        /*const fd = new FormData()
+        fd.append("crud", "C")
         fd.append("chanid", gst.selChanId)
         fd.append("msgid", null)
         fd.append("body", msgbody.value)
-        //fd.append("sub_link", linkArr)
-        //fd.append("sub_file", null)
-        //fd.append("sub_image", null)        
-        const res = await axios.post("/chanmsg/saveMsg", fd)
+        fd.append("num_file", 0)
+        fd.append("num_image", 0)        
+        const res = await axios.post("/chanmsg/saveMsg", fd, { headers: { 'Content-Type': 'multipart/form-data' }})*/
+        const rq = { crud: "C", chanid: gst.selChanId, msgid: null, body: msgbody.value, num_file: 0, num_image: 0 }
+        const res = await axios.post("/chanmsg/saveMsg", rq)
         const rs = gst.util.chkAxiosCode(res.data)
-        debugger
         if (!rs) return
+        
     } 
 
     async function test() {
