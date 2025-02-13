@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted } from 'vue' 
+    import { ref, reactive, onMounted } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -12,7 +12,8 @@
 
     let grnm = ref(''), channm = ref('')
     let msglist = ref([])
-    let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네\n\r술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
+    let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
+    let imgBlobArrToSave = ref([])
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -69,7 +70,8 @@
         try {
             const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
             const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return            
+            if (!rs) return
+            debugger
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             document.title = channm.value + "[채널]"
@@ -91,6 +93,48 @@
         row.hover = false
     }
 
+    function pastedInMsgBody(e) {
+        try {
+            e.preventDefault()
+            const pastedData = e.clipboardData.items//e.originalEvent.clipboardData.items
+            if (pastedData.length == 0) return
+            const clipboardItem = pastedData[0]
+            if (clipboardItem.type.includes("image")) { //예) image/png
+                const blob = clipboardItem.getAsFile()
+                // if (blob.size > hush.cons.max_size_to_sublink) { //see get_sublink.js
+                //     hush.msg.toast("이미지가 너무 큽니다 : " + blob.size + "<br>max : " + hush.util.formatBytes(hush.cons.max_size_to_sublink) + "(" + hush.cons.max_size_to_sublink + "bytes)")
+                //     return
+                // }
+                debugger
+                imgBlobArrToSave.value.push(URL.createObjectURL(blob))
+            } else if (clipboardItem.type.includes("text")) {
+                clipboardItem.getAsString(function(str) {
+                    // const _arr = str.split(hush.cons.deli)
+                    // if (_arr[0] == "btn_copy_cell") { //e.preventDefault() here has no effect                                    
+                    //     g_in_chat.val(g_in_chat.val().replace(str, ""))
+                    //     if (g_in_chat.val().trim() != "") {
+                    //         alert("이미 작성중인 데이터가 있습니다.")
+                    //         return
+                    //     }                                                        
+                    //     const rq = { msgid : _arr[3] }
+                    //     if (hush.webview.ios) { 
+                    //     } else if (hush.webview.and) { //it's text
+                    //         setTimeout(function() {
+                    //             AndroidCom.send(hush.cons.sock_ev_qry_msgcell, JSON.stringify(rq), g_roomid, null, true)
+                    //         }, hush.cons.sec_for_webview_func) //비동기로 호출해야 동작
+                    //     } else {
+                    //         hush.sock.send(g_socket, hush.cons.sock_ev_qry_msgcell, rq, g_roomid)
+                    //     }
+                    // } else {
+                    //     calcBytes()
+                    // }
+                })
+            }                        
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }    
+
     async function saveMsg() {
         //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리하기
         //https://kimmangyu.tistory.com/entry/NestJS-File-upload
@@ -103,12 +147,15 @@
         fd.append("num_file", 0)
         fd.append("num_image", 0)        
         const res = await axios.post("/chanmsg/saveMsg", fd, { headers: { 'Content-Type': 'multipart/form-data' }})*/
-        const rq = { crud: "C", chanid: gst.selChanId, msgid: null, body: msgbody.value, num_file: 0, num_image: 0 }
+        const rq = { 
+            crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgBody').innerHTML, 
+            num_file: 0, num_image: 0 
+        }
         const res = await axios.post("/chanmsg/saveMsg", rq)
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return
-        
-    } 
+
+    }
 
     async function test() {
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
@@ -150,9 +197,7 @@
                 <div style="display:flex;align-items:center">
                     <img class="coImg32" :src="gst.html.getImageUrl('user.png')"><span style="margin-left:10px">{{ row.AUTHORNM }} {{ row.CDT }} </span>
                 </div>
-                <div style="display:flex;margin:10px">
-                    <span>{{ row.BODY }}</span>
-                </div>
+                <div v-html="row.BODY" style="margin:10px"></div> <!--<span>{{ row.BODY }}</span></div>-->
                 <div class="msg_body_sub">
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
@@ -164,11 +209,11 @@
                         댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
                     </div>
                 </div>
-                <div class="msg_body_sub">
+                <!-- <div class="msg_body_sub">
                     <div v-for="(row3, idx3) in row.msglink" class="msg_body_sub1">
                         <a :href="row3.BODY"><span>{{ row3.BODY }}</span></a>
                     </div>
-                </div>
+                </div> -->
                 <div class="msg_body_sub">
                     <div v-for="(row4, idx4) in row.msgfile" class="msg_body_sub1">
                         <span>{{ row4.BODY }}</span>
@@ -281,9 +326,16 @@
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘 추가">
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크 추가">
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일 추가">                
-            </div>    
-            <div class="editor_body" contenteditable="true" spellcheck="false">
-                {{ msgbody }}
+            </div>
+            <!-- 
+                <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
+                https://www.jkun.net/702
+            -->
+            <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="pastedInMsgBody"></div>
+            <div v-if="imgBlobArrToSave.length > 0" style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke">
+                <div v-for="(row, idx) in imgBlobArrToSave" style="width:50px;height:50px;margin:10px;border:1px solid lightgray">
+                    <img :src="row" style='width:100%;height:100%'>
+                </div>
             </div>
         </div>
     </div>
