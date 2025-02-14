@@ -14,6 +14,7 @@
     let msglist = ref([])
     let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
     let imgBlobArrToSave = ref([])
+    let fileBlobArrToSave = ref([]), fileBlobArrMgt = ref([]) //fileBlobArrMgt : 파일객체(ReadOnly)가 아님. hover 속성 관리 가능 (서버에서는 delete all and insert임)
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -71,7 +72,6 @@
             const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            debugger
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             document.title = channm.value + "[채널]"
@@ -93,6 +93,14 @@
         row.hover = false
     }
 
+    async function blobEnter(idx) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+        fileBlobArrMgt.value[idx].hover = true
+    }
+
+    function blobLeave(idx) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+        fileBlobArrMgt.value[idx].hover = false
+    }
+
     function pastedInMsgBody(e) {
         try {
             e.preventDefault()
@@ -105,7 +113,6 @@
                 //     hush.msg.toast("이미지가 너무 큽니다 : " + blob.size + "<br>max : " + hush.util.formatBytes(hush.cons.max_size_to_sublink) + "(" + hush.cons.max_size_to_sublink + "bytes)")
                 //     return
                 // }
-                debugger
                 imgBlobArrToSave.value.push(URL.createObjectURL(blob))
             } else if (clipboardItem.type.includes("text")) {
                 clipboardItem.getAsString(function(str) {
@@ -135,26 +142,59 @@
         }
     }    
 
-    async function saveMsg() {
-        //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리하기
-        //https://kimmangyu.tistory.com/entry/NestJS-File-upload
-        //https://velog.io/@danceintherain/Nestjs%EB%A1%9C-%EC%9D%B4%EB%AF%B8%EC%A7%80%ED%8C%8C%EC%9D%BC-%EC%97%85%EB%A1%9C%EB%93%9C-%EA%B5%AC%ED%98%84%ED%95%98%EA%B8%B0
-        /*const fd = new FormData()
-        fd.append("crud", "C")
-        fd.append("chanid", gst.selChanId)
-        fd.append("msgid", null)
-        fd.append("body", msgbody.value)
-        fd.append("num_file", 0)
-        fd.append("num_image", 0)        
-        const res = await axios.post("/chanmsg/saveMsg", fd, { headers: { 'Content-Type': 'multipart/form-data' }})*/
-        const rq = { 
-            crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgBody').innerHTML, 
-            num_file: 0, num_image: 0 
+    async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
+        try {
+            //1) S_MSGMST_TBL insert
+            const rq = { crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgBody').innerHTML }
+            const res = await axios.post("/chanmsg/saveMsg", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            const msgid = rs.data.msgid
+            //2) S_MSGSUB_TBL insert : file (서버에서의 저장 실패 고려해 한번에 보내서 트랜잭션 처리 delete all and insert : 파일용량이 크면 무리가 있음)           
+            //for (let item of fileBlobArrToSave.value) {
+                const fd = new FormData()
+                fd.append("chanid", gst.selChanId)
+                fd.append("msgid", msgid)
+                fd.append("kind", "F")
+                //fd.append("body", item.name)
+                //fd.append("filesize", item.size)
+                //fd.append("file", item)
+                fd.append("file", fileBlobArrToSave.value)
+                const res = await axios.post("/chanmsg/uploadBlob", fd, { headers: { 'Content-Type': 'multipart/form-data' }})
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+            //}
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
         }
-        const res = await axios.post("/chanmsg/saveMsg", rq)
-        const rs = gst.util.chkAxiosCode(res.data)
-        if (!rs) return
+    }
 
+    function addFile(e) { //파일이름이 같을 경우 업데이트하면 위험하니까 사용자에게 알려 주기
+        try {
+            const files = e.target.files
+            const filesToDel = []
+            for (let i = 0; i < files.length; i++) { //console.log(files[i].name + "@@@@@@" + files[i].size)
+                const exist = fileBlobArrToSave.value.filter(x => x.name == files[i].name)
+                if (exist.length > 0) {
+                    gst.util.setToast("이미 같은 이름의 파일이 존재합니다.\n" + files[i].name, 5, true)
+                    return
+                }
+                filesToDel.push({ hover: false })
+            }
+            fileBlobArrToSave.value = [...fileBlobArrToSave.value, ...files]
+            fileBlobArrMgt.value = [...fileBlobArrMgt.value, ...filesToDel]
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function delFile(idx) {
+        try {
+            fileBlobArrToSave.value.splice(idx, 1)
+            fileBlobArrMgt.value.splice(idx, 1)
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
     }
 
     async function test() {
@@ -325,16 +365,26 @@
                 </div>
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘 추가">
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크 추가">
-                <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일 추가">                
+                <input id="file_upload" type=file multiple hidden @change="addFile" />
+                <label for="file_upload"><img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일 추가"></label>
             </div>
             <!-- 
                 <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
                 https://www.jkun.net/702
             -->
             <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="pastedInMsgBody"></div>
-            <div v-if="imgBlobArrToSave.length > 0" style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke">
+            <div v-if="imgBlobArrToSave.length > 0" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArrToSave" style="width:50px;height:50px;margin:10px;border:1px solid lightgray">
                     <img :src="row" style='width:100%;height:100%'>
+                </div>
+            </div>
+            <div v-if="fileBlobArrToSave.length > 0" class="msg_body_blob">
+                <div v-for="(row, idx) in fileBlobArrToSave" @mouseenter="blobEnter(idx)" @mouseleave="blobLeave(idx)" 
+                    style="position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;justify-content:space-between;border:1px solid lightgray;border-radius:3px;cursor:pointer">
+                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
+                    <div v-show="fileBlobArrMgt[idx].hover" style="position:absolute;right:0px;top:0px;height:100%;margin-left:5px;display:flex;align-items:center;background:beige">
+                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click="delFile(idx)">
+                    </div>
                 </div>
             </div>
         </div>
@@ -391,6 +441,9 @@
     }
     .msg_body_sub1 {
         margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px
+    }
+    .msg_body_blob {
+        margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke
     }
     .msg_proc {
         position:absolute;height:20px;right:15px;top:-5px;padding:5px 10px;z-index:9999;
