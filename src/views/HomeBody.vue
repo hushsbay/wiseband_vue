@@ -209,12 +209,14 @@
         }
     }
 
-    async function delFile(idx) {
+    async function delFile(msgid, idx) { //msgid = temp or real msgid
         try {
             const kind = 'F'
             const name = fileBlobArr.value[idx].name
             const cdt = fileBlobArr.value[idx].cdt
-            const res = await axios.post("/chanmsg/delBlob", { chanid: gst.selChanId, kind: kind, name: name, cdt: cdt })
+            const res = await axios.post("/chanmsg/delBlob", { 
+                msgid: msgid, chanid: gst.selChanId, kind: kind, name: name, cdt: cdt 
+            })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             fileBlobArr.value.splice(idx, 1)
@@ -224,6 +226,20 @@
     }
 
     async function test() {
+        //axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&name=nodeconfig.js', {
+        axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&name=aaa.xlsx', {
+            responseType: "blob"
+        }).then(response => {
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', attachFileName); //or any other extension
+            document.body.appendChild(link);
+            link.click();
+        }).catch(exception => {
+            alert("파일 다운로드 실패");
+        });
+        return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return            
@@ -404,7 +420,7 @@
                     style="position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;justify-content:space-between;border:1px solid lightgray;border-radius:3px;cursor:pointer">
                     <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
                     <div v-show="fileBlobArr[idx].hover" style="position:absolute;right:0px;top:0px;height:100%;margin-left:5px;display:flex;align-items:center;background:beige">
-                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click="delFile(idx)">
+                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click="delFile('temp', idx)">
                     </div>
                 </div>
             </div>
