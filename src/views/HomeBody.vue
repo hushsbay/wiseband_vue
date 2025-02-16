@@ -227,17 +227,17 @@
 
     async function test() {
         //axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&name=nodeconfig.js', {
-        axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&name=aaa.xlsx', {
+        axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&name=111.png', {
             responseType: "blob"
         }).then(response => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', attachFileName); //or any other extension
+            link.setAttribute('download', "111.png"); //or any other extension
             document.body.appendChild(link);
             link.click();
         }).catch(exception => {
-            alert("파일 다운로드 실패");
+            alert("파일 다운로드 실패" + exception.toString());
         });
         return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
