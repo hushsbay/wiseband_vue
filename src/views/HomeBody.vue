@@ -215,7 +215,7 @@
             const name = fileBlobArr.value[idx].name
             const cdt = fileBlobArr.value[idx].cdt
             const res = await axios.post("/chanmsg/delBlob", { 
-                msgid: msgid, chanid: gst.selChanId, kind: kind, name: name, cdt: cdt 
+                msgid: msgid, chanid: gst.selChanId, kind: kind, cdt: cdt, name: name
             })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -225,11 +225,34 @@
         }
     }
 
+    function downloadFile(msgid, idx) { //msgid = temp or real msgid
+        try {
+            const name = fileBlobArr.value[idx].name
+            const cdt = fileBlobArr.value[idx].cdt
+            const query = "?msgid=" + msgid + "&chanid=" + gst.selChanId + "&kind=F&cdt=" + cdt + "&name=" + name
+            axios.get("/chanmsg/readBlob" +query, { 
+                responseType: "blob"
+            }).then(res => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
+                const url = window.URL.createObjectURL(new Blob([res.data]))
+                const link = document.createElement('a')
+                link.href = url
+                link.setAttribute('download', name)
+                document.body.appendChild(link)
+                link.click()
+                gst.util.setToast("")
+            }).catch(exception => {
+                gst.util.setToast("")
+                alert("파일 다운로드 실패 : " + exception.toString())
+            })
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
     async function test() {
-        //axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&name=nodeconfig.js', {
-        axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&name=111.png', {
+        axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&cdt=2025-02-16 09:03:56.598271&name=111.png', {
             responseType: "blob"
-        }).then(response => {
+        }).then(response => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -405,10 +428,8 @@
                 <input id="file_upload" type=file multiple hidden @change="uploadFile" />
                 <label for="file_upload"><img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일 추가"></label>
             </div>
-            <!-- 
-                <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
-                https://www.jkun.net/702
-            -->
+            <!--<div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
+                https://www.jkun.net/702-->
             <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="pastedInMsgBody"></div>
             <div v-if="imgBlobArr.length > 0" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArr" style="width:50px;height:50px;margin:10px;border:1px solid lightgray">
@@ -416,11 +437,11 @@
                 </div>
             </div>
             <div v-if="fileBlobArr.length > 0" class="msg_body_blob">
-                <div v-for="(row, idx) in fileBlobArr" @mouseenter="blobEnter(idx)" @mouseleave="blobLeave(idx)" 
+                <div v-for="(row, idx) in fileBlobArr" @mouseenter="blobEnter(idx)" @mouseleave="blobLeave(idx)" @click="downloadFile('temp', idx)"
                     style="position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;justify-content:space-between;border:1px solid lightgray;border-radius:3px;cursor:pointer">
                     <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
                     <div v-show="fileBlobArr[idx].hover" style="position:absolute;right:0px;top:0px;height:100%;margin-left:5px;display:flex;align-items:center;background:beige">
-                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click="delFile('temp', idx)">
+                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click.stop="delFile('temp', idx)">
                     </div>
                 </div>
             </div>

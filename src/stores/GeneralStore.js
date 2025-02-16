@@ -387,6 +387,7 @@ const GeneralStore = defineStore('General', () => {
             } else {
                 msg = ex.toString()
             }
+            util.setToast("")
             util.setSnack(msg, sec)
         },
 
