@@ -233,13 +233,20 @@
             axios.get("/chanmsg/readBlob" +query, { 
                 responseType: "blob"
             }).then(res => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
+                //https://stackoverflow.com/questions/55218597/is-it-good-to-access-dom-in-vue-js
+                //index.html의 <body><div id="app">와 main.js의 app.mount('#app')를 보면 알 수 있듯이 vue realm은 app이 루트엘레먼트가 되므로
+                //아래 document.body.appendChild(link)는 app의 밖이므로 문제없어 보임. 다만, 처리후 삭제하는 코딩은 callback/promise가 필요해 보이므로 
+                //더 간편하게 처리하려면 차라리 시작할 때 기존 정해진 아이디를 지우는 게 나아 보이긴 함
+                //var elem = document.getElementById("btn_download")
+                //elem.remove()
                 const url = window.URL.createObjectURL(new Blob([res.data]))
                 const link = document.createElement('a')
+                link.id = "btn_download"
                 link.href = url
-                link.setAttribute('download', name)
+                link.setAttribute('download', name)                
                 document.body.appendChild(link)
                 link.click()
-                gst.util.setToast("")
+                gst.util.setToast("")                
             }).catch(exception => {
                 gst.util.setToast("")
                 alert("파일 다운로드 실패 : " + exception.toString())
