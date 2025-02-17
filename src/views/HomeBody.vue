@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, reactive, onMounted } from 'vue' 
+    import { ref, onMounted, nextTick } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -13,8 +13,9 @@
     let grnm = ref(''), channm = ref('')
     let msglist = ref([])
     let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
-    let imgBlobArr = ref([])
+    let uploadProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let fileBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
+    let imgBlobArr = ref([])
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -180,7 +181,8 @@
                     return
                 }                
             }
-            const filesToUpload = []
+            uploadProgress.value = []
+            const filesToUpload = []            
             for (let i = 0; i < files.length; i++) {
                 const fd = new FormData()
                 fd.append("chanid", gst.selChanId)
@@ -188,7 +190,15 @@
                 fd.append("body", files[i].name)
                 fd.append("filesize", files[i].size)
                 fd.append("file", files[i])
-                const res = await axios.post("/chanmsg/uploadBlob", fd, { headers: { 'Content-Type': 'multipart/form-data' }})
+                uploadProgress.value.push({ name: files[i].name, size: files[i].size, percent : 0 }) //실패시 filesToUpload에 추가된 걸 빼지 않으려고 별도로 만든 것임
+                const res = await axios.post("/chanmsg/uploadBlob", fd, { 
+                    headers: { 
+                        'Content-Type': 'multipart/form-data' 
+                    }, onUploadProgress: async (e) => { //파일이 작으면 보이지도 않는데 나중에 파일시스템으로 이관하면 필요할 것임 (현재 구현 및 테스트 완료 상태임)
+                        const percent = (e.loaded * 100) / e.total                        
+                        uploadProgress.value[i].percent = Math.round(percent)
+                    }
+                })
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 filesToUpload.push({ hover: false, name: files[i].name, size: files[i].size, cdt: rs.data.cdt })
@@ -422,12 +432,17 @@
                 </div>
             </div>
             <div v-if="fileBlobArr.length > 0" class="msg_body_blob">
-                <div v-for="(row, idx) in fileBlobArr" @mouseenter="blobEnter(idx)" @mouseleave="blobLeave(idx)" @click="downloadFile('temp', idx)"
-                    style="position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;justify-content:space-between;border:1px solid lightgray;border-radius:3px;cursor:pointer">
-                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
-                    <div v-show="fileBlobArr[idx].hover" style="position:absolute;right:0px;top:0px;height:100%;margin-left:5px;display:flex;align-items:center;background:beige">
+                <div v-for="(row, idx) in fileBlobArr" @mouseenter="blobEnter(idx)" @mouseleave="blobLeave(idx)" @click="downloadFile('temp', idx)" class="msg_file_each">
+                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ gst.util.formatBytes(row.size) }}</span>)</div>
+                    <div v-show="fileBlobArr[idx].hover" class="msg_file_del">
                         <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click.stop="delFile('temp', idx)">
                     </div>
+                </div>
+                <div v-for="(row, idx) in uploadProgress" v-show="row.percent > 0 && row.percent < 100" class="msg_file_each">
+                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
+                    <div class="msg_file_del">
+                        <span style="padding:0 5px;color:red">{{ row.percent }}%</span>
+                    </div>                    
                 </div>
             </div>
         </div>
@@ -487,6 +502,12 @@
     }
     .msg_body_blob {
         margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke
+    }
+    .msg_file_each {
+        position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;justify-content:space-between;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    }
+    .msg_file_del {
+
     }
     .msg_proc {
         position:absolute;height:20px;right:15px;top:-5px;padding:5px 10px;z-index:9999;
