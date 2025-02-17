@@ -71,6 +71,8 @@ const GeneralStore = defineStore('General', () => {
         PWD_MISMATCH : '-811',
         auth_err_prefix : "-8",
         toastSec : 3,
+        uploadLimitSize : 10 * 1024 * 1024, //10MB
+        uploadMaxCount : 10,
         toastMsg : "처리중..",
         done : "처리 완료",
         doneWithCnt : "처리 완료 : ",
@@ -400,6 +402,12 @@ const GeneralStore = defineStore('General', () => {
         getCodeNm : function(arr, id) { //Z_CODE_TBL 관련 전용 //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
             const found = arr.find((item) => item.ID == id)
             return (found) ? found.NM : null
+        },
+
+        formatBytes : function (bytes) {
+            let units = ["B", "KB", "MB", "GB", "TB"], i
+            for (i = 0; bytes >= 1024 && i < 4; i++) bytes /= 1024
+            return bytes.toFixed(2) + units[i]
         }
 
     }

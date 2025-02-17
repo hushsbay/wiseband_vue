@@ -147,8 +147,7 @@
     }    
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
-        try {
-            //1) S_MSGMST_TBL insert
+        try { //파일 및 이미지가 있다면 미리 업로드된 상태임
             const rq = { 
                 crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgBody').innerHTML,
                 num_file: fileBlobArr.value.length, num_image: imgBlobArr.value.length
@@ -156,21 +155,7 @@
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            const msgid = rs.data.msgid
-            //2) S_MSGSUB_TBL insert : file (서버에서의 저장 실패 고려해 한번에 보내서 트랜잭션 처리 delete all and insert : 파일용량이 크면 무리가 있음)           
-            // for (let item of fileBlobArrToSave.value) {
-            //     const fd = new FormData()
-            //     fd.append("chanid", gst.selChanId)
-            //     fd.append("msgid", msgid)
-            //     fd.append("kind", "F")
-            //     //fd.append("body", item.name)
-            //     //fd.append("filesize", item.size)
-            //     //fd.append("file", item)
-            //     fd.append("file", fileBlobArrToSave.value)
-            //     const res = await axios.post("/chanmsg/uploadBlob", fd, { headers: { 'Content-Type': 'multipart/form-data' }})
-            //     const rs = gst.util.chkAxiosCode(res.data)
-            //     if (!rs) return
-            // }
+            gst.setToast(gst.cons.done)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -179,19 +164,24 @@
     async function uploadFile(e) {
         try {
             const files = e.target.files
-            // const filesToDel = []
-            // for (let i = 0; i < files.length; i++) { //console.log(files[i].name + "@@@@@@" + files[i].size)
-            //     const exist = fileBlobArrToSave.value.filter(x => x.name == files[i].name)
-            //     if (exist.length > 0) {
-            //         gst.util.setToast("이미 같은 이름의 파일이 존재합니다.\n" + files[i].name, 5, true)
-            //         return
-            //     }
-            //     filesToDel.push({ hover: false })
-            // }
-            // fileBlobArrToSave.value = [...fileBlobArrToSave.value, ...files]
-            // fileBlobArr.value = [...fileBlobArr.value, ...filesToDel]
+            if (fileBlobArr.value.length + files.length > gst.cons.uploadMaxCount) {
+                gst.util.setToast("업로드 파일 갯수는 메시지별로 " + gst.cons.uploadMaxCount + "개(기존 파일 포함)까지만 가능합니다.", 5, true)
+                return
+            }            
+            for (let i = 0; i < files.length; i++) {
+                const size = files[i].size
+                if (size > gst.cons.uploadLimitSize) {
+                    gst.util.setSnack("업로드 파일 크기 제한은 " + gst.util.formatBytes(gst.cons.uploadLimitSize) + "입니다.\n" + files[i].name + " => " + gst.util.formatBytes(size), true)
+                    return
+                }
+                const exist = fileBlobArr.value.filter(x => x.name == files[i].name)
+                if (exist.length > 0) {
+                    gst.util.setToast("이미 같은 이름의 파일이 존재합니다.\n" + files[i].name, 5, true)
+                    return
+                }                
+            }
             const filesToUpload = []
-            for (let i = 0; i < files.length; i++) { //console.log(files[i].name + "@@@@@@" + files[i].size)
+            for (let i = 0; i < files.length; i++) {
                 const fd = new FormData()
                 fd.append("chanid", gst.selChanId)
                 fd.append("kind", "F")
@@ -234,14 +224,15 @@
                 responseType: "blob"
             }).then(res => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
                 //https://stackoverflow.com/questions/55218597/is-it-good-to-access-dom-in-vue-js
-                //index.html의 <body><div id="app">와 main.js의 app.mount('#app')를 보면 알 수 있듯이 vue realm은 app이 루트엘레먼트가 되므로
-                //아래 document.body.appendChild(link)는 app의 밖이므로 문제없어 보임. 다만, 처리후 삭제하는 코딩은 callback/promise가 필요해 보이므로 
+                //index.html의 <body><div id="app">와 main.js의 app.mount('#app')를 보면 알 수 있듯이 vue realm은 app이 루트엘레먼트가 되서
+                //아래 document.body.appendChild(link)는 app의 밖이므로 문제없어 보임. 다만, 처리후 삭제하는 코딩은 callback/promise가 필요해 보이는데
                 //더 간편하게 처리하려면 차라리 시작할 때 기존 정해진 아이디를 지우는 게 나아 보이긴 함
-                //var elem = document.getElementById("btn_download")
-                //elem.remove()
+                const tagId = "btn_download"
+                const elem = document.getElementById(tagId)
+                if (elem) elem.remove()
                 const url = window.URL.createObjectURL(new Blob([res.data]))
                 const link = document.createElement('a')
-                link.id = "btn_download"
+                link.id = tagId
                 link.href = url
                 link.setAttribute('download', name)                
                 document.body.appendChild(link)
@@ -249,7 +240,7 @@
                 gst.util.setToast("")                
             }).catch(exception => {
                 gst.util.setToast("")
-                alert("파일 다운로드 실패 : " + exception.toString())
+                gst.util.setSnack("파일 다운로드 실패\n" + exception.toString(), true)
             })
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -257,19 +248,6 @@
     }
 
     async function test() {
-        axios.get('/chanmsg/readBlob?msgid=temp&chanid=20250122084532918913033403&kind=F&cdt=2025-02-16 09:03:56.598271&name=111.png', {
-            responseType: "blob"
-        }).then(response => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', "111.png"); //or any other extension
-            document.body.appendChild(link);
-            link.click();
-        }).catch(exception => {
-            alert("파일 다운로드 실패" + exception.toString());
-        });
-        return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return            
