@@ -315,7 +315,7 @@ const GeneralStore = defineStore('General', () => {
                 strStack = ex.stack
                 console.log(ex.stack)
             } else {
-                strMsg = "gst.setSnack - typeof error"
+                strMsg = "gst.util.setSnack - typeof error"
             }
             if (!strMsg) {
                 snackBar.value.msg = ""
@@ -348,7 +348,7 @@ const GeneralStore = defineStore('General', () => {
             } else if (typeof ex == "object" && ex.stack) {
                 strMsg = ex.message
             } else {
-                strMsg = "gst.setToast - typeof error"
+                strMsg = "gst.util.setToast - typeof error"
             }
             if (!strMsg) {
                 toast.value.msg = "" //this.toast.msg = ""
