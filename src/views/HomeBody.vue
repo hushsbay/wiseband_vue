@@ -156,7 +156,7 @@
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.util.setToast(gst.cons.done)
+            //setTimeout(function() { gst.util.setToast(gst.cons.done) }, 500)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
