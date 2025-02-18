@@ -77,19 +77,39 @@
             if (!rs) return
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
-            document.title = channm.value + "[채널]"
+            document.title = channm.value + "[채널]"            
+            for (let row of rs.data.msglist) {
+                if (row.msgimg.length > 0) debugger
+                for (let item of row.msgimg) {
+                    if (!item.BUFFER) continue //임시코딩 - 테스트 - 나중에 제거
+                    const uInt8Array = new Uint8Array(item.BUFFER.data)
+                    const blob = new Blob([uInt8Array], { type: "image/png" })
+                    const blobUrl = URL.createObjectURL(blob)
+                    debugger
+                    item.url = blobUrl
+                    item.hover = false
+                    item.cdt = item.CDT
+                }
+                if (row.msgfile.length > 0) debugger
+                for (let item of row.msgfile) {
+                    item.hover = false
+                    item.name = item.BODY
+                    item.size = item.FILESIZE
+                    item.cdt = item.CDT
+                }
+            }
             msglist.value = rs.data.msglist
             debugger
-            fileBlobArr.value = []
-            for (let item of rs.data.tempfilelist) {
-                fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
-            }
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
                 const uInt8Array = new Uint8Array(item.BUFFER.data)
                 const blob = new Blob([uInt8Array], { type: "image/png" })
                 const blobUrl = URL.createObjectURL(blob)
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: item.CDT })
+            }
+            fileBlobArr.value = []
+            for (let item of rs.data.tempfilelist) {
+                fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -100,28 +120,12 @@
         
     }
 
-    function msgEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+    function rowEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
         row.hover = true
     }
 
-    function msgLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+    function rowLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
         row.hover = false
-    }
-
-    function blobEnter(idx, kind) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
-        if (kind == "F") {
-            fileBlobArr.value[idx].hover = true
-        } else { //kind(I)
-            imgBlobArr.value[idx].hover = true
-        }
-    }
-
-    function blobLeave(idx, kind) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
-        if (kind == "F") {
-            fileBlobArr.value[idx].hover = false
-        } else { //kind(I)
-            imgBlobArr.value[idx].hover = false
-        }
     }
 
     function imgLoaded(e, row) {
@@ -202,15 +206,18 @@
         }
     }
 
-    function showImage(msgid, idx) { //msgid = temp or real msgid
+    function showImage(row) { //msgid, idx) { //msgid = temp or real msgid
         try {
-            if (msgid == "temp") {
-                imgPopupUrl.value = imgBlobArr.value[idx].url
-                const realWidth = imgBlobArr.value[idx].realWidth
-                const realHeight = imgBlobArr.value[idx].realHeight
-                imgPopupStyle.value = { width: realWidth + "px", height: realHeight + "px" }
-                imgPopupRef.value.open()
-            }
+            // if (msgid == "temp") {
+            //     imgPopupUrl.value = imgBlobArr.value[idx].url
+            //     const realWidth = imgBlobArr.value[idx].realWidth
+            //     const realHeight = imgBlobArr.value[idx].realHeight
+            //     imgPopupStyle.value = { width: realWidth + "px", height: realHeight + "px" }
+            //     imgPopupRef.value.open()
+            // }
+            imgPopupUrl.value = row.url
+            imgPopupStyle.value = { width: row.realWidth + "px", height: row.realHeight + "px" }
+            imgPopupRef.value.open()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -293,11 +300,9 @@
         }
     }
 
-    function downloadFile(msgid, idx) { //msgid = temp or real msgid
+    function downloadFile(msgid, row) { //msgid = temp or real msgid
         try {
-            const name = fileBlobArr.value[idx].name
-            const cdt = fileBlobArr.value[idx].cdt
-            const query = "?msgid=" + msgid + "&chanid=" + gst.selChanId + "&kind=F&cdt=" + cdt + "&name=" + name
+            const query = "?msgid=" + msgid + "&chanid=" + gst.selChanId + "&kind=F&cdt=" + row.cdt + "&name=" + row.name
             axios.get("/chanmsg/readBlob" +query, { 
                 responseType: "blob"
             }).then(res => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
@@ -312,7 +317,7 @@
                 const link = document.createElement('a')
                 link.id = tagId
                 link.href = url
-                link.setAttribute('download', name)                
+                link.setAttribute('download', row.name)                
                 document.body.appendChild(link)
                 link.click()
                 gst.util.setToast("")                
@@ -361,7 +366,7 @@
         </div>
         <div class="chan_center_body">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"
-                @mouseenter="msgEnter(row)" @mouseleave="msgLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
+                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
                 <div style="display:flex;align-items:center">
                     <img class="coImg32" :src="gst.html.getImageUrl('user.png')"><span style="margin-left:10px">{{ row.AUTHORNM }} {{ row.CDT }} </span>
                 </div>
@@ -377,14 +382,20 @@
                         댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
                     </div>
                 </div>
-                <div class="msg_body_sub">
-                    <div v-for="(row4, idx4) in row.msgfile" class="msg_body_sub1">
-                        <span>{{ row4.BODY }}</span>
-                    </div>
+                <div v-if="row.msgimg.length > 0" class="msg_body_sub">
+                    <div v-for="(row5, idx5) in row.msgimg" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)" class="msg_image_each">
+                        <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
+                        <div v-show="row5.hover" class="msg_file_seemore">
+                            <img class="coImg20" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" >
+                        </div>
+                    </div>                
                 </div>
-                <div class="msg_body_sub">
-                    <div v-for="(row5, idx5) in row.msgimg" class="msg_body_sub1">
-                        <img class="coImg64" :src="gst.html.getImageUrl('edms.png')">
+                <div v-if="row.msgfile.length > 0" class="msg_body_sub">
+                    <div v-for="(row5, idx5) in row.msgfile" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)" class="msg_file_each">
+                        <div><span style="margin-right:3px">{{ row5.name }}</span>(<span>{{ gst.util.formatBytes(row5.size) }}</span>)</div>
+                        <div v-show="row5.hover" class="msg_file_seemore">
+                            <img class="coImg20" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" >
+                        </div>
                     </div>
                 </div>
                 <div v-show="row.hover" class="msg_proc">
@@ -398,87 +409,6 @@
                     <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기"></span>
                 </div>
             </div>
-            <!-- <div class="msg_body">
-                메시지 테스트입니다. 1111 <input type="text" value="00000000" />
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. 2222                
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-                메시지 테스트입니다. 3333<br>
-            </div>
-            <div class="msg_body" style="display:flex;flex-direction:column;">
-                <div style="display:flex;align-items:center;margin-bottom:10px">
-                    <img class="coImg32" :src="gst.html.getImageUrl('user.png')" title="완료됨">
-                    <span>이상병 2025-01-01 13:43:22</span>
-                </div>
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444 
-                메시지 테스트입니다. 4444
-                <br><br>
-                구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네 
-                구름에 달 가듯이 가는 나그네                
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. 5555
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. 6666
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. 7777                
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. 8888
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. 9999
-            </div>
-            <div class="msg_body">
-                술익는 마을마다 타는 저녁놀<br>
-                술익는 마을마다 타는 저녁놀<br>
-                술익는 마을마다 타는 저녁놀<br>
-                술익는 마을마다 타는 저녁놀<br>
-                술익는 마을마다 타는 저녁놀<br>
-                술익는 마을마다 타는 저녁놀<br>
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. aaaa
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. bbbb
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. cccc                
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. dddd
-            </div>
-            <div class="msg_body">
-                메시지 테스트입니다. eeee
-            </div> -->
         </div>
         <div class="chan_center_footer">
             <div class="editor_header">
@@ -495,7 +425,7 @@
                 https://www.jkun.net/702-->
             <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="uploadImage"></div>
             <div v-if="imgBlobArr.length > 0" class="msg_body_blob">
-                <div v-for="(row, idx) in imgBlobArr" @mouseenter="blobEnter(idx, 'I')" @mouseleave="blobLeave(idx, 'I')" @click="showImage('temp', idx)" class="msg_image_each">
+                <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
                     <div v-show="row.hover" class="msg_file_del">
                         <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delImage('temp', idx)">
@@ -503,12 +433,8 @@
                 </div>                
             </div>
             <div v-if="fileBlobArr.length > 0" class="msg_body_blob">
-                <div v-for="(row, idx) in fileBlobArr" @mouseenter="blobEnter(idx, 'F')" @mouseleave="blobLeave(idx, 'F')" @click="downloadFile('temp', idx)" class="msg_file_each">
+                <div v-for="(row, idx) in fileBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="downloadFile('temp', row)" class="msg_file_each">
                     <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ gst.util.formatBytes(row.size) }}</span>)</div>
-                    <!-- 나중에 메시지 하버시 사용하기
-                    <div v-show="row.hover" class="msg_file_seemore">
-                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('temp', idx)">
-                    </div> -->
                     <div v-show="row.hover" class="msg_file_del">
                         <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delFile('temp', idx)">
                     </div>
