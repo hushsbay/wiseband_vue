@@ -79,8 +79,11 @@
             channm.value = rs.data.chanmst.CHANNM
             document.title = channm.value + "[채널]"
             msglist.value = rs.data.msglist
+            debugger
             fileBlobArr.value = []
-            for (let item of rs.data.tempfilelist) fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+            for (let item of rs.data.tempfilelist) {
+                fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+            }
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
                 const uInt8Array = new Uint8Array(item.BUFFER.data)
