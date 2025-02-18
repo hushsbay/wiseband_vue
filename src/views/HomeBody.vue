@@ -5,17 +5,19 @@
 
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
+    import PopupCommon from "/src/components/PopupCommon.vue"
     
     const gst = GeneralStore()
     const route = useRoute()
     const router = useRouter()
 
+    const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({})
+
     let grnm = ref(''), channm = ref('')
     let msglist = ref([])
     let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
-    let uploadProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
-    let fileBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
-    let imgBlobArr = ref([])
+    let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
+    let fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -78,19 +80,24 @@
             document.title = channm.value + "[채널]"
             msglist.value = rs.data.msglist
             fileBlobArr.value = []
-            for (let item of rs.data.tempfilelist) {
-                fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+            for (let item of rs.data.tempfilelist) fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+            imgBlobArr.value = []
+            for (let item of rs.data.tempimagelist) {
+                const uInt8Array = new Uint8Array(item.BUFFER.data)
+                const blob = new Blob([uInt8Array], { type: "image/png" })
+                const blobUrl = URL.createObjectURL(blob)
+                imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: item.CDT })
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
-    async function msgRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
+    function msgRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         
     }
 
-    async function msgEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+    function msgEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
         row.hover = true
     }
 
@@ -98,27 +105,58 @@
         row.hover = false
     }
 
-    async function blobEnter(idx) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
-        fileBlobArr.value[idx].hover = true
+    function blobEnter(idx, kind) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+        if (kind == "F") {
+            fileBlobArr.value[idx].hover = true
+        } else { //kind(I)
+            imgBlobArr.value[idx].hover = true
+        }
     }
 
-    function blobLeave(idx) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
-        fileBlobArr.value[idx].hover = false
+    function blobLeave(idx, kind) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+        if (kind == "F") {
+            fileBlobArr.value[idx].hover = false
+        } else { //kind(I)
+            imgBlobArr.value[idx].hover = false
+        }
     }
 
-    function pastedInMsgBody(e) {
+    function imgLoaded(e, row) {
+        row.realWidth = e.currentTarget.naturalWidth
+        row.readHeight = e.currentTarget.naturalHeight
+    }
+
+    async function uploadImage(e) { //from paste event
         try {
-            e.preventDefault()
-            const pastedData = e.clipboardData.items//e.originalEvent.clipboardData.items
+            e.preventDefault() //tage의 .prevent가 안먹혀서 여기서 처리
+            const pastedData = e.clipboardData.items //e.originalEvent.clipboardData.items
             if (pastedData.length == 0) return
             const clipboardItem = pastedData[0]
             if (clipboardItem.type.includes("image")) { //예) image/png
-                const blob = clipboardItem.getAsFile()
+                const blob = clipboardItem.getAsFile() //서버에 보낼 데이터
+                const blobUrl = URL.createObjectURL(blob) //화면에 보여줄 데이터
                 // if (blob.size > hush.cons.max_size_to_sublink) { //see get_sublink.js
                 //     hush.msg.toast("이미지가 너무 큽니다 : " + blob.size + "<br>max : " + hush.util.formatBytes(hush.cons.max_size_to_sublink) + "(" + hush.cons.max_size_to_sublink + "bytes)")
                 //     return
                 // }
-                imgBlobArr.value.push(URL.createObjectURL(blob))
+                const fd = new FormData()
+                fd.append("chanid", gst.selChanId)
+                fd.append("kind", "I")
+                fd.append("body", "") //width x height 미리 넣을 필요없어 보이며 대신 빈칸으로 넣어야 함
+                fd.append("filesize", blob.size)
+                fd.append("file", blob)
+                uploadImageProgress.value = { url: blobUrl, percent : 0 }
+                const res = await axios.post("/chanmsg/uploadBlob", fd, { 
+                    headers: { 
+                        'Content-Type': 'multipart/form-data' 
+                    }, onUploadProgress: async (e) => {
+                        const percent = (e.loaded * 100) / e.total                        
+                        uploadImageProgress.value.percent = Math.round(percent)
+                    }
+                })
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+                imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: rs.data.cdt })
             } else if (clipboardItem.type.includes("text")) {
                 clipboardItem.getAsString(function(str) {
                     // const _arr = str.split(hush.cons.deli)
@@ -145,7 +183,35 @@
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
-    }    
+    } 
+    
+    async function delImage(msgid, idx) { //msgid = temp or real msgid
+        try {
+            const cdt = imgBlobArr.value[idx].cdt
+            const res = await axios.post("/chanmsg/delBlob", { 
+                msgid: msgid, chanid: gst.selChanId, kind: "I", cdt: cdt, name: ""
+            })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            imgBlobArr.value.splice(idx, 1)
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function showImage(msgid, idx) { //msgid = temp or real msgid
+        try {
+            if (msgid == "temp") {
+                imgPopupUrl.value = imgBlobArr.value[idx].url
+                const realWidth = imgBlobArr.value[idx].realWidth
+                const realHeight = imgBlobArr.value[idx].realHeight
+                imgPopupStyle.value = { width: realWidth + "px", height: realHeight + "px" }
+                imgPopupRef.value.open()
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
         try { //파일 및 이미지가 있다면 미리 업로드된 상태임
@@ -181,7 +247,7 @@
                     return
                 }                
             }
-            uploadProgress.value = []
+            uploadFileProgress.value = []
             const filesToUpload = []            
             for (let i = 0; i < files.length; i++) {
                 const fd = new FormData()
@@ -190,13 +256,13 @@
                 fd.append("body", files[i].name)
                 fd.append("filesize", files[i].size)
                 fd.append("file", files[i])
-                uploadProgress.value.push({ name: files[i].name, size: files[i].size, percent : 0 }) //실패시 filesToUpload에 추가된 걸 빼지 않으려고 별도로 만든 것임
+                uploadFileProgress.value.push({ name: files[i].name, size: files[i].size, percent : 0 }) //실패시 filesToUpload에 추가된 걸 빼지 않으려고 별도로 만든 것임
                 const res = await axios.post("/chanmsg/uploadBlob", fd, { 
                     headers: { 
                         'Content-Type': 'multipart/form-data' 
                     }, onUploadProgress: async (e) => { //파일이 작으면 보이지도 않는데 나중에 파일시스템으로 이관하면 필요할 것임 (현재 구현 및 테스트 완료 상태임)
                         const percent = (e.loaded * 100) / e.total                        
-                        uploadProgress.value[i].percent = Math.round(percent)
+                        uploadFileProgress.value[i].percent = Math.round(percent)
                     }
                 })
                 const rs = gst.util.chkAxiosCode(res.data)
@@ -211,11 +277,10 @@
 
     async function delFile(msgid, idx) { //msgid = temp or real msgid
         try {
-            const kind = 'F'
             const name = fileBlobArr.value[idx].name
             const cdt = fileBlobArr.value[idx].cdt
             const res = await axios.post("/chanmsg/delBlob", { 
-                msgid: msgid, chanid: gst.selChanId, kind: kind, cdt: cdt, name: name
+                msgid: msgid, chanid: gst.selChanId, kind: "F", cdt: cdt, name: name
             })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -425,24 +490,31 @@
             </div>
             <!--<div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
                 https://www.jkun.net/702-->
-            <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="pastedInMsgBody"></div>
+            <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="uploadImage"></div>
             <div v-if="imgBlobArr.length > 0" class="msg_body_blob">
-                <div v-for="(row, idx) in imgBlobArr" style="width:50px;height:50px;margin:10px;border:1px solid lightgray">
-                    <img :src="row" style='width:100%;height:100%'>
-                </div>
+                <div v-for="(row, idx) in imgBlobArr" @mouseenter="blobEnter(idx, 'I')" @mouseleave="blobLeave(idx, 'I')" @click="showImage('temp', idx)" class="msg_image_each">
+                    <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
+                    <div v-show="row.hover" class="msg_file_del">
+                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delImage('temp', idx)">
+                    </div>
+                </div>                
             </div>
             <div v-if="fileBlobArr.length > 0" class="msg_body_blob">
-                <div v-for="(row, idx) in fileBlobArr" @mouseenter="blobEnter(idx)" @mouseleave="blobLeave(idx)" @click="downloadFile('temp', idx)" class="msg_file_each">
+                <div v-for="(row, idx) in fileBlobArr" @mouseenter="blobEnter(idx, 'F')" @mouseleave="blobLeave(idx, 'F')" @click="downloadFile('temp', idx)" class="msg_file_each">
                     <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ gst.util.formatBytes(row.size) }}</span>)</div>
-                    <div v-show="fileBlobArr[idx].hover" class="msg_file_del">
-                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click.stop="delFile('temp', idx)">
+                    <!-- 나중에 메시지 하버시 사용하기
+                    <div v-show="row.hover" class="msg_file_seemore">
+                        <img class="coImg20" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('temp', idx)">
+                    </div> -->
+                    <div v-show="row.hover" class="msg_file_del">
+                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delFile('temp', idx)">
                     </div>
-                </div>
-                <div v-for="(row, idx) in uploadProgress" v-show="row.percent > 0 && row.percent < 100" class="msg_file_each">
+                </div><!-- 아래 진행바는 db에 파일저장시엔 용량제한이 있으므로 실제 육안으로는 보이지 않고 파일시스템 저장 적용시 대용량에 한해서 보이게 될 것임 -->
+                <div v-for="(row, idx) in uploadFileProgress" v-show="row.percent > 0 && row.percent < 100" class="msg_file_each">
                     <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
-                    <div class="msg_file_del">
+                    <div class="msg_file_seemore">
                         <span style="padding:0 5px;color:red">{{ row.percent }}%</span>
-                    </div>                    
+                    </div>
                 </div>
             </div>
         </div>
@@ -463,7 +535,12 @@
             
         </div>
     </div>   
-    <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    
+    <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
+    <popup-common ref="imgPopupRef"><!-- <popup-common ref="imgPopupRef" :objUrl="objUrl"></popup-common> -->
+        <div style="padding:0px;border:0px solid red">
+            <img :src="imgPopupUrl" :style='imgPopupStyle'>
+        </div>
+    </popup-common>
 </template>
 
 <style scoped>    
@@ -504,10 +581,16 @@
         margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke
     }
     .msg_file_each {
-        position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;justify-content:space-between;border:1px solid lightgray;border-radius:3px;cursor:pointer
+        position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    }
+    .msg_file_seemore {
+        position:absolute;top:0;right:0px;height:30px;display:flex;align-items:center;background:beige
     }
     .msg_file_del {
-
+        position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;background:beige
+    }
+    .msg_image_each {
+        position:relative;width:50px;height:50px;margin:10px;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_proc {
         position:absolute;height:20px;right:15px;top:-5px;padding:5px 10px;z-index:9999;
