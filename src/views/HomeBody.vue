@@ -11,9 +11,11 @@
     const route = useRoute()
     const router = useRouter()
 
-    const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({})
-
-    let grnm = ref(''), channm = ref('')
+    const scrollArea = ref(null)
+    const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
+    
+    const MAX_PICTURE_CNT = 11
+    let grnm = ref(''), channm = ref(''), chanimg = ref(''), chandtl = ref([]), chanmemUnder = ref([])
     let msglist = ref([])
     let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
@@ -77,20 +79,32 @@
             if (!rs) return
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
-            document.title = channm.value + "[채널]"            
-            for (let row of rs.data.msglist) {
-                if (row.msgimg.length > 0) debugger
+            chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+            document.title = channm.value + "[채널]"
+            chanmemUnder.value = []
+            for (let i = 0; i < rs.data.chandtl.length; i++) {
+                const row = rs.data.chandtl[i]                
+                if (row.PICTURE == null) {
+                    row.url = null
+                } else {
+                    const uInt8Array = new Uint8Array(row.PICTURE.data)
+                    const blob = new Blob([uInt8Array], { type: "image/png" })
+                    const blobUrl = URL.createObjectURL(blob)
+                    row.url = blobUrl
+                }
+                if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+            }
+            chandtl.value = rs.data.chandtl
+            for (let row of rs.data.msglist) { //if (row.msgimg.length > 0) debugger
                 for (let item of row.msgimg) {
                     if (!item.BUFFER) continue //임시코딩 - 테스트 - 나중에 제거
                     const uInt8Array = new Uint8Array(item.BUFFER.data)
                     const blob = new Blob([uInt8Array], { type: "image/png" })
                     const blobUrl = URL.createObjectURL(blob)
-                    debugger
                     item.url = blobUrl
                     item.hover = false
                     item.cdt = item.CDT
-                }
-                if (row.msgfile.length > 0) debugger
+                } //if (row.msgfile.length > 0) debugger
                 for (let item of row.msgfile) {
                     item.hover = false
                     item.name = item.BODY
@@ -99,7 +113,6 @@
                 }
             }
             msglist.value = rs.data.msglist
-            debugger
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
                 const uInt8Array = new Uint8Array(item.BUFFER.data)
@@ -111,6 +124,8 @@
             for (let item of rs.data.tempfilelist) {
                 fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
             }
+            await nextTick()
+            scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -345,17 +360,23 @@
     <div class="chan_center">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                {{ grnm }} >> {{ channm }} [{{ gst.selChanId }}]
+                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><div class="coDotDot"> {{ channm }} [{{ grnm }}]</div>
             </div>
-            <div class="chan_center_header_right" @click="test">
-                <span class="topMenu" style="padding:5px 10px;border:1px solid lightgray">멤버 11</span>
-                <span class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+            <div class="chan_center_header_right">
+                <div class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
+                    <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
+                        <img v-if="row.url" :src="row.url" style='width:100%;height:100%;border-radius:12px'>
+                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:100%;height:100%'>
+                    </div>
+                    <span>{{ chandtl.length }}</span>
+                </div>
+                <div class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                     <img class="coImg20" :src="gst.html.getImageUrl('dimgray_option_vertical.png')">
-                </span>                
+                </div>                
             </div>
         </div>
         <div class="chan_center_nav">
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:2px solid black;border-radius:0">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
             </div>
@@ -364,7 +385,7 @@
                 <span style="margin-left:5px">파일</span> 
             </div>
         </div>
-        <div class="chan_center_body">
+        <div class="chan_center_body" ref="scrollArea">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
                 <div style="display:flex;align-items:center">
@@ -474,20 +495,18 @@
 
 <style scoped>    
     .chan_center {
-        width:100%;height:100%;padding: 0 20px;
+        width:calc(100% - 20px);height:100%;padding: 0 0 0 10px;
         display:flex;flex-direction:column;
     }
     .chan_center_header {
-        width:100%;min-height:50px;display:flex;justify-content:space-between;
-        overflow:hidden
+        width:100%;min-height:50px;display:flex;justify-content:space-between;overflow:hidden
     }
     .chan_center_header_left {
-        width:80%;height:100%;display:flex;align-items:center;
-        font-weight:bold;border:0px solid red
+        width:50%;height:100%;display:flex;align-items:center;
+        font-size:18px;font-weight:bold
     }
     .chan_center_header_right {
-        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;
-        border:0px solid red
+        width:50%;height:100%;display:flex;align-items:center;justify-content:flex-end
     }
     .chan_center_nav {
         width:100%;min-height:30px;display:flex;align-items:center;

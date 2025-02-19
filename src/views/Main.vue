@@ -239,7 +239,7 @@
         display:flex;flex-direction:column;justify-content:flex-end;
     }
     .main {
-        width:100%;height:100%;display:flex;flex-direction:column;
+        width:calc(100% - 70px);height:100%;display:flex;flex-direction:column;
     }
     .content {
         width:calc(100% - 3px);height:100%;display:flex;margin-right:3px;margin-bottom:3px;

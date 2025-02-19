@@ -15,6 +15,7 @@
     let kind = ref('my'), listChan = ref([])
 
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
+    let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')') //resizing 관련
     let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0 //resizing 관련
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
@@ -239,6 +240,7 @@
         rightSide.style.userSelect = 'none'
         rightSide.style.pointerEvents = 'none'        
         chanSideWidth.value = `${leftWidth + dx + mainSideWidth}px` //아래 % 대신에 바로 px 적용
+        chanMainWidth.value = `calc(100% - ${chanSideWidth.value})`
         //초기 width 값과 마우스 드래그 거리를 더한 뒤 상위요소(container) 너비 이용해 퍼센티지 구해 left의 width로 적용
         //const newLeftWidth = ((leftWidth + dx) * 100) / resizer.parentNode.getBoundingClientRect().width
         //leftSide.style.width = `${newLeftWidth}%`
@@ -299,7 +301,7 @@
         </div>
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
-    <div class="chan_main" id="chan_main">  <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
+    <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">  <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
         <!-- App.vue와 Main.vue에서는 :key를 안쓰고 여기 Home.vue에서만 :key를 사용하는 이유는 HomeBody.vue에서 설명 -->
         <!-- <router-view :key="$route.fullPath"></router-view> -->
         <!-- <keep-alive><router-view :key="$route.fullPath"></router-view></keep-alive> keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
@@ -342,7 +344,7 @@
         background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
     }
     .chan_main {
-        width:100%;height:100%;display:flex;
+        height:100%;display:flex; /* width:100%;는 resizing처리됨 */
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
     }
 </style>
