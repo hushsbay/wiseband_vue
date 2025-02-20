@@ -15,7 +15,8 @@
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     
     const MAX_PICTURE_CNT = 11
-    let grnm = ref(''), channm = ref(''), chanimg = ref(''), chandtl = ref([]), chanmemUnder = ref([])
+    let grnm = ref(''), channm = ref(''), chanimg = ref('')
+    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
     let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
@@ -81,7 +82,7 @@
             channm.value = rs.data.chanmst.CHANNM
             chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             document.title = channm.value + "[채널]"
-            chanmemUnder.value = []
+            chanmemUnder.value = [] //대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             for (let i = 0; i < rs.data.chandtl.length; i++) {
                 const row = rs.data.chandtl[i]                
                 if (row.PICTURE == null) {
@@ -92,6 +93,7 @@
                     const blobUrl = URL.createObjectURL(blob)
                     row.url = blobUrl
                 }
+                chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
                 if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
             }
             chandtl.value = rs.data.chandtl
@@ -389,7 +391,9 @@
             <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
                 <div style="display:flex;align-items:center">
-                    <img class="coImg32" :src="gst.html.getImageUrl('user.png')"><span style="margin-left:10px">{{ row.AUTHORNM }} {{ row.CDT }} </span>
+                    <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" class="coImg32" style="border-radius:16px">
+                    <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
+                    <span style="margin-left:10px">{{ row.AUTHORNM }} {{ row.CDT }} </span>
                 </div>
                 <div v-html="row.BODY" style="margin:10px"></div> <!--<span>{{ row.BODY }}</span></div>-->
                 <div class="msg_body_sub">
