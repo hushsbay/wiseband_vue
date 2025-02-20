@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-//CommonStore.js는 pinia 모듈을 사용하지 않음 (GeneralStore.vue와 분리해 편리/명확하게 관리하고자 함)
+//CommonStore.js는 pinia 모듈을 사용하지 않음 (GeneralStore.js와 분리해 편리/명확하게 관리하고자 함)
 
 
 
