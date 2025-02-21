@@ -3,6 +3,8 @@ import { useRouter } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
 import axios from 'axios' 
 
+import hush from '/src/stores/Common.js'
+
 const GeneralStore = defineStore('General', () => {
 
     const router = useRouter()
@@ -30,7 +32,7 @@ const GeneralStore = defineStore('General', () => {
 
         getCookie : function(nm) { //vue-cookies의 get 메소드는 nm이 없으면 "undefined"를 반환하는데 그 경우도 null로 처리해서 밖에서는 if (!userid) 방식으로 체크 가능하도록 함
             const cookie = $cookie.get(nm)
-            if (util.isvoid(cookie)) return null
+            if (hush.util.isvoid(cookie)) return null
             return cookie
         },
 
@@ -59,7 +61,7 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const cons = {
+    const cons = { //vue, react 등에 특화된 내용도 있을 수 있으니? 어쨋든 cons는 Common.js로 빼지 말고 그냥 쓰기
         OK : '0',
         NOT_OK : '-1',
         NOT_FOUND : '-100',
@@ -129,7 +131,7 @@ const GeneralStore = defineStore('General', () => {
             isRead.value = false
             isEdit.value = true
             isNew.value = false
-            if (!util.isvoid(idx)) listIndex.value = idx //목록에서도 openDoc하지 않고 바로 편집가능하게 editDoc()하는 가능성도 열어둬야 함
+            if (!hush.util.isvoid(idx)) listIndex.value = idx //목록에서도 openDoc하지 않고 바로 편집가능하게 editDoc()하는 가능성도 열어둬야 함
         },
 
         new : function() {
@@ -294,11 +296,6 @@ const GeneralStore = defineStore('General', () => {
 
     const util = {
 
-        isvoid : function(obj) { //대신 a ?? b로 사용하기 (a가 null도 아니고 undefined도 아니면 a 반환. a가 0이거나 false라도 a를 반환)
-            if (typeof obj == "undefined" || obj == null || obj == "undefined") return true //vue-cookies의 get 메소드는 "undefined"를 반환하므로 여기서 체크하도록 함
-            return false
-        },
-
         setSnack : function(ex, toastSec, fromConfig) {
             let strMsg, strStack
             if (toastSec == true) { //토스트없이 계속 display
@@ -393,22 +390,16 @@ const GeneralStore = defineStore('General', () => {
             util.setSnack(msg, sec)
         },
 
-        codeQry : async function (strKind) { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-            const res = await axios.post("/code/qry", { kind: strKind })
-            const rs = util.chkAxiosCode(res.data)
-            return rs
-        },
+        // codeQry : async function (strKind) { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
+        //     const res = await axios.post("/code/qry", { kind: strKind })
+        //     const rs = util.chkAxiosCode(res.data)
+        //     return rs
+        // },
 
-        getCodeNm : function(arr, id) { //Z_CODE_TBL 관련 전용 //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-            const found = arr.find((item) => item.ID == id)
-            return (found) ? found.NM : null
-        },
-
-        formatBytes : function (bytes) {
-            let units = ["B", "KB", "MB", "GB", "TB"], i
-            for (i = 0; bytes >= 1024 && i < 4; i++) bytes /= 1024
-            return bytes.toFixed(2) + units[i]
-        }
+        // getCodeNm : function(arr, id) { //Z_CODE_TBL 관련 전용 //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
+        //     const found = arr.find((item) => item.ID == id)
+        //     return (found) ? found.NM : null
+        // },
 
     }
 
@@ -416,8 +407,7 @@ const GeneralStore = defineStore('General', () => {
 
     return { 
         isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, 
-        selSideMenu, selSideMenuTimeTag, selChanId, selGrId,
-        snackBar, toast, 
+        selSideMenu, selSideMenuTimeTag, selChanId, selGrId, snackBar, toast, 
         auth, cons, ctx, doc, html, list, util
     }
 

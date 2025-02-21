@@ -3,6 +3,7 @@
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
+    import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
@@ -67,7 +68,7 @@
         try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의 //console.log("########homebody.vue")
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
-            await getList()            
+            await getList()  
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -131,6 +132,13 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    }
+
+    function displayDt(dtStr) { //vue의 computed method 이용할 경우 아규먼트 전달방법을 아직 파악하지 못해 일반 함수로 처리함
+        if (dtStr.length < 19) return null
+        const arr = dtStr.split(" ")
+        const hday = hush.util.getDayFromDateStr(arr[0])
+        return arr[0] + " (" + hday + ") " + arr[1].substring(0, 8)
     }
 
     function msgRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
@@ -225,13 +233,6 @@
 
     function showImage(row) { //msgid, idx) { //msgid = temp or real msgid
         try {
-            // if (msgid == "temp") {
-            //     imgPopupUrl.value = imgBlobArr.value[idx].url
-            //     const realWidth = imgBlobArr.value[idx].realWidth
-            //     const realHeight = imgBlobArr.value[idx].realHeight
-            //     imgPopupStyle.value = { width: realWidth + "px", height: realHeight + "px" }
-            //     imgPopupRef.value.open()
-            // }
             imgPopupUrl.value = row.url
             imgPopupStyle.value = { width: row.realWidth + "px", height: row.realHeight + "px" }
             imgPopupRef.value.open()
@@ -265,7 +266,7 @@
             for (let i = 0; i < files.length; i++) {
                 const size = files[i].size
                 if (size > gst.cons.uploadLimitSize) {
-                    gst.util.setSnack("업로드 파일 크기 제한은 " + gst.util.formatBytes(gst.cons.uploadLimitSize) + "입니다.\n" + files[i].name + " => " + gst.util.formatBytes(size), true)
+                    gst.util.setSnack("업로드 파일 크기 제한은 " + hush.util.formatBytes(gst.cons.uploadLimitSize) + "입니다.\n" + files[i].name + " => " + hush.util.formatBytes(size), true)
                     return
                 }
                 const exist = fileBlobArr.value.filter(x => x.name == files[i].name)
@@ -388,15 +389,15 @@
             </div>
         </div>
         <div class="chan_center_body" ref="scrollArea">
-            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"
+            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu" style="border:1px solid red"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
-                <div style="display:flex;align-items:center">
+                <div style="display:flex;align-items:center;border:1px solid green">
                     <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" class="coImg32" style="border-radius:16px">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
-                    <span style="margin-left:10px">{{ row.AUTHORNM }} {{ row.CDT }} </span>
+                    <span style="margin-left:10px">{{ row.AUTHORNM }} {{ displayDt(row.CDT) }} </span>
                 </div>
-                <div v-html="row.BODY" style="margin:10px"></div> <!--<span>{{ row.BODY }}</span></div>-->
-                <div class="msg_body_sub">
+                <div v-html="row.BODY" style="margin:10px;border:1px solid blue"></div> <!--<span>{{ row.BODY }}</span></div>-->
+                <div class="msg_body_sub" style="border:1px solid yellow">
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
                     </div>
@@ -407,7 +408,7 @@
                         댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
                     </div>
                 </div>
-                <div v-if="row.msgimg.length > 0" class="msg_body_sub">
+                <div v-if="row.msgimg.length > 0" class="msg_body_sub"  style="border:1px solid black">
                     <div v-for="(row5, idx5) in row.msgimg" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)" class="msg_image_each">
                         <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
                         <div v-show="row5.hover" class="msg_file_seemore">
@@ -415,9 +416,9 @@
                         </div>
                     </div>                
                 </div>
-                <div v-if="row.msgfile.length > 0" class="msg_body_sub">
+                <div v-if="row.msgfile.length > 0" class="msg_body_sub"  style="border:1px solid black">
                     <div v-for="(row5, idx5) in row.msgfile" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)" class="msg_file_each">
-                        <div><span style="margin-right:3px">{{ row5.name }}</span>(<span>{{ gst.util.formatBytes(row5.size) }}</span>)</div>
+                        <div><span style="margin-right:3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)</div>
                         <div v-show="row5.hover" class="msg_file_seemore">
                             <img class="coImg20" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" >
                         </div>
@@ -459,7 +460,7 @@
             </div>
             <div v-if="fileBlobArr.length > 0" class="msg_body_blob">
                 <div v-for="(row, idx) in fileBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="downloadFile('temp', row)" class="msg_file_each">
-                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ gst.util.formatBytes(row.size) }}</span>)</div>
+                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ hush.util.formatBytes(row.size) }}</span>)</div>
                     <div v-show="row.hover" class="msg_file_del">
                         <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delFile('temp', idx)">
                     </div>
