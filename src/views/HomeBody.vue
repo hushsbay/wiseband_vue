@@ -389,15 +389,15 @@
             </div>
         </div>
         <div class="chan_center_body" ref="scrollArea">
-            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu" style="border:1px solid red"
+            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu" 
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
-                <div style="display:flex;align-items:center;border:1px solid green">
+                <div style="display:flex;align-items:center">
                     <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" class="coImg32" style="border-radius:16px">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
                     <span style="margin-left:10px">{{ row.AUTHORNM }} {{ displayDt(row.CDT) }} </span>
                 </div>
-                <div v-html="row.BODY" style="margin:10px;border:1px solid blue"></div> <!--<span>{{ row.BODY }}</span></div>-->
-                <div class="msg_body_sub" style="border:1px solid yellow">
+                <div v-html="row.BODY" style="margin:10px 0 10px 40px"></div>
+                <div class="msg_body_sub">
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
                     </div>
@@ -408,7 +408,7 @@
                         댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
                     </div>
                 </div>
-                <div v-if="row.msgimg.length > 0" class="msg_body_sub"  style="border:1px solid black">
+                <div v-if="row.msgimg.length > 0" class="msg_body_sub">
                     <div v-for="(row5, idx5) in row.msgimg" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)" class="msg_image_each">
                         <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
                         <div v-show="row5.hover" class="msg_file_seemore">
@@ -416,7 +416,7 @@
                         </div>
                     </div>                
                 </div>
-                <div v-if="row.msgfile.length > 0" class="msg_body_sub"  style="border:1px solid black">
+                <div v-if="row.msgfile.length > 0" class="msg_body_sub">
                     <div v-for="(row5, idx5) in row.msgfile" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)" class="msg_file_each">
                         <div><span style="margin-right:3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)</div>
                         <div v-show="row5.hover" class="msg_file_seemore">
@@ -492,7 +492,7 @@
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-common ref="imgPopupRef"><!-- <popup-common ref="imgPopupRef" :objUrl="objUrl"></popup-common> -->
-        <div style="padding:0px;border:0px solid red">
+        <div>
             <img :src="imgPopupUrl" :style='imgPopupStyle'>
         </div>
     </popup-common>
@@ -519,13 +519,12 @@
     }
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
-        border:0px solid blue
     }
     .msg_body {
-        position:relative;display:flex;flex-direction:column;margin:10px 0;border-bottom:1px solid lightgray
+        position:relative;display:flex;flex-direction:column;margin:5px 0 0 0;border-bottom:1px solid lightgray
     }
     .msg_body_sub {
-        display:flex;margin:10px;display:flex;flex-wrap:wrap;justify-content:flex-start
+        display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start
     }
     .msg_body_sub1 {
         margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px
@@ -534,7 +533,7 @@
         margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke
     }
     .msg_file_each {
-        position:relative;height:30px;margin:10px;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
+        position:relative;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_file_seemore {
         position:absolute;top:0;right:0px;height:30px;display:flex;align-items:center;background:beige
@@ -543,10 +542,10 @@
         position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;background:beige
     }
     .msg_image_each {
-        position:relative;width:50px;height:50px;margin:10px;border:1px solid lightgray;border-radius:3px;cursor:pointer
+        position:relative;width:50px;height:50px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_proc {
-        position:absolute;height:20px;right:15px;top:-5px;padding:5px 10px;z-index:9999;
+        position:absolute;height:20px;right:3px;top:1px;padding:5px 10px;z-index:9999;
         display:flex;align-items:center;
         background:white;border:1px solid lightgray;border-radius:5px
     }
@@ -569,23 +568,18 @@
     }
     .chan_right_header {
         width:100%;height:70px;display:flex;justify-content:space-between;
-        border:0px solid red
     }
     .chan_right_header_left {
         width:70%;height:100%;display:flex;align-items:center;
-        border:0px solid red
     }
     .chan_right_header_right {
         width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;
-        border:0px solid red
     }
     .chan_right_body {
         width:100%;height:100%;display:flex;flex-direction:column;
-        border:0px solid blue
     }
     .chan_right_footer {
         width:100%;height:150px;display:flex;
-        border:0px solid gray
     }
     .chan_side_top {
         width:100%;height:50px;display:flex;justify-content:space-between;
