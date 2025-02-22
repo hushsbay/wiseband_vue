@@ -72,9 +72,10 @@ const GeneralStore = defineStore('General', () => {
         JWT_ETC : '-809',
         PWD_MISMATCH : '-811',
         auth_err_prefix : "-8",
-        toastSec : 3,
+        cdtAtFirst : "9999-99-99",
         uploadLimitSize : 10 * 1024 * 1024, //10MB
         uploadMaxCount : 10,
+        toastSec : 3,
         toastMsg : "처리중..",
         done : "처리 완료",
         doneWithCnt : "처리 완료 : ",

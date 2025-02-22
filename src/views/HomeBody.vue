@@ -23,7 +23,7 @@
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
-    let savLastMsgMstCdt = ""
+    let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -70,20 +70,26 @@
         try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의 //console.log("########homebody.vue")
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
-            await getList({ grid: gst.selGrId, chanid: gst.selChanId })  
+            await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt })  
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
-    //grid, chanid는 기본 param
-    //1) lastMsgMstCdt : 메시지 작성후 맨 아래에 방금 작성한 메시지 추가할 때 사용 (서버데이터는 기본과 동일하게 가져옴)
+    async function qryPrev() {
+        await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt }) //Endless Scrolling
+    }
+
+    //grid, chanid, lastMsgMstCdt는 기본 param
+    //1) lastMsgMstCdt : Endless Scrolling 관련
+    //2) firstMsgMstCdt : 메시지 작성후 화면 맨 아래에 방금 작성한 메시지 추가할 때 사용
     async function getList(param) {
         try {
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             const lastMsgMstCdt = param.lastMsgMstCdt
+            const firstMsgMstCdt = param.firstMsgMstCdt //lastMsgMstCdt와 공존하면 안됨
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
@@ -104,7 +110,7 @@
             }
             chandtl.value = rs.data.chandtl
             const msgArr = rs.data.msglist
-            if (msgArr.length > 0) {
+            if (msgArr.length > 0) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 for (let i = 0; i < msgArr.length; i++) { //if (row.msgimg.length > 0) debugger
                     const row = msgArr[i]
                     for (let item of row.msgimg) {
@@ -124,41 +130,45 @@
                     }
                     const curAuthorId = row.AUTHORID
                     const curCdt = row.CDT.substring(0, 19)
-                    if (i == 0) {
+                    if (i == msgArr.length - 1) {
                         row.stickToPrev = false
                     } else {
-                        if (msgArr[i - 1].AUTHORID != curAuthorId) {
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 오래된 것임
                             row.stickToPrev = false
                         } else {
-                            const prevCdt = msgArr[i - 1].CDT.substring(0, 19)
+                            const prevCdt = msgArr[i + 1].CDT.substring(0, 19)
                             const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
                             const minuteDiff = parseInt(secondDiff / 60)
                             row.stickToPrev = (minuteDiff <= 1) ? true : false
                         }
                     }
-                    if (i == msgArr.length - 1) {
+                    if (i == 0) {
                         row.hasSticker = false
                     } else {
-                        if (curAuthorId != msgArr[i + 1].AUTHORID) {
+                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 최근임
                             row.hasSticker = false
                         } else {
-                            const nextCdt = msgArr[i + 1].CDT.substring(0, 19)                            
+                            const nextCdt = msgArr[i - 1].CDT.substring(0, 19)
                             const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
                             const minuteDiff = parseInt(secondDiff / 60)
                             row.hasSticker = (minuteDiff <= 1) ? true : false
                         }
                     }
-                }
-                const lastMsgMstCdtThisTime = msgArr[msgArr.length - 1].CDT
-                if (lastMsgMstCdtThisTime > savLastMsgMstCdt) savLastMsgMstCdt = lastMsgMstCdtThisTime
-                if (lastMsgMstCdt) { //1) 설명 참조
-                    msglist.value = [...msglist.value, ...msgArr]
-                } else {
-                    msglist.value = msgArr
+                    if (firstMsgMstCdt) {
+                        if (i == 0) {
+                            msglist.value.push(row)
+                        } else {
+                            msglist.value.splice(msgArr.length - i, 0, row)    
+                        }                        
+                    } else {
+                        msglist.value.splice(0, 0, row)
+                    }
+                    if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
+                    if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
                 }
             }
-            if (lastMsgMstCdt) {
-                //1) 설명 참조
+            if (firstMsgMstCdt) {
+                //2) 설명 참조
             } else {
                 imgBlobArr.value = []
                 for (let item of rs.data.tempimagelist) {
@@ -173,7 +183,9 @@
                 }
             }
             await nextTick()
-            scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
+            if (!lastMsgMstCdt || lastMsgMstCdt == gst.cons.cdtAtFirst) {
+                scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -307,7 +319,7 @@
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt }) //저장한 메시지 추가
+            await getList({ grid: gst.selGrId, chanid: gst.selChanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
             msgbody.value = "111" //https://yamyam-naengmyeon-donkats.tistory.com/35 vue HTML 데이터 바인딩 (sanitize-html)
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -420,7 +432,7 @@
 
 <template>
     <div class="chan_center">
-        <div class="chan_center_header" @click="test" style="cursor:pointer">
+        <div class="chan_center_header" @click="qryPrev" style="cursor:pointer">
             <div class="chan_center_header_left">
                 <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
                 <div class="coDotDot">{{ channm }} [{{ grnm }}] - {{ gst.selChanId }}</div>
