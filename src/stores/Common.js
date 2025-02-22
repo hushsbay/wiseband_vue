@@ -19,7 +19,6 @@ const hush = {
             return obj[dt.getDay().toString()]
         },
         getDateTimeDiff(prev, cur) { //yyyy-mm-dd hh:MM:dd
-            debugger
             const dtPrev = hush.util.getDateTimeStamp(prev)
             const dtCur = hush.util.getDateTimeStamp(cur)
             return parseInt((dtCur - dtPrev) / 1000) //return seconds / 60 : 분으로 리턴
