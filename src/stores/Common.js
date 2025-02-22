@@ -18,6 +18,12 @@ const hush = {
             const dt = hush.util.getDateTimeStamp(str.substring(0, 10) + " 00:00:00")
             return obj[dt.getDay().toString()]
         },
+        getDateTimeDiff(prev, cur) { //yyyy-mm-dd hh:MM:dd
+            debugger
+            const dtPrev = hush.util.getDateTimeStamp(prev)
+            const dtCur = hush.util.getDateTimeStamp(cur)
+            return parseInt((dtCur - dtPrev) / 1000) //return seconds / 60 : 분으로 리턴
+        },
         formatBytes : function (bytes) {
             let units = ["B", "KB", "MB", "GB", "TB"], i
             for (i = 0; bytes >= 1024 && i < 4; i++) bytes /= 1024

@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick } from 'vue' 
+    import { ref, onMounted, nextTick, computed } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -22,6 +22,8 @@
     let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
+
+    let savLastMsgMstCdt = ""
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -68,17 +70,20 @@
         try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의 //console.log("########homebody.vue")
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
-            await getList()  
+            await getList({ grid: gst.selGrId, chanid: gst.selChanId })  
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
-    async function getList() {
+    //grid, chanid는 기본 param
+    //1) lastMsgMstCdt : 메시지 작성후 맨 아래에 방금 작성한 메시지 추가할 때 사용 (서버데이터는 기본과 동일하게 가져옴)
+    async function getList(param) {
         try {
-            const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
+            const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            const lastMsgMstCdt = param.lastMsgMstCdt
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
@@ -98,34 +103,74 @@
                 if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
             }
             chandtl.value = rs.data.chandtl
-            for (let row of rs.data.msglist) { //if (row.msgimg.length > 0) debugger
-                for (let item of row.msgimg) {
-                    if (!item.BUFFER) continue //임시코딩 - 테스트 - 나중에 제거
+            const msgArr = rs.data.msglist
+            if (msgArr.length > 0) {
+                for (let i = 0; i < msgArr.length; i++) { //if (row.msgimg.length > 0) debugger
+                    const row = msgArr[i]
+                    for (let item of row.msgimg) {
+                        if (!item.BUFFER) continue //임시코딩 - 테스트 - 나중에 제거
+                        const uInt8Array = new Uint8Array(item.BUFFER.data)
+                        const blob = new Blob([uInt8Array], { type: "image/png" })
+                        const blobUrl = URL.createObjectURL(blob)
+                        item.url = blobUrl
+                        item.hover = false
+                        item.cdt = item.CDT
+                    } //if (row.msgfile.length > 0) debugger
+                    for (let item of row.msgfile) {
+                        item.hover = false
+                        item.name = item.BODY
+                        item.size = item.FILESIZE
+                        item.cdt = item.CDT
+                    }
+                    const curAuthorId = row.AUTHORID
+                    const curCdt = row.CDT.substring(0, 19)
+                    if (i == 0) {
+                        row.stickToPrev = false
+                    } else {
+                        if (msgArr[i - 1].AUTHORID != curAuthorId) {
+                            row.stickToPrev = false
+                        } else {
+                            const prevCdt = msgArr[i - 1].CDT.substring(0, 19)
+                            const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
+                            const minuteDiff = parseInt(secondDiff / 60)
+                            row.stickToPrev = (minuteDiff <= 1) ? true : false
+                        }
+                    }
+                    if (i == msgArr.length - 1) {
+                        row.hasSticker = false
+                    } else {
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) {
+                            row.hasSticker = false
+                        } else {
+                            const nextCdt = msgArr[i + 1].CDT.substring(0, 19)                            
+                            const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
+                            const minuteDiff = parseInt(secondDiff / 60)
+                            row.hasSticker = (minuteDiff <= 1) ? true : false
+                        }
+                    }
+                }
+                const lastMsgMstCdtThisTime = msgArr[msgArr.length - 1].CDT
+                if (lastMsgMstCdtThisTime > savLastMsgMstCdt) savLastMsgMstCdt = lastMsgMstCdtThisTime
+                if (lastMsgMstCdt) { //1) 설명 참조
+                    msglist.value = [...msglist.value, ...msgArr]
+                } else {
+                    msglist.value = msgArr
+                }
+            }
+            if (lastMsgMstCdt) {
+                //1) 설명 참조
+            } else {
+                imgBlobArr.value = []
+                for (let item of rs.data.tempimagelist) {
                     const uInt8Array = new Uint8Array(item.BUFFER.data)
                     const blob = new Blob([uInt8Array], { type: "image/png" })
                     const blobUrl = URL.createObjectURL(blob)
-                    item.url = blobUrl
-                    item.hover = false
-                    item.cdt = item.CDT
-                } //if (row.msgfile.length > 0) debugger
-                for (let item of row.msgfile) {
-                    item.hover = false
-                    item.name = item.BODY
-                    item.size = item.FILESIZE
-                    item.cdt = item.CDT
+                    imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: item.CDT })
                 }
-            }
-            msglist.value = rs.data.msglist
-            imgBlobArr.value = []
-            for (let item of rs.data.tempimagelist) {
-                const uInt8Array = new Uint8Array(item.BUFFER.data)
-                const blob = new Blob([uInt8Array], { type: "image/png" })
-                const blobUrl = URL.createObjectURL(blob)
-                imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: item.CDT })
-            }
-            fileBlobArr.value = []
-            for (let item of rs.data.tempfilelist) {
-                fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+                fileBlobArr.value = []
+                for (let item of rs.data.tempfilelist) {
+                    fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+                }
             }
             await nextTick()
             scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
@@ -134,11 +179,15 @@
         }
     }
 
-    function displayDt(dtStr) { //vue의 computed method 이용할 경우 아규먼트 전달방법을 아직 파악하지 못해 일반 함수로 처리함
+    function displayDt(dtStr, tmOnly) { //vue의 computed method 이용할 경우 아규먼트 전달방법을 아직 파악하지 못해 일반 함수로 처리함
         if (dtStr.length < 19) return null
         const arr = dtStr.split(" ")
-        const hday = hush.util.getDayFromDateStr(arr[0])
-        return arr[0] + " (" + hday + ") " + arr[1].substring(0, 8)
+        if (tmOnly) {
+            return arr[1].substring(0, 5)
+        } else {
+            const hday = hush.util.getDayFromDateStr(arr[0])
+            return arr[0] + " (" + hday + ") " + arr[1].substring(0, 5)
+        }
     }
 
     function msgRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
@@ -241,16 +290,25 @@
         }
     }
 
+    function keyUpEnter(e) {
+        if (e.ctrlKey) {
+            saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
+        } else {
+            //일단 줄바꿈으로 동작하게 하기
+        }
+    }
+
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
         try { //파일 및 이미지가 있다면 미리 업로드된 상태임
             const rq = { 
-                crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgBody').innerHTML,
+                crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgContent').innerHTML,
                 num_file: fileBlobArr.value.length, num_image: imgBlobArr.value.length
             }
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //setTimeout(function() { gst.util.setToast(gst.cons.done) }, 500)
+            await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt }) //저장한 메시지 추가
+            msgbody.value = "111" //https://yamyam-naengmyeon-donkats.tistory.com/35 vue HTML 데이터 바인딩 (sanitize-html)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -349,6 +407,7 @@
     }
 
     async function test() {
+        return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return            
@@ -361,9 +420,10 @@
 
 <template>
     <div class="chan_center">
-        <div class="chan_center_header">
+        <div class="chan_center_header" @click="test" style="cursor:pointer">
             <div class="chan_center_header_left">
-                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><div class="coDotDot"> {{ channm }} [{{ grnm }}]</div>
+                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
+                <div class="coDotDot">{{ channm }} [{{ grnm }}] - {{ gst.selChanId }}</div>
             </div>
             <div class="chan_center_header_right">
                 <div class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
@@ -387,16 +447,22 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
-        </div>
+        </div> 
         <div class="chan_center_body" ref="scrollArea">
-            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu" 
+            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"  
+                :style="row.hasSticker ? {} : { borderBottom: '1px solid lightgray' }"               
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
-                <div style="display:flex;align-items:center">
+                <div style="display:flex;align-items:center" v-show="!row.stickToPrev">
                     <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" class="coImg32" style="border-radius:16px">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
-                    <span style="margin-left:10px">{{ row.AUTHORNM }} {{ displayDt(row.CDT) }} </span>
+                    <span style="margin-left:9px;color:dimgray">{{ row.AUTHORNM }} {{ displayDt(row.CDT) }} </span>
                 </div>
-                <div v-html="row.BODY" style="margin:10px 0 10px 40px"></div>
+                <div style="display:flex;margin:10px 0">
+                    <div style="width:40px;display:flex;align-items:center;color:dimgray">
+                        <span v-show="row.stickToPrev && row.hover">{{ displayDt(row.CDT, true) }}</span>
+                    </div>
+                    <div v-html="row.BODY"></div>
+                </div>
                 <div class="msg_body_sub">
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
@@ -438,8 +504,7 @@
         </div>
         <div class="chan_center_footer">
             <div class="editor_header">
-                <div style="display:flex;align-items:center;padding:3px 5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px"
-                    @click="saveMsg">
+                <div class="saveMenu" @click="saveMsg">
                     <img class="coImg24" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
                 <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘 추가">
@@ -449,7 +514,9 @@
             </div>
             <!--<div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
                 https://www.jkun.net/702-->
-            <div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="uploadImage"></div>
+            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" 
+                v-html="msgbody" @paste="uploadImage" @keyup.enter="keyUpEnter">
+            </div>
             <div v-if="imgBlobArr.length > 0" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
@@ -521,7 +588,7 @@
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
-        position:relative;display:flex;flex-direction:column;margin:5px 0 0 0;border-bottom:1px solid lightgray
+        position:relative;display:flex;flex-direction:column;margin:5px 0 0 0;
     }
     .msg_body_sub {
         display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start
@@ -605,6 +672,10 @@
     .procMenu:hover { background:whitesmoke }
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
     .editorMenu:hover { background:lightgray }
+    .editorMenu:active { background:lightsteelblue }
+    .saveMenu { display:flex;align-items:center;padding:3px 5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
+    .saveMenu:hover { background:lightsteelblue }
+    .saveMenu:active { background:darkblue }
     .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
     .resizer {
         background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
