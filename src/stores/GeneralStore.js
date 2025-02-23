@@ -357,7 +357,7 @@ const GeneralStore = defineStore('General', () => {
         },
 
         chkAxiosCode : function(data, notShowMsgIfNoData) { //data는 axios의 rs.data
-            setTimeout(function() { util.setToast("") }, 10) //setting은 main.js axios에 있음
+            setTimeout(function() { util.setToast("") }, 1) //setting은 main.js axios에 있음
             if (data.code != cons.OK) {
                 if (notShowMsgIfNoData && data.code == cons.NOT_FOUND) {
                     //데이터 없을 경우에 메시지없이 넘어가야 할 때가 있음

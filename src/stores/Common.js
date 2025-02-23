@@ -27,6 +27,12 @@ const hush = {
             let units = ["B", "KB", "MB", "GB", "TB"], i
             for (i = 0; bytes >= 1024 && i < 4; i++) bytes /= 1024
             return bytes.toFixed(2) + units[i]
+        },
+        getRect : (tagStr) => {
+            const tag = document.querySelector(tagStr)
+            if (!tag) return null 
+            const rect = tag.getBoundingClientRect()
+            return rect
         }
     }
 

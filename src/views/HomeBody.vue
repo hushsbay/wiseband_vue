@@ -2,6 +2,7 @@
     import { ref, onMounted, nextTick, computed } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
+    import { debounce } from 'lodash'
 
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
@@ -24,6 +25,7 @@
     let fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
+    let onGoingGetList = false, prevScrollY
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -84,12 +86,22 @@
     //1) lastMsgMstCdt : Endless Scrolling 관련
     //2) firstMsgMstCdt : 메시지 작성후 화면 맨 아래에 방금 작성한 메시지 추가할 때 사용
     async function getList(param) {
+        if (onGoingGetList) return
         try {
-            const res = await axios.post("/chanmsg/qry", param)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
+            onGoingGetList = true
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt //lastMsgMstCdt와 공존하면 안됨
+            let idTop
+            if (lastMsgMstCdt && lastMsgMstCdt != gst.cons.cdtAtFirst) {
+                const eleTop = getTopMsgBody() //1) 경우에 데이터 가져와서 뿌린 후 그 이전 위치로 가기 위해 저장한 것임
+                idTop = eleTop.id
+            }
+            const res = await axios.post("/chanmsg/qry", param)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) {
+                onGoingGetList = false
+                return
+            }            
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
@@ -185,8 +197,15 @@
             await nextTick()
             if (!lastMsgMstCdt || lastMsgMstCdt == gst.cons.cdtAtFirst) {
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
+            } else {
+                if (msgArr.length > 0) {
+                    const ele = document.getElementById(idTop)
+                    if (ele) scrollArea.value.scrollTo({ top: ele.offsetTop - ele.offsetHeight - 10}) //10은 마진/패딩 등 알파값 
+                }
             }
+            onGoingGetList = false
         } catch (ex) {
+            onGoingGetList = false
             gst.util.showEx(ex, true)
         }
     }
@@ -212,6 +231,25 @@
 
     function rowLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
         row.hover = false
+    }
+
+    const onScrollEnd = debounce(async (e) => { //2) 관련
+        const sTop = scrollArea.value.scrollTop
+        const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down"
+        prevScrollY = sTop //console.log(sTop+"@@@@@@@@@@@"+which)
+        if (which == "up" && sTop < 100) { 
+            //0으로 조건을 걸면 up 체크할 필요없지만 일단 그냥 두기로 함 (debounce도 필요없어 보임)
+            //처음엔 sTop < 250 정도로 했으나 debound로도 안먹히고 두번 실행될 때가 있어서 일단 안전하게 sTop == 0으로 처리함
+            await qryPrev()
+        }
+    }, 500)
+
+    const getTopMsgBody = () => { //2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
+        const rect = hush.util.getRect("#chan_center_body")
+        const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
+        let yy = rect.top + 6
+        const ele = document.elementFromPoint(xx, yy)
+        return ele
     }
 
     function imgLoaded(e, row) {
@@ -432,7 +470,7 @@
 
 <template>
     <div class="chan_center">
-        <div class="chan_center_header" @click="qryPrev" style="cursor:pointer">
+        <div class="chan_center_header" @click="test" style="cursor:pointer">
             <div class="chan_center_header_left">
                 <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
                 <div class="coDotDot">{{ channm }} [{{ grnm }}] - {{ gst.selChanId }}</div>
@@ -450,7 +488,7 @@
                 </div>                
             </div>
         </div>
-        <div class="chan_center_nav">
+        <div class="chan_center_nav" id="chan_center_nav">
             <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
@@ -460,7 +498,7 @@
                 <span style="margin-left:5px">파일</span> 
             </div>
         </div> 
-        <div class="chan_center_body" ref="scrollArea">
+        <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"  
                 :style="row.hasSticker ? {} : { borderBottom: '1px solid lightgray' }"               
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
