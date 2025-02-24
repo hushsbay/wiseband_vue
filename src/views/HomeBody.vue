@@ -458,6 +458,19 @@
         }
     }
 
+    async function toggleAction(msgid, kind) {
+        try {
+            const rq = { 
+                chanid: gst.selChanId, msgid: msgid, kind: kind
+            }
+            const res = await axios.post("/chanmsg/toggleAction", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return            
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
     async function test() {
         return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
@@ -548,9 +561,9 @@
                     </div>
                 </div>
                 <div v-show="row.hover" class="msg_proc">
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_watch.png')" title="알아보는중"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_check.png')" title="접수완료"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_watch.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watch')"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_check.png')" title="접수완료" @click="toggleAction(row.MSGID, 'check')"></span>
+                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
                     <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></span>
                     <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
                     <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달"></span>
