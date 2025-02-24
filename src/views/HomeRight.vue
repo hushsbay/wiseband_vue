@@ -1,4 +1,25 @@
 <script setup>
+
+
+
+
+
+
+
+
+
+    //HomeBody.vue를 모두 마무리해서 여기 내부에 소스 복사/붙이기해야 두번 코딩안하게 됨 (코디잉 유사한 부분이 많으나 결국 다름)
+    //HomeBody.vue를 다시 재귀적으로 불러 사용하려다가 말그대로 재귀적호출이 되어 훨씬 힘들어지므로 그냥 HomeRight로 만들어 적용하는 것이 나을 것임
+
+
+
+
+
+
+
+
+
+
     import { ref, onMounted, nextTick } from 'vue' 
     import { useRoute } from 'vue-router'
     import axios from 'axios'
@@ -8,12 +29,11 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
-    import HomeRight from "/src/views/HomeRight.vue"
     
     const gst = GeneralStore()
     const route = useRoute()
 
-    let thread = ref({ msgid: null })
+    const props = defineProps({ thread : Object })
 
     const scrollArea = ref(null)
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
@@ -459,6 +479,8 @@
     }
 
     async function test() {
+        alert("111")
+        thread.value.msgid = null
         return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
         const rs = gst.util.chkAxiosCode(res.data)
@@ -468,17 +490,15 @@
         document.title = channm.value
         msglist.value = [...msglist.value, ...rs.data.msglist]
     }
-
-    ///////////////////////////////////////////////////////////////////////////아래는 thread 관련임
-    function openThread(msgid) {
-        thread.value.msgid = msgid
-    }
 </script>
 
 <template>
     <div class="chan_center">
         <div class="chan_center_header" @click="test" style="cursor:pointer">
-            <div class="chan_center_header_left">
+            <div v-if="props && props.thread && props.thread.msgid" class="chan_center_header_left">                
+                <div class="coDotDot">{{ props.thread.msgid }}</div>
+            </div>
+            <div v-else class="chan_center_header_left">
                 <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
                 <div class="coDotDot">{{ channm }} [{{ grnm }}] - {{ gst.selChanId }}</div>
             </div>
@@ -598,8 +618,7 @@
             </div>
         </div>
     </div>
-    <div class="chan_right" v-show="thread.msgid">
-        <home-right :thread="thread" />
+    <div class="chan_right">
         <!-- <div class="chan_right_header">
             <div class="chan_right_header_left">
                    
