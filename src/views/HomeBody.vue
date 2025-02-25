@@ -152,8 +152,8 @@
                             item.text = item.BODY
                             item.url = item.BODY
                         } else {
-                            item.text = arr(0)
-                            item.url = arr(1)
+                            item.text = arr[0]
+                            item.url = arr[1]
                         }
                     }
                     const curAuthorId = row.AUTHORID
@@ -382,7 +382,7 @@
         try { //파일 및 이미지가 있다면 미리 업로드된 상태임
             const rq = { 
                 crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgContent').innerHTML,
-                num_file: fileBlobArr.value.length, num_image: imgBlobArr.value.length
+                num_file: fileBlobArr.value.length, num_image: imgBlobArr.value.length, num_link: linkArr.value.length
             }
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
@@ -412,7 +412,13 @@
             linkArr.value.push({ hover: false, text: linkText.value, url: linkUrl.value, cdt: rs.data.cdt })
             linkText.value = ""
             linkUrl.value = ""
+            linkPopupRef.value.close()
         }
+    }
+
+    function openLink(url) { 
+        //window.open(url, "_blank", "width=800,height=800,menubar=yes,status=yes,toolbar=yes,resizable=yes,location=yes");
+        window.open(url, "_blank") //popup not worked for 'going back' navigation
     }
 
     async function delLink(msgid, idx) { //msgid = temp or real msgid
@@ -423,16 +429,8 @@
             })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            fileBlobArr.value.splice(idx, 1)
+            linkArr.value.splice(idx, 1)
         } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
-
-    function showLink(row) { //msgid = temp or real msgid
-        try {
-            alert(JSON.stringify(row))
-        } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
@@ -629,6 +627,14 @@
                         </div>
                     </div>
                 </div>
+                <div v-if="row.msglink.length > 0" class="msg_body_sub">
+                    <div v-for="(row5, idx5) in row.msglink" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)" class="msg_file_each">
+                        <div><span style="margin-right:3px;color:#005192">{{ row5.text }}</span></div>
+                        <div v-show="row5.hover" class="msg_file_seemore">
+                            <img class="coImg20" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" >
+                        </div>
+                    </div>
+                </div>
                 <div v-show="row.hover" class="msg_proc">
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watch.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watch')"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_check.png')" title="접수완료" @click="toggleAction(row.MSGID, 'check')"></span>
@@ -679,8 +685,8 @@
                 </div>
             </div>
             <div v-if="linkArr.length > 0" class="msg_body_blob">
-                <div v-for="(row, idx) in linkArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="goLink('temp', row)" class="msg_file_each">
-                    <div><span style="margin-right:3px">{{ row.text }}</span>(<span>{{ (row.url) }}</span>)</div>
+                <div v-for="(row, idx) in linkArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="openLink(row.url)" class="msg_file_each">
+                    <div><span style="margin-right:3px;color:#005192">{{ row.text }}</span></div>
                     <div v-show="row.hover" class="msg_file_del">
                         <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delLink('temp', idx)">
                     </div>
@@ -751,7 +757,7 @@
         margin-right:10px;padding:5px;display:flex;background:lightsteelblue;border:1px solid dimblue;border-radius:5px
     }
     .msg_body_blob {
-        margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke
+        margin-bottom:5px;padding-left:8px;display:flex;flex-wrap:wrap;justify-content:flex-start
     }
     .msg_file_each {
         position:relative;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer

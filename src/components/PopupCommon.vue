@@ -6,7 +6,7 @@
     //const gst = GeneralStore()
     const props = defineProps({ kind: String })
     const emits = defineEmits(["ev-click"])
-    defineExpose({ open })
+    defineExpose({ open, close })
 
     let show = ref(false)
 
