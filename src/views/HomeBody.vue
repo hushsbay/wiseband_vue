@@ -460,12 +460,10 @@
 
     async function toggleAction(msgid, kind) {
         try {
-            const rq = { 
-                chanid: gst.selChanId, msgid: msgid, kind: kind
-            }
+            const rq = { chanid: gst.selChanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
             const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return            
+            if (!rs) return
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -534,9 +532,10 @@
                     <div v-html="row.BODY"></div>
                 </div>
                 <div class="msg_body_sub">
-                    <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM">
+                    <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
                     </div>
+                    <div v-if="row.msgdtl.length > 0" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></div>
                     <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center" :title="row2.AUTHORNM">
                         <img class="coImg18" :src="gst.html.getImageUrl('user.png')">
                     </div>
@@ -561,14 +560,14 @@
                     </div>
                 </div>
                 <div v-show="row.hover" class="msg_proc">
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_watch.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watch')"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_check.png')" title="접수완료" @click="toggleAction(row.MSGID, 'check')"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_later.png')" title="나중에"></span>
-                    <span class="procMenu"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watch.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watch')"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_check.png')" title="접수완료" @click="toggleAction(row.MSGID, 'check')"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_later.png')" title="나중에"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기"></span>
                 </div>
             </div>
         </div>
@@ -665,7 +664,7 @@
         display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start
     }
     .msg_body_sub1 {
-        margin-right:10px;padding:5px;display:flex;background:whitesmoke;border-radius:8px
+        margin-right:10px;padding:5px;display:flex;background:lightsteelblue;border:1px solid dimblue;border-radius:5px
     }
     .msg_body_blob {
         margin-top:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;background:whitesmoke
@@ -740,6 +739,8 @@
     .topMenu:hover { background:whitesmoke;font-weight:bold }
     .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:pointer }
     .procMenu:hover { background:whitesmoke }
+    .procAct { padding:5px;margin-right:10px;border-radius:5px;background:lightgray;cursor:pointer }
+    .procAct:hover { background:silver }
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
     .editorMenu:hover { background:lightgray }
     .editorMenu:active { background:lightsteelblue }
