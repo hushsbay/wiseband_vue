@@ -16,7 +16,9 @@
     let thread = ref({ msgid: null })
 
     const scrollArea = ref(null)
+    let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
+    const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
     
     const MAX_PICTURE_CNT = 11
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
@@ -24,7 +26,7 @@
     let msglist = ref([])
     let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
-    let fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
+    let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
     let onGoingGetList = false, prevScrollY
@@ -142,6 +144,18 @@
                         item.size = item.FILESIZE
                         item.cdt = item.CDT
                     }
+                    for (let item of row.msglink) {
+                        item.hover = false                        
+                        item.cdt = item.CDT
+                        const arr = item.BODY.split(gst.cons.deli)
+                        if (arr.length == 1) {
+                            item.text = item.BODY
+                            item.url = item.BODY
+                        } else {
+                            item.text = arr(0)
+                            item.url = arr(1)
+                        }
+                    }
                     const curAuthorId = row.AUTHORID
                     const curCdt = row.CDT.substring(0, 19)
                     if (i == msgArr.length - 1) {
@@ -194,6 +208,19 @@
                 fileBlobArr.value = []
                 for (let item of rs.data.tempfilelist) {
                     fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+                }
+                linkArr.value = []
+                for (let item of rs.data.templinklist) {
+                    let text, url
+                    const arr = item.BODY.split(gst.cons.deli)
+                    if (arr.length == 1) {
+                        text = item.BODY
+                        url = item.BODY
+                    } else {
+                        text = arr[0]
+                        url = arr[1]
+                    }
+                    linkArr.value.push({ hover: false, text: text, url: url, cdt: item.CDT })
                 }
             }
             await nextTick()
@@ -322,7 +349,7 @@
         try {
             const cdt = imgBlobArr.value[idx].cdt
             const res = await axios.post("/chanmsg/delBlob", { 
-                msgid: msgid, chanid: gst.selChanId, kind: "I", cdt: cdt, name: ""
+                msgid: msgid, chanid: gst.selChanId, kind: "I", cdt: cdt
             })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -332,8 +359,9 @@
         }
     }
 
-    function showImage(row) { //msgid, idx) { //msgid = temp or real msgid
+    function showImage(row) { //msgid = temp or real msgid
         try {
+            popupRefKind.value = 'image'
             imgPopupUrl.value = row.url
             imgPopupStyle.value = { width: row.realWidth + "px", height: row.realHeight + "px" }
             imgPopupRef.value.open()
@@ -362,6 +390,49 @@
             await getList({ grid: gst.selGrId, chanid: gst.selChanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
             msgbody.value = "111" //https://yamyam-naengmyeon-donkats.tistory.com/35 vue HTML 데이터 바인딩 (sanitize-html)
         } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function uploadLink() {
+        try {
+            popupRefKind.value = 'link'
+            linkPopupRef.value.open()
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+    
+    async function okPopup(kind) {
+        if (kind == "link") {
+            const rq = { chanid: gst.selChanId, kind: "L", body: linkText.value + gst.cons.deli + linkUrl.value }
+            const res = await axios.post("/chanmsg/uploadBlob", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            linkArr.value.push({ hover: false, text: linkText.value, url: linkUrl.value, cdt: rs.data.cdt })
+            linkText.value = ""
+            linkUrl.value = ""
+        }
+    }
+
+    async function delLink(msgid, idx) { //msgid = temp or real msgid
+        try {
+            const cdt = linkArr.value[idx].cdt                        
+            const res = await axios.post("/chanmsg/delBlob", {
+                msgid: msgid, chanid: gst.selChanId, kind: "L", cdt: cdt
+            })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            fileBlobArr.value.splice(idx, 1)
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function showLink(row) { //msgid = temp or real msgid
+        try {
+            alert(JSON.stringify(row))
+        } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
@@ -415,10 +486,9 @@
 
     async function delFile(msgid, idx) { //msgid = temp or real msgid
         try {
-            const name = fileBlobArr.value[idx].name
             const cdt = fileBlobArr.value[idx].cdt
             const res = await axios.post("/chanmsg/delBlob", { 
-                msgid: msgid, chanid: gst.selChanId, kind: "F", cdt: cdt, name: name
+                msgid: msgid, chanid: gst.selChanId, kind: "F", cdt: cdt
             })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -576,10 +646,10 @@
                 <div class="saveMenu" @click="saveMsg">
                     <img class="coImg24" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
-                <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘 추가">
-                <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크 추가">
+                <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가">
+                <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
                 <input id="file_upload" type=file multiple hidden @change="uploadFile" />
-                <label for="file_upload"><img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일 추가"></label>
+                <label for="file_upload"><img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
             </div>
             <!--<div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
                 https://www.jkun.net/702-->
@@ -608,6 +678,14 @@
                     </div>
                 </div>
             </div>
+            <div v-if="linkArr.length > 0" class="msg_body_blob">
+                <div v-for="(row, idx) in linkArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="goLink('temp', row)" class="msg_file_each">
+                    <div><span style="margin-right:3px">{{ row.text }}</span>(<span>{{ (row.url) }}</span>)</div>
+                    <div v-show="row.hover" class="msg_file_del">
+                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delLink('temp', idx)">
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="chan_right" v-show="thread.msgid">
@@ -628,9 +706,15 @@
         </div> -->
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
-    <popup-common ref="imgPopupRef"><!-- <popup-common ref="imgPopupRef" :objUrl="objUrl"></popup-common> -->
+    <popup-common ref="imgPopupRef" :kind="popupRefKind">
         <div>
             <img :src="imgPopupUrl" :style='imgPopupStyle'>
+        </div>
+    </popup-common>
+    <popup-common ref="linkPopupRef" :kind="popupRefKind" @ev-click="okPopup">
+        <div>
+            <input v-model="linkText" /><br>
+            <input v-model="linkUrl" />
         </div>
     </popup-common>
 </template>
@@ -739,8 +823,8 @@
     .topMenu:hover { background:whitesmoke;font-weight:bold }
     .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:pointer }
     .procMenu:hover { background:whitesmoke }
-    .procAct { padding:5px;margin-right:10px;border-radius:5px;background:lightgray;cursor:pointer }
-    .procAct:hover { background:silver }
+    .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
+    .procAct:hover { background:lightgray }
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
     .editorMenu:hover { background:lightgray }
     .editorMenu:active { background:lightsteelblue }

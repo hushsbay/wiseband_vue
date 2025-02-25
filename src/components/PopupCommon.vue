@@ -4,8 +4,8 @@
     //import GeneralStore from '/src/stores/GeneralStore.js'
 
     //const gst = GeneralStore()
-    //const props = defineProps({ objUrl: Object })
-    //const emits = defineEmits(["ev-click", "ev-leave"])
+    const props = defineProps({ kind: String })
+    const emits = defineEmits(["ev-click"])
     defineExpose({ open })
 
     let show = ref(false)
@@ -17,16 +17,22 @@
     function close() {
         show.value = false
     }
+
+    function ok() {
+        emits("ev-click", props.kind)
+    } 
 </script>
 
 <template>
     <Transition>
         <div v-if="show">
             <div class="popup">
+                {{ props.kind }}
                 <slot></slot>
                 <!-- <div style="width:300px;height:300px;border:1px solid red">
                     <img :src="props.objUrl" style='width:100%;height:100%'>                    
                 </div> -->
+                <button v-if="props.kind=='link'" @click="ok">확인</button>
                 <button @click="close">닫기</button>
             </div>
             <div class="overlay" @click="close"></div>

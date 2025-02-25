@@ -72,6 +72,7 @@ const GeneralStore = defineStore('General', () => {
         JWT_ETC : '-809',
         PWD_MISMATCH : '-811',
         auth_err_prefix : "-8",
+        deli : "$~$",
         cdtAtFirst : "9999-99-99",
         uploadLimitSize : 10 * 1024 * 1024, //10MB
         uploadMaxCount : 10,
