@@ -9,7 +9,9 @@
     let ctxStyle = ref({}) //Parent 스타일
     let ctxChildOn = ref(false), ctxChildStyle = ref({}), ctxChildMenu = ref([])
 
-    watch(gst.ctx, async () => {
+    let prevX
+
+    watch(gst.ctx, async () => { //몇번씩 실행됨 (해결 필요)
         if (!gst.ctx.on) ctxChildOn.value = false
         let posX = gst.ctx.data.posX
         let posY = gst.ctx.data.posY
@@ -36,6 +38,7 @@
             ctxStyle.value.top = posY + "px"
             ctxType += "T"
         }
+        console.log(ctxType+"@@@@@@@@@@2")
         gst.ctx.data.type = ctxType
         gst.ctx.data.parentWidth = pWidth
     }, { immediate: true, deep: true })
@@ -45,41 +48,76 @@
         let posX = gst.ctx.data.parentX
         let posY = gst.ctx.data.parentY
         let ctxChild = document.getElementById('ctxChild')
-        const pWidth = ctxChild.offsetWidth
-        const pHeight = ctxChild.offsetHeight
+        const pWidth = ctxChild.offsetWidth //렌더링이 보장되어야 하는데 잘안되고 있음
+        const pHeight = ctxChild.offsetHeight //렌더링이 보장되어야 하는데 잘안되고 있음
         if (gst.ctx.data.type.startsWith("L")) {
-            ctxChildStyle.value.left = (posX - pWidth - 3) + "px"
+            //ctxChildStyle.value.left = (posX - pWidth - 3) + "px"
+            ctxChildStyle.value.left = (posX - 120 - 3) + "px"
+            console.log(posX+"@@@@@@@@@@L"+pWidth+"==="+ctxChildMenu.length)
         } else { //R
             ctxChildStyle.value.left = (posX + gst.ctx.data.parentWidth + 3) +"px"
+            console.log("@@@@@@@@@@R")
         }
         if (gst.ctx.data.type.endsWith("B")) {
             ctxChildStyle.value.top = (posY - pHeight + 20) + "px"
+            console.log("@@@@@@@@@@B")
         } else { //T
             ctxChildStyle.value.top = (posY - 20) + "px"
-        }
+            console.log("@@@@@@@@@@T")
+        }        
     }, { immediate: true, deep: true })
     
     async function rowClick(e, row, idx) {
-        if (row.line || row.disable) return
+        if (row.disable) return //if (row.line || row.disable) return
         if (row.child) { //ctxParent의 좌표타입(LB,LT,RB,RT)에 따라 left/top을 결정하면 됨
             gst.ctx.data.parentY = e.clientY
             ctxChildMenu.value = row.child
-            ctxChildOn.value = !ctxChildOn.value         
+            ctxChildOn.value = !ctxChildOn.value   
         } else {
             ctxChildOn.value = false
             gst.ctx.on = false //props가 아니고 readonly도 아니므로 문제없음
             emits("ev-menu-click", row, idx)
         }        
     }
+
+    function mouseEnter(e, row) {
+        ctxChildMenu.value = []
+        ctxChildOn.value = false
+        if (row.disable) return
+        if (row.child) { //ctxParent의 좌표타입(LB,LT,RB,RT)에 따라 left/top을 결정하면 됨
+            prevX = e.pageX
+            gst.ctx.data.parentY = e.clientY
+            ctxChildMenu.value = row.child
+            ctxChildOn.value = true
+        }
+    }
+
+    function mouseLeave(e, row) {
+        //if (row.disable) return
+        if (row.child) {
+            if (e.pageX > prevX) {
+                //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
+            } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
+                ctxChildMenu.value = []
+                ctxChildOn.value = false
+            }
+        }
+    }
+
+    function mouseLeaveChild() {
+        ctxChildMenu.value = []
+        ctxChildOn.value = false         
+    }
 </script>
 
-<template> <!-- 아래 @click.stop은 Main.vue의 gst.ctx.on=false 참조 -->
+<template> <!-- 아래 @click.stop은 Main.vue 참조 -->
     <div v-show="gst.ctx.on" id="ctxParent" class="popupMenu" :style="ctxStyle">
         <div v-if="gst.ctx.data.header" class="popupHeader">
             <div v-html="gst.ctx.data.header" class="popupHeaderItem coDotDot"></div>
         </div>
         <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
-            @click.stop="(e) => rowClick(e, row, idx)">
+            @mouseenter="(e) => mouseEnter(e, row)" @mouseleave="(e) => mouseLeave(e, row)"         
+            @click.stop="(e) => rowClick(e, row, idx)"> 
             <div v-if="row.child" class="popupMenuItemChild coDotDot">
                 <div style="display:flex;align-items:center">
                     <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
@@ -93,7 +131,8 @@
             </div>                    
         </div> 
     </div>
-    <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle">
+    <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle"
+        @mouseleave="mouseLeaveChild">
         <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
             @click.stop="(e) => rowClick(e, row, idx)">
             <div class="popupMenuItem coDotDot">
