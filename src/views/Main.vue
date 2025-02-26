@@ -170,7 +170,7 @@
 </script>
 
 <template>
-    <div class="coMain" @click="gst.ctx.on=false">
+    <div class="coMain" @click="gst.ctx.hide">
         <div class="header">
 
         </div>

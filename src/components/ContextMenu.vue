@@ -78,7 +78,7 @@
         <div v-if="gst.ctx.data.header" class="popupHeader">
             <div v-html="gst.ctx.data.header" class="popupHeaderItem coDotDot"></div>
         </div>
-        <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '' }" 
+        <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
             @click.stop="(e) => rowClick(e, row, idx)">
             <div v-if="row.child" class="popupMenuItemChild coDotDot">
                 <div style="display:flex;align-items:center">
@@ -94,7 +94,7 @@
         </div> 
     </div>
     <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle">
-        <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '' }" 
+        <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
             @click.stop="(e) => rowClick(e, row, idx)">
             <div class="popupMenuItem coDotDot">
                 <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">

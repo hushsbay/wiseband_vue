@@ -250,8 +250,52 @@
         }
     }
 
-    function msgRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        
+    function rowRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
+        gst.ctx.data.header = ""
+        gst.ctx.menu = [
+            { nm: "반응 추가", img: "dimgray_emoti.png", func: function(item, idx) {
+                alert(JSON.stringify(row))
+            }},
+            { nm: "스레드(댓글)", img: "dimgray_thread.png", func: function(item, idx) {
+                
+            }},
+            { nm: "메시지 전달", img: "dimgray_forward.png", func: function(item, idx) {
+                
+            }},
+            { nm: "나중을 위해 저장", img: "dimgray_later.png", deli: true, func: function(item, idx) {
+                
+            }},
+            { nm: "읽지않음으로 표시", func: function(item, idx) {
+                alert(item.nm+"@@@@"+idx)
+            }},
+            { nm: "리마인더 받기", child: [
+                { nm: "1시간 후", func: function(item, idx) { 
+                    alert(item.nm+"@@@@"+idx)
+                }},
+                { nm: "내일", func: function(item, idx) { 
+                    
+                }},
+                { nm: "다음 주", func: function(item, idx) { 
+                    
+                }},
+                { nm: "사용자 지정", func: function(item, idx) { 
+                    
+                }}                
+            ]},
+            { nm: "새 댓글시 알림 받기", func: function(item, idx) {
+                
+            }},
+            { nm: "채널에 고정", func: function(item, idx) {
+                
+            }},
+            { nm: "링크 복사", func: function(item, idx) {
+                
+            }},
+            { nm: "메시지 삭제", color: "red", func: function(item, idx) {
+                
+            }}
+        ]
+        gst.ctx.show(e)
     }
 
     function rowEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
@@ -587,7 +631,7 @@
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"  
                 :style="row.hasSticker ? {} : { borderBottom: '1px solid lightgray' }"               
-                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => msgRight(e, row)">
+                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row)">
                 <div style="display:flex;align-items:center" v-show="!row.stickToPrev">
                     <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" class="coImg32" style="border-radius:16px">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
@@ -643,7 +687,9 @@
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_later.png')" title="나중에"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기"></span>
+                    <span class="procAct"><!-- maintainContextMenu 클래스는 GeneralStore.js에서 참조 -->
+                        <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
+                    </span>
                 </div>
             </div>
         </div>
@@ -772,7 +818,7 @@
         position:relative;width:50px;height:50px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_proc {
-        position:absolute;height:20px;right:3px;top:1px;padding:5px 10px;z-index:9999;
+        position:absolute;height:20px;right:3px;top:1px;padding:5px 0 5px 10px;z-index:8888;
         display:flex;align-items:center;
         background:white;border:1px solid lightgray;border-radius:5px
     }

@@ -109,6 +109,11 @@ const GeneralStore = defineStore('General', () => {
             this.on = true
         },
 
+        hide : function(e) { //Main.vue에서 @click="gst.ctx.hide시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
+            if (e.srcElement.className.includes("maintainContextMenu")) return
+            this.on = false
+        },
+
         proc : function(row, idx) {
             if (typeof row.func != "function") return
             row.func(row, idx)
