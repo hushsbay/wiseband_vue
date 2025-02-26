@@ -84,10 +84,8 @@ const GeneralStore = defineStore('General', () => {
     }
 
     const ctx = { 
-
-        //Main.vue에서 <div class="coMain" @click="gst.ctx.on=false">처리하지 않으면 
-        //다른 곳을 클릭했을 때 right click한 ctx가 닫히면서 클릭한 이벤트가 바로 먹히지 않음        
-        on : false,
+        
+        on : false, //Main.vue에서 <div class="coMain" @click=>처리하지 않으면 다른 곳을 클릭했을 때 right click한 ctx가 닫히면서 클릭한 이벤트가 바로 먹히지 않음        
 
         data : {
             posX : 0,
@@ -96,21 +94,20 @@ const GeneralStore = defineStore('General', () => {
             parentX : 0,
             parentY : 0,
             parentWidth : 0,
-            header : '', //v-html로 받기
+            header : '' //v-html로 받기
         },
 
         menu : [],    
         
         show : async function(e) {
             this.on = false //child 메뉴 없애지 않으면 child 떠 있는채로 right click 먹히게 됨
-            //await nextTick()
             this.data.posX = e.clientX
             this.data.posY = e.clientY
             this.on = true
         },
 
-        hide : function(e) { //Main.vue에서 @click="gst.ctx.hide시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
-            if (e.srcElement.className.includes("maintainContextMenu")) return
+        hide : function(e) { //Main.vue에서 @click시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
+            if (e.srcElement.className.includes("maintainContextMenu")) return //우클릭이 아닌 click에서 처리시 바로 닫히면 안되게 함
             this.on = false
         },
 
