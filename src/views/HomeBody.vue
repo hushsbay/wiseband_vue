@@ -295,6 +295,7 @@
                 
             }}
         ]
+        //debugger
         gst.ctx.show(e)
     }
 

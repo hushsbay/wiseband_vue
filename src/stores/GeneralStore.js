@@ -103,7 +103,7 @@ const GeneralStore = defineStore('General', () => {
         
         show : async function(e) {
             this.on = false //child 메뉴 없애지 않으면 child 떠 있는채로 right click 먹히게 됨
-            await nextTick()
+            //await nextTick()
             this.data.posX = e.clientX
             this.data.posY = e.clientY
             this.on = true

@@ -11,7 +11,7 @@
 
     let prevX
 
-    watch([gst.ctx], async () => { //몇번씩 실행됨 (해결 필요)
+    watch(gst.ctx, async () => { //몇번씩 실행됨 (해결 필요)
         if (!gst.ctx.on) ctxChildOn.value = false
         let posX = gst.ctx.data.posX
         let posY = gst.ctx.data.posY
@@ -26,12 +26,10 @@
             ctxStyle.value.left = (posX - pWidth) + "px"
             ctxType = "L"
             gst.ctx.data.parentX = posX - pWidth
-            console.log(gst.ctx.data.parentX+"@@@@@@@@L@@parentX")
         } else {
             ctxStyle.value.left = posX + "px"
             ctxType = "R"
             gst.ctx.data.parentX = posX
-            console.log(gst.ctx.data.parentX+"@@@@@@@@R@@parentX")
         }
         if (posY + pHeight > docHeight) {
             ctxStyle.value.top = (posY - pHeight) + "px"
@@ -45,21 +43,17 @@
         gst.ctx.data.parentWidth = pWidth
     }, { immediate: true, deep: true })
 
-    watch([ctxChildMenu], async () => { //watch([ctxChildMenu, ctxChildOn], async () => {
+    watch([ctxChildMenu, ctxChildOn], async () => {
         await nextTick()
         let posX = gst.ctx.data.parentX
-        console.log(posX+"@@@@@@@@@11@posX")
         let posY = gst.ctx.data.parentY
-        const docWidth = document.documentElement.offsetWidth
-        const docHeight = document.documentElement.offsetHeight
         let ctxChild = document.getElementById('ctxChild')
         const pWidth = ctxChild.offsetWidth //렌더링이 보장되어야 하는데 잘안되고 있음
         const pHeight = ctxChild.offsetHeight //렌더링이 보장되어야 하는데 잘안되고 있음
         if (gst.ctx.data.type.startsWith("L")) {
             //ctxChildStyle.value.left = (posX - pWidth - 3) + "px"
-            ctxChildStyle.value.left = null
-            ctxChildStyle.value.right = (docWidth - posX + 3) + "px"
-            console.log(posX+"@@@@@@@@@@L==="+gst.ctx.data.parentWidth)
+            ctxChildStyle.value.left = (posX - 120 - 3) + "px"
+            console.log(posX+"@@@@@@@@@@L"+pWidth+"==="+ctxChildMenu.length)
         } else { //R
             ctxChildStyle.value.left = (posX + gst.ctx.data.parentWidth + 3) +"px"
             console.log("@@@@@@@@@@R")
@@ -99,21 +93,20 @@
     }
 
     function mouseLeave(e, row) {
-        if (row.child) { //child가 떠 있는 반대방향으로 나갈 때는 child 닫기
-            if ((gst.ctx.data.type.startsWith("L") && e.pageX > prevX) || 
-                (gst.ctx.data.type.startsWith("R") && e.pageX < prevX)) {
+        //if (row.disable) return
+        if (row.child) {
+            if (e.pageX > prevX) {
+                //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
+            } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
                 ctxChildMenu.value = []
                 ctxChildOn.value = false
             }
-        } else {
-            ctxChildMenu.value = []
-            ctxChildOn.value = false
         }
     }
 
     function mouseLeaveChild() {
         ctxChildMenu.value = []
-        ctxChildOn.value = false
+        ctxChildOn.value = false         
     }
 </script>
 
