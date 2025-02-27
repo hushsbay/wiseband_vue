@@ -131,8 +131,7 @@
                 </div>                    
             </div> 
         </div>
-        <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle"
-            @mouseleave="mouseLeaveChild">
+        <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle" @mouseleave="mouseLeaveChild">
             <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
                 @click.stop="rowClick(row, idx)">
                 <div class="popupMenuItem coDotDot">
@@ -165,7 +164,7 @@
     }
 
     .popupMenuItem {
-        width:calc(100% - 8px);height:35px;padding-left:8px;
+        width:calc(100% - 8px);height:35px;padding:0 8px;
         display:flex;align-items:center;border-bottom:1px solid var(--border-color)
     }
 

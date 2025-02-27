@@ -183,16 +183,16 @@
             ]
         } else {
             gst.ctx.menu = [
-                { nm: "채널정보 보기", color: "darkgreen", func: function(item, idx) {
-                    alert(item.nm+"@@@@"+idx)
+                { nm: "채널정보 보기", func: function(item, idx) {
+                    
                 }},
                 { nm: "복사", img: DARK + "other.png", child: [
-                    { nm: "채널 복사", disable: true, func: function(item, idx) { 
-                        alert(item.nm+"####"+idx)
+                    { nm: "채널 복사", func: function(item, idx) { 
+                        
                     }},
-                    { nm: "링크 복사", img: DARK + "other.png", color: "red" }
+                    { nm: "링크 복사" }
                 ]},
-                { nm: "즐겨찾기 설정", disable: true },
+                { nm: "즐겨찾기" },
                 { nm: "채널 나가기", color: "red" }
             ]            
         }
