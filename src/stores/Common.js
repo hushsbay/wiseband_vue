@@ -33,6 +33,10 @@ const hush = {
             if (!tag) return null 
             const rect = tag.getBoundingClientRect()
             return rect
+        },
+        getAngle : (x1, y1, x2, y2) => {
+            var rad = Math.atan2(y2 - y1, x2 - x1)
+            return (rad * 180) / Math.PI
         }
     }
 

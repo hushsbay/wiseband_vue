@@ -3,6 +3,7 @@
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
+    import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupList from "/src/components/PopupList.vue"
 
@@ -18,7 +19,7 @@
     const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel + listUnSel (더보기에서의 수식)
     let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel + listNotSeen (더보기에서의 수식)
 
-    let prevX
+    let prevX, prevY
 
     //1. 아래 localStorage 처리 이전에 SPA내에서 Home >> DM 및 A채널 >> B채널과 같이 내부적으로 이동시 이전 상태를 기억하는 것부터 먼저 코딩하기
     //2. localStorage를 사용하는 곳은 1. Main.vue(1) 2. Hpme.vue(3) 총 4군데임 (save/recall)
@@ -76,6 +77,7 @@
 
     function mouseEnter(e) {
         prevX = e.pageX
+        prevY = e.pageY
         const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
         if (menuDiv.id == "mnuSeeMore") {
             listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value]
@@ -100,7 +102,8 @@
     }
 
     function mouseLeave(e) {
-        if (e.pageX > prevX) {
+        const angle = hush.util.getAngle(prevX, prevY, e.pageX, e.pageY)
+        if (angle >= -60 && angle <= 60) { //if (e.pageX > prevX) {
             //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
         } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
             popupMenuOn.value = false
