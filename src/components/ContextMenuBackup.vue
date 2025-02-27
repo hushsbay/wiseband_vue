@@ -11,7 +11,7 @@
 
     let prevX
 
-    watch(gst.ctx, async () => { //몇번씩 실행됨 (해결 필요)
+    watch([gst.ctx], async () => { //4번씩 실행됨 : lodash의 debounce로 처리해도 문제 (10으로 잡아도 3번 처리, 500 잡으면 느리게 중첩으로 보여 문제 있음)
         if (!gst.ctx.on) ctxChildOn.value = false
         let posX = gst.ctx.data.posX
         let posY = gst.ctx.data.posY
@@ -38,41 +38,38 @@
             ctxStyle.value.top = posY + "px"
             ctxType += "T"
         }
-        console.log(ctxType+"@@@@@@@@@@2")
         gst.ctx.data.type = ctxType
         gst.ctx.data.parentWidth = pWidth
     }, { immediate: true, deep: true })
 
-    watch([ctxChildMenu, ctxChildOn], async () => {
+    watch([ctxChildMenu], async () => {
         await nextTick()
         let posX = gst.ctx.data.parentX
         let posY = gst.ctx.data.parentY
-        let ctxChild = document.getElementById('ctxChild')
-        const pWidth = ctxChild.offsetWidth //렌더링이 보장되어야 하는데 잘안되고 있음
-        const pHeight = ctxChild.offsetHeight //렌더링이 보장되어야 하는데 잘안되고 있음
+        const docWidth = document.documentElement.offsetWidth
+        const docHeight = document.documentElement.offsetHeight
+        //const pWidth = document.getElementById('ctxChild').offsetWidth //렌더링이 보장되어야 하는데 잘안됨. 대신 right로 해결
+        //const pHeight = document.getElementById('ctxChild').offsetHeight //렌더링이 보장되어야 하는데 잘안됨. 대신 bottom으로 해결
         if (gst.ctx.data.type.startsWith("L")) {
-            //ctxChildStyle.value.left = (posX - pWidth - 3) + "px"
-            ctxChildStyle.value.left = (posX - 120 - 3) + "px"
-            console.log(posX+"@@@@@@@@@@L"+pWidth+"==="+ctxChildMenu.length)
+            ctxChildStyle.value.left = null
+            ctxChildStyle.value.right = (docWidth - posX + 3) + "px"
         } else { //R
             ctxChildStyle.value.left = (posX + gst.ctx.data.parentWidth + 3) +"px"
-            console.log("@@@@@@@@@@R")
+            ctxChildStyle.value.right = null
         }
         if (gst.ctx.data.type.endsWith("B")) {
-            ctxChildStyle.value.top = (posY - pHeight + 20) + "px"
-            console.log("@@@@@@@@@@B")
+            ctxChildStyle.value.top = null
+            ctxChildStyle.value.bottom = (docHeight - posY - 20) + "px"
         } else { //T
             ctxChildStyle.value.top = (posY - 20) + "px"
-            console.log("@@@@@@@@@@T")
-        }        
+            ctxChildStyle.value.bottom = null
+        }    
     }, { immediate: true, deep: true })
     
-    async function rowClick(e, row, idx) {
-        if (row.disable) return //if (row.line || row.disable) return
-        if (row.child) { //ctxParent의 좌표타입(LB,LT,RB,RT)에 따라 left/top을 결정하면 됨
-            gst.ctx.data.parentY = e.clientY
-            ctxChildMenu.value = row.child
-            ctxChildOn.value = !ctxChildOn.value   
+    async function rowClick(row, idx) {
+        if (row.disable) return
+        if (row.child) {
+            //child는 mouseEnter에서 처리하도록 함
         } else {
             ctxChildOn.value = false
             gst.ctx.on = false //props가 아니고 readonly도 아니므로 문제없음
@@ -84,7 +81,7 @@
         ctxChildMenu.value = []
         ctxChildOn.value = false
         if (row.disable) return
-        if (row.child) { //ctxParent의 좌표타입(LB,LT,RB,RT)에 따라 left/top을 결정하면 됨
+        if (row.child) {
             prevX = e.pageX
             gst.ctx.data.parentY = e.clientY
             ctxChildMenu.value = row.child
@@ -93,20 +90,20 @@
     }
 
     function mouseLeave(e, row) {
-        //if (row.disable) return
-        if (row.child) {
-            if (e.pageX > prevX) {
-                //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
-            } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
+        if (row.child) { //child가 떠 있는 반대방향으로 나갈 때는 child 닫기
+            if ((gst.ctx.data.type.startsWith("L") && e.pageX > prevX) || (gst.ctx.data.type.startsWith("R") && e.pageX < prevX)) {
                 ctxChildMenu.value = []
                 ctxChildOn.value = false
             }
+        } else {
+            ctxChildMenu.value = []
+            ctxChildOn.value = false
         }
     }
 
     function mouseLeaveChild() {
         ctxChildMenu.value = []
-        ctxChildOn.value = false         
+        ctxChildOn.value = false
     }
 </script>
 
@@ -117,7 +114,7 @@
         </div>
         <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
             @mouseenter="(e) => mouseEnter(e, row)" @mouseleave="(e) => mouseLeave(e, row)"         
-            @click.stop="(e) => rowClick(e, row, idx)"> 
+            @click.stop="rowClick(row, idx)"> 
             <div v-if="row.child" class="popupMenuItemChild coDotDot">
                 <div style="display:flex;align-items:center">
                     <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
@@ -134,7 +131,7 @@
     <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle"
         @mouseleave="mouseLeaveChild">
         <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
-            @click.stop="(e) => rowClick(e, row, idx)">
+            @click.stop="rowClick(row, idx)">
             <div class="popupMenuItem coDotDot">
                 <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
                 <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
@@ -146,7 +143,7 @@
 <style scoped>
 
     .popupMenu {
-        position:fixed;min-width:150px;max-width:350px;z-index:9999;
+        position:fixed;min-width:100px;max-width:350px;z-index:9999;
         display:flex;flex-direction:column;
         background:var(--bottom-color);border:1px solid var(--border-color);border-radius:5px;
         box-shadow:1px 1px 1px var(--shadow-color)
