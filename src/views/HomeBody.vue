@@ -20,7 +20,7 @@
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
     
-    const MAX_PICTURE_CNT = 11
+    const MAX_PICTURE_CNT = 11, MAX_REPLY_PICTURE_CNT = 2
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
@@ -702,23 +702,24 @@
             <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"  
                 :style="row.hasSticker ? {} : { borderBottom: '1px solid lightgray' }"               
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row)">
-                <div style="display:flex;align-items:center" v-show="!row.stickToPrev">
+                <div style="display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
                     <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
                         class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row)">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)">
-                    <span style="margin-left:9px;color:dimgray">{{ row.AUTHORNM }} {{ displayDt(row.CDT) }} </span>
+                    <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
+                    <span style="margin-left:9px;color:dimgray">{{ displayDt(row.CDT) }}</span>
                 </div>
                 <div style="display:flex;margin:10px 0">
-                    <div style="width:40px;display:flex;align-items:center;color:dimgray">
+                    <div style="width:40px;display:flex;align-items:center;color:dimgray;cursor:pointer">
                         <span v-show="row.stickToPrev && row.hover">{{ displayDt(row.CDT, true) }}</span>
                     </div>
                     <div v-html="row.BODY"></div>
                 </div>
-                <div class="msg_body_sub">
+                <div class="msg_body_sub"><!-- 반응, 댓글 -->
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
                     </div>
-                    <div v-if="row.msgdtl.length > 0" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></div>
+                    <div v-if="row.msgdtl.length > 0" class="msg_body_sub1"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></div>
                     <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center" :title="row2.AUTHORNM">
                         <img class="coImg18" :src="gst.html.getImageUrl('user.png')">
                     </div>
@@ -726,7 +727,7 @@
                         댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
                     </div>
                 </div>
-                <div v-if="row.msgimg.length > 0" class="msg_body_sub">
+                <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
                     <div v-for="(row5, idx5) in row.msgimg" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)" class="msg_image_each">
                         <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
                         <div v-show="row5.hover" class="msg_file_seemore">
@@ -734,7 +735,7 @@
                         </div>
                     </div>                
                 </div>
-                <div v-if="row.msgfile.length > 0" class="msg_body_sub">
+                <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
                     <div v-for="(row5, idx5) in row.msgfile" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)" class="msg_file_each">
                         <div><span style="margin-right:3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)</div>
                         <div v-show="row5.hover" class="msg_file_seemore">
@@ -742,7 +743,7 @@
                         </div>
                     </div>
                 </div>
-                <div v-if="row.msglink.length > 0" class="msg_body_sub">
+                <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
                     <div v-for="(row5, idx5) in row.msglink" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)" class="msg_file_each">
                         <div><span style="margin-right:3px;color:#005192">{{ row5.text }}</span></div>
                         <div v-show="row5.hover" class="msg_file_seemore">
@@ -767,12 +768,12 @@
         <div class="chan_center_footer">
             <div class="editor_header">
                 <div class="saveMenu" @click="saveMsg">
-                    <img class="coImg24" :src="gst.html.getImageUrl('white_send.png')" title="발송">
+                    <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
-                <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가">
-                <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가">
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
                 <input id="file_upload" type=file multiple hidden @change="uploadFile" />
-                <label for="file_upload"><img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
+                <label for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
             </div>
             <!--<div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
                 https://www.jkun.net/702-->
@@ -868,10 +869,13 @@
         position:relative;display:flex;flex-direction:column;margin:5px 0 0 0;
     }
     .msg_body_sub {
-        display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start
+        display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
     }
     .msg_body_sub1 {
-        margin-right:10px;padding:5px;display:flex;background:lightsteelblue;border:1px solid dimblue;border-radius:5px
+        margin-right:10px;padding:4px 8px;display:flex;align-items:center;background:#e6e7eb;border:1px solid #e6e7eb;border-radius:12px
+    }
+    .msg_body_sub1:hover {
+        background:whitesmoke;border:1px solid dimgray
     }
     .msg_body_blob {
         margin-bottom:5px;padding-left:8px;display:flex;flex-wrap:wrap;justify-content:flex-start
@@ -944,16 +948,16 @@
     .nodeRight { display:flex;align-items:center;justify-content:flex-end; }*/
     .topMenu { border-radius:5px;cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
-    .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:pointer }
+    .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:text }
     .procMenu:hover { background:whitesmoke }
     .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
     .procAct:hover { background:lightgray }
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
     .editorMenu:hover { background:lightgray }
     .editorMenu:active { background:lightsteelblue }
-    .saveMenu { display:flex;align-items:center;padding:3px 5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
-    .saveMenu:hover { background:lightsteelblue }
-    .saveMenu:active { background:darkblue }
+    .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
+    .saveMenu:hover { opacity:0.5 }
+    .saveMenu:active { background:darkblue;opacity:1.0 }
     /*.nodeSel { background:var(--second-select-color);color:var(--primary-color); }
     .resizer {
         background-color:transparent;cursor:ew-resize;height:100%;width:5px; / 5px 미만은 커서 너무 민감해짐 #cbd5e0 /
