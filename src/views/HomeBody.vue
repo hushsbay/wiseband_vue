@@ -162,6 +162,7 @@
             }
             chandtl.value = rs.data.chandtl
             const msgArr = rs.data.msglist
+            debugger
             if (msgArr.length > 0) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 for (let i = 0; i < msgArr.length; i++) { //if (row.msgimg.length > 0) debugger
                     const row = msgArr[i]
@@ -268,7 +269,7 @@
                     if (ele) scrollArea.value.scrollTo({ top: ele.offsetTop - ele.offsetHeight - 10}) //10은 마진/패딩 등 알파값 
                 }
             }
-            onGoingGetList = false
+            onGoingGetList = false            
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
@@ -721,10 +722,16 @@
                     </div>
                     <div v-if="row.msgdtl.length > 0" class="msg_body_sub1"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></div>
                     <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center" :title="row2.AUTHORNM">
-                        <img class="coImg18" :src="gst.html.getImageUrl('user.png')">
+                        <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
+                            class="coImg18" style="border-radius:9px">
+                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
                     </div>
+                    <dim style="display:flex;align-items:center;margin-left:2px">{{ row.replyinfo[0].CNT_BY_USER }}명</dim>
                     <div v-if="row.reply.length > 0" style="margin:0 5px;display:flex;align-items:center">
-                        댓글:<span>{{ row.reply.length }}</span>개 (최근:<span>{{ row.reply[0].DT }}</span>)
+                        <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
+                        <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
+                        <span style="margin:0 4px;color:dimgray">최근 :</span>
+                        <span style="color:dimgray">{{ displayDt(row.replyinfo[0].CDT_MAX) }}</span>
                     </div>
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
