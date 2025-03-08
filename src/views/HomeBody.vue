@@ -162,7 +162,6 @@
             }
             chandtl.value = rs.data.chandtl
             const msgArr = rs.data.msglist
-            debugger
             if (msgArr.length > 0) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 for (let i = 0; i < msgArr.length; i++) { //if (row.msgimg.length > 0) debugger
                     const row = msgArr[i]
@@ -717,21 +716,28 @@
                     <div v-html="row.BODY"></div>
                 </div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
-                    <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                        <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')"> <span style="margin-left:3px">{{ row1.CNT}}</span>
+                    <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                        <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                        <span style="margin-left:3px">{{ row1.CNT}}</span>
                     </div>
-                    <div v-if="row.msgdtl.length > 0" class="msg_body_sub1"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘"></div>
-                    <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center" :title="row2.AUTHORNM">
-                        <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
-                            class="coImg18" style="border-radius:9px">
-                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
-                    </div>
-                    <dim style="display:flex;align-items:center;margin-left:2px">{{ row.replyinfo[0].CNT_BY_USER }}명</dim>
-                    <div v-if="row.reply.length > 0" style="margin:0 5px;display:flex;align-items:center">
-                        <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
-                        <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
-                        <span style="margin:0 4px;color:dimgray">최근 :</span>
-                        <span style="color:dimgray">{{ displayDt(row.replyinfo[0].CDT_MAX) }}</span>
+                    <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
+                        <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
+                    </div>     
+                    <div v-if="row.reply.length > 0" class="replyAct" @click="openThread(row.MSGID)">
+                        <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center">
+                            <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
+                                class="coImg18" style="border-radius:9px">
+                            <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
+                        </div>
+                        <div v-if="row.reply.length < row.replyinfo[0].CNT_BY_USER" style="display:flex;align-items:center;margin-left:2px">
+                            ..{{ row.replyinfo[0].CNT_BY_USER }}명
+                        </div>
+                        <div style="margin:0 5px;display:flex;align-items:center">
+                            <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
+                            <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
+                            <span style="margin:0 4px;color:dimgray">최근 :</span>
+                            <span style="color:dimgray">{{ displayDt(row.replyinfo[0].CDT_MAX) }}</span>
+                        </div>
                     </div>
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
@@ -759,8 +765,8 @@
                     </div>
                 </div>
                 <div v-show="row.hover" class="msg_proc">
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watch.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watch')"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_check.png')" title="접수완료" @click="toggleAction(row.MSGID, 'check')"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watching')"></span>
+                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
@@ -955,6 +961,8 @@
     .nodeRight { display:flex;align-items:center;justify-content:flex-end; }*/
     .topMenu { border-radius:5px;cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
+    .replyAct { display:flex;align-items:center;cursor:pointer }
+    .replyAct:hover { background:#e6e7eb;border-radius:12px }
     .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:text }
     .procMenu:hover { background:whitesmoke }
     .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
