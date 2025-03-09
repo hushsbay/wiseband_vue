@@ -338,6 +338,7 @@
     }
     .nodeRight { display:flex;align-items:center;justify-content:flex-end; }
     .coImg20:hover { background:var(--second-hover-color); }
+    .coImg20:active { background:var(--active-color);border-radius:9px }
     .nodeHover { background:var(--second-hover-color); }
     .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
     .resizer {

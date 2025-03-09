@@ -647,6 +647,11 @@
                 
             }}
         ]
+        if (row.KIND == "I") {
+            gst.ctx.menu.splice(0, 0, { nm: "이미지(원본) 복사", func: function(item, idx) {
+                //이미지 원본 사이즈는 처음 이미지 저장후 load 완료싯점에 다시 한번 서버 호출해 width x height 저장하기로 함
+            }},)
+        }
         gst.ctx.show(e)
     }
 
@@ -741,7 +746,8 @@
                     </div>
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
-                    <div v-for="(row5, idx5) in row.msgimg" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)" class="msg_image_each">
+                    <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
+                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)">
                         <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
                         <div v-show="row5.hover" class="msg_file_seemore">
                             <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row5)">
@@ -749,16 +755,24 @@
                     </div>                
                 </div>
                 <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
-                    <div v-for="(row5, idx5) in row.msgfile" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)" class="msg_file_each">
-                        <div><span style="margin-right:3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)</div>
+                    <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
+                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)">
+                        <div style="height:100%;display:flex;align-items:center">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
+                            <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
+                        </div>
                         <div v-show="row5.hover" class="msg_file_seemore">
                             <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row5)">
                         </div>
                     </div>
                 </div>
                 <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
-                    <div v-for="(row5, idx5) in row.msglink" @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)" class="msg_file_each">
-                        <div><span style="margin-right:3px;color:#005192">{{ row5.text }}</span></div>
+                    <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
+                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
+                        <div style="height:100%;display:flex;align-items:center">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_openlink.png')">
+                            <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
+                        </div>
                         <div v-show="row5.hover" class="msg_file_seemore">
                             <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row5)">
                         </div>
@@ -890,20 +904,24 @@
     .msg_body_sub1:hover {
         background:whitesmoke;border:1px solid dimgray
     }
+    .msg_body_sub1:active {
+        background:lightsteelblue;border:1px solid lightsteelblue
+    }
     .msg_body_blob {
         margin-bottom:5px;padding-left:8px;display:flex;flex-wrap:wrap;justify-content:flex-start
     }
     .msg_file_each {
-        position:relative;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
+        position:relative;min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
+    .msg_file_each:active { background:lightsteelblue }
     .msg_file_seemore {
-        position:absolute;top:0;right:0px;height:30px;display:flex;align-items:center;background:beige
+        position:absolute;top:0;right:0;padding:0 3px;height:30px;display:flex;align-items:center;background:whitesmoke;border-radius:0px
     }
     .msg_file_del {
         position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;background:beige
     }
     .msg_image_each {
-        position:relative;width:50px;height:50px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
+        position:relative;width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_proc {
         position:absolute;height:20px;right:3px;top:1px;padding:5px 0 5px 10px;z-index:8888;
@@ -961,20 +979,19 @@
     .nodeRight { display:flex;align-items:center;justify-content:flex-end; }*/
     .topMenu { border-radius:5px;cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
+    .topMenu:active { background:var(--active-color);font-weight:bold }
     .replyAct { display:flex;align-items:center;cursor:pointer }
     .replyAct:hover { background:#e6e7eb;border-radius:12px }
+    .replyAct:active { background:var(--active-color) }
     .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:text }
     .procMenu:hover { background:whitesmoke }
     .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
     .procAct:hover { background:lightgray }
+    .procAct:active { background:var(--active-color) }
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
     .editorMenu:hover { background:lightgray }
-    .editorMenu:active { background:lightsteelblue }
+    .editorMenu:active { background:var(--active-color) }
     .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
     .saveMenu:hover { opacity:0.5 }
     .saveMenu:active { background:darkblue;opacity:1.0 }
-    /*.nodeSel { background:var(--second-select-color);color:var(--primary-color); }
-    .resizer {
-        background-color:transparent;cursor:ew-resize;height:100%;width:5px; / 5px 미만은 커서 너무 민감해짐 #cbd5e0 /
-    }*/    
 </style>
