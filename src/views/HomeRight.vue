@@ -707,7 +707,7 @@
         width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow:hidden       
     }
     .chan_right {
-        width:800px;height:100%;border:1px solid lightgray; /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
+        width:800px;height:100%;border:0px solid red; /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
     /*.chan_right_header {
         width:100%;height:70px;display:flex;justify-content:space-between;
