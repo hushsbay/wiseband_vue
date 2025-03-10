@@ -724,7 +724,7 @@
         if (row.KIND == "I") {
             gst.ctx.menu.splice(0, 0, { nm: "이미지(원본) 복사", func: function() {
                 //이미지 원본 사이즈는 처음 이미지 저장후 load 완료싯점에 다시 한번 서버 호출해 width x height 저장하기로 함
-            }},)
+            }})
         }
         gst.ctx.show(e)
     }
