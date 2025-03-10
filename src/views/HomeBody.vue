@@ -24,7 +24,7 @@
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
-    let msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
+    let msgbody = ref('') //ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
@@ -346,7 +346,6 @@
             }},
             { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
                 try {
-                    //삭제되면 안되는 클라이언트 및 서버 코딩 필요
                     const res = await axios.post("/chanmsg/delMsg", { 
                         msgid: row.MSGID, chanid: gst.selChanId
                     })
@@ -388,8 +387,8 @@
         return ele
     }
 
-    async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid. index는 메시지 배열의 항목 인덱스
-        try {
+    async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid
+        try { //index는 메시지 배열의 항목 인덱스. idx는 그 항목내 file or image or link array의 인덱스
             let cdt = ""
             if (kind == "F") {
                 cdt = (msgid == "temp") ? fileBlobArr.value[idx].cdt : msglist.value[index].msgfile[idx].cdt
@@ -491,20 +490,6 @@
         }
     } 
     
-    // async function delImage(msgid, idx) { //msgid = temp or real msgid
-    //     try {
-    //         const cdt = imgBlobArr.value[idx].cdt
-    //         const res = await axios.post("/chanmsg/delBlob", { 
-    //             msgid: msgid, chanid: gst.selChanId, kind: "I", cdt: cdt
-    //         })
-    //         const rs = gst.util.chkAxiosCode(res.data)
-    //         if (!rs) return
-    //         imgBlobArr.value.splice(idx, 1)
-    //     } catch (ex) { 
-    //         gst.util.showEx(ex, true)
-    //     }
-    // }
-
     function showImage(row) { //msgid = temp or real msgid
         try {
             popupRefKind.value = 'image'
@@ -583,20 +568,6 @@
         window.open(url, "_blank") //popup not worked for 'going back' navigation
     }
 
-    // async function delLink(msgid, idx) { //msgid = temp or real msgid
-    //     try {
-    //         const cdt = linkArr.value[idx].cdt                        
-    //         const res = await axios.post("/chanmsg/delBlob", {
-    //             msgid: msgid, chanid: gst.selChanId, kind: "L", cdt: cdt
-    //         })
-    //         const rs = gst.util.chkAxiosCode(res.data)
-    //         if (!rs) return
-    //         linkArr.value.splice(idx, 1)
-    //     } catch (ex) { 
-    //         gst.util.showEx(ex, true)
-    //     }
-    // }
-
     async function uploadFile(e) {
         try {
             const files = e.target.files
@@ -644,20 +615,6 @@
         }
     }
 
-    // async function delFile(msgid, idx) { //msgid = temp or real msgid
-    //     try {
-    //         const cdt = fileBlobArr.value[idx].cdt
-    //         const res = await axios.post("/chanmsg/delBlob", { 
-    //             msgid: msgid, chanid: gst.selChanId, kind: "F", cdt: cdt
-    //         })
-    //         const rs = gst.util.chkAxiosCode(res.data)
-    //         if (!rs) return
-    //         fileBlobArr.value.splice(idx, 1)
-    //     } catch (ex) { 
-    //         gst.util.showEx(ex, true)
-    //     }
-    // }
-
     function downloadFile(msgid, row) { //msgid = temp or real msgid
         try {
             const query = "?msgid=" + msgid + "&chanid=" + gst.selChanId + "&kind=F&cdt=" + row.cdt + "&name=" + row.name
@@ -699,7 +656,7 @@
         }
     }
 
-    function blobSetting(e, row, idx, row5, idx5) { //row와 idx는 메시지 배열의 항목 및 인덱스임
+    function blobSetting(e, row, idx, row5, idx5) { //row와 idx는 메시지 배열 항목 및 인덱스. row5와 idx5는 file,image,link의 배열 항목 및 인덱스
         let target = ""
         if (row5.KIND == "F") {
             target = "파일"
@@ -716,7 +673,7 @@
             { nm: "나중을 위해 저장", func: function() {
                 
             }},
-            { nm: target + " 삭제", color: 'red', func: function() { //삭제되면 안되는 클라이언트 및 서버 코딩 필요
+            { nm: target + " 삭제", color: 'red', func: function() {
                 delBlob(row5.KIND, row.MSGID, idx5, idx)
             }}
         ]
