@@ -303,7 +303,7 @@
         }
     }
 
-    function rowRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
+    function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "반응 추가", img: "dimgray_emoti.png", func: function(item, idx) {
@@ -341,11 +341,21 @@
             { nm: "채널에 고정", func: function(item, idx) {
                 
             }},
-            { nm: "링크 복사", func: function(item, idx) {
+            { nm: "링크로 복사", func: function(item, idx) {
                 
             }},
-            { nm: "메시지 삭제", color: "red", func: function(item, idx) {
-                
+            { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
+                try {
+                    //삭제되면 안되는 클라이언트 및 서버 코딩 필요
+                    const res = await axios.post("/chanmsg/delMsg", { 
+                        msgid: row.MSGID, chanid: gst.selChanId
+                    })
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs) return
+                    msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
+                } catch (ex) { 
+                    gst.util.showEx(ex, true)
+                }
             }}
         ]
         gst.ctx.show(e)
@@ -378,6 +388,46 @@
         return ele
     }
 
+    async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid. index는 메시지 배열의 항목 인덱스
+        try {
+            let cdt = ""
+            debugger
+            if (kind == "F") {
+                cdt = (msgid == "temp") ? fileBlobArr.value[idx].cdt : msglist.value[index].msgfile[idx].cdt
+            } else if (kind == "I") {
+                cdt = (msgid == "temp") ? imgBlobArr.value[idx].cdt : msglist.value[index].msgimg[idx].cdt
+            } else if (kind == "L") {
+                cdt = (msgid == "temp") ? linkArr.value[idx].cdt : msglist.value[index].msglink[idx].cdt
+            }
+            const res = await axios.post("/chanmsg/delBlob", { 
+                msgid: msgid, chanid: gst.selChanId, kind: kind, cdt: cdt
+            })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            if (kind == "F") {
+                if (msgid == "temp") {
+                    fileBlobArr.value.splice(idx, 1)
+                } else {
+                    msglist.value[index].msgfile.splice(idx, 1)
+                }
+            } else if (kind == "I") {
+                if (msgid == "temp") {
+                    imgBlobArr.value.splice(idx, 1)
+                } else {
+                    msglist.value[index].msgimg.splice(idx, 1)
+                }
+            } else if (kind == "L") {
+                if (msgid == "temp") {
+                    linkArr.value.splice(idx, 1)
+                } else {
+                    msglist.value[index].msglink.splice(idx, 1)
+                }
+            }
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
     function imgLoaded(e, row) {
         row.realWidth = e.currentTarget.naturalWidth
         row.readHeight = e.currentTarget.naturalHeight
@@ -392,10 +442,10 @@
             if (clipboardItem.type.includes("image")) { //예) image/png
                 const blob = clipboardItem.getAsFile() //서버에 보낼 데이터
                 const blobUrl = URL.createObjectURL(blob) //화면에 보여줄 데이터
-                // if (blob.size > hush.cons.max_size_to_sublink) { //see get_sublink.js
-                //     hush.msg.toast("이미지가 너무 큽니다 : " + blob.size + "<br>max : " + hush.util.formatBytes(hush.cons.max_size_to_sublink) + "(" + hush.cons.max_size_to_sublink + "bytes)")
-                //     return
-                // }
+                if (blob.size > gst.cons.uploadLimitSize) {
+                    gst.util.setSnack("업로드 이미지 크기 제한은 " + hush.util.formatBytes(gst.cons.uploadLimitSize) + "입니다.\n" + "현재 => " + hush.util.formatBytes(blob.size), true)
+                    return
+                }
                 const fd = new FormData()
                 fd.append("chanid", gst.selChanId)
                 fd.append("kind", "I")
@@ -442,19 +492,19 @@
         }
     } 
     
-    async function delImage(msgid, idx) { //msgid = temp or real msgid
-        try {
-            const cdt = imgBlobArr.value[idx].cdt
-            const res = await axios.post("/chanmsg/delBlob", { 
-                msgid: msgid, chanid: gst.selChanId, kind: "I", cdt: cdt
-            })
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            imgBlobArr.value.splice(idx, 1)
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function delImage(msgid, idx) { //msgid = temp or real msgid
+    //     try {
+    //         const cdt = imgBlobArr.value[idx].cdt
+    //         const res = await axios.post("/chanmsg/delBlob", { 
+    //             msgid: msgid, chanid: gst.selChanId, kind: "I", cdt: cdt
+    //         })
+    //         const rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return
+    //         imgBlobArr.value.splice(idx, 1)
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     function showImage(row) { //msgid = temp or real msgid
         try {
@@ -502,6 +552,22 @@
     
     async function okPopup(kind) {
         if (kind == "link") {
+            const regexp = new RegExp("^https?://")
+            if (regexp.test(linkText.value) || regexp.test(linkUrl.value)) { //2개 필드중 하나라도 링크가 있으면 OK
+                if (linkText.value.trim() == "") {
+                    linkText.value = linkUrl.value.trim()
+                } else if (linkUrl.value.trim() == "") {
+                    linkUrl.value = linkText.value.trim()
+                } else {
+                    if (regexp.test(linkText.value) && !regexp.test(linkUrl.value)) {
+                        gst.util.setSnack("http(s)://로 시작되는 링크가 필요합니다.", true)
+                        return
+                    }
+                }
+            } else {
+                gst.util.setSnack("http(s)://로 시작되는 링크가 필요합니다.", true)
+                return
+            }
             const rq = { chanid: gst.selChanId, kind: "L", body: linkText.value + gst.cons.deli + linkUrl.value }
             const res = await axios.post("/chanmsg/uploadBlob", rq)
             const rs = gst.util.chkAxiosCode(res.data)
@@ -518,19 +584,19 @@
         window.open(url, "_blank") //popup not worked for 'going back' navigation
     }
 
-    async function delLink(msgid, idx) { //msgid = temp or real msgid
-        try {
-            const cdt = linkArr.value[idx].cdt                        
-            const res = await axios.post("/chanmsg/delBlob", {
-                msgid: msgid, chanid: gst.selChanId, kind: "L", cdt: cdt
-            })
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            linkArr.value.splice(idx, 1)
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function delLink(msgid, idx) { //msgid = temp or real msgid
+    //     try {
+    //         const cdt = linkArr.value[idx].cdt                        
+    //         const res = await axios.post("/chanmsg/delBlob", {
+    //             msgid: msgid, chanid: gst.selChanId, kind: "L", cdt: cdt
+    //         })
+    //         const rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return
+    //         linkArr.value.splice(idx, 1)
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     async function uploadFile(e) {
         try {
@@ -579,19 +645,19 @@
         }
     }
 
-    async function delFile(msgid, idx) { //msgid = temp or real msgid
-        try {
-            const cdt = fileBlobArr.value[idx].cdt
-            const res = await axios.post("/chanmsg/delBlob", { 
-                msgid: msgid, chanid: gst.selChanId, kind: "F", cdt: cdt
-            })
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            fileBlobArr.value.splice(idx, 1)
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function delFile(msgid, idx) { //msgid = temp or real msgid
+    //     try {
+    //         const cdt = fileBlobArr.value[idx].cdt
+    //         const res = await axios.post("/chanmsg/delBlob", { 
+    //             msgid: msgid, chanid: gst.selChanId, kind: "F", cdt: cdt
+    //         })
+    //         const rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return
+    //         fileBlobArr.value.splice(idx, 1)
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     function downloadFile(msgid, row) { //msgid = temp or real msgid
         try {
@@ -634,21 +700,29 @@
         }
     }
 
-    function blobSetting(e, row) {
+    function blobSetting(e, row, idx, row5, idx5) { //row와 idx는 메시지 배열의 항목 및 인덱스임
+        let target = ""
+        if (row5.KIND == "F") {
+            target = "파일"
+        } else if (row5.KIND == "I") {
+            target = "이미지"
+        } else if (row5.KIND == "L") {
+            target = "링크"
+        }
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "링크 복사", func: function(item, idx) {
+            { nm: "링크로 복사", func: function() {
                 
             }},
-            { nm: "나중을 위해 저장", func: function(item, idx) {
+            { nm: "나중을 위해 저장", func: function() {
                 
             }},
-            { nm: "삭제", color: 'red', func: function(item, idx) {
-                
+            { nm: target + " 삭제", color: 'red', func: function() { //삭제되면 안되는 클라이언트 및 서버 코딩 필요
+                delBlob(row5.KIND, row.MSGID, idx5, idx)
             }}
         ]
         if (row.KIND == "I") {
-            gst.ctx.menu.splice(0, 0, { nm: "이미지(원본) 복사", func: function(item, idx) {
+            gst.ctx.menu.splice(0, 0, { nm: "이미지(원본) 복사", func: function() {
                 //이미지 원본 사이즈는 처음 이미지 저장후 load 완료싯점에 다시 한번 서버 호출해 width x height 저장하기로 함
             }},)
         }
@@ -706,7 +780,7 @@
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"  
                 :style="row.hasSticker ? {} : { borderBottom: '1px solid lightgray' }"               
-                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row)">
+                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
                 <div style="display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
                     <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
                         class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row)">
@@ -750,7 +824,7 @@
                         @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)">
                         <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
                         <div v-show="row5.hover" class="msg_file_seemore">
-                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row5)">
+                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
                         </div>
                     </div>                
                 </div>
@@ -762,7 +836,7 @@
                             <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
                         </div>
                         <div v-show="row5.hover" class="msg_file_seemore">
-                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row5)">
+                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
                         </div>
                     </div>
                 </div>
@@ -774,7 +848,7 @@
                             <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
                         </div>
                         <div v-show="row5.hover" class="msg_file_seemore">
-                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row5)">
+                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
                         </div>
                     </div>
                 </div>
@@ -811,7 +885,7 @@
                 <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
                     <div v-show="row.hover" class="msg_file_del">
-                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delImage('temp', idx)">
+                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('I', 'temp', idx)">
                     </div>
                 </div>                
             </div>
@@ -819,7 +893,7 @@
                 <div v-for="(row, idx) in fileBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="downloadFile('temp', row)" class="msg_file_each">
                     <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ hush.util.formatBytes(row.size) }}</span>)</div>
                     <div v-show="row.hover" class="msg_file_del">
-                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delFile('temp', idx)">
+                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('F', 'temp', idx)">
                     </div>
                 </div><!-- 아래 진행바는 db에 파일저장시엔 용량제한이 있으므로 실제 육안으로는 보이지 않고 파일시스템 저장 적용시 대용량에 한해서 보이게 될 것임 -->
                 <div v-for="(row, idx) in uploadFileProgress" v-show="row.percent > 0 && row.percent < 100" class="msg_file_each">
@@ -833,7 +907,7 @@
                 <div v-for="(row, idx) in linkArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="openLink(row.url)" class="msg_file_each">
                     <div><span style="margin-right:3px;color:#005192">{{ row.text }}</span></div>
                     <div v-show="row.hover" class="msg_file_del">
-                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delLink('temp', idx)">
+                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('L', 'temp', idx)">
                     </div>
                 </div>
             </div>
@@ -863,9 +937,10 @@
         </div>
     </popup-common>
     <popup-common ref="linkPopupRef" :kind="popupRefKind" @ev-click="okPopup">
-        <div>
-            <input v-model="linkText" /><br>
-            <input v-model="linkUrl" />
+        <div style="display:flex;flex-direction:column">
+            <input v-model="linkText" style="width:300px;height:24px;border:1px solid dimgray" placeholder="표시 텍스트" />
+            <input v-model="linkUrl" style="width:300px;height:24px;margin-top:15px;border:1px solid dimgray" placeholder="링크 http(s)://" />
+            <span style="margin-top:10px;color:dimgray">링크를 한 필드에만 넣어도 됩니다.</span>
         </div>
     </popup-common>
 </template>

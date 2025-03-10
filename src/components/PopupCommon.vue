@@ -27,13 +27,11 @@
     <Transition>
         <div v-if="show">
             <div class="popup">
-                {{ props.kind }}
                 <slot></slot>
-                <!-- <div style="width:300px;height:300px;border:1px solid red">
-                    <img :src="props.objUrl" style='width:100%;height:100%'>                    
-                </div> -->
-                <button v-if="props.kind=='link'" @click="ok">확인</button>
-                <button @click="close">닫기</button>
+                <div style="margin-top:15px;display:flex;align-items:center;justify-content:flex-end;">
+                    <div v-if="props.kind=='link'" class="btn" @click="ok" style="margin-right:10px">확인</div>
+                    <div class="btn" @click="close">닫기</div>
+                </div>
             </div>
             <div class="overlay" @click="close"></div>
         </div>
@@ -46,11 +44,16 @@
     .v-enter-from, .v-leave-to { opacity: 0; }
 
     .popup {
-        position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);background: white;padding: 20px;z-index: 1000;
+        position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);background:white;padding:20px;z-index: 1000;
     }
 
     .overlay {
         position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0, 0, 0, 0.5);z-index: 999;
     }
 
+    .btn {
+        height:24px;padding:5px 8px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer
+    }
+    .btn:hover { background:var(--second-select-color)}
+    .btn:active { background:var(--active-color)}
 </style>
