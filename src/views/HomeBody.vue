@@ -391,7 +391,6 @@
     async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid. index는 메시지 배열의 항목 인덱스
         try {
             let cdt = ""
-            debugger
             if (kind == "F") {
                 cdt = (msgid == "temp") ? fileBlobArr.value[idx].cdt : msglist.value[index].msgfile[idx].cdt
             } else if (kind == "I") {
