@@ -24,12 +24,15 @@
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
-    let editMsgId = ref(''), prevEditData = "", msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
+    let editMsgId = ref(''), prevEditData = "", msgbody = ref('') //ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
     let onGoingGetList = false, prevScrollY
+    
+    //##0 웹에디터 => https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/
+    let focusedElement = null, cursorPosition = { node: null, offset: 0 }, editor
 
     // let msgbody2 = computed(() => { return msgbody.value })
 
@@ -82,6 +85,19 @@
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
             await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt })  
+            editor = document.getElementById('msgContent') //##0
+            editor.addEventListener("focusin",function(ev){
+                focusedElement = ev.target
+                storeCursorPosition()
+            })
+            editor.addEventListener("input", function(ev){
+                focusedElement = ev.target
+                storeCursorPosition()
+            })
+            editor.addEventListener("click", function(ev){
+                focusedElement = ev.target
+                storeCursorPosition()
+            })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -91,7 +107,7 @@
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {
-                
+
             }},
             { nm: "채널정보 보기", func: function(item, idx) {
                 
@@ -451,8 +467,8 @@
             e.preventDefault() //tage의 .prevent가 안먹혀서 여기서 처리
             const pastedData = e.clipboardData.items //e.originalEvent.clipboardData.items
             if (pastedData.length == 0) return
-            const clipboardItem = pastedData[0]
-            if (clipboardItem.type.includes("image")) { //예) image/png
+            if (pastedData[0].type.includes("image")) { //예) image/png
+                const clipboardItem = pastedData[0]
                 const blob = clipboardItem.getAsFile() //서버에 보낼 데이터
                 const blobUrl = URL.createObjectURL(blob) //화면에 보여줄 데이터
                 if (blob.size > gst.cons.uploadLimitSize) {
@@ -477,14 +493,25 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: rs.data.cdt })
-            } else if (clipboardItem.type.includes("text")) {
-                clipboardItem.getAsString(function(str) {
-                    //const html = sanitizeHTML(str)
-                    //document.execCommand('insertHTML', false, (html))
+            } else if (pastedData.length >= 2 && pastedData[0].type == "text/plain" && pastedData[1].type == "text/html") {
+                const clipboardItem = pastedData[1]
+                clipboardItem.getAsString(function(str) { //const html = sanitizeHTML(str) //document.execCommand('insertHTML', false, (html))
                     msgbody.value = str
                 })
-                
-            }                        
+            } else if (pastedData[0].type == "text/plain") {
+                const clipboardItem = pastedData[0]
+                clipboardItem.getAsString(function(str) { 
+                    //msgbody.value = str
+                    if (focusedElement) {
+                        let node = document.createElement('span')
+                        node.classList.add('inserted-field')
+                        node.contentEditable = "false"
+                        //node.dataset.dbField = this.dataset.dbField
+                        node.textContent = str
+                        insertElementAtCursorPosition(node, focusedElement)
+                    }
+                })
+            }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -712,6 +739,34 @@
         msglist.value = [...msglist.value, ...rs.data.msglist]
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    function storeCursorPosition() {
+        if (window.getSelection) {
+            let selection = window.getSelection()
+            if (selection.rangeCount > 0) {
+                let range = selection.getRangeAt(0)
+                cursorPosition.node = range.startContainer
+                cursorPosition.offset = range.startOffset
+            } //console.log(cursorPosition)
+        }
+    }                
+                
+    function restoreCursorPosition(element) {
+        let range = document.createRange()
+        range.setStart(cursorPosition.node, cursorPosition.offset);
+        range.collapse(true);
+        let selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        element.focus();
+    }
+
+    function insertElementAtCursorPosition(element,targetEl) {
+        restoreCursorPosition(targetEl)
+        let range = document.getSelection().getRangeAt(0);
+        range.insertNode(element)
+        storeCursorPosition()
+    }
     ///////////////////////////////////////////////////////////////////////////아래는 thread 관련임
     function openThread(msgid) {
         thread.value.msgid = msgid
@@ -853,11 +908,7 @@
                 <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
                 <label v-if="!editMsgId" for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
             </div>
-            <!--<div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
-                https://www.jkun.net/702-->
-            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" 
-                @paste="pasteData" @keyup.enter="keyUpEnter">
-            </div>
+            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="pasteData" @keyup.enter="keyUpEnter"></div>
             <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
