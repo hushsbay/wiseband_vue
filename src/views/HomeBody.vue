@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, computed, onMounted, nextTick } from 'vue' 
+    import { ref, computed, onMounted, nextTick, useTemplateRef } from 'vue' 
     import { useRoute } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
@@ -32,7 +32,7 @@
     let onGoingGetList = false, prevScrollY
     
     //##0 웹에디터 => https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/
-    let focusedElement = null, cursorPosition = { node: null, offset: 0 }, editor
+    let cursorPos = { node: null, offset: 0 }, inEditor = useTemplateRef('editorRef') //editor = document.getElementById('msgContent') editor 대신 inEditor (템플릿 참조) 사용
 
     // let msgbody2 = computed(() => { return msgbody.value })
 
@@ -85,19 +85,7 @@
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
             await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt })  
-            editor = document.getElementById('msgContent') //##0
-            editor.addEventListener("focusin",function(ev){
-                focusedElement = ev.target
-                storeCursorPosition()
-            })
-            editor.addEventListener("input", function(ev){
-                focusedElement = ev.target
-                storeCursorPosition()
-            })
-            editor.addEventListener("click", function(ev){
-                focusedElement = ev.target
-                storeCursorPosition()
-            })
+            inEditor.value.focus()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -501,15 +489,12 @@
             } else if (pastedData[0].type == "text/plain") {
                 const clipboardItem = pastedData[0]
                 clipboardItem.getAsString(function(str) { 
-                    //msgbody.value = str
-                    if (focusedElement) {
-                        let node = document.createElement('span')
-                        node.classList.add('inserted-field')
-                        node.contentEditable = "false"
-                        //node.dataset.dbField = this.dataset.dbField
-                        node.textContent = str
-                        insertElementAtCursorPosition(node, focusedElement)
-                    }
+                    let node = document.createElement('span')
+                    node.classList.add('inserted-field')
+                    node.contentEditable = "false"
+                    //node.dataset.dbField = this.dataset.dbField
+                    node.textContent = str
+                    insertElementAtCursorPosition(node)
                 })
             }
         } catch (ex) { 
@@ -738,38 +723,43 @@
         document.title = channm.value
         msglist.value = [...msglist.value, ...rs.data.msglist]
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    function storeCursorPosition() {
-        if (window.getSelection) {
-            let selection = window.getSelection()
-            if (selection.rangeCount > 0) {
-                let range = selection.getRangeAt(0)
-                cursorPosition.node = range.startContainer
-                cursorPosition.offset = range.startOffset
-            } //console.log(cursorPosition)
-        }
-    }                
-                
-    function restoreCursorPosition(element) {
-        let range = document.createRange()
-        range.setStart(cursorPosition.node, cursorPosition.offset);
-        range.collapse(true);
-        let selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        element.focus();
-    }
-
-    function insertElementAtCursorPosition(element,targetEl) {
-        restoreCursorPosition(targetEl)
-        let range = document.getSelection().getRangeAt(0);
-        range.insertNode(element)
-        storeCursorPosition()
-    }
+    
     ///////////////////////////////////////////////////////////////////////////아래는 thread 관련임
     function openThread(msgid) {
         thread.value.msgid = msgid
+    }
+
+    ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임
+    //https://velog.io/@msdio/window%EC%9D%98-Selection%EA%B3%BC-range%EC%97%90-%EB%8C%80%ED%95%B4%EC%84%9C-%EC%95%8C%EC%95%84%EB%B3%B4%EC%9E%90
+    //selection 타입 : none, range, caret. range는 유저가 선택한(드래그한) 범위 / caret은 범위가 아닌 특정 위치의 커서
+    //collapse : 선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
+    //anchorNode / anchorOffset : selection이 시작되는 위치의 노드/offset을 반환. 일반 텍스트의 노드 이름은 "text"
+    //focusNode / focusOffset : selection이 끝나는 위치의 노드/offset을 반환
+    //anchor는 시작점, focus는 끝나는 지점을 나타냄. 드래그를 앞→뒤가 아니라 뒤→앞으로 했다면, anchor와 focus는 반대가 됨
+
+    function storeCursorPosition() { //event : focusin, input, click, keyup(keydown은 화살표 뒤로 갈 경우 안맞고 keypress는 안먹힘)
+        let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
+        if (selection.rangeCount == 0) return //console.log("===="+selection.rangeCount)
+        const range = selection.getRangeAt(0) //크롬은 텍스트 드래그가 한번만 가능. 파폭은 Ctrl+드래그(윈도우)로 여러 개 범위 선택
+        cursorPos.node = range.startContainer //에디터만 다루므로 여기서는 div#msgContent.editor_body가 됨
+        cursorPos.offset = range.startOffset //console.log("@@@@"+JSON.stringify(cursorPos))
+    }                
+                
+    function restoreCursorPosition() {
+        let range = document.createRange()
+        range.setStart(cursorPos.node, cursorPos.offset)
+        range.collapse(true) //선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
+        let selection = window.getSelection()
+        selection.removeAllRanges()
+        selection.addRange(range)
+        inEditor.value.focus() //vue 템플릿 참조에 의한 처리
+    }
+
+    function insertElementAtCursorPosition(element) {
+        restoreCursorPosition()
+        let range = document.getSelection().getRangeAt(0)
+        range.insertNode(element)
+        storeCursorPosition()
     }
 </script>
 
@@ -908,7 +898,9 @@
                 <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
                 <label v-if="!editMsgId" for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
             </div>
-            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" @paste="pasteData" @keyup.enter="keyUpEnter"></div>
+            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" @paste="pasteData" @keyup.enter="keyUpEnter"
+                @focusin="storeCursorPosition" @input="storeCursorPosition" @keyup="storeCursorPosition" @click="storeCursorPosition">
+            </div>
             <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
