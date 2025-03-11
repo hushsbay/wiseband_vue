@@ -1,9 +1,9 @@
 <script setup>
-    import { ref, onMounted, nextTick } from 'vue' 
+    import { ref, computed, onMounted, nextTick } from 'vue' 
     import { useRoute } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
-
+    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
@@ -20,16 +20,21 @@
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
     
-    const MAX_PICTURE_CNT = 11, MAX_REPLY_PICTURE_CNT = 2
+    const MAX_PICTURE_CNT = 11
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
-    let msgbody = ref('') //ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
+    let editMsgId = ref(''), prevEditData = "", msgbody = ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> Lets GoGo!!!")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
     let onGoingGetList = false, prevScrollY
+
+    // let msgbody2 = computed(() => { return msgbody.value })
+
+    //const updateStyle = (eventTarget) => { msgbody.value = eventTarget.innerHTML.toString() } //https://www.jkun.net/702
+    //@input="updateStyle($event.target)"
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -344,8 +349,14 @@
             { nm: "링크로 복사", func: function(item, idx) {
                 
             }},
+            { nm: "메시지 편집", func: function(item, idx) {
+                editMsgId.value = row.MSGID
+                prevEditData = document.getElementById('msgContent').innerHTML
+                msgbody.value = row.BODY
+            }},
             { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
                 try {
+                    //if (!window.confirm("삭제후엔 복구가 불가능합니다. 진행할까요?")) return
                     const res = await axios.post("/chanmsg/delMsg", { 
                         msgid: row.MSGID, chanid: gst.selChanId
                     })
@@ -431,8 +442,12 @@
         row.readHeight = e.currentTarget.naturalHeight
     }
 
-    async function uploadImage(e) { //from paste event
+    async function pasteData(e) { //from paste event
         try {
+            if (editMsgId.value) {
+                gst.util.setToast("편집중인 메시지에는 이미지 붙이기가 불가능합니다.", 3)
+                return
+            }
             e.preventDefault() //tage의 .prevent가 안먹혀서 여기서 처리
             const pastedData = e.clipboardData.items //e.originalEvent.clipboardData.items
             if (pastedData.length == 0) return
@@ -464,26 +479,11 @@
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: rs.data.cdt })
             } else if (clipboardItem.type.includes("text")) {
                 clipboardItem.getAsString(function(str) {
-                    // const _arr = str.split(hush.cons.deli)
-                    // if (_arr[0] == "btn_copy_cell") { //e.preventDefault() here has no effect                                    
-                    //     g_in_chat.val(g_in_chat.val().replace(str, ""))
-                    //     if (g_in_chat.val().trim() != "") {
-                    //         alert("이미 작성중인 데이터가 있습니다.")
-                    //         return
-                    //     }                                                        
-                    //     const rq = { msgid : _arr[3] }
-                    //     if (hush.webview.ios) { 
-                    //     } else if (hush.webview.and) { //it's text
-                    //         setTimeout(function() {
-                    //             AndroidCom.send(hush.cons.sock_ev_qry_msgcell, JSON.stringify(rq), g_roomid, null, true)
-                    //         }, hush.cons.sec_for_webview_func) //비동기로 호출해야 동작
-                    //     } else {
-                    //         hush.sock.send(g_socket, hush.cons.sock_ev_qry_msgcell, rq, g_roomid)
-                    //     }
-                    // } else {
-                    //     calcBytes()
-                    // }
+                    //const html = sanitizeHTML(str)
+                    //document.execCommand('insertHTML', false, (html))
+                    msgbody.value = str
                 })
+                
             }                        
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -510,19 +510,35 @@
     }
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
-        try { //파일 및 이미지가 있다면 미리 업로드된 상태임
+        try { //파일,이미지,링크가 있다면 미리 업로드된 상태이며 crud가 C일 때만 업로드 되며 U일 때는 슬랙과 동일하게 업로드되지 않음 (본문만 수정저장됨)
+            msgbody.value = document.getElementById('msgContent').innerHTML //이 행이 없으면 발송 2회차부터 msgbody가 계속 본문에 남아 있음
+            let crud = (editMsgId.value) ? "U" : "C"
             const rq = { 
-                crud: "C", chanid: gst.selChanId, msgid: null, body: document.getElementById('msgContent').innerHTML,
-                num_file: fileBlobArr.value.length, num_image: imgBlobArr.value.length, num_link: linkArr.value.length
+                crud: crud, chanid: gst.selChanId, msgid: editMsgId.value, body: msgbody.value, //document.getElementById('msgContent').innerHTML,
+                num_file: (editMsgId.value) ? 0 : fileBlobArr.value.length, 
+                num_image: (editMsgId.value) ? 0 : imgBlobArr.value.length, 
+                num_link: (editMsgId.value) ? 0 : linkArr.value.length
             }
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await getList({ grid: gst.selGrId, chanid: gst.selChanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
-            msgbody.value = "111" //https://yamyam-naengmyeon-donkats.tistory.com/35 vue HTML 데이터 바인딩 (sanitize-html)
+            if (crud == "C") {
+                await getList({ grid: gst.selGrId, chanid: gst.selChanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
+            } else {
+                const item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
+                item.BODY = msgbody.value
+                item.UDT = rs.data.udt
+            }
+            msgbody.value = ""            
+            editMsgId.value = null
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
+    }
+
+    function cancelMsg() {
+        msgbody.value = prevEditData
+        editMsgId.value = null
     }
 
     async function uploadLink() {
@@ -748,8 +764,9 @@
                     <div style="width:40px;display:flex;align-items:center;color:dimgray;cursor:pointer">
                         <span v-show="row.stickToPrev && row.hover">{{ displayDt(row.CDT, true) }}</span>
                     </div>
-                    <div v-html="row.BODY"></div>
+                    <div v-html="row.BODY"></div>                    
                 </div>
+                <div v-if="row.UDT" style="margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
@@ -824,20 +841,24 @@
         </div>
         <div class="chan_center_footer">
             <div class="editor_header">
-                <div class="saveMenu" @click="saveMsg">
+                <div v-if="editMsgId" style="margin-left:10px;display:flex;align-items:center">
+                    <div class="btn" @click="saveMsg" style="margin-right:10px">저장</div>
+                    <div class="btn" @click="cancelMsg">취소</div>
+                </div>
+                <div v-else class="saveMenu" @click="saveMsg">
                     <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
                 <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가">
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
-                <input id="file_upload" type=file multiple hidden @change="uploadFile" />
-                <label for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
+                <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
+                <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
+                <label v-if="!editMsgId" for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
             </div>
             <!--<div id="msgBody" class="editor_body" contenteditable="true" spellcheck="false" v-html="editData.edit" @input="updateStyling($event.target)"></div> 
                 https://www.jkun.net/702-->
-            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" 
-                v-html="msgbody" @paste="uploadImage" @keyup.enter="keyUpEnter">
+            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" 
+                @paste="pasteData" @keyup.enter="keyUpEnter">
             </div>
-            <div v-if="imgBlobArr.length > 0" class="msg_body_blob">
+            <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
                     <div v-show="row.hover" class="msg_file_del">
@@ -845,7 +866,7 @@
                     </div>
                 </div>                
             </div>
-            <div v-if="fileBlobArr.length > 0" class="msg_body_blob">
+            <div v-if="fileBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
                 <div v-for="(row, idx) in fileBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="downloadFile('temp', row)" class="msg_file_each">
                     <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ hush.util.formatBytes(row.size) }}</span>)</div>
                     <div v-show="row.hover" class="msg_file_del">
@@ -859,7 +880,7 @@
                     </div>
                 </div>
             </div>
-            <div v-if="linkArr.length > 0" class="msg_body_blob">
+            <div v-if="linkArr.length > 0 && !editMsgId" class="msg_body_blob">
                 <div v-for="(row, idx) in linkArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="openLink(row.url)" class="msg_file_each">
                     <div><span style="margin-right:3px;color:#005192">{{ row.text }}</span></div>
                     <div v-show="row.hover" class="msg_file_del">
@@ -1025,4 +1046,7 @@
     .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
     .saveMenu:hover { opacity:0.5 }
     .saveMenu:active { background:darkblue;opacity:1.0 }
+    .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
+    .btn:hover { background:lightgray}
+    .btn:active { background:var(--active-color)}
 </style>

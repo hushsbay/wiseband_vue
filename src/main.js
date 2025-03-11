@@ -4,6 +4,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import VueCookies from "vue-cookies"
 import axios from 'axios'
+import Vue3Sanitize  from 'vue-3-sanitize'
 
 import App from '/src/App.vue'
 import router from '/src/router'
@@ -23,6 +24,8 @@ app.config.globalProperties.axios = axios //global로 설정했음에도 각 .vu
 app.use(createPinia())
 app.use(router)
 app.use(VueCookies, { path : '/', domain : hostnameStr, secure : true, sameSite : 'none' }) //none(모든 도메인에 쿠키가 전송), strict(동일한 사이트 내의 요청에만 전송)
+const overridenOptions = { allowedTags: ['span'] }
+app.use(Vue3Sanitize, overridenOptions)
 app.mount('#app')
 
 const gst = GeneralStore() //app위로 올리지 말기

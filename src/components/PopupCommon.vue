@@ -52,7 +52,7 @@
     }
 
     .btn {
-        height:24px;padding:5px 8px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer
+        height:24px;padding:5px 8px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer
     }
     .btn:hover { background:var(--second-select-color)}
     .btn:active { background:var(--active-color)}
