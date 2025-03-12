@@ -24,20 +24,18 @@
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
-    let editMsgId = ref(''), prevEditData = "", msgbody = ref('') //ref("구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>")
+    let editMsgId = ref(''), prevEditData = "", msgbody = ref("<p>구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span></p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
     let onGoingGetList = false, prevScrollY
     
-    //##0 웹에디터 => https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/
+    //##0 웹에디터
+    //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
+    //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/
     let cursorPos = { node: null, offset: 0 }, inEditor = useTemplateRef('editorRef') //editor = document.getElementById('msgContent') editor 대신 inEditor (템플릿 참조) 사용
-
-    // let msgbody2 = computed(() => { return msgbody.value })
-
-    //const updateStyle = (eventTarget) => { msgbody.value = eventTarget.innerHTML.toString() } //https://www.jkun.net/702
-    //@input="updateStyle($event.target)"
+    //const updateStyle = (eventTarget) => { msgbody.value = eventTarget.innerHTML.toString() } //https://www.jkun.net/702 <div @input="updateStyle($event.target)">
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -482,19 +480,17 @@
                 if (!rs) return
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: rs.data.cdt })
             } else if (pastedData.length >= 2 && pastedData[0].type == "text/plain" && pastedData[1].type == "text/html") {
+                debugger
                 const clipboardItem = pastedData[1]
                 clipboardItem.getAsString(function(str) { //const html = sanitizeHTML(str) //document.execCommand('insertHTML', false, (html))
+                    //insertElementAtCursorPosition(str)
                     msgbody.value = str
                 })
             } else if (pastedData[0].type == "text/plain") {
+                debugger
                 const clipboardItem = pastedData[0]
                 clipboardItem.getAsString(function(str) { 
-                    let node = document.createElement('span')
-                    node.classList.add('inserted-field')
-                    node.contentEditable = "false"
-                    //node.dataset.dbField = this.dataset.dbField
-                    node.textContent = str
-                    insertElementAtCursorPosition(node)
+                    insertElementAtCursorPosition(str)
                 })
             }
         } catch (ex) { 
@@ -560,6 +556,27 @@
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
+    }
+
+    function addEmoti() {
+        let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
+        //if (selection.rangeCount == 0) return //console.log("===="+selection.rangeCount)
+        const range = selection.getRangeAt(0) 
+        //selection.removeAllRanges()
+        
+
+        let node = document.createElement('span')
+        //node.textContent = "<span style='color:green;font-weight:bold'>고고고</span>"
+        node.innerHTML = "<span style='color:green;font-weight:bold'>고고고</span>"
+        //let selection = window.getSelection() //document.getSelection()
+        // selection.empty()
+        //let range = selection.getRangeAt(0)
+        //selection.removeRange(range)        
+        //selection.removeAllRanges()
+        range.deleteContents()
+        range.insertNode(node)
+        selection.removeAllRanges()
+
     }
     
     async function okPopup(kind) {
@@ -745,21 +762,40 @@
         cursorPos.offset = range.startOffset //console.log("@@@@"+JSON.stringify(cursorPos))
     }                
                 
+    // function restoreCursorPosition() {
+    //     let range = document.createRange()
+    //     range.setStart(cursorPos.node, cursorPos.offset)
+    //     //range.collapse(true) //선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
+    //     let selection = window.getSelection()
+    //     selection.removeAllRanges()
+    //     selection.addRange(range)
+    //     inEditor.value.focus() //vue 템플릿 참조에 의한 처리
+    // }
+
     function restoreCursorPosition() {
         let range = document.createRange()
         range.setStart(cursorPos.node, cursorPos.offset)
-        range.collapse(true) //선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
+        //range.collapse(true) //선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
         let selection = window.getSelection()
         selection.removeAllRanges()
         selection.addRange(range)
         inEditor.value.focus() //vue 템플릿 참조에 의한 처리
+        range.deleteContents()
+        selection.removeAllRanges()
     }
 
-    function insertElementAtCursorPosition(element) {
+    function insertElementAtCursorPosition(strHtml) {
         restoreCursorPosition()
-        let range = document.getSelection().getRangeAt(0)
-        range.insertNode(element)
-        storeCursorPosition()
+        // let node = document.createElement('span')
+        // node.textContent = strHtml //node.classList.add('inserted-field') //node.contentEditable = "false" //node.dataset.dbField = this.dataset.dbField
+        //let selection = window.getSelection() //document.getSelection()
+        // selection.empty()
+        //let range = selection.getRangeAt(0)
+        //selection.removeRange(range)        
+        //selection.removeAllRanges()
+        //range.insertNode(node)
+        //storeCursorPosition()
+        //msgbody.value = document.getElementById('msgContent').innerHTML
     }
 </script>
 
@@ -893,7 +929,7 @@
                 <div v-else class="saveMenu" @click="saveMsg">
                     <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가">
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" @click="addEmoti">
                 <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
                 <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
                 <label v-if="!editMsgId" for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
