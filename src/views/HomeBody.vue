@@ -480,17 +480,55 @@
                 if (!rs) return
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: rs.data.cdt })
             } else if (pastedData.length >= 2 && pastedData[0].type == "text/plain" && pastedData[1].type == "text/html") {
-                debugger
+                //클립보드에 text뿐만 아니라 html 데이터를 제공하므로 기본적으로 html을 적용시키는 것이 맞을 것임 
                 const clipboardItem = pastedData[1]
+                const type = clipboardItem.type
                 clipboardItem.getAsString(function(str) { //const html = sanitizeHTML(str) //document.execCommand('insertHTML', false, (html))
-                    //insertElementAtCursorPosition(str)
-                    msgbody.value = str
+                    insertPastedToEditor(type, str) //여기에 clipboardItem.type으로 참조하면 안읽히므로 위에서 get
+                    /*//insertElementAtCursorPosition(str)
+                    let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
+                    if (selection.rangeCount == 0) return
+                    const range = selection.getRangeAt(0) 
+                    //const ele = range.startContainer
+                    let node = document.createElement('span')
+                    //node.textContent = str
+                    node.innerHTML = str
+                    //let selection = window.getSelection() //document.getSelection()
+                    // selection.empty()
+                    //let range = selection.getRangeAt(0)
+                    //selection.removeRange(range)        
+                    //selection.removeAllRanges()
+                    range.deleteContents()
+                    range.insertNode(node)
+                    range.collapse(false)
+                    //range.insertNode(document.createTextNode(str))
+                    //selection.removeAllRanges()
+                    //msgbody.value = document.getElementById('msgContent').innerHTML*/
                 })
-            } else if (pastedData[0].type == "text/plain") {
-                debugger
+            } else if (pastedData[0].type == "text/plain") { //html이 아닌 순수 text라고 봐야 함
                 const clipboardItem = pastedData[0]
+                const type = clipboardItem.type
                 clipboardItem.getAsString(function(str) { 
-                    insertElementAtCursorPosition(str)
+                    insertPastedToEditor(type, str) //여기에 clipboardItem.type으로 참조하면 안읽히므로 위에서 get
+                    /*//insertElementAtCursorPosition(str)
+                    let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
+                    if (selection.rangeCount == 0) return
+                    const range = selection.getRangeAt(0) 
+                    //const ele = range.startContainer
+                    //let node = document.createElement('span')
+                    //node.textContent = str
+                    //node.innerHTML = "<span style='color:green;font-weight:bold'>고고고</span>"
+                    //let selection = window.getSelection() //document.getSelection()
+                    // selection.empty()
+                    //let range = selection.getRangeAt(0)
+                    //selection.removeRange(range)        
+                    //selection.removeAllRanges()
+                    range.deleteContents()
+                    //range.insertNode(node)
+                    range.insertNode(document.createTextNode(str))
+                    range.collapse(false)
+                    //selection.removeAllRanges()
+                    //msgbody.value = document.getElementById('msgContent').innerHTML*/
                 })
             }
         } catch (ex) { 
@@ -797,6 +835,30 @@
         //storeCursorPosition()
         //msgbody.value = document.getElementById('msgContent').innerHTML
     }
+
+    function insertPastedToEditor(type, str) {
+        let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
+        if (selection.rangeCount == 0) return //이 함수가 에디터에 붙이기할 때만을 전제로 하므로 체크는 의미없으나 그대로 두기로 함 
+        const range = selection.getRangeAt(0) 
+        if (type == "text/html") {
+            let node = document.createElement('span')
+            node.innerHTML = str
+            range.deleteContents()
+            range.insertNode(node)
+            range.collapse(false)
+            //msgbody.value = document.getElementById('msgContent').innerHTML
+            return true
+        } else if (type == "text/plain") {
+            range.deleteContents()
+            range.insertNode(document.createTextNode(str))
+            range.collapse(false)
+            //msgbody.value = document.getElementById('msgContent').innerHTML
+            return true
+        } else {
+            gst.util.setToast("복사/붙이기는 Text/Html/Image만 지원 가능합니다.", 3)
+            return false
+        }
+    }
 </script>
 
 <template>
@@ -1070,7 +1132,7 @@
         background:whitesmoke;
     }
     .editor_body {
-        width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow:hidden       
+        width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
     }
     .chan_right {
         width:800px;height:100%; /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
