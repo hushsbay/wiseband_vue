@@ -603,10 +603,8 @@
     }
 
     function editorFocused() {
-        setTimeout(function() { //stopPropagation으로도 안되서 꼼수 사용 (gst의 focused = false가 나중에 발생하면 안되서 처리한 것임)
-            gst.editor.focused = true
-            console.log("focus true")
-        }, 500)
+        gst.editor.focused = true
+        console.log("focus true")
     }
 
     function addEmoti() {
