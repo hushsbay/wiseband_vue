@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, computed, onMounted, nextTick, useTemplateRef } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef } from 'vue' 
     import { useRoute } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
@@ -33,8 +33,10 @@
     
     //##0 웹에디터
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
-    //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/
+    //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/ => 목적이 다르고 헛점도 많이 보이지만 참고할 만한 내용도 많음
     let cursorPos = { node: null, offset: 0 }, inEditor = useTemplateRef('editorRef') //editor = document.getElementById('msgContent') editor 대신 inEditor (템플릿 참조) 사용
+    //@focusin="storeCursorPosition" @input="storeCursorPosition" @keyup="storeCursorPosition" @click="storeCursorPosition">
+
     //const updateStyle = (eventTarget) => { msgbody.value = eventTarget.innerHTML.toString() } //https://www.jkun.net/702 <div @input="updateStyle($event.target)">
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
@@ -444,6 +446,10 @@
         row.readHeight = e.currentTarget.naturalHeight
     }
 
+    function selectedData(e) { 
+        debugger
+    }
+
     async function pasteData(e) { //from paste event
         try {
             if (editMsgId.value) {
@@ -596,13 +602,23 @@
         }
     }
 
+    function editorFocused() {
+        setTimeout(function() { //stopPropagation으로도 안되서 꼼수 사용 (gst의 focused = false가 나중에 발생하면 안되서 처리한 것임)
+            gst.editor.focused = true
+            console.log("focus true")
+        }, 500)
+    }
+
     function addEmoti() {
-        let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
-        //if (selection.rangeCount == 0) return //console.log("===="+selection.rangeCount)
+        if (!gst.editor.focused) {
+            gst.util.setToast("에디터내 커서가 없습니다.")
+            return
+        }
+        let selection = window.getSelection()
+        if (selection.rangeCount == 0) return
         const range = selection.getRangeAt(0) 
         //selection.removeAllRanges()
-        
-
+        const node1 = range.commonAncestorContainer
         let node = document.createElement('span')
         //node.textContent = "<span style='color:green;font-weight:bold'>고고고</span>"
         node.innerHTML = "<span style='color:green;font-weight:bold'>고고고</span>"
@@ -614,7 +630,39 @@
         range.deleteContents()
         range.insertNode(node)
         selection.removeAllRanges()
+    }
 
+    function wordStyle(type) {
+        if (!gst.editor.focused) {
+            gst.util.setToast("에디터내 커서가 없습니다.")
+            return
+        }
+        let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
+        if (selection.rangeCount == 0) return //위에서 체크하고 있으나 그대로 두기로 함 
+        const range = selection.getRangeAt(0) 
+        debugger
+        //const str = range.startContainer
+        
+        return
+        
+        if (type == "text/html") {
+            let node = document.createElement('span')
+            node.innerHTML = "<B>" + str + "</B>"
+            range.deleteContents()
+            range.insertNode(node)
+            range.collapse(false)
+            msgbody.value = document.getElementById('msgContent').innerHTML
+            return true
+        } else if (type == "text/plain") {
+            range.deleteContents()
+            range.insertNode(document.createTextNode(str))
+            range.collapse(false)
+            msgbody.value = document.getElementById('msgContent').innerHTML
+            return true
+        } else {
+            gst.util.setToast("복사/붙이기는 Text/Html/Image만 지원 가능합니다.", 3)
+            return false
+        }
     }
     
     async function okPopup(kind) {
@@ -769,6 +817,7 @@
     }
 
     async function test() {
+        msgbody.value = document.getElementById('msgContent').innerHTML
         return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
         const rs = gst.util.chkAxiosCode(res.data)
@@ -796,9 +845,8 @@
         let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
         if (selection.rangeCount == 0) return //console.log("===="+selection.rangeCount)
         const range = selection.getRangeAt(0) //크롬은 텍스트 드래그가 한번만 가능. 파폭은 Ctrl+드래그(윈도우)로 여러 개 범위 선택
-        cursorPos.node = range.startContainer //에디터만 다루므로 여기서는 div#msgContent.editor_body가 됨
-        cursorPos.offset = range.startOffset //console.log("@@@@"+JSON.stringify(cursorPos))
-    }                
+        cursorPos.node = range.startContainer //에디터만 다루므로 여기서는 div#msgContent.editor_body가 됨 //console.log("@@@@"+JSON.stringify(cursorPos))
+    }
                 
     // function restoreCursorPosition() {
     //     let range = document.createRange()
@@ -846,13 +894,13 @@
             range.deleteContents()
             range.insertNode(node)
             range.collapse(false)
-            //msgbody.value = document.getElementById('msgContent').innerHTML
+            msgbody.value = document.getElementById('msgContent').innerHTML
             return true
         } else if (type == "text/plain") {
             range.deleteContents()
             range.insertNode(document.createTextNode(str))
             range.collapse(false)
-            //msgbody.value = document.getElementById('msgContent').innerHTML
+            msgbody.value = document.getElementById('msgContent').innerHTML
             return true
         } else {
             gst.util.setToast("복사/붙이기는 Text/Html/Image만 지원 가능합니다.", 3)
@@ -991,14 +1039,19 @@
                 <div v-else class="saveMenu" @click="saveMsg">
                     <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" @click="addEmoti">
-                <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
+                <img class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" @click="addEmoti">
+                <img v-if="!editMsgId" class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
                 <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
                 <label v-if="!editMsgId" for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
+                <button @click="test" style="margin-left:10px">html(임시)</button>
+                <div style="width:8px;height:20px;margin-left:20px;border-left:1px solid dimgray"></div>
+                <img class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게" @click="wordStyle('B')">
+                <img class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_cancelword.png')" title="취소선" @click="wordStyle('C')">
             </div>
-            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" @paste="pasteData" @keyup.enter="keyUpEnter"
-                @focusin="storeCursorPosition" @input="storeCursorPosition" @keyup="storeCursorPosition" @click="storeCursorPosition">
+            <div id="msgContent" class="editor_body maintainContextMenu" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused">
             </div>
+            <div class="editor_body" style="background:beige">{{ msgbody }}</div><!--임시-->
             <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">

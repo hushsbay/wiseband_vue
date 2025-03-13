@@ -107,8 +107,11 @@ const GeneralStore = defineStore('General', () => {
         },
 
         hide : function(e) { //Main.vue에서 @click시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
-            if (e.srcElement.className.includes("maintainContextMenu")) return //우클릭이 아닌 click에서 처리시 바로 닫히면 안되게 함
+            //아래에서 우클릭이 아닌 click에서 처리시 바로 닫히면 안되게 함. 에디터에서도 적용 (에디터내 <p>로 시작되면 srcElement이므로 이 경우는 parentElement로 체크)
+            if (e.srcElement.className.includes("maintainContextMenu") || e.parentElement.className.includes("maintainContextMenu")) return
             this.on = false
+            editor.focused = false //HomeBody.vue에서 false 처리 (에디터내 selection/range 체크시에도 사용. selection/range에서 그 부모(에디터)를 인지하지 못해 여기서 maintainContextMenu으로 처리함)
+            console.log("hideReal")
         },
 
         proc : function(row, idx) {
@@ -191,6 +194,10 @@ const GeneralStore = defineStore('General', () => {
     }
 
     ////////////////////////////////////////////////////////////////////////////////
+
+    const editor = {
+        focused : false
+    }
 
     const html = {
 
@@ -412,7 +419,7 @@ const GeneralStore = defineStore('General', () => {
     return { 
         isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, 
         selSideMenu, selSideMenuTimeTag, selChanId, selGrId, snackBar, toast, 
-        auth, cons, ctx, doc, html, list, util
+        auth, cons, ctx, doc, editor, html, list, util
     }
 
 })
