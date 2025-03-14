@@ -577,6 +577,7 @@
         //위와 같이 체크하는 이유는 selection or range에서는 현재 커서가 있는 노드를 찾을 수 없음 (parentNode를 모두 뒤져도 없음)
         //1) 그래서, 에디터의 focusin/blur event로 하고자 했으나 그 상태값만으로는 체크가 어려움 : 이미지(버튼)을 누르는 순간 blur됨
         //2) blur되어도 클릭하는 순간의 갭이 짧기때문에 그걸 체크해서 disabled/enabled 효과를 내는 것임
+        //참고로, let currentNode = window.getSelection().focusNode에서 parent로 올라가면 에디터 노드를 만날 수 있음
     }
 
     function addEmoti() {
@@ -618,6 +619,14 @@
         let selection = window.getSelection()
         if (selection.rangeCount == 0) return
         const range = selection.getRangeAt(0) 
+        debugger
+        const bool = isSelectionInTag('B')
+        //const bool1 = isSelectionInTag('B')
+        //let content1 = range.cloneContents()
+        //let node1 = document.createElement("span")
+        //node1.append(content1)
+        //console.log(node1.innerHTML+"@@@")
+
         let content = range.cloneContents()
         let node = document.createElement(type)
         node.append(content)
@@ -791,12 +800,7 @@
         }
         gst.ctx.show(e)
     }
-
-    function htmlView() {
-        showHtml.value = true
-        msgbody.value = document.getElementById('msgContent').innerHTML
-    }
-
+    
     async function test() {
         msgbody.value = document.getElementById('msgContent').innerHTML
         return
@@ -869,6 +873,20 @@
             gst.util.setToast("복사/붙이기는 Text/Html/Image만 지원 가능합니다.", 3)
             return false
         }
+    }
+
+    function isSelectionInTag(tag) {
+        let currentNode = window.getSelection().focusNode
+        while (currentNode && (currentNode.nodeName == '#text' || currentNode.id != 'msgContent')) {
+            if (currentNode.tagName === tag) return true
+            currentNode = currentNode.parentNode;		
+        }
+        return false
+    }
+
+    function htmlView() {
+        showHtml.value = true
+        msgbody.value = document.getElementById('msgContent').innerHTML
     }
 </script>
 
