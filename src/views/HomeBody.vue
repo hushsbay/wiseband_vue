@@ -356,6 +356,10 @@
             { nm: "메시지 편집", func: function(item, idx) {
                 editMsgId.value = row.MSGID
                 prevEditData = document.getElementById('msgContent').innerHTML
+                if (prevEditData.trim() != "") {
+                    gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
+                    return
+                }
                 msgbody.value = row.BODY
             }},
             { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
@@ -545,6 +549,10 @@
     function cancelMsg() {
         msgbody.value = prevEditData
         editMsgId.value = null
+    }
+
+    function msgCopied(e) { //procMenu:hover 때문에 메시지를 복사하면 바탕색이 변하는데 아래에서 그걸 원래 배경색으로 환원시킴
+        e.currentTarget.style.background = "white"
     }
 
     async function uploadLink(kind, text) {
@@ -910,7 +918,7 @@
                     <div style="width:40px;display:flex;align-items:center;color:dimgray;cursor:pointer">
                         <span v-show="row.stickToPrev && row.hover">{{ displayDt(row.CDT, true) }}</span>
                     </div>
-                    <div v-html="row.BODY"></div>                    
+                    <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>                    
                 </div>
                 <div v-if="row.UDT" style="margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
