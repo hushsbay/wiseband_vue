@@ -29,7 +29,7 @@
             <div class="popup">
                 <slot></slot>
                 <div style="margin-top:15px;display:flex;align-items:center;justify-content:flex-end;">
-                    <div v-if="props.kind=='link'" class="btn" @click="ok" style="margin-right:10px">확인</div>
+                    <div v-if="props.kind=='addlink' || props.kind=='makelink'" class="btn" @click="ok" style="margin-right:10px">확인</div>
                     <div class="btn" @click="close">닫기</div>
                 </div>
             </div>

@@ -8,7 +8,7 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
-    import HomeRight from "/src/views/HomeRight.vue"
+    //import HomeRight from "/src/views/HomeRight.vue"
     
     const gst = GeneralStore()
     const route = useRoute()
@@ -24,20 +24,20 @@
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
-    let editMsgId = ref(''), prevEditData = "", msgbody = ref("<p>구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span></p>")
+    let editMsgId = ref(''), prevEditData = "", showHtml = ref(false), msgbody = ref("<p>구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span></p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
     let onGoingGetList = false, prevScrollY
     
-    //##0 웹에디터
+    //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
     //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/ => 목적이 다르고 헛점도 많이 보이지만 참고할 만한 내용도 많음
-    let cursorPos = { node: null, offset: 0 }, inEditor = useTemplateRef('editorRef') //editor = document.getElementById('msgContent') editor 대신 inEditor (템플릿 참조) 사용
-    //@focusin="storeCursorPosition" @input="storeCursorPosition" @keyup="storeCursorPosition" @click="storeCursorPosition">
-
-    //const updateStyle = (eventTarget) => { msgbody.value = eventTarget.innerHTML.toString() } //https://www.jkun.net/702 <div @input="updateStyle($event.target)">
+    //아래 변수는 storeCursorPosition()의 주석 참조
+    let prevRange //let cursorPos = { node: null, startOffset: 0, endOffset: 0 } curPos 말고 prevRange로 기억하면 훨씬 간편해서 막음 (코딩은 그대로 둠)
+    let editorIn = ref(false), editorBlurDt = Date.now()
+    let inEditor = useTemplateRef('editorRef') //editor = document.getElementById('msgContent') editor 대신 inEditor (템플릿 참조) 사용
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -446,10 +446,6 @@
         row.readHeight = e.currentTarget.naturalHeight
     }
 
-    function selectedData(e) { 
-        debugger
-    }
-
     async function pasteData(e) { //from paste event
         try {
             if (editMsgId.value) {
@@ -485,56 +481,14 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: rs.data.cdt })
-            } else if (pastedData.length >= 2 && pastedData[0].type == "text/plain" && pastedData[1].type == "text/html") {
-                //클립보드에 text뿐만 아니라 html 데이터를 제공하므로 기본적으로 html을 적용시키는 것이 맞을 것임 
-                const clipboardItem = pastedData[1]
+            } else if (pastedData[0].type == "text/plain" || (pastedData.length >= 2 && pastedData[1].type == "text/html")) {
+                const idx = (pastedData.length >= 2 && pastedData[1].type == "text/html") ? 1 : 0
+                //1 : 클립보드에 text뿐만 아니라 html 데이터를 제공하므로 기본적으로 html을 적용시키는 것이 맞을 것임 
+                //0 : html이 아닌 순수 text라고 봐야 함
+                const clipboardItem = pastedData[idx]
                 const type = clipboardItem.type
                 clipboardItem.getAsString(function(str) { //const html = sanitizeHTML(str) //document.execCommand('insertHTML', false, (html))
-                    insertPastedToEditor(type, str) //여기에 clipboardItem.type으로 참조하면 안읽히므로 위에서 get
-                    /*//insertElementAtCursorPosition(str)
-                    let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
-                    if (selection.rangeCount == 0) return
-                    const range = selection.getRangeAt(0) 
-                    //const ele = range.startContainer
-                    let node = document.createElement('span')
-                    //node.textContent = str
-                    node.innerHTML = str
-                    //let selection = window.getSelection() //document.getSelection()
-                    // selection.empty()
-                    //let range = selection.getRangeAt(0)
-                    //selection.removeRange(range)        
-                    //selection.removeAllRanges()
-                    range.deleteContents()
-                    range.insertNode(node)
-                    range.collapse(false)
-                    //range.insertNode(document.createTextNode(str))
-                    //selection.removeAllRanges()
-                    //msgbody.value = document.getElementById('msgContent').innerHTML*/
-                })
-            } else if (pastedData[0].type == "text/plain") { //html이 아닌 순수 text라고 봐야 함
-                const clipboardItem = pastedData[0]
-                const type = clipboardItem.type
-                clipboardItem.getAsString(function(str) { 
-                    insertPastedToEditor(type, str) //여기에 clipboardItem.type으로 참조하면 안읽히므로 위에서 get
-                    /*//insertElementAtCursorPosition(str)
-                    let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
-                    if (selection.rangeCount == 0) return
-                    const range = selection.getRangeAt(0) 
-                    //const ele = range.startContainer
-                    //let node = document.createElement('span')
-                    //node.textContent = str
-                    //node.innerHTML = "<span style='color:green;font-weight:bold'>고고고</span>"
-                    //let selection = window.getSelection() //document.getSelection()
-                    // selection.empty()
-                    //let range = selection.getRangeAt(0)
-                    //selection.removeRange(range)        
-                    //selection.removeAllRanges()
-                    range.deleteContents()
-                    //range.insertNode(node)
-                    range.insertNode(document.createTextNode(str))
-                    range.collapse(false)
-                    //selection.removeAllRanges()
-                    //msgbody.value = document.getElementById('msgContent').innerHTML*/
+                    insertPastedToEditor(type, str) //여기에 clipboardItem.type으로 참조하면 안읽히므로 위에서 미리 get
                 })
             }
         } catch (ex) { 
@@ -593,25 +547,32 @@
         editMsgId.value = null
     }
 
-    async function uploadLink() {
+    async function uploadLink(kind, text) {
         try {
-            popupRefKind.value = 'link'
+            popupRefKind.value = kind
+            linkText.value = text ?? ""
             linkPopupRef.value.open()
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
     }
 
-    function editorFocused() {
-        gst.editor.focused = true
-        console.log("focus true")
+    function editorFocused(bool) {
+        editorIn.value = bool
+        if (!bool) editorBlurDt = Date.now()
+    }
+
+    function chkEditorFocus() {
+        const ms = Date.now() - editorBlurDt
+        if (ms <= 250) return true //에디터 포커스 상태에서 이모티, B, S 등의 이미지(버튼)을 누르면 그 차이가 100단위의 MiliSec 나오는데 여유있게 250으로 줌
+        return false //250 넘어가면 에디터 포커스 상태에서 이미지(버튼)을 바로 누른 게 아니라는 의미임
+        //위와 같이 체크하는 이유는 selection or range에서는 현재 커서가 있는 노드를 찾을 수 없음 (parentNode를 모두 뒤져도 없음)
+        //1) 그래서, 에디터의 focusin/blur event로 하고자 했으나 그 상태값만으로는 체크가 어려움 : 이미지(버튼)을 누르는 순간 blur됨
+        //2) blur되어도 클릭하는 순간의 갭이 짧기때문에 그걸 체크해서 disabled/enabled 효과를 내는 것임
     }
 
     function addEmoti() {
-        if (!gst.editor.focused) {
-            gst.util.setToast("에디터내 커서가 없습니다.")
-            return
-        }
+        if (!chkEditorFocus()) return
         let selection = window.getSelection()
         if (selection.rangeCount == 0) return
         const range = selection.getRangeAt(0) 
@@ -630,41 +591,37 @@
         selection.removeAllRanges()
     }
 
-    function wordStyle(type) {
-        if (!gst.editor.focused) {
-            gst.util.setToast("에디터내 커서가 없습니다.")
-            return
-        }
-        let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
-        if (selection.rangeCount == 0) return //위에서 체크하고 있으나 그대로 두기로 함 
+    function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
+        if (!chkEditorFocus()) return
+        let selection = window.getSelection()
+        if (selection.rangeCount == 0) return
         const range = selection.getRangeAt(0) 
-        debugger
-        //const str = range.startContainer
-        
+        let content = range.cloneContents()
+        let node = document.createElement('span')
+        node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
+        const text = node.innerHTML
+        node.remove()
+        storeCursorPosition()
+        uploadLink('makelink', text)
+    }
+
+    function wordStyle(type) {
+        if (!chkEditorFocus()) return
+        let selection = window.getSelection()
+        if (selection.rangeCount == 0) return
+        const range = selection.getRangeAt(0) 
+        let content = range.cloneContents()
+        let node = document.createElement(type)
+        node.append(content)
+        range.deleteContents()
+        range.insertNode(node)
+        inEditor.value.focus()
+        //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
         return
-        
-        if (type == "text/html") {
-            let node = document.createElement('span')
-            node.innerHTML = "<B>" + str + "</B>"
-            range.deleteContents()
-            range.insertNode(node)
-            range.collapse(false)
-            msgbody.value = document.getElementById('msgContent').innerHTML
-            return true
-        } else if (type == "text/plain") {
-            range.deleteContents()
-            range.insertNode(document.createTextNode(str))
-            range.collapse(false)
-            msgbody.value = document.getElementById('msgContent').innerHTML
-            return true
-        } else {
-            gst.util.setToast("복사/붙이기는 Text/Html/Image만 지원 가능합니다.", 3)
-            return false
-        }
     }
     
     async function okPopup(kind) {
-        if (kind == "link") {
+        if (kind == "addlink" || kind == "makelink") {
             const regexp = new RegExp("^https?://")
             if (regexp.test(linkText.value) || regexp.test(linkUrl.value)) { //2개 필드중 하나라도 링크가 있으면 OK
                 if (linkText.value.trim() == "") {
@@ -681,11 +638,25 @@
                 gst.util.setSnack("http(s)://로 시작되는 링크가 필요합니다.", true)
                 return
             }
-            const rq = { chanid: gst.selChanId, kind: "L", body: linkText.value + gst.cons.deli + linkUrl.value }
-            const res = await axios.post("/chanmsg/uploadBlob", rq)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            linkArr.value.push({ hover: false, text: linkText.value, url: linkUrl.value, cdt: rs.data.cdt })
+            if (kind == "addlink") {
+                const rq = { chanid: gst.selChanId, kind: "L", body: linkText.value + gst.cons.deli + linkUrl.value }
+                const res = await axios.post("/chanmsg/uploadBlob", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+                linkArr.value.push({ hover: false, text: linkText.value, url: linkUrl.value, cdt: rs.data.cdt })
+            } else {
+                inEditor.value.focus()
+                const range = restoreCursorPosition()
+                let node = document.createElement('a')
+                node.setAttribute("href", linkUrl.value)
+                node.setAttribute("target", "_blank")
+                node.style.color = "steelblue"
+                node.append(linkText.value)
+                range.deleteContents()
+                range.insertNode(node)
+                range.collapse(false)
+                //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
+            }
             linkText.value = ""
             linkUrl.value = ""
             linkPopupRef.value.close()
@@ -693,7 +664,6 @@
     }
 
     function openLink(url) { 
-        //window.open(url, "_blank", "width=800,height=800,menubar=yes,status=yes,toolbar=yes,resizable=yes,location=yes");
         window.open(url, "_blank") //popup not worked for 'going back' navigation
     }
 
@@ -814,6 +784,11 @@
         gst.ctx.show(e)
     }
 
+    function htmlView() {
+        showHtml.value = true
+        msgbody.value = document.getElementById('msgContent').innerHTML
+    }
+
     async function test() {
         msgbody.value = document.getElementById('msgContent').innerHTML
         return
@@ -839,47 +814,27 @@
     //focusNode / focusOffset : selection이 끝나는 위치의 노드/offset을 반환
     //anchor는 시작점, focus는 끝나는 지점을 나타냄. 드래그를 앞→뒤가 아니라 뒤→앞으로 했다면, anchor와 focus는 반대가 됨
 
-    function storeCursorPosition() { //event : focusin, input, click, keyup(keydown은 화살표 뒤로 갈 경우 안맞고 keypress는 안먹힘)
-        let selection = window.getSelection() //현재 커서 위치나 선택한 범위를 나타냄
-        if (selection.rangeCount == 0) return //console.log("===="+selection.rangeCount)
+    //B(Bold), S(Strike) 등은 팝업이 없어 cursorPos를 기억할 필요가 없으므로 editorIn과 editorBlurDt를 이용해 처리하고
+    //팝업이 있어 selection을 잃어버리는 makelink(링크로변환) 등은 prevRange를 사용해야 함 (with storeCursorPosition/restoreCursorPosition)
+    function storeCursorPosition() {
+        let selection = window.getSelection()
+        if (selection.rangeCount == 0) return
         const range = selection.getRangeAt(0) //크롬은 텍스트 드래그가 한번만 가능. 파폭은 Ctrl+드래그(윈도우)로 여러 개 범위 선택
-        cursorPos.node = range.startContainer //에디터만 다루므로 여기서는 div#msgContent.editor_body가 됨 //console.log("@@@@"+JSON.stringify(cursorPos))
+        //cursorPos.node = range.startContainer
+        //cursorPos.startOffset = range.startOffset
+        //cursorPos.endOffset = range.endOffset
+        prevRange = range
     }
                 
-    // function restoreCursorPosition() {
-    //     let range = document.createRange()
-    //     range.setStart(cursorPos.node, cursorPos.offset)
-    //     //range.collapse(true) //선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
-    //     let selection = window.getSelection()
-    //     selection.removeAllRanges()
-    //     selection.addRange(range)
-    //     inEditor.value.focus() //vue 템플릿 참조에 의한 처리
-    // }
-
     function restoreCursorPosition() {
-        let range = document.createRange()
-        range.setStart(cursorPos.node, cursorPos.offset)
-        //range.collapse(true) //선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
+        //let range = null //document.createRange()
+        //range.setStart(cursorPos.node, cursorPos.startOffset)
+        //range.setEnd(cursorPos.node, cursorPos.endOffset)
+        const range = prevRange
         let selection = window.getSelection()
         selection.removeAllRanges()
         selection.addRange(range)
-        inEditor.value.focus() //vue 템플릿 참조에 의한 처리
-        range.deleteContents()
-        selection.removeAllRanges()
-    }
-
-    function insertElementAtCursorPosition(strHtml) {
-        restoreCursorPosition()
-        // let node = document.createElement('span')
-        // node.textContent = strHtml //node.classList.add('inserted-field') //node.contentEditable = "false" //node.dataset.dbField = this.dataset.dbField
-        //let selection = window.getSelection() //document.getSelection()
-        // selection.empty()
-        //let range = selection.getRangeAt(0)
-        //selection.removeRange(range)        
-        //selection.removeAllRanges()
-        //range.insertNode(node)
-        //storeCursorPosition()
-        //msgbody.value = document.getElementById('msgContent').innerHTML
+        return range
     }
 
     function insertPastedToEditor(type, str) {
@@ -892,13 +847,15 @@
             range.deleteContents()
             range.insertNode(node)
             range.collapse(false)
-            msgbody.value = document.getElementById('msgContent').innerHTML
+            inEditor.value.focus()
+            //msgbody.value = document.getElementById('msgContent').innerHTML //처리할 필요가 있을 때 추가하기로 함
             return true
         } else if (type == "text/plain") {
             range.deleteContents()
             range.insertNode(document.createTextNode(str))
             range.collapse(false)
-            msgbody.value = document.getElementById('msgContent').innerHTML
+            inEditor.value.focus()
+            //msgbody.value = document.getElementById('msgContent').innerHTML //처리할 필요가 있을 때 추가하기로 함
             return true
         } else {
             gst.util.setToast("복사/붙이기는 Text/Html/Image만 지원 가능합니다.", 3)
@@ -911,8 +868,8 @@
     <div class="chan_center">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
-                <div class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] - {{ gst.selChanId }}</div>
+                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><!-- - {{ gst.selChanId }}-->
+                <div class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}]</div>
             </div>
             <div class="chan_center_header_right">
                 <div class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
@@ -1006,7 +963,7 @@
                     <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
                         @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
                         <div style="height:100%;display:flex;align-items:center">
-                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_openlink.png')">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
                             <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
                         </div>
                         <div v-show="row5.hover" class="msg_file_seemore">
@@ -1022,7 +979,7 @@
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_later.png')" title="나중에" @click="procLater(row.MSGID)"></span>
-                    <span class="procAct"><!-- maintainContextMenu 클래스는 GeneralStore.js에서 참조 -->
+                    <span class="procAct">
                         <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
                     </span>
                 </div>
@@ -1037,19 +994,28 @@
                 <div v-else class="saveMenu" @click="saveMsg">
                     <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
                 </div>
-                <img class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" @click="addEmoti">
-                <img v-if="!editMsgId" class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_link.png')" title="링크추가" @click="uploadLink">
+                <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_addlink.png')" 
+                    title="링크추가" @click="uploadLink('addlink')">
                 <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
-                <label v-if="!editMsgId" for="file_upload"><img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가"></label>
-                <button @click="test" style="margin-left:10px">html(임시)</button>
-                <div style="width:8px;height:20px;margin-left:20px;border-left:1px solid dimgray"></div>
-                <img class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게" @click="wordStyle('B')">
-                <img class="coImg20 editorMenu maintainContextMenu" :src="gst.html.getImageUrl('dimgray_cancelword.png')" title="취소선" @click="wordStyle('C')">
+                <label v-if="!editMsgId" for="file_upload">
+                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
+                </label>
+                <div style="width:8px;height:20px;margin-left:12px;border-left:1px solid dimgray"></div>
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" 
+                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="addEmoti()">
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_makelink.png')" title="링크로변환"
+                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="makeLink()">
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게"
+                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('B')">
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
+                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('S')">
+                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
+                    @click="htmlView()"><!--개발자사용-->
             </div>
-            <div id="msgContent" class="editor_body maintainContextMenu" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused">
+            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
             </div>
-            <div class="editor_body" style="background:beige">{{ msgbody }}</div><!--임시-->
+            <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
             <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
                 <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
@@ -1109,7 +1075,7 @@
         <div style="display:flex;flex-direction:column">
             <input v-model="linkText" style="width:300px;height:24px;border:1px solid dimgray" placeholder="표시 텍스트" />
             <input v-model="linkUrl" style="width:300px;height:24px;margin-top:15px;border:1px solid dimgray" placeholder="링크 http(s)://" />
-            <span style="margin-top:10px;color:dimgray">링크를 한 필드에만 넣어도 됩니다.</span>
+            <!-- <span style="margin-top:10px;color:dimgray">링크를 한 필드에만 넣어도 됩니다.</span> -->
         </div>
     </popup-common>
 </template>

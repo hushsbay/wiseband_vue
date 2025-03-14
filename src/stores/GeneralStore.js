@@ -106,12 +106,13 @@ const GeneralStore = defineStore('General', () => {
             this.on = true
         },
 
-        hide : function(e) { //1) Main.vue에서 @click시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
-            //1) 아래에서 우클릭이 아닌 click에서 처리시 바로 닫히면 안되게 함
-            if (e.srcElement.className.includes("maintainContextMenu")) return
+        hide : function(e) { //Main.vue에서 @click시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
+            if (e.srcElement.className.includes("maintainContextMenu")) return //우클릭이 아닌 click에서 처리시 바로 닫히면 안되게 함
             this.on = false
-            //2) 아래는 에디터용 체크 (에디터내 <p>로 시작되면 srcElement이므로 이 경우는 parentElement로 올라가면서 에디터 있는지 체크)
-            let ok = false, times = 10
+            //아래는 에디터용 체크인데 문제가 많아서 막고 다른 방식(MiliSec차이)으로 체크하므로 아래 막음 (소스는 향후 참조용으로 지우지 말것)
+            //에디터내 <p>로 시작되면 srcElement이므로 이 경우는 parentElement로 올라가면서 에디터 있는지 체크
+            //글자를 선택후 마우스로 계속 끌어서 에디터 밖에서 놓으면 소스엘레멘트가 에디터가 아닌 놓아진 그 엘레멘트가 되므로 선택되었는지 체크 추가 필요
+            /*let ok = false, times = 10
             let parentEle = e.srcElement.parentElement            
             while (parentEle) { //loop로 맨 위까지 가면서 에디터 엘레먼트가 있는지 찾아 보기
                 if (parentEle.className.includes("maintainContextMenu")) {
@@ -124,7 +125,7 @@ const GeneralStore = defineStore('General', () => {
             }
             if (ok) return            
             editor.focused = false //HomeBody.vue에서 false 처리 (에디터내 selection/range 체크시에도 사용. selection/range에서 그 부모(에디터)를 인지하지 못해 여기서 maintainContextMenu으로 처리함)
-            console.log("hideReal")
+            console.log("hideReal")*/
         },
 
         proc : function(row, idx) {
@@ -207,10 +208,6 @@ const GeneralStore = defineStore('General', () => {
     }
 
     ////////////////////////////////////////////////////////////////////////////////
-
-    const editor = {
-        focused : false
-    }
 
     const html = {
 
@@ -432,7 +429,7 @@ const GeneralStore = defineStore('General', () => {
     return { 
         isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, 
         selSideMenu, selSideMenuTimeTag, selChanId, selGrId, snackBar, toast, 
-        auth, cons, ctx, doc, editor, html, list, util
+        auth, cons, ctx, doc, html, list, util
     }
 
 })
