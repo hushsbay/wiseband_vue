@@ -24,7 +24,7 @@
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
-    let editMsgId = ref(''), prevEditData = "", showHtml = ref(false), msgbody = ref("<p>구름에 \"달 가듯이\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span></p>")
+    let editMsgId = ref(''), prevEditData = "", showHtml = ref(false), msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span></p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
@@ -581,6 +581,19 @@
     }
 
     function addEmoti() {
+        const str = "<b>"
+        const str1 = "<b style='xxx:bbb'>ghghghgh</b>"
+        const exp = /<(strong|b)([^>]+)*>/gi
+        const rs = str.replace(exp, "")
+        console.log(rs+"@@@@@@@@@")
+        const rs1 = str1.replace(exp, "")
+        console.log(rs1+"@@@@@@@@@")
+
+        const str4 = "</b>"
+        const exp4 = /<\/(strong|b)>/gi
+        const rs4 = exp4.test(str4)
+        console.log(rs4+"@@@@@@@@@")
+return
         if (!chkEditorFocus()) return
         let selection = window.getSelection()
         if (selection.rangeCount == 0) return
@@ -614,28 +627,79 @@
         uploadLink('makelink', text)
     }
 
-    function wordStyle(type) {
+    function wordStyle(type) { //Bold,Strike 경우임 (추가시 로직 수정해야 할 수도 있음)
         if (!chkEditorFocus()) return
+        let exp, exp1
+        if (type == "B") {
+            exp = /<(strong|b)([^>rR]+)*>/gi //<strong이나 <b로 시작해서 >과 BR의 R 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
+            exp1 = /<\/(strong|b)>/gi //</strong>이나 </b>
+        } else if (type == "S") { //Strike
+            exp = /<s([^>]+)*>/gi
+            exp1 = /<\/s>/gi
+        }
         let selection = window.getSelection()
         if (selection.rangeCount == 0) return
         const range = selection.getRangeAt(0) 
+        /* 예를 들어, Bold는 아래와 같이 2가지 케이스가 있을 것음
+           1. <B>, <STRONG>의 경우 커서로 선택이 아래와 같을 수 있음
+              1) <B>XYZ</B> : XYZ를 선택했을 때 innerHTML => <B>와 </B>가 안보임 (#text)
+              2) X<B>YZ</B> : XYZ를 선택했을 때 innerHTML => <B>와 </B> 모두 보임
+              3) <B>XY</B>Z : XYZ를 선택했을 때 innerHTML => <B>와 </B> 모두 보임
+              4) X<B>Y</B>Z : XYZ를 선택했을 때 innerHTML => <B>와 </B> 모두 보임
+              따라서, 1)과 2)3)4) 두가지 경우로 나눠서 처리하면 됨. 2)3)4)의 경우 cloneContents()후엔 B가 하나뿐이더라도 앞뒤로 생겨남
+           2. stle="font-weight:bold"
+        */
+        const bool = chkSelectionInTag(type) //1)~4) 모두 true임. 부모태그없이 XYZ만 있는 순수 텍스트인 경우는 false임
+        let content, content1 = range.cloneContents()
+        let node, node1 = document.createElement("span")
+        node1.append(content1)
+        let str = node1.innerHTML
         debugger
-        const bool = isSelectionInTag('B')
-        //const bool1 = isSelectionInTag('B')
-        //let content1 = range.cloneContents()
-        //let node1 = document.createElement("span")
-        //node1.append(content1)
-        //console.log(node1.innerHTML+"@@@")
-
-        let content = range.cloneContents()
-        let node = document.createElement(type)
-        node.append(content)
+        if (exp.test(str)) { //위 2)3)4) 경우인데 매칭파트를 제거하면 됨
+            str = str.replace(exp, "").replace(exp1, "")
+            node = document.createElement("SPAN")
+            node.innerHTML = str
+        } else {
+            if (bool) { //1) 케이스이므로 parentNode를 제거해야 함
+                chkSelectionInTag(type, true) //true(제거옵션)
+                content = range.cloneContents()
+                node = document.createElement("SPAN")
+                node.innerHTML = str
+            } else { //해당 selection에 대해 type 추가해 주기
+                content = range.cloneContents()
+                node = document.createElement(type)
+                node.append(content)
+            }
+        }
         range.deleteContents()
         range.insertNode(node)
         inEditor.value.focus()
         //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
         return
     }
+
+    // function wordStyle(type) {
+    //     if (!chkEditorFocus()) return
+    //     let selection = window.getSelection()
+    //     if (selection.rangeCount == 0) return
+    //     const range = selection.getRangeAt(0) 
+    //     debugger
+    //     const bool = isSelectionInTag('B')
+    //     //const bool1 = isSelectionInTag('B')
+    //     let content1 = range.cloneContents()
+    //     let node1 = document.createElement("span")
+    //     node1.append(content1)
+    //     console.log(node1.innerHTML+"@@@"+node1.outerHTML)
+
+    //     let content = range.cloneContents()
+    //     let node = document.createElement(type)
+    //     node.append(content)
+    //     range.deleteContents()
+    //     range.insertNode(node)
+    //     inEditor.value.focus()
+    //     //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
+    //     return
+    // }
     
     async function okPopup(kind) {
         if (kind == "addlink" || kind == "makelink") {
@@ -875,11 +939,21 @@
         }
     }
 
-    function isSelectionInTag(tag) {
+    function chkSelectionInTag(tag, del) {
         let currentNode = window.getSelection().focusNode
         while (currentNode && (currentNode.nodeName == '#text' || currentNode.id != 'msgContent')) {
-            if (currentNode.tagName === tag) return true
-            currentNode = currentNode.parentNode;		
+            if (tag == "B") {
+                if (currentNode.tagName === tag || currentNode.tagName === "STRONG") {
+                    if (del) currentNode.remove()
+                    return true
+                }
+            } else {
+                if (currentNode.tagName === tag) {
+                    if (del) currentNode.remove()
+                    return true
+                }
+            }
+            currentNode = currentNode.parentNode		
         }
         return false
     }
