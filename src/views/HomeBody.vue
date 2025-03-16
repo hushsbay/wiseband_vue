@@ -24,7 +24,8 @@
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
-    let editMsgId = ref(''), prevEditData = "", showHtml = ref(false), msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
+    let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
+    let msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
@@ -581,7 +582,7 @@
     }
 
     function addEmoti() {
-        const str = "<span style='font-weight:   bold'>"
+        /*const str = "<span style='font-weight:bold'>"
         //const str1 = "<b style='xxx:bbb'>ghghghgh</b>"
         //const exp = /<(strong|b)([^>]+)*>/gi
         const exp = /(font-weight)([\s:]+)(bold)/gi
@@ -589,11 +590,24 @@
         console.log(rs+"@@@@@@@@@")
         //const rs1 = str1.replace(exp, "")
         //console.log(rs1+"@@@@@@@@@")
-
+*/
         //const str4 = "</b>"
         //const exp4 = /<\/(strong|b)>/gi
         //const rs4 = exp4.test(str4)
         //console.log(rs4+"@@@@@@@@@")
+
+        const exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' >
+        const exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
+        const exp2 = /(font-weight)([\s:]+)(bold)/gi //font-weight:  bold
+        const str = "<B style='color:red'><span style='font-weight: bold'>aaa</SPAN></B >"
+        const rs = exp.exec(str) //str.match(exp)
+        const rs1 = exp1.exec(str)
+        const rs2 = exp2.exec(str)
+        debugger
+        const result = str.replace(rs[1], "span")
+        const result1 = str.replace(rs1[0], "</span>")
+        const result2 = str.replace(rs2[0], "") //font-weight:normal로 변환 대신 제거
+        debugger
 return
         if (!chkEditorFocus()) return
         let selection = window.getSelection()
@@ -628,7 +642,7 @@ return
         uploadLink('makelink', text)
     }
 
-    function wordStyle(type) { //Bold,Strike 경우임 (추가시 로직 수정해야 할 수도 있음)
+    function wordStyleFailed(type) { //Bold,Strike 경우임 (다른 type 추가시 로직 수정해야 할 수도 있음)
         if (!chkEditorFocus()) return
         let exp, exp1, exp2
         if (type == "B") {
@@ -639,9 +653,6 @@ return
             exp = /<s([^>pP]+)*>/gi //<s로 시작해서 >과 SPAN의 S 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
             exp1 = /<\/s>/gi
         }
-        let selection = window.getSelection()
-        if (selection.rangeCount == 0) return
-        const range = selection.getRangeAt(0) 
         /* 예를 들어, Bold는 아래와 같이 2가지 케이스가 있을 것음
            1. <B>, <STRONG>의 경우 커서로 선택이 아래와 같을 수 있음
               1) <B>XYZ</B> : XYZ를 선택했을 때 innerHTML => <B>와 </B>가 안보임 (#text)
@@ -650,26 +661,53 @@ return
               4) X<B>Y</B>Z : XYZ를 선택했을 때 innerHTML => <B>와 </B> 모두 보임
               따라서, 1)과 2)3)4) 두가지 경우로 나눠서 처리하면 됨. 2)3)4)의 경우 cloneContents()후엔 B가 하나뿐이더라도 앞뒤로 생겨남
            2. stle="font-weight:bold"
-              마찬가지로 위 네가지 형태로 나올 것이나 font-weight:400 등과 같이 숫치는 무시하기로 함
-        */
-        const bool = chkSelectionInTag(type) //1)~4) 모두 true임. 부모태그없이 XYZ만 있는 순수 텍스트인 경우는 false임
-        let content, content1 = range.cloneContents()
+              마찬가지로 위 네가지 형태로 나올 것이나 font-weight:400 등과 같이 숫치는 무시하기로 함 */
+        let selection = window.getSelection()
+        if (selection.rangeCount == 0) return
+        const range = selection.getRangeAt(0)
+        let content1 = range.cloneContents() //content1,node1은 str로 받기 위한 단순 도구임
         let node, node1 = document.createElement("span")
         node1.append(content1)
-        let str = node1.innerHTML
+        let str = node1.innerHTML //예) <B>가 한쪽에 없이 선택해도 innerHTML에서는 <B>까지 들어가도록 함
+        const bool = chkSelectionInTag(type) //1)~4) 모두 true 또는, 부모태그없이 XYZ만 있는 순수 텍스트인 경우는 false임
+        let specific = false
+        debugger
         if (bool) {
+            //debugger
+            // let pass = false
+            // if (type == "B" && exp2.test(str)) { //볼드체의 경우, font-weight 먼저 체크해야 한번에 replace 처리 가능
+            //     str = str.replace(exp2, "")
+            //     pass = true
+            // }
             if (exp.test(str)) { //위 2)3)4) 경우인데 매칭파트를 제거하면 됨
                 str = str.replace(exp, "").replace(exp1, "")
-            } else if (type == "B" && exp2.test(str)) { //<B>와 font-weight 둘 다 존재하면 2회 실행으로 제거하는 것이 됨
+            } else if (type == "B" && exp2.test(str)) { //볼드체의 경우, <b>, font-weight 둘 다 있으면 한번에 안됨
                 str = str.replace(exp2, "")
             } else { //1) 케이스이므로 parentNode를 제거해야 함
-                chkSelectionInTag(type, true) //true(제거옵션)
-                //content = range.cloneContents()
+                //if (!pass) {
+                    chkSelectionInTag(type, str) //true(제거옵션=>span으로변경(font-weight는제거))
+                    specific = true
+                //}
+                //const range = selection.getRangeAt(0)
+                //const content = range.cloneContents()
+                //node = document.createElement("SPAN")
+                //node.append(content)
+//                node = document.createElement("SPAN")
+//                node.innerHTML = str
             }
-            node = document.createElement("SPAN")
-            node.innerHTML = str
-        } else { //해당 selection에 대해 type 추가해 주기
-            //content = range.cloneContents()
+            if (!specific) {
+                node = document.createElement("SPAN")
+                node.innerHTML = str
+                debugger
+            }
+        } else { //해당 selection에 대해 parentNode까지 추적해보니 없으므로 type를 추가하는 케이스가 됨
+            //chkSelectionInTag()에서 보듯이 bool=false라고 해도 range에는 true(포함될)일 수 있으므로 regexp 체크 필요함
+            //그래서 포함되어 있으면 또 추가하면 문제가 될 수 있으므로 멈춤
+            // if (exp.test(str) || (type == "B" && exp2.test(str))) {
+            //     console.log("stop:bool=false,range=true")
+            //     return
+            // }
+            const content = range.cloneContents()
             node = document.createElement(type)
             node.append(content)
         }
@@ -690,34 +728,75 @@ return
         //     }
         // }
         range.deleteContents()
-        range.insertNode(node)
+        if (!specific) {            
+            range.insertNode(node)
+             //collapse안하려면 range를 refresh해야 최신으로 반영됨. selection.removeAllRanges()는 모두 deselect하는 것임
+        }
+        range.collapse(false)
         inEditor.value.focus()
         //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
         return
     }
 
-    // function wordStyle(type) {
-    //     if (!chkEditorFocus()) return
-    //     let selection = window.getSelection()
-    //     if (selection.rangeCount == 0) return
-    //     const range = selection.getRangeAt(0) 
-    //     debugger
-    //     const bool = isSelectionInTag('B')
-    //     //const bool1 = isSelectionInTag('B')
-    //     let content1 = range.cloneContents()
-    //     let node1 = document.createElement("span")
-    //     node1.append(content1)
-    //     console.log(node1.innerHTML+"@@@"+node1.outerHTML)
-
-    //     let content = range.cloneContents()
-    //     let node = document.createElement(type)
-    //     node.append(content)
-    //     range.deleteContents()
-    //     range.insertNode(node)
-    //     inEditor.value.focus()
-    //     //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
-    //     return
-    // }
+    function wordStyle(type) {
+        if (!chkEditorFocus()) return
+        let selection = window.getSelection()
+        if (selection.rangeCount == 0) return
+        let exp, exp1, exp2
+        if (type == "B") {
+            exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' >
+            exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
+            exp2 = /(font-weight)([\s:]+)(bold)/gi //font-weight:  bold
+        } else if (type == "S") { //Strike
+            exp = /<s([^>pP]+)*>/gi //<s로 시작해서 >과 SPAN의 S 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
+            exp1 = /<\/s>/gi
+            exp2 = /(text-decoration)([\s:]+)(line-through)/gi
+        }
+        debugger
+        const range = selection.getRangeAt(0)
+        let content1 = range.cloneContents()
+        let node1 = document.createElement("span")
+        node1.append(content1)
+        let str = node1.innerHTML
+        console.log(node1.innerHTML+"@@@"+node1.outerHTML)
+        //위 cloneContents()와 innerHTML로 처리된 str에서는 맨 앞과 맨뒤는 엘레멘트노드가 아닌 항상 텍스트노드임
+        //또한, 사용자가 시작태그 또는 종료태그만 있도록 선택해도 자동으로 앞뒤 태그가 붙어서 문제없이 처리 가능함
+        //1) 볼드체 판단 : range.commonAncestorContainer가 B, Strong, font-weight:bold(bold대신숫자는무시)이면 볼드체로 보기로 함
+        //2) 볼드체 처리 : 추가하든 빼든, 일단 str 안에 있는 모든 볼드체 관련은 span/font-weight:bold로 변환후 (str: 텍스트 or 엘레먼트)
+        //- 볼드체를 추가하려면 <span style='font-weight:bold'> + str + </span>으로 변환함
+        //- 볼드체를 빼려면 <span style='font-weight:normal'> + str + </span>으로 변환함
+        //위가 아닌 다른 방식(예를 들어 chkSelectionInTagFailed - focusNode)으로 처리하려면 경우의 수가 너무 많아 100% 구현이 어려울 것임
+        //참고로, wordStyleFailed()와 chkSelectionInTagFailed()는 실패했어도 참고할 만한 코딩이 많으므로 지우지 말기로 함
+        let container = range.commonAncestorContainer //text일 수도 있음
+        if (container.nodeName == "#text") container = container.parentNode
+        let bool = false
+        if (type == "B") {
+            if (container.tagName == type || container.tagName == "STRONG" || 
+                (container.style && container.style["font-weight"] === "bold")) bool = true
+        } else if (type == "S") {
+            if (container.tagName == type || 
+                (container.style && container.style["text-decoration"] === "line-through")) bool = true
+        }
+        const rs = exp.exec(str) //RegExp.$n deprecated 배열[0]는 매칭 결과 전체
+        if (rs != null) str = str.replace(rs[1], "span") //맨 앞에 있으므로 문제없으나
+        const rs1 = exp1.exec(str)
+        if (rs1 != null) str = str.replace(rs1[0], "</span>") //맨 뒤에 있으므로 앞의 text가 검색될 수도 있으므로 전체 변경 필요
+        const rs2 = exp2.exec(str)    
+        if (rs2 != null) str = str.replace(rs2[0], "") //font-weight:normal로 변환 대신 제거
+        debugger
+        range.deleteContents()
+        let node = document.createElement("span")
+        node.innerHTML = str
+        if (bool) {
+            node.style["font-weight"] = "normal"    
+        } else {
+            node.style["font-weight"] = "bold"
+        }        
+        range.insertNode(node)
+        inEditor.value.focus()
+        //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
+        return
+    }
     
     async function okPopup(kind) {
         if (kind == "addlink" || kind == "makelink") {
@@ -957,17 +1036,86 @@ return
         }
     }
 
-    function chkSelectionInTag(tag, del) {
+    function chkSelectionInTag(tag, str) { //del 제거하기 => 수정하기로 변경
+        // if (type == "B") { //<b><strong> => <span> / font-weight:bold은 제거
+        //     exp = /<(strong|b)([^>rR]+)*>/gi //<strong이나 <b로 시작해서 >과 BR의 R 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
+        //     exp1 = /<\/(strong|b)>/gi //</strong>이나 </b>
+        //     exp2 = /(font-weight)([\s:]+)(bold)/gi
+        // } else if (type == "S") { //Strike. <s> => <span>
+        //     exp = /<s([^>pP]+)*>/gi //<s로 시작해서 >과 SPAN의 S 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
+        //     exp1 = /<\/s>/gi
+        // }
         let currentNode = window.getSelection().focusNode
         while (currentNode && (currentNode.nodeName == '#text' || currentNode.id != 'msgContent')) {
             if (tag == "B") {
-                if (currentNode.tagName === tag || currentNode.tagName === "STRONG" || currentNode.style["font-weight"] == "bold") {
-                    if (del) currentNode.remove()
+                //결론은 selection/range내 노드는 여러개 있을 수 있으나 currentNode는 focusNode 기준이므로 한개만 추출됨
+                //예) <p>구름에 "달 <b>가듯이</b>" 가는 나그네<br>술익는 마을마다 <span style="color:red;font-weight:bold">타는 저녁놀</span> 하하</p>
+                //1) '저녁놀'만 선택해도 currentNode.textContent는 '타는 저녁놀' (return true)
+                //2) '저녁놀</span> '을 선택하면 currentNode.textContent는 ' 하하'로 나옴 (return false)
+                //3) '마을마다 <span style="color:red;font-weight:bold">타는 저녁놀'을 선택하면 currentNode.textContent는 '타는 저녁놀' (return true)
+                //4) '마다 <span style="color:red;font-weight:bold">타는 저녁놀</span> 하하'을 선택하면 currentNode.textContent는 '술익는 마을마다' (return false)
+                //결국은 selection의 방향에도 영향 받아서 마지막 커서를 뗀 그 때의 노드가 추출됨 (텍스트 역시 해당 노드의 텍스트임)
+                //그래서, 사용자 기준으로는 본인이 선택한 곳에 분명히 굵게 표시된 2)의 경우도 이 코딩으로는 '하하'로 볼드체가 아니므로 문제 있음
+                //그러나, 다시 생각해보니, 이 focusNode 기준으로 볼드체인지 아닌지만 판단해서 리턴해도 무방할 것으로 보이며
+                //다른 웹에디터도 그리 판단할 거라 보여짐. 다만 아래 remove()는 막고 다른 방안을 모색해야 할 것으로 판단됨
+                //=> 이 함수는 오로지 마지막 커서 기준으로 tag에 속하는지 알아보는 것으로만 사용하기
+                
+                if (currentNode.tagName === tag || currentNode.tagName === "STRONG" || 
+                    (currentNode.style && currentNode.style["font-weight"] === "bold")) { //#text인 경우는 .style 없음
+                        debugger
+                    if (!hush.util.isvoid(str)) {
+                    //if (currentNode.textContent == str) { 
+                    //    currentNode.remove()
+                    //} else { //currentNode.tagName = "SPAN"는 only getter이므로 오류. currentNode.style["font-weight"] = "normal"은 가능하나 모든 text 영향 받음
+                        //const caption = document.createTextNode(str)
+                        
+                        //currentNode.parentNode.insertBefore(caption, currentNode.nextSibling)
+                        //currentNode.parentNode.insertBefore(caption, currentNode)
+                        //currentNode.parentNode.insertAfter(caption, currentNode)
+                        //currentNode.textContent = currentNode.textContent.replace(str, "")
+                        debugger
+                        let idxFound = 1
+                        const arr = currentNode.textContent.split(str), brr = [] //arr length는 무조건 2 (str은 빠지므로)
+                        brr.push(arr[0])
+                        brr.push(str) //str => idxFound = 1
+                        brr.push(arr[1])
+
+
+                        // for (let i = 0; i < arr.length; i++) {
+                        //     if (arr[i] != "") {
+                        //         brr.push(arr[i])
+                        //         if (idxFound == -1) idxFound = brr.length - 1 //동일 text 고려
+                        //     }
+                        // }
+                        debugger
+                        for (let i = 0; i < brr.length; i++) { //https://andreiglingeanu.me/rename-element-tag/
+                            if (brr[i] == "") continue
+                            const ele = document.createElement("SPAN")
+                            if (i != idxFound) {
+                                [...currentNode.attributes].map(({ name, value }) => {
+                                    ele.setAttribute(name, value)
+                                })
+                            } else {
+                                [...currentNode.attributes].map(({ name, value }) => {
+                                    ele.setAttribute(name, value)
+                                })
+                                ele.style["font-weight"] = "normal"
+                            }
+                            ele.textContent = brr[i]
+                            currentNode.parentNode.insertBefore(ele, currentNode)
+                        }
+                        debugger
+                        currentNode.remove()
+                    }
                     return true
                 }
-            } else {
+            } else if (tag == "S") {
                 if (currentNode.tagName === tag) {
-                    if (del) currentNode.remove()
+                    // if (currentNode.textContent == str) { 
+                    //     currentNode.remove()
+                    // } else {
+                    //     currentNode.tagName = "SPAN"
+                    // }
                     return true
                 }
             }
