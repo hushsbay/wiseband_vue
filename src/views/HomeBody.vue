@@ -582,20 +582,6 @@
     }
 
     function addEmoti() {
-        /*const str = "<span style='font-weight:bold'>"
-        //const str1 = "<b style='xxx:bbb'>ghghghgh</b>"
-        //const exp = /<(strong|b)([^>]+)*>/gi
-        const exp = /(font-weight)([\s:]+)(bold)/gi
-        const rs = str.replace(exp, "")
-        console.log(rs+"@@@@@@@@@")
-        //const rs1 = str1.replace(exp, "")
-        //console.log(rs1+"@@@@@@@@@")
-*/
-        //const str4 = "</b>"
-        //const exp4 = /<\/(strong|b)>/gi
-        //const rs4 = exp4.test(str4)
-        //console.log(rs4+"@@@@@@@@@")
-
         const exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' >
         const exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
         const exp2 = /(font-weight)([\s:]+)(bold)/gi //font-weight:  bold
@@ -608,24 +594,6 @@
         const result1 = str.replace(rs1[0], "</span>")
         const result2 = str.replace(rs2[0], "") //font-weight:normal로 변환 대신 제거
         debugger
-return
-        if (!chkEditorFocus()) return
-        let selection = window.getSelection()
-        if (selection.rangeCount == 0) return
-        const range = selection.getRangeAt(0) 
-        //selection.removeAllRanges()
-        const node1 = range.commonAncestorContainer
-        let node = document.createElement('span')
-        //node.textContent = "<span style='color:green;font-weight:bold'>고고고</span>"
-        node.innerHTML = "<span style='color:green;font-weight:bold'>고고고</span>"
-        //let selection = window.getSelection() //document.getSelection()
-        // selection.empty()
-        //let range = selection.getRangeAt(0)
-        //selection.removeRange(range)        
-        //selection.removeAllRanges()
-        range.deleteContents()
-        range.insertNode(node)
-        selection.removeAllRanges()
     }
 
     function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
@@ -642,7 +610,7 @@ return
         uploadLink('makelink', text)
     }
 
-    function wordStyleFailed(type) { //Bold,Strike 경우임 (다른 type 추가시 로직 수정해야 할 수도 있음)
+    function wordStyleFailed(type) { //코딩 실패 케이스 (donotdelete)
         if (!chkEditorFocus()) return
         let exp, exp1, exp2
         if (type == "B") {
@@ -669,68 +637,30 @@ return
         let node, node1 = document.createElement("span")
         node1.append(content1)
         let str = node1.innerHTML //예) <B>가 한쪽에 없이 선택해도 innerHTML에서는 <B>까지 들어가도록 함
-        const bool = chkSelectionInTag(type) //1)~4) 모두 true 또는, 부모태그없이 XYZ만 있는 순수 텍스트인 경우는 false임
+        const bool = chkSelectionInTagFailed(type) //1)~4) 모두 true 또는, 부모태그없이 XYZ만 있는 순수 텍스트인 경우는 false임
         let specific = false
-        debugger
         if (bool) {
-            //debugger
-            // let pass = false
-            // if (type == "B" && exp2.test(str)) { //볼드체의 경우, font-weight 먼저 체크해야 한번에 replace 처리 가능
-            //     str = str.replace(exp2, "")
-            //     pass = true
-            // }
             if (exp.test(str)) { //위 2)3)4) 경우인데 매칭파트를 제거하면 됨
                 str = str.replace(exp, "").replace(exp1, "")
             } else if (type == "B" && exp2.test(str)) { //볼드체의 경우, <b>, font-weight 둘 다 있으면 한번에 안됨
                 str = str.replace(exp2, "")
             } else { //1) 케이스이므로 parentNode를 제거해야 함
-                //if (!pass) {
-                    chkSelectionInTag(type, str) //true(제거옵션=>span으로변경(font-weight는제거))
-                    specific = true
-                //}
-                //const range = selection.getRangeAt(0)
-                //const content = range.cloneContents()
-                //node = document.createElement("SPAN")
-                //node.append(content)
-//                node = document.createElement("SPAN")
-//                node.innerHTML = str
+                chkSelectionInTagFailed(type, str) //true(제거옵션=>span으로변경(font-weight는제거))
+                specific = true
             }
             if (!specific) {
                 node = document.createElement("SPAN")
                 node.innerHTML = str
-                debugger
             }
         } else { //해당 selection에 대해 parentNode까지 추적해보니 없으므로 type를 추가하는 케이스가 됨
-            //chkSelectionInTag()에서 보듯이 bool=false라고 해도 range에는 true(포함될)일 수 있으므로 regexp 체크 필요함
-            //그래서 포함되어 있으면 또 추가하면 문제가 될 수 있으므로 멈춤
-            // if (exp.test(str) || (type == "B" && exp2.test(str))) {
-            //     console.log("stop:bool=false,range=true")
-            //     return
-            // }
             const content = range.cloneContents()
             node = document.createElement(type)
             node.append(content)
         }
-        // if (exp.test(str)) { //위 2)3)4) 경우인데 매칭파트를 제거하면 됨
-        //     str = str.replace(exp, "").replace(exp1, "")
-        //     node = document.createElement("SPAN")
-        //     node.innerHTML = str
-        // } else {
-        //     if (bool) { //1) 케이스이므로 parentNode를 제거해야 함
-        //         chkSelectionInTag(type, true) //true(제거옵션)
-        //         content = range.cloneContents()
-        //         node = document.createElement("SPAN")
-        //         node.innerHTML = str
-        //     } else { //해당 selection에 대해 type 추가해 주기
-        //         content = range.cloneContents()
-        //         node = document.createElement(type)
-        //         node.append(content)
-        //     }
-        // }
         range.deleteContents()
         if (!specific) {            
             range.insertNode(node)
-             //collapse안하려면 range를 refresh해야 최신으로 반영됨. selection.removeAllRanges()는 모두 deselect하는 것임
+            //collapse안하려면 range를 refresh해야 최신으로 반영됨. selection.removeAllRanges()는 모두 deselect하는 것임
         }
         range.collapse(false)
         inEditor.value.focus()
@@ -748,17 +678,15 @@ return
             exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
             exp2 = /(font-weight)([\s:]+)(bold)/gi //font-weight:  bold
         } else if (type == "S") { //Strike
-            exp = /<s([^>pP]+)*>/gi //<s로 시작해서 >과 SPAN의 S 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
-            exp1 = /<\/s>/gi
-            exp2 = /(text-decoration)([\s:]+)(line-through)/gi
+            exp = /<(s)((>)|([\s]+)([^>]+)*>)/gi //<s> <s  style='' >
+            exp1 = /<\/(s)([\s]+)*>/gi //</s> </s >
+            exp2 = /(text-decoration)([\s:]+)(line-through)/gi //text-decoration:  line-through
         }
-        debugger
         const range = selection.getRangeAt(0)
         let content1 = range.cloneContents()
-        let node1 = document.createElement("span")
+        let node1 = document.createElement("span") //단지 innerHTML에 담기 위해 생성하는 것임
         node1.append(content1)
-        let str = node1.innerHTML
-        console.log(node1.innerHTML+"@@@"+node1.outerHTML)
+        let str = node1.innerHTML //console.log(node1.innerHTML+"@@@"+node1.outerHTML)
         //위 cloneContents()와 innerHTML로 처리된 str에서는 맨 앞과 맨뒤는 엘레멘트노드가 아닌 항상 텍스트노드임
         //또한, 사용자가 시작태그 또는 종료태그만 있도록 선택해도 자동으로 앞뒤 태그가 붙어서 문제없이 처리 가능함
         //1) 볼드체 판단 : range.commonAncestorContainer가 B, Strong, font-weight:bold(bold대신숫자는무시)이면 볼드체로 보기로 함
@@ -777,22 +705,33 @@ return
             if (container.tagName == type || 
                 (container.style && container.style["text-decoration"] === "line-through")) bool = true
         }
-        const rs = exp.exec(str) //RegExp.$n deprecated 배열[0]는 매칭 결과 전체
-        if (rs != null) str = str.replace(rs[1], "span") //맨 앞에 있으므로 문제없으나
-        const rs1 = exp1.exec(str)
-        if (rs1 != null) str = str.replace(rs1[0], "</span>") //맨 뒤에 있으므로 앞의 text가 검색될 수도 있으므로 전체 변경 필요
-        const rs2 = exp2.exec(str)    
-        if (rs2 != null) str = str.replace(rs2[0], "") //font-weight:normal로 변환 대신 제거
-        debugger
-        range.deleteContents()
-        let node = document.createElement("span")
-        node.innerHTML = str
-        if (bool) {
-            node.style["font-weight"] = "normal"    
+        if (container.outerHTML.startsWith("<span maker=\"hushsbay\"")) {
+            //maker="hushsbay" 태그에는 다른 속성이나 여기에서 다루는 style말고는 없음
+            //그러나, 다른 태그의 속성이나 스타일은 추가로 있을 수 있으므로 다루기가 까다로울 것임
+            if (type == "B") {
+                container.style["font-weight"] = (bool) ? "normal" : "bold"
+            } else if (type == "S") {
+                container.style["text-decoration"] = (bool) ? "none" : "line-through"
+            }
         } else {
-            node.style["font-weight"] = "bold"
-        }        
-        range.insertNode(node)
+            const rs = exp.exec(str) //RegExp.$n deprecated 배열[0]는 매칭 결과 전체
+            if (rs != null) str = str.replace(rs[1], "span") //맨 앞에 있으므로 문제없으나
+            const rs1 = exp1.exec(str)
+            if (rs1 != null) str = str.replace(rs1[0], "</span>") //맨 뒤에 있으므로 앞의 text가 검색될 수도 있으므로 전체 변경 필요
+            const rs2 = exp2.exec(str)    
+            if (rs2 != null) str = str.replace(rs2[0], "") //font-weight:normal로 변환 대신 제거
+            range.deleteContents()
+            let node = document.createElement("span")
+            node.innerHTML = str
+            if (type == "B") {
+                node.style["font-weight"] = (bool) ? "normal" : "bold"
+            } else if (type == "S") {
+                node.style["text-decoration"] = (bool) ? "none" : "line-through"
+            }
+            node.setAttribute("maker", "hushsbay")
+            range.insertNode(node)
+        }
+        range.collapse(false)
         inEditor.value.focus()
         //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
         return
@@ -963,8 +902,6 @@ return
     }
     
     async function test() {
-        msgbody.value = document.getElementById('msgContent').innerHTML
-        return
         const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return            
@@ -1036,18 +973,10 @@ return
         }
     }
 
-    function chkSelectionInTag(tag, str) { //del 제거하기 => 수정하기로 변경
-        // if (type == "B") { //<b><strong> => <span> / font-weight:bold은 제거
-        //     exp = /<(strong|b)([^>rR]+)*>/gi //<strong이나 <b로 시작해서 >과 BR의 R 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
-        //     exp1 = /<\/(strong|b)>/gi //</strong>이나 </b>
-        //     exp2 = /(font-weight)([\s:]+)(bold)/gi
-        // } else if (type == "S") { //Strike. <s> => <span>
-        //     exp = /<s([^>pP]+)*>/gi //<s로 시작해서 >과 SPAN의 S 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
-        //     exp1 = /<\/s>/gi
-        // }
+    function chkSelectionInTagFailed(tag, str) { //코딩 실패 케이스 (donotdelete)
         let currentNode = window.getSelection().focusNode
         while (currentNode && (currentNode.nodeName == '#text' || currentNode.id != 'msgContent')) {
-            if (tag == "B") {
+            if (tag == "B") { //아래는 초창기에 생각한 해법이었으나 focusNode로는 해결이 안되었음
                 //결론은 selection/range내 노드는 여러개 있을 수 있으나 currentNode는 focusNode 기준이므로 한개만 추출됨
                 //예) <p>구름에 "달 <b>가듯이</b>" 가는 나그네<br>술익는 마을마다 <span style="color:red;font-weight:bold">타는 저녁놀</span> 하하</p>
                 //1) '저녁놀'만 선택해도 currentNode.textContent는 '타는 저녁놀' (return true)
@@ -1058,39 +987,18 @@ return
                 //그래서, 사용자 기준으로는 본인이 선택한 곳에 분명히 굵게 표시된 2)의 경우도 이 코딩으로는 '하하'로 볼드체가 아니므로 문제 있음
                 //그러나, 다시 생각해보니, 이 focusNode 기준으로 볼드체인지 아닌지만 판단해서 리턴해도 무방할 것으로 보이며
                 //다른 웹에디터도 그리 판단할 거라 보여짐. 다만 아래 remove()는 막고 다른 방안을 모색해야 할 것으로 판단됨
-                //=> 이 함수는 오로지 마지막 커서 기준으로 tag에 속하는지 알아보는 것으로만 사용하기
-                
+                //=> 이 함수는 오로지 마지막 커서 기준으로 tag에 속하는지 알아보는 것으로만 사용하기                
                 if (currentNode.tagName === tag || currentNode.tagName === "STRONG" || 
                     (currentNode.style && currentNode.style["font-weight"] === "bold")) { //#text인 경우는 .style 없음
-                        debugger
                     if (!hush.util.isvoid(str)) {
-                    //if (currentNode.textContent == str) { 
-                    //    currentNode.remove()
-                    //} else { //currentNode.tagName = "SPAN"는 only getter이므로 오류. currentNode.style["font-weight"] = "normal"은 가능하나 모든 text 영향 받음
-                        //const caption = document.createTextNode(str)
-                        
-                        //currentNode.parentNode.insertBefore(caption, currentNode.nextSibling)
-                        //currentNode.parentNode.insertBefore(caption, currentNode)
-                        //currentNode.parentNode.insertAfter(caption, currentNode)
-                        //currentNode.textContent = currentNode.textContent.replace(str, "")
-                        debugger
                         let idxFound = 1
                         const arr = currentNode.textContent.split(str), brr = [] //arr length는 무조건 2 (str은 빠지므로)
                         brr.push(arr[0])
                         brr.push(str) //str => idxFound = 1
                         brr.push(arr[1])
-
-
-                        // for (let i = 0; i < arr.length; i++) {
-                        //     if (arr[i] != "") {
-                        //         brr.push(arr[i])
-                        //         if (idxFound == -1) idxFound = brr.length - 1 //동일 text 고려
-                        //     }
-                        // }
-                        debugger
                         for (let i = 0; i < brr.length; i++) { //https://andreiglingeanu.me/rename-element-tag/
                             if (brr[i] == "") continue
-                            const ele = document.createElement("SPAN")
+                            const ele = document.createElement("SPAN") //태그 이름만 변경하기 (속성은 모두 복사)
                             if (i != idxFound) {
                                 [...currentNode.attributes].map(({ name, value }) => {
                                     ele.setAttribute(name, value)
@@ -1104,20 +1012,11 @@ return
                             ele.textContent = brr[i]
                             currentNode.parentNode.insertBefore(ele, currentNode)
                         }
-                        debugger
                         currentNode.remove()
                     }
                     return true
                 }
             } else if (tag == "S") {
-                if (currentNode.tagName === tag) {
-                    // if (currentNode.textContent == str) { 
-                    //     currentNode.remove()
-                    // } else {
-                    //     currentNode.tagName = "SPAN"
-                    // }
-                    return true
-                }
             }
             currentNode = currentNode.parentNode		
         }
