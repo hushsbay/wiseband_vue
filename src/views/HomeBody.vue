@@ -674,6 +674,33 @@
     }
 
     function wordStyle(type) {
+
+        function procNodeRecursive(node1) {
+            let nodes = node1.children
+            for (let node of nodes) {
+                if (node.tagName == "BR") continue //console.log(node.outerHTML+"###")            
+                if (node.getAttribute("maker") == "hushsbay") {
+                    if (node.innerHTML == "") { console.log("!!!"+node.outerHTML)
+                        delArr.push(node) //node.innerHTML = "!!!!!"
+                    } else { //console.log("^^^"+node.outerHTML)
+                        procNodeRecursive(node)
+                    }
+                } else { //console.log("******"+node.outerHTML)
+                    procNodeRecursive(node)
+                }
+            }    
+        }
+
+        function cleanGabageNode(node1) {
+            delArr = []
+            procNodeRecursive(node1) //console.log("@@@"+node1.innerHTML)
+            if (delArr.length == 0) return
+            for (let i = delArr.length - 1; i >= 0; i--) {
+                delArr[i].remove() //console.log("useless" + i)
+            }            
+            cleanGabageNode(node1)
+        }
+
         if (!chkEditorFocus()) return
         let selection = window.getSelection()
         if (selection.rangeCount == 0) return
@@ -692,8 +719,12 @@
         const range = selection.getRangeAt(0)
         let content1 = range.cloneContents()
         let node1 = document.createElement("span") //단지 innerHTML에 담기 위해 생성하는 것임
-        node1.append(content1)
-        let str = node1.innerHTML //console.log(node1.innerHTML+"@@@"+node1.outerHTML)
+        node1.append(content1) //console.log("@@@"+node1.outerHTML)
+        //let html= '<span maker="hushsbay" style="font-weight: bold;"></span><span maker="hushsbay" style="font-weight: bold;"><span maker="hushsbay" style="">구</span><span maker="hushsbay" style="font-weight: normal;"><span maker="hushsbay" style=""></span><span maker="hushsbay" style="font-weight: bold;"><span maker="hushsbay" style="">름에</span> "달 <span>가</span><span maker="hushsbay" style=""><span>듯</span></span><span maker="hushsbay" style=""><span maker="hushsbay" style=""><span>이</span>" </span></span></span><span maker="hushsbay" style="font-weight: bold;"><span maker="hushsbay" style="">가는 <span maker="hushsbay" style="">나그네</span></span><span maker="hushsbay" style=""></span><br><span maker="hushsbay" style="font-weight: normal;">술익는 <span maker="hushsbay" style="">마</span><span maker="hushsbay" style=""><span maker="hushsbay" style="">을마다 </span><span style="color:red;">타는 저녁놀</span> <span maker="hushsbay" style="">하하</span></span></span><span maker="hushsbay" style=""><span maker="hushsbay" style=""></span></span></span><span maker="hushsbay" style=""><span maker="hushsbay" style=""></span></span></span><span maker="hushsbay" style="font-weight: normal;"><span maker="hushsbay" style=""></span></span><span maker="hushsbay" style=""></span></span><span maker="hushsbay" style="font-weight: bold;"></span>'
+        //node1.innerHTML = html //console.log("@@@"+node1.innerHTML)
+        let delArr = []
+        cleanGabageNode(node1) //console.log("@@@@@@@"+node1.innerHTML)
+        let str = node1.innerHTML
         const strInnerText = node1.innerText
         //위 cloneContents()와 innerHTML로 처리된 str에서는 맨 앞과 맨뒤는 엘레멘트노드가 아닌 항상 텍스트노드임
         //또한, 사용자가 시작태그 또는 종료태그만 있도록 선택해도 자동으로 앞뒤 태그가 붙어서 문제없이 처리 가능함
@@ -706,28 +737,9 @@
         let container = range.commonAncestorContainer //startContainer 및 endContainer를 가지는 최상위 노드를 리턴. text일 경우는 그 위 엘레먼트 노드를 구함
         if (container.nodeName == "#text") container = container.parentNode
         let currentNode = container //container와 currentNode 둘 다 필요하므로 분리
-        debugger
-        let bool = false        
-        while (currentNode && currentNode.id != 'msgContent') {
-            if (type == "B") {
-                if (currentNode.tagName == type || currentNode.tagName == "STRONG" || (currentNode.style && currentNode.style["font-weight"] === "bold")) {
-                    bool = true
-                    break
-                } else if (currentNode.style && currentNode.style["font-weight"] == "normal") {
-                    bool = false
-                    break
-                }
-            } else if (type == "S") {
-                if (currentNode.tagName == type || (currentNode.style && currentNode.style["text-decoration"] === "line-through")) {
-                    bool = true
-                    break
-                } else if (currentNode.style && currentNode.style["text-decoration"] == "none") {
-                    bool = false
-                    break
-                }
-            }
-            currentNode = currentNode.parentNode
-        } //아래부터는 currentNode가 없어야 함 (위에서 체크용으로만 쓰임). 아래는 container(바로 위 엘레먼트 노드)임을 유의
+        //debugger
+        const bool = chkCurTagType(currentNode, type)
+        //아래부터는 currentNode가 없어야 함 (위에서 체크용으로만 쓰임). 아래는 container(바로 위 엘레먼트 노드)임을 유의
         //RegExp.$n deprecated. 배열[0]는 매칭 결과 전체 //const rs = exp.exec(str) //if (rs != null) str = str.replace(rs[1], "span")
         str = str.replace(exp01, "<span>")
         str = str.replace(exp02, "<span ")
@@ -735,15 +747,16 @@
         str = str.replace(exp2, "") //font-weight:~ 제거 //const rs2 = exp2.exec(str) //if (rs2 != null) str = str.replace(rs2[0], "") //rs2[0]는 전체이므로 바로 replace 가능
         const containerInnerText = container.innerText.replace(/\n/g, "") //예) 구름에 \"달 가듯이\" 가는 나그네\n술익는 마을마다 타는 저녁놀 하하 => \n 제거
         //containerInnerText가 strInnerText와 다른데 바로 아래 if를 타면 containerInnerText 모든 문장이 영향을 받는 것임
-        debugger
+        //debugger
         if (strInnerText == containerInnerText && container.outerHTML.startsWith("<span maker=\"hushsbay\"")) {
-            //maker="hushsbay" 태그에는 다른 속성이나 여기에서 다루는 style말고는 없음
-            //그러나, 다른 태그의 속성이나 스타일은 추가로 있을 수 있으므로 다루기가 까다로울 것임
+            //maker="hushsbay" 태그에는 다른 속성이나 여기에서 다루는 style말고는 없음. 그러나, 다른 태그의 속성이나 스타일은 추가로 있을 수 있으므로 다루기가 까다로울 것임
+            cleanGabageNode(container) //console.log("@@@@@@@"+container.innerHTML)
             if (type == "B") {
                 container.style["font-weight"] = (bool) ? "normal" : "bold"
             } else if (type == "S") {
                 container.style["text-decoration"] = (bool) ? "none" : "line-through"
             }
+            container.innerHTML = container.innerHTML.replace(exp2, "") //전체를 적용하는 것이므로 없애도 될 것임
         } else {
             //RegExp.$n deprecated. 배열[0]는 매칭 결과 전체 //const rs = exp.exec(str) //if (rs != null) str = str.replace(rs[1], "span")
             /*str = str.replace(exp01, "<span>")
@@ -1049,6 +1062,26 @@
             } else if (tag == "S") {
             }
             currentNode = currentNode.parentNode		
+        }
+        return false
+    }
+
+    function chkCurTagType(currentNode, type) {
+        while (currentNode && currentNode.id != 'msgContent') {
+            if (type == "B") {
+                if (currentNode.tagName == type || currentNode.tagName == "STRONG" || (currentNode.style && currentNode.style["font-weight"] === "bold")) {
+                    return true
+                } else if (currentNode.style && currentNode.style["font-weight"] && currentNode.style["font-weight"] != "bold") {
+                    return false
+                }
+            } else if (type == "S") {
+                if (currentNode.tagName == type || (currentNode.style && currentNode.style["text-decoration"] === "line-through")) {
+                    return true
+                } else if (currentNode.style && currentNode.style["text-decoration"] && currentNode.style["text-decoration"] != "text-decoration") {
+                    return false
+                }
+            }
+            currentNode = currentNode.parentNode
         }
         return false
     }
