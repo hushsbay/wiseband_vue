@@ -717,6 +717,7 @@
             exp2 = /(text-decoration)([\s:]+)([a-z0-9]+)([;]?)/gi //text-decoration:  line-through..
         }
         const range = selection.getRangeAt(0)
+        debugger
         let content1 = range.cloneContents()
         let node1 = document.createElement("span") //단지 innerHTML에 담기 위해 생성하는 것임
         node1.append(content1) //console.log("@@@"+node1.outerHTML)
@@ -725,6 +726,7 @@
         let delArr = []
         cleanGabageNode(node1) //console.log("@@@@@@@"+node1.innerHTML)
         let str = node1.innerHTML
+        if (str == "") str = "&nbsp"
         const strInnerText = node1.innerText
         //위 cloneContents()와 innerHTML로 처리된 str에서는 맨 앞과 맨뒤는 엘레멘트노드가 아닌 항상 텍스트노드임
         //또한, 사용자가 시작태그 또는 종료태그만 있도록 선택해도 자동으로 앞뒤 태그가 붙어서 문제없이 처리 가능함
@@ -758,11 +760,6 @@
             }
             container.innerHTML = container.innerHTML.replace(exp2, "") //전체를 적용하는 것이므로 없애도 될 것임
         } else {
-            //RegExp.$n deprecated. 배열[0]는 매칭 결과 전체 //const rs = exp.exec(str) //if (rs != null) str = str.replace(rs[1], "span")
-            /*str = str.replace(exp01, "<span>")
-            str = str.replace(exp02, "<span ")
-            str = str.replace(exp1, "</span>") //맨 뒤에 있어 앞의 text가 검색될 수도 있으므로 전체(rs1[0]) 변경 필요 //const rs1 = exp1.exec(str) //if (rs1 != null) str = str.replace(rs1[0], "</span>")
-            str = str.replace(exp2, "")*/ //font-weight:~ 제거 //const rs2 = exp2.exec(str) //if (rs2 != null) str = str.replace(rs2[0], "") //rs2[0]는 전체이므로 바로 replace 가능
             range.deleteContents()
             let node = document.createElement("span")
             node.innerHTML = str
