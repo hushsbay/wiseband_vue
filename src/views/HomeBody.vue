@@ -583,10 +583,14 @@
 
     function addEmoti() {
         const exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' >
+        const exp01 = /<(strong|b)>/gi
+        const exp02 = /<(strong|b)[\s]/gi
         const exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
-        const exp2 = /(font-weight)([\s:]+)(bold)/gi //font-weight:  bold
-        const str = "<B style='color:red'><span style='font-weight: bold'>aaa</SPAN></B >"
+        const exp2 = /(font-weight)([\s:]+)([a-z0-9]+)([;]?)/gi //font-weight:  bold..
+        const str = "<B>style='color:red'><span style='font-weight: normal;; ;'>a<Br>aa</SPAN><B >"
         const rs = exp.exec(str) //str.match(exp)
+        const rs01 = exp01.exec(str)
+        const rs02 = exp02.exec(str)
         const rs1 = exp1.exec(str)
         const rs2 = exp2.exec(str)
         debugger
@@ -615,6 +619,7 @@
         let exp, exp1, exp2
         if (type == "B") {
             exp = /<(strong|b)([^>rR]+)*>/gi //<strong이나 <b로 시작해서 >과 BR의 R 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
+            exp01 = /<(strong|b)([^>rR]+)*>/gi
             exp1 = /<\/(strong|b)>/gi //</strong>이나 </b>
             exp2 = /(font-weight)([\s:]+)(bold)/gi
         } else if (type == "S") { //Strike
@@ -672,40 +677,66 @@
         if (!chkEditorFocus()) return
         let selection = window.getSelection()
         if (selection.rangeCount == 0) return
-        let exp, exp1, exp2
-        if (type == "B") {
-            exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' >
+        let exp01, exp02, exp1, exp2
+        if (type == "B") { //exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' > => .exec 사용시
+            exp01 = /<(strong|b)>/gi
+            exp02 = /<(strong|b)[\s]/gi
             exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
-            exp2 = /(font-weight)([\s:]+)(bold)/gi //font-weight:  bold
-        } else if (type == "S") { //Strike
-            exp = /<(s)((>)|([\s]+)([^>]+)*>)/gi //<s> <s  style='' >
+            exp2 = /(font-weight)([\s:]+)([a-z0-9]+)([;]?)/gi //font-weight: bold;..
+        } else if (type == "S") { //Strike //exp = /<(s)((>)|([\s]+)([^>]+)*>)/gi //<s> <s  style='' > => .exec 사용시
+            exp01 = /<(s)>/gi
+            exp02 = /<(s)[\s]/gi
             exp1 = /<\/(s)([\s]+)*>/gi //</s> </s >
-            exp2 = /(text-decoration)([\s:]+)(line-through)/gi //text-decoration:  line-through
+            exp2 = /(text-decoration)([\s:]+)([a-z0-9]+)([;]?)/gi //text-decoration:  line-through..
         }
         const range = selection.getRangeAt(0)
         let content1 = range.cloneContents()
         let node1 = document.createElement("span") //단지 innerHTML에 담기 위해 생성하는 것임
         node1.append(content1)
         let str = node1.innerHTML //console.log(node1.innerHTML+"@@@"+node1.outerHTML)
+        const strInnerText = node1.innerText
         //위 cloneContents()와 innerHTML로 처리된 str에서는 맨 앞과 맨뒤는 엘레멘트노드가 아닌 항상 텍스트노드임
         //또한, 사용자가 시작태그 또는 종료태그만 있도록 선택해도 자동으로 앞뒤 태그가 붙어서 문제없이 처리 가능함
-        //1) 볼드체 판단 : range.commonAncestorContainer가 B, Strong, font-weight:bold(bold대신숫자는무시)이면 볼드체로 보기로 함
+        //1) 볼드체 판단 : range.commonAncestorContainer를 시작으로 msgContent 전까지 B, Strong, font-weight:bold(bold대신숫자는무시) 체크해 define
         //2) 볼드체 처리 : 추가하든 빼든, 일단 str 안에 있는 모든 볼드체 관련은 span/font-weight:bold로 변환후 (str: 텍스트 or 엘레먼트)
         //- 볼드체를 추가하려면 <span style='font-weight:bold'> + str + </span>으로 변환함
         //- 볼드체를 빼려면 <span style='font-weight:normal'> + str + </span>으로 변환함
         //위가 아닌 다른 방식(예를 들어 chkSelectionInTagFailed - focusNode)으로 처리하려면 경우의 수가 너무 많아 100% 구현이 어려울 것임
         //참고로, wordStyleFailed()와 chkSelectionInTagFailed()는 실패했어도 참고할 만한 코딩이 많으므로 지우지 말기로 함
-        let container = range.commonAncestorContainer //text일 수도 있음
+        let container = range.commonAncestorContainer //startContainer 및 endContainer를 가지는 최상위 노드를 리턴. text일 경우는 그 위 엘레먼트 노드를 구함
         if (container.nodeName == "#text") container = container.parentNode
-        let bool = false
-        if (type == "B") {
-            if (container.tagName == type || container.tagName == "STRONG" || 
-                (container.style && container.style["font-weight"] === "bold")) bool = true
-        } else if (type == "S") {
-            if (container.tagName == type || 
-                (container.style && container.style["text-decoration"] === "line-through")) bool = true
-        }
-        if (container.outerHTML.startsWith("<span maker=\"hushsbay\"")) {
+        let currentNode = container //container와 currentNode 둘 다 필요하므로 분리
+        debugger
+        let bool = false        
+        while (currentNode && currentNode.id != 'msgContent') {
+            if (type == "B") {
+                if (currentNode.tagName == type || currentNode.tagName == "STRONG" || (currentNode.style && currentNode.style["font-weight"] === "bold")) {
+                    bool = true
+                    break
+                } else if (currentNode.style && currentNode.style["font-weight"] == "normal") {
+                    bool = false
+                    break
+                }
+            } else if (type == "S") {
+                if (currentNode.tagName == type || (currentNode.style && currentNode.style["text-decoration"] === "line-through")) {
+                    bool = true
+                    break
+                } else if (currentNode.style && currentNode.style["text-decoration"] == "none") {
+                    bool = false
+                    break
+                }
+            }
+            currentNode = currentNode.parentNode
+        } //아래부터는 currentNode가 없어야 함 (위에서 체크용으로만 쓰임). 아래는 container(바로 위 엘레먼트 노드)임을 유의
+        //RegExp.$n deprecated. 배열[0]는 매칭 결과 전체 //const rs = exp.exec(str) //if (rs != null) str = str.replace(rs[1], "span")
+        str = str.replace(exp01, "<span>")
+        str = str.replace(exp02, "<span ")
+        str = str.replace(exp1, "</span>") //맨 뒤에 있어 앞의 text가 검색될 수도 있으므로 전체(rs1[0]) 변경 필요 //const rs1 = exp1.exec(str) //if (rs1 != null) str = str.replace(rs1[0], "</span>")
+        str = str.replace(exp2, "") //font-weight:~ 제거 //const rs2 = exp2.exec(str) //if (rs2 != null) str = str.replace(rs2[0], "") //rs2[0]는 전체이므로 바로 replace 가능
+        const containerInnerText = container.innerText.replace(/\n/g, "") //예) 구름에 \"달 가듯이\" 가는 나그네\n술익는 마을마다 타는 저녁놀 하하 => \n 제거
+        //containerInnerText가 strInnerText와 다른데 바로 아래 if를 타면 containerInnerText 모든 문장이 영향을 받는 것임
+        debugger
+        if (strInnerText == containerInnerText && container.outerHTML.startsWith("<span maker=\"hushsbay\"")) {
             //maker="hushsbay" 태그에는 다른 속성이나 여기에서 다루는 style말고는 없음
             //그러나, 다른 태그의 속성이나 스타일은 추가로 있을 수 있으므로 다루기가 까다로울 것임
             if (type == "B") {
@@ -714,12 +745,11 @@
                 container.style["text-decoration"] = (bool) ? "none" : "line-through"
             }
         } else {
-            const rs = exp.exec(str) //RegExp.$n deprecated 배열[0]는 매칭 결과 전체
-            if (rs != null) str = str.replace(rs[1], "span") //맨 앞에 있으므로 문제없으나
-            const rs1 = exp1.exec(str)
-            if (rs1 != null) str = str.replace(rs1[0], "</span>") //맨 뒤에 있으므로 앞의 text가 검색될 수도 있으므로 전체 변경 필요
-            const rs2 = exp2.exec(str)    
-            if (rs2 != null) str = str.replace(rs2[0], "") //font-weight:normal로 변환 대신 제거
+            //RegExp.$n deprecated. 배열[0]는 매칭 결과 전체 //const rs = exp.exec(str) //if (rs != null) str = str.replace(rs[1], "span")
+            /*str = str.replace(exp01, "<span>")
+            str = str.replace(exp02, "<span ")
+            str = str.replace(exp1, "</span>") //맨 뒤에 있어 앞의 text가 검색될 수도 있으므로 전체(rs1[0]) 변경 필요 //const rs1 = exp1.exec(str) //if (rs1 != null) str = str.replace(rs1[0], "</span>")
+            str = str.replace(exp2, "")*/ //font-weight:~ 제거 //const rs2 = exp2.exec(str) //if (rs2 != null) str = str.replace(rs2[0], "") //rs2[0]는 전체이므로 바로 replace 가능
             range.deleteContents()
             let node = document.createElement("span")
             node.innerHTML = str
