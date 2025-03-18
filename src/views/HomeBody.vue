@@ -555,7 +555,19 @@
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
         try { //파일,이미지,링크가 있다면 미리 업로드된 상태이며 crud가 C일 때만 업로드 되며 U일 때는 슬랙과 동일하게 업로드되지 않음 (본문만 수정저장됨)
-            msgbody.value = document.getElementById('msgContent').innerHTML //이 행이 없으면 발송 2회차부터 msgbody가 계속 본문에 남아 있음
+            let body = document.getElementById('msgContent').innerHTML
+            const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/
+            const result = reg.exec(body)
+            if (result != null) {
+                let node = document.createElement('a')
+                node.setAttribute("href", result[0])
+                node.setAttribute("target", "_blank")
+                node.style.color = "steelblue"
+                node.append(result[0])
+                body = body.replace(result[0], node.outerHTML)
+                node.remove()
+            }
+            msgbody.value = body //document.getElementById('msgContent').innerHTML //이 행이 없으면 발송 2회차부터 msgbody가 계속 본문에 남아 있음
             let crud = (editMsgId.value) ? "U" : "C"
             const rq = { 
                 crud: crud, chanid: gst.selChanId, msgid: editMsgId.value, body: msgbody.value, //document.getElementById('msgContent').innerHTML,
@@ -623,6 +635,14 @@
     }
 
     function addEmoti() {
+        const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
+        const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
+        const text1 = "https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection?aaa=가나다"
+        const res = reg.exec(text)
+        const res1 = reg.exec(text1)
+        debugger
+        return
+
         const exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' >
         const exp01 = /<(strong|b)>/gi
         const exp02 = /<(strong|b)[\s]/gi
