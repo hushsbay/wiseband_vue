@@ -85,7 +85,8 @@
         try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의 //console.log("########homebody.vue")
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
-            await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt })  
+            //await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt })  
+            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
             inEditor.value.focus()
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -129,16 +130,19 @@
     }
 
     async function qryPrev() {
-        await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt }) //Endless Scrolling
+        //await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt }) //Endless Scrolling
+        await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //Endless Scrolling
     }
 
-    //grid, chanid, lastMsgMstCdt는 기본 param
+    //grid, chanid는 기본 param
     //1) lastMsgMstCdt : Endless Scrolling 관련
     //2) firstMsgMstCdt : 메시지 작성후 화면 맨 아래에 방금 작성한 메시지 추가할 때 사용
-    async function getList(param) {
+    async function getList(addedParam) {
         if (onGoingGetList) return
         try {
             onGoingGetList = true
+            let param = { grid: gst.selGrId, chanid: gst.selChanId } //기본 param
+            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt //lastMsgMstCdt와 공존하면 안됨
             let idTop
@@ -285,6 +289,35 @@
         }
     }
 
+    async function getMsg(addedParam, verbose) {
+        try {
+            let param = { chanid: gst.selChanId } //기본 param
+            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+            const res = await axios.post("/chanmsg/qryMsg", param)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) {
+                if (verbose) gst.util.setToast(rs.msg)
+                return null
+            }
+            return rs.data
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function qryAction(addedParam) {
+        try {
+            let param = { chanid: gst.selChanId } //기본 param
+            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+            const res = await axios.post("/chanmsg/qryAction", param)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return null
+            return rs.data
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
     function memProfile(e, row) {
         //alert(JSON.stringify(row))
         gst.ctx.data.header = row.AUTHORNM
@@ -358,8 +391,8 @@
                 editMsgId.value = row.MSGID
                 prevEditData = document.getElementById('msgContent').innerHTML
                 if (prevEditData.trim() != "") {
-                    gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
-                    return
+                    //gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
+                    //return
                 }
                 msgbody.value = row.BODY
             }},
@@ -534,11 +567,19 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             if (crud == "C") {
-                await getList({ grid: gst.selGrId, chanid: gst.selChanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
-            } else {
+                //await getList({ grid: gst.selGrId, chanid: gst.selChanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
+                await getList({ firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
+            } else { //아래 막은 것은 getMsg()를 사용하지 않는 방법인데 나중에 어차피 다른 사용자화면에 실시간반영을 위해서는 소켓으로 통보받도록 하고 getMsg()를 써야 할 것임
+                //const item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
+                //item.BODY = msgbody.value
+                //item.UDT = rs.data.udt
+                const rs = await getMsg({ msgid: editMsgId.value }, true)
+                if (rs == null) return
                 const item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
-                item.BODY = msgbody.value
-                item.UDT = rs.data.udt
+                if (item) {
+                    item.BODY = rs.msgmst.BODY
+                    item.UDT = rs.msgmst.UDT
+                }
             }
             msgbody.value = ""            
             editMsgId.value = null
@@ -905,8 +946,12 @@
         try {
             const rq = { chanid: gst.selChanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
-            const rs = gst.util.chkAxiosCode(res.data)
+            let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
+            if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
+            const item = msglist.value.find(function(row) { return row.MSGID == msgid })
+            if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1137,7 +1182,7 @@
                     </div>
                     <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>                    
                 </div>
-                <div v-if="row.UDT" style="margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
+                <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
