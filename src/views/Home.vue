@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, watch } from 'vue' 
+    import { ref, onMounted, onActivated, onDeactivated, watch } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -34,6 +34,11 @@
         }
     })
 
+    onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 //onDeactivated(() => { //DOM에서 제거되고 캐시로 전환될 때 또는 마운트 해제될 때마다 호출
+        console.log("Home==> "+gst.selGrId+" ^^^^^^^^^^"+gst.selChanId+" ^^^^^^^^^^"+gst.selMsgId)
+        loopListChan(gst.selGrId, gst.selChanId)
+    })
+
     watch(kind, async () => { //gst.xxx일 경우 () => gst.xxx로 처리해야 동작
         localStorage.wiseband_lastsel_kind = kind.value
         await getList() 
@@ -44,10 +49,10 @@
         displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
     })
 
-    watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
-        //console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue")
-        loopListChan(gst.selGrId, gst.selChanId)
-    })
+    // watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
+    //     console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue") //console.log(route.fullPath+"@@@@@@@main.vue")
+    //     loopListChan(gst.selGrId, gst.selChanId)
+    // }) ##87 지우지 말 것 : selSideMenuTimeTag 대신 onActivated() 사용해 해결 - keepalive인 경우임
 
     function loopListChan(grid, chanid) {
         try {

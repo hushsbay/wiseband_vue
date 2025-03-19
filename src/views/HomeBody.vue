@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
     import { useRoute } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
@@ -13,6 +13,10 @@
     const gst = GeneralStore()
     const route = useRoute()
 
+    //현재 Back() 또는 원래 열렸던 노드 클릭시 keepalive를 이용해 첫 데이터로 돌아가지 않고는 있으나 스크롤이 맨 위로 올라가버림 => 원래 있었던 위치에 있어야 함
+    //https://stackoverflow.com/questions/75584410/how-to-maintain-scroll-position-in-a-division-after-a-division-is-redisplayed-in
+    //https://medium.com/chekiprice/caching-routes-in-vuejs-using-keep-alive-advanced-guide-e399839f2673
+
     let thread = ref({ msgid: null })
 
     const scrollArea = ref(null)
@@ -22,7 +26,7 @@
     
     const MAX_PICTURE_CNT = 11
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
-    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
+    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), msgidInChan = ref('')
     let msglist = ref([])
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
     let msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
@@ -90,6 +94,16 @@
             inEditor.value.focus()
         } catch (ex) {
             gst.util.showEx(ex, true)
+        }
+    })
+
+    onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 //onDeactivated(() => { //DOM에서 제거되고 캐시로 전환될 때 또는 마운트 해제될 때마다 호출
+        console.log("HomeBody==> "+gst.selGrId+" ^^^^^^^^^^"+gst.selChanId+" ^^^^^^^^^^"+gst.selMsgId)
+        if (gst.selMsgId) {
+            console.log("HomeBody1==> "+gst.selGrId+" ^^^^^^^^^^"+gst.selChanId+" ^^^^^^^^^^"+gst.selMsgId)
+            msgidInChan.value = gst.selMsgId
+            gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
+            await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //임시 -> 메시지 하나 전후로 가져와서 보여 주는 UI 필요
         }
     })
 
@@ -430,7 +444,7 @@
             //처음엔 sTop < 250 정도로 했으나 debound로도 안먹히고 두번 실행될 때가 있어서 일단 안전하게 sTop == 0으로 처리함
             await qryPrev()
         }
-    }, 500)
+    }, 100) //500
 
     const getTopMsgBody = () => { //2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
         const rect = hush.util.getRect("#chan_center_body")
@@ -635,6 +649,12 @@
     }
 
     function addEmoti() {
+        debugger
+        setTimeout(function() {
+            const ele = document.getElementById("chan_center_body")
+            ele.scrollTo({ top: 100 })
+        }, 2000)
+        return
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
         const text1 = "https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection?aaa=가나다"

@@ -10,7 +10,7 @@ const GeneralStore = defineStore('General', () => {
     const router = useRouter()
     const $cookie = inject('$cookies')
 
-    let selSideMenu = ref(""), selSideMenuTimeTag = ref(""), selChanId = ref(''), selGrId = ref('')
+    let selSideMenu = ref(""), selChanId = ref(''), selGrId = ref(''), selMsgId = '' //selSideMenuTimeTag = ref("") ##87
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
 
@@ -428,7 +428,7 @@ const GeneralStore = defineStore('General', () => {
 
     return { 
         isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, 
-        selSideMenu, selSideMenuTimeTag, selChanId, selGrId, snackBar, toast, 
+        selSideMenu, selChanId, selGrId, selMsgId, snackBar, toast, //selSideMenuTimeTag ##87
         auth, cons, ctx, doc, html, list, util
     }
 

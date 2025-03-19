@@ -28,7 +28,8 @@
     
     onMounted(async () => { //한번만 수행되고 Back()을 해도 여길 다시 실행하는 것은 최초 로드말고는 없음
         try {
-            document.title = "WiSEBand 메인" //console.log(route.fullPath+"@@@@@@@main.vue")
+            document.title = "WiSEBand 메인" 
+            console.log(route.fullPath+"@@@@@@@main.vue")
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return    
