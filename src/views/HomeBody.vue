@@ -35,7 +35,7 @@
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
-    let savFirstMsgMstCdt = "", savLastMsgMstCdt = "9999-99-99"
+    let savFirstMsgMstCdt = "", savLastMsgMstCdt = gst.cons.cdtAtFirst //"9999-99-99"
     let onGoingGetList = false, prevScrollY
     
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -91,7 +91,7 @@
         try {
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
-            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+            await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //EndlessScroll : lastMsgMstCdt 조건으로 조회하는 것이 일반적임
             inEditor.value.focus()
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -144,24 +144,24 @@
     }
 
     async function qryPrev() {
-        await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //Endless Scrolling
+        await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //EndlessScroll : lastMsgMstCdt 조건으로 조회하는 것이 일반적임
     }
 
     //grid, chanid는 기본 param
-    //1) lastMsgMstCdt : Endless Scrolling 관련
-    //2) firstMsgMstCdt : 메시지 작성후 화면 맨 아래에 방금 작성한 메시지 추가할 때 사용
+    //1) lastMsgMstCdt : EndlessScroll 관련
+    //2) firstMsgMstCdt : 메시지 발송후 화면 맨 아래에 방금 작성한 메시지 추가할 때 사용 (향후 소켓 적용시 수신자 입장에서도 이 조건을 써서 화면에서 아직 받지않은 메시지를 가져올 수 있음)
     async function getList(addedParam) {
         if (onGoingGetList) return
         try {
             onGoingGetList = true
             let param = { grid: gst.selGrId, chanid: gst.selChanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            const lastMsgMstCdt = param.lastMsgMstCdt
+            const lastMsgMstCdt = param.lastMsgMstCdt //firstMsgMstCdt와 공존하면 안됨
             const firstMsgMstCdt = param.firstMsgMstCdt //lastMsgMstCdt와 공존하면 안됨
             let idTop
             if (lastMsgMstCdt && lastMsgMstCdt != gst.cons.cdtAtFirst) {
-                const eleTop = getTopMsgBody() //1) 경우에 데이터 가져와서 뿌린 후 그 이전 위치로 가기 위해 저장한 것임
-                idTop = eleTop.id
+                const eleTop = getTopMsgBody() //1) 케이스임 : 이전 데이터를 가져와 뿌린 후에 이젠에 육안으로 맨위에 보였던 idTop이 이젠 안보일테니 
+                idTop = eleTop.id //idTop이 맨위에 보이게 스크롤하기 위해 여기서 기억하고 아래에서 처리함
             }
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data)
