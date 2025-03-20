@@ -36,7 +36,7 @@
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = "", savLastMsgMstCdt = gst.cons.cdtAtFirst //"9999-99-99"
-    let onGoingGetList = false, prevScrollY
+    let onGoingGetList = false, prevScrollY, prevScrollHeight
     
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -169,11 +169,11 @@
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt //firstMsgMstCdt와 공존하면 안됨
             const firstMsgMstCdt = param.firstMsgMstCdt //lastMsgMstCdt와 공존하면 안됨
-            let idTop
-            if (lastMsgMstCdt && lastMsgMstCdt != gst.cons.cdtAtFirst) {
-                const eleTop = getTopMsgBody() //1) 케이스임 : 이전 데이터를 가져와 뿌린 후에 이젠에 육안으로 맨위에 보였던 idTop이 이젠 안보일테니 
-                idTop = eleTop.id //idTop이 맨위에 보이게 스크롤하기 위해 여기서 기억하고 아래에서 처리함
-            }
+            //let idTop //$$50 참조 (막았지만 코딩 지우지 말기 - 향후 쓰임새가 있는 내용임)
+            //if (lastMsgMstCdt && lastMsgMstCdt != gst.cons.cdtAtFirst) {
+            //    const eleTop = getTopMsgBody() //1) 케이스임 : 이전 데이터를 가져와 뿌린 후에 이젠에 육안으로 맨위에 보였던 idTop이 이젠 안보일테니 
+            //    idTop = eleTop.id //idTop이 맨위에 보이게 스크롤하기 위해 여기서 기억하고 아래에서 처리함
+            //}
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
@@ -302,8 +302,13 @@
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else {
                 if (msgArr.length > 0) {
-                    const ele = document.getElementById(idTop) //데이터를 더 읽어와 추가했으므로 scrollHeight는 더 커진 상태이므로 이전에 봤던 ele를 기준으로 위치 설정함
-                    if (ele) scrollArea.value.scrollTo({ top: ele.offsetTop - ele.offsetHeight - 10}) //10은 마진/패딩 등 알파값 
+                    //const ele = document.getElementById(idTop) //데이터를 더 읽어와 추가했으므로 scrollHeight는 더 커진 상태이므로 이전에 봤던 ele를 기준으로 위치 설정함
+                    //if (ele) scrollArea.value.scrollTo({ top: ele.offsetTop - ele.offsetHeight - 10}) //10은 마진/패딩 등 알파값
+                    //$$50 처음엔 위 2행으로 idTop을 기억해 처리했으나 생각해보니, 굳이 그럴 필요없이.. 
+                    //스크롤이전에 prevScrollY + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop을 구하면 됨
+                    scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
+                } else {
+                    scrollArea.value.scrollTop = prevScrollY
                 }
             }
             onGoingGetList = false            
@@ -445,16 +450,16 @@
         row.hover = false
     }
 
-    const onScrollEnd = debounce(async (e) => { //2) 관련
+    const onScrollEnd = async (e) => { //debounce(async (e) => { //처음엔 debounce가 필요할 거 같았는데 적용해보니 필요없음
         const sTop = scrollArea.value.scrollTop //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight)
         const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down"
-        prevScrollY = sTop //console.log(sTop+"@@@@@@@@@@@"+which)
-        if (which == "up" && sTop < 100) { 
-            //0으로 조건을 걸면 up 체크할 필요없지만 일단 그냥 두기로 함 (debounce도 필요없어 보임)
-            //처음엔 sTop < 250 정도로 했으나 debound로도 안먹히고 두번 실행될 때가 있어서 일단 안전하게 sTop == 0으로 처리함
-            await qryPrev()
+        prevScrollY = sTop
+        const chkPoint = scrollArea.value.scrollHeight / 2
+        if (which == "up" && sTop < chkPoint) { //스크롤이 위 방향으로 절반(이하)에 오게 되면 실행
+            prevScrollHeight = scrollArea.value.scrollHeight
+            await qryPrev() //console.log(sTop+"@@@@@@@@@@@"+which)
         }
-    }, 100) //500
+    } //, 100)
 
     const getTopMsgBody = () => { //2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
         const rect = hush.util.getRect("#chan_center_body")
