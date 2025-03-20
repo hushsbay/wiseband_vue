@@ -13,14 +13,14 @@
     const LIGHT = "whitesmoke_", DARK = "violet_"
 
     let kind = ref('my'), listChan = ref([])
-
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //resizing 관련
-    let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')') //resizing 관련
-    let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0 //resizing 관련
+    //아래는 resizing 관련
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
+    let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
+    let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
-            document.title = "WiSEBand 홈"
+            document.title = "WiSEBand 홈" //다른 곳에서 title이 업데이트 될 것임
             gst.selSideMenu = "mnuHome" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 HomeBody.vue에 Balnk가 표시됨
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) kind.value = lastSelKind
@@ -34,18 +34,17 @@
         }
     })
 
-    onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 //onDeactivated(() => { //DOM에서 제거되고 캐시로 전환될 때 또는 마운트 해제될 때마다 호출
-        console.log("Home==> "+gst.selGrId+" ^^^^^^^^^^"+gst.selChanId+" ^^^^^^^^^^"+gst.selMsgId)
+    onActivated(async () => { //초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출
+        console.log("onActivated Home ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId)
         loopListChan(gst.selGrId, gst.selChanId)
     })
 
-    watch(kind, async () => { //gst.xxx일 경우 () => gst.xxx로 처리해야 동작
+    watch(kind, async () => { //gst.xxx일 경우 () => gst.xxx로 처리해야 동작함
         localStorage.wiseband_lastsel_kind = kind.value
         await getList() 
     })
 
     watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
-        //console.log(gst.selChanId + " == gst.selChanId########watch in home.vue")
         displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
     })
 
@@ -76,7 +75,7 @@
 
     async function getList() {
         try {            
-            const res = await axios.post("/menu/qryChan", { kind : kind.value })
+            const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             listChan.value = rs.list
@@ -141,7 +140,7 @@
                 procChanRowImg(row)
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID //console.log("router.push:" + row.CHANNM)
-                router.push({ name : 'home_body', params : { chanid: row.CHANID, grid: row.GR_ID }}) //path와 param는 같이 사용 X (name 이용)
+                router.push({ name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }}) //path와 param는 같이 사용 X (name 이용)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -182,7 +181,6 @@
         gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
         if (!row.CHANID) {            
             gst.ctx.menu = [
-                { nm: "사용자 초대" },
                 { nm: "채널 생성" },
                 { nm: "환경 설정" }
             ]
@@ -191,32 +189,33 @@
                 { nm: "채널정보 보기", func: function(item, idx) {
                     
                 }},
+                { nm: "즐겨찾기" },
+                { nm: "사용자 초대" },
                 { nm: "복사", img: DARK + "other.png", child: [
                     { nm: "채널 복사", func: function(item, idx) { 
                         
                     }},
                     { nm: "링크 복사" }
-                ]},
-                { nm: "즐겨찾기" },
+                ]},                
                 { nm: "채널 나가기", color: "red" }
             ]            
         }
         gst.ctx.show(e)
     }
 
-    function mouseEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+    function mouseEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         if (row.sel) return
         row.hover = true
-        procChanRowImg(row)
+        //procChanRowImg(row)
     }
 
-    function mouseLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+    function mouseLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
         if (row.sel) return
         row.hover = false
-        procChanRowImg(row)
+        //procChanRowImg(row)
     }
 
-    function procExpCol(type) { //모두필치기/모두접기
+    function procExpCol(type) { //모두필치기,모두접기
         const exploded = (type == "E") ? true : false
         for (let i = 0; i < listChan.value.length; i++) {
             listChan.value[i].exploded = exploded

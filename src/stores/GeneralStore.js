@@ -1,7 +1,6 @@
 import { ref, inject, nextTick } from "vue"
 import { useRouter } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
-import axios from 'axios' 
 
 import hush from '/src/stores/Common.js'
 
@@ -13,16 +12,7 @@ const GeneralStore = defineStore('General', () => {
     let selSideMenu = ref(""), selChanId = ref(''), selGrId = ref(''), selMsgId = '' //selSideMenuTimeTag = ref("") ##87
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
-
-    ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-    const paging = ref({ //서버에 전송되어야 할 파라미터(pageRq)는 curPage/rowPerPage 2개임
-        curPage : 1, rowPerPage : 20, pagePerNav : 5, totalRow : 0, totalPage : 0, curPageArr : [], savedPage : 0
-    }) //위 savedPage와 아래 scrollPosRecall 2개는 (목록과 디테일이 분리된 .vue일 경우) 목록에서 디테일 열고 작업후 닫고 나서 기존 페이지 찾아 기존 위치로 스크롤링하기 위한 용도임
     
-    const scrollPosRecall = { x : -1, y : -1 }
-    let listIndex = ref(-1), isDoc = ref(false), docId = ref(null), isRead = ref(false), isEdit = ref(false), isNew = ref(false)
-    ////////////////////////////////////////////////////////////////////////////////
-
     const auth = {
 
         setCookie : function(nm, val, persist) { //모든 쿠키는 main.js 설정에 따르고 여기서는 persist/session 쿠키여부만 결정함. persist는 모두 1년을 만기로 설정
@@ -106,26 +96,9 @@ const GeneralStore = defineStore('General', () => {
             this.on = true
         },
 
-        hide : function(e) { //Main.vue에서 @click시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
+        hide : function(e) { //maintainContextMenu : Main.vue에서 @click시 click해도 메뉴가 안닫히도록 해야 눈에 보일 것임
             if (e.srcElement.className.includes("maintainContextMenu")) return //우클릭이 아닌 click에서 처리시 바로 닫히면 안되게 함
             this.on = false
-            //아래는 에디터용 체크인데 문제가 많아서 막고 다른 방식(MiliSec차이)으로 체크하므로 아래 막음 (소스는 향후 참조용으로 지우지 말것)
-            //에디터내 <p>로 시작되면 srcElement이므로 이 경우는 parentElement로 올라가면서 에디터 있는지 체크
-            //글자를 선택후 마우스로 계속 끌어서 에디터 밖에서 놓으면 소스엘레멘트가 에디터가 아닌 놓아진 그 엘레멘트가 되므로 선택되었는지 체크 추가 필요
-            /*let ok = false, times = 10
-            let parentEle = e.srcElement.parentElement            
-            while (parentEle) { //loop로 맨 위까지 가면서 에디터 엘레먼트가 있는지 찾아 보기
-                if (parentEle.className.includes("maintainContextMenu")) {
-                    ok = true
-                    break
-                }
-                parentEle = parentEle.parentElement
-                times += -1
-                if (times <= 0) break //혹시 모를 무한루프 대비
-            }
-            if (ok) return            
-            editor.focused = false //HomeBody.vue에서 false 처리 (에디터내 selection/range 체크시에도 사용. selection/range에서 그 부모(에디터)를 인지하지 못해 여기서 maintainContextMenu으로 처리함)
-            console.log("hideReal")*/
         },
 
         proc : function(row, idx) {
@@ -135,186 +108,14 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const doc = { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-
-        open : function(strDocId, idx) {
-            docId.value = strDocId
-            isDoc.value = true
-            isRead.value = true
-            isEdit.value = false
-            isNew.value = false
-            listIndex.value = idx
-        },
-
-        edit : function(strDocId, idx) {
-            docId.value = strDocId
-            isDoc.value = true
-            isRead.value = false
-            isEdit.value = true
-            isNew.value = false
-            if (!hush.util.isvoid(idx)) listIndex.value = idx //목록에서도 openDoc하지 않고 바로 편집가능하게 editDoc()하는 가능성도 열어둬야 함
-        },
-
-        new : function() {
-            docId.value = null
-            isDoc.value = true
-            isRead.value = false
-            isEdit.value = false
-            isNew.value = true
-            listIndex.value = -1
-        },
-
-        onOpen : function(btn) {
-            if (btn && btn.value) {
-                if (btn.value.btn_edit) btn.value.btn_edit.hide = false
-                if (btn.value.btn_save) btn.value.btn_save.hide = true
-                if (btn.value.btn_delete) btn.value.btn_delete.hide = false
-            }
-        },
-
-        onEdit : function(btn) {
-            if (btn && btn.value) {
-                if (btn.value.btn_edit) btn.value.btn_edit.hide = true
-                if (btn.value.btn_save) btn.value.btn_save.hide = false
-                if (btn.value.btn_delete) btn.value.btn_delete.hide = true
-            }
-        },
-
-        onNew : function(btn) {
-            if (btn && btn.value) {
-                if (btn.value.btn_edit) btn.value.btn_edit.hide = true
-                if (btn.value.btn_save) btn.value.btn_save.hide = false
-                if (btn.value.btn_delete) btn.value.btn_delete.hide = true
-            }
-        },
-
-        close : function() {
-            docId.value = null
-            isDoc.value = false
-            isRead.value = false
-            isEdit.value = false
-            isNew.value = false
-            listIndex.value = -1
-        },
-
-        closeIfOpened : function() { //목록과 문서가 한몸일 때 문서인 경우 closeDoc()하면 문서는 초기화하고 hide하는 것으로 종료 (history.back 없음)
-            if (isDoc.value) {
-                doc.close()
-                return true
-            }
-            return false
-        }
-
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
-
     const html = {
 
         getImageUrl : function(strFile) { //<template>의 <img>에서 사용
-            return new URL('/src/assets/images/' + strFile, import.meta.url).href //예) import.meta.url => http://localhost:5173/src/views/PortalPage.vue?t=1730165570470
+            return new URL('/src/assets/images/' + strFile, import.meta.url).href //예) import.meta.url => http://localhost:5173/src/views/current.vue?t=1730165570470
         }
 
     }
     
-    const list = { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-
-        saveCurPage : function() {
-            const _paging = paging.value
-            _paging.savedPage = _paging.curPage
-        },
-        
-        setCurPage : function(toWhere) {
-            const _paging = paging.value
-            if (toWhere == 'first') {
-                if (_paging.curPage <= 1) return "첫 페이지입니다."
-                _paging.curPage = 1
-            } else if (toWhere == 'prev') {
-                if (_paging.curPage <= 1) return "첫 페이지입니다."
-                _paging.curPage = (_paging.curPage <= 1) ? 1 : parseInt(_paging.curPage) - 1
-            } else if (toWhere == 'next') {
-                if (_paging.curPage >= _paging.totalPage) return "마지막 페이지입니다."
-                _paging.curPage = (_paging.curPage >= _paging.totalPage) ? _paging.totalPage : parseInt(_paging.curPage) + 1
-            } else if (toWhere == 'last') {
-                if (_paging.curPage >= _paging.totalPage) return "마지막 페이지입니다."
-                _paging.curPage = _paging.totalPage
-            } else if (toWhere == 'prevSet') { //일반적인 UI에서는 잘 사용하지 않으나 사용자 요청이 있을 경우 쓰기로 함
-                if (_paging.curPageArr[0] <= 1) return "첫 페이지셋입니다."
-                _paging.curPage = (_paging.curPageArr[0] <= 1) ? _paging.curPageArr[0] : _paging.curPageArr[0] - parseInt(_paging.pagePerNav)
-            } else if (toWhere == 'nextSet') { //일반적인 UI에서는 잘 사용하지 않으나 사용자 요청이 있을 경우 쓰기로 함
-                if (_paging.curPageArr[0] + parseInt(_paging.pagePerNav) > _paging.totalPage) return "마지막 페이지셋입니다."
-                _paging.curPage = (_paging.curPageArr[0] + parseInt(_paging.pagePerNav) > _paging.totalPage) ? _paging.curPageArr[0] : _paging.curPageArr[0] + parseInt(_paging.pagePerNav)
-            } else {
-                _paging.curPage = toWhere
-            }
-            return ""
-        }, 
-        
-        setPageNav : function(totalRow) { //서버로부터 totalRow를 응답받아서 페이지 네비게이션을 만들어냄
-            const _paging = paging.value
-            _paging.totalRow = totalRow
-            _paging.totalPage = (typeof totalRow == "undefined" || totalRow == 0) ? 0 : Math.ceil(totalRow / _paging.rowPerPage)    
-            const pageStart = parseInt(_paging.pagePerNav) * (Math.ceil(parseInt(_paging.curPage) / parseInt(_paging.pagePerNav)) - 1) + 1
-            const pageEnd = pageStart + parseInt(_paging.pagePerNav) - 1
-            _paging.curPageArr = []
-            for (let i = pageStart; i <= pageEnd; i++) {
-                if (i > _paging.totalPage) break
-                _paging.curPageArr.push(i)
-            }
-        }, 
-        
-        getListWithPager : async function(_toWhere, _rq, _promise, _scrollArea, msgCallback) {
-            const _paging = paging.value
-            if (_toWhere) {
-                const msg = list.setCurPage(_toWhere)
-                if (msg) {
-                    if (typeof msgCallback == "function") msgCallback(msg)
-                    return
-                } 
-            } else {
-                if (_paging.savedPage) { //recalling page
-                    _paging.curPage = _paging.savedPage
-                    _paging.savedPage = 0
-                } else {
-                    list.setCurPage(1)
-                }
-            }
-            const req = _rq
-            req.pageRq = { curPage : _paging.curPage, rowPerPage : _paging.rowPerPage }
-            _promise(req).then((totalRow) => {
-                list.setPageNav(totalRow)
-                setTimeout(function() {
-                    if (_scrollArea) {
-                        const scrollPos = _scrollArea.value
-                        scrollPos.scrollLeft = scrollPosRecall.x
-                        scrollPos.scrollTop = scrollPosRecall.y
-                    } else {
-
-                    }
-                }, 10) 
-            }).catch((err) => {
-                alert("getListWithPager: " + err)
-            })
-        }
-
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
-
-    //아래 함수는 main.js의 axios.defaults.baseURL로 해결했으므로 더 이상 사용하지 않아도 됨 (포트 3000으로의 호출시 쿠키 전송안되는것은 Cors Issue - nest/axios)
-    //dev : "http://localhost:3000", ops : "https://hushsbay.com:446"
-    //function getRequestUrl(addr) { //vue와 next 조합으로 개발시 locahost port는 2개가 되는데 아래처럼 어쩔 수 없이 절대주소로 axios를 호출해아 함
-    //     //예) location.href=http://localhost:5173/login, location.protocol=http:, location.host=localhost:5173, location.hostname=localhost
-    //     //예) localhost의 vue port = 5173, nest port = 3000 (운영서버는 하나의 port로 운영 가능)
-    //     if (addr.startsWith("http")) {
-    //         return addr
-    //     } else if (location.hostname == "localhost") {
-    //         return cons.dev + addr
-    //     } else {
-    //         return cons.ops + addr
-    //     }
-    //}
-
     const util = {
 
         setSnack : function(ex, toastSec, fromConfig) {
@@ -411,6 +212,20 @@ const GeneralStore = defineStore('General', () => {
             util.setSnack(msg, sec)
         },
 
+        //아래 함수는 main.js의 axios.defaults.baseURL로 해결했으므로 더 이상 사용하지 않아도 됨 (포트 3000으로의 호출시 쿠키 전송안되는것은 Cors Issue - nest/axios)
+        //dev : "http://localhost:3000", ops : "https://hushsbay.com:446"
+        //function getRequestUrl(addr) { //vue와 next 조합으로 개발시 locahost port는 2개가 되는데 아래처럼 어쩔 수 없이 절대주소로 axios를 호출해아 함
+        //     //예) location.href=http://localhost:5173/login, location.protocol=http:, location.host=localhost:5173, location.hostname=localhost
+        //     //예) localhost의 vue port = 5173, nest port = 3000 (운영서버는 하나의 port로 운영 가능)
+        //     if (addr.startsWith("http")) {
+        //         return addr
+        //     } else if (location.hostname == "localhost") {
+        //         return cons.dev + addr
+        //     } else {
+        //         return cons.ops + addr
+        //     }
+        //}
+
         // codeQry : async function (strKind) { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         //     const res = await axios.post("/code/qry", { kind: strKind })
         //     const rs = util.chkAxiosCode(res.data)
@@ -423,14 +238,174 @@ const GeneralStore = defineStore('General', () => {
         // },
 
     }
+    
+    return { 
+        //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
+        selSideMenu, selChanId, selGrId, selMsgId, //selSideMenuTimeTag ##87
+        snackBar, toast, auth, cons, ctx, html, util
+    }
 
+    ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
+    // const paging = ref({ //서버에 전송되어야 할 파라미터(pageRq)는 curPage/rowPerPage 2개임
+    //     curPage : 1, rowPerPage : 20, pagePerNav : 5, totalRow : 0, totalPage : 0, curPageArr : [], savedPage : 0
+    // }) //위 savedPage와 아래 scrollPosRecall 2개는 (목록과 디테일이 분리된 .vue일 경우) 목록에서 디테일 열고 작업후 닫고 나서 기존 페이지 찾아 기존 위치로 스크롤링하기 위한 용도임
+    // const scrollPosRecall = { x : -1, y : -1 }
+    // let listIndex = ref(-1), isDoc = ref(false), docId = ref(null), isRead = ref(false), isEdit = ref(false), isNew = ref(false)
     ////////////////////////////////////////////////////////////////////////////////
 
-    return { 
-        isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, 
-        selSideMenu, selChanId, selGrId, selMsgId, snackBar, toast, //selSideMenuTimeTag ##87
-        auth, cons, ctx, doc, html, list, util
-    }
+    // const doc = { //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임 (혹시 필요할 수 있을 거 같아서 그냥 두었음 - noSql등에서 사용 가능할 수도..)
+
+    //     open : function(strDocId, idx) {
+    //         docId.value = strDocId
+    //         isDoc.value = true
+    //         isRead.value = true
+    //         isEdit.value = false
+    //         isNew.value = false
+    //         listIndex.value = idx
+    //     },
+
+    //     edit : function(strDocId, idx) {
+    //         docId.value = strDocId
+    //         isDoc.value = true
+    //         isRead.value = false
+    //         isEdit.value = true
+    //         isNew.value = false
+    //         if (!hush.util.isvoid(idx)) listIndex.value = idx //목록에서도 openDoc하지 않고 바로 편집가능하게 editDoc()하는 가능성도 열어둬야 함
+    //     },
+
+    //     new : function() {
+    //         docId.value = null
+    //         isDoc.value = true
+    //         isRead.value = false
+    //         isEdit.value = false
+    //         isNew.value = true
+    //         listIndex.value = -1
+    //     },
+
+    //     onOpen : function(btn) {
+    //         if (btn && btn.value) {
+    //             if (btn.value.btn_edit) btn.value.btn_edit.hide = false
+    //             if (btn.value.btn_save) btn.value.btn_save.hide = true
+    //             if (btn.value.btn_delete) btn.value.btn_delete.hide = false
+    //         }
+    //     },
+
+    //     onEdit : function(btn) {
+    //         if (btn && btn.value) {
+    //             if (btn.value.btn_edit) btn.value.btn_edit.hide = true
+    //             if (btn.value.btn_save) btn.value.btn_save.hide = false
+    //             if (btn.value.btn_delete) btn.value.btn_delete.hide = true
+    //         }
+    //     },
+
+    //     onNew : function(btn) {
+    //         if (btn && btn.value) {
+    //             if (btn.value.btn_edit) btn.value.btn_edit.hide = true
+    //             if (btn.value.btn_save) btn.value.btn_save.hide = false
+    //             if (btn.value.btn_delete) btn.value.btn_delete.hide = true
+    //         }
+    //     },
+
+    //     close : function() {
+    //         docId.value = null
+    //         isDoc.value = false
+    //         isRead.value = false
+    //         isEdit.value = false
+    //         isNew.value = false
+    //         listIndex.value = -1
+    //     },
+
+    //     closeIfOpened : function() { //목록과 문서가 한몸일 때 문서인 경우 closeDoc()하면 문서는 초기화하고 hide하는 것으로 종료 (history.back 없음)
+    //         if (isDoc.value) {
+    //             doc.close()
+    //             return true
+    //         }
+    //         return false
+    //     }
+
+    // }
+
+    // const list = { //일단 막음. 예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임 (혹시 페이징네비가 필요할 수 있을 거 같아서 그냥 두었음)
+
+    //     saveCurPage : function() {
+    //         const _paging = paging.value
+    //         _paging.savedPage = _paging.curPage
+    //     },
+        
+    //     setCurPage : function(toWhere) {
+    //         const _paging = paging.value
+    //         if (toWhere == 'first') {
+    //             if (_paging.curPage <= 1) return "첫 페이지입니다."
+    //             _paging.curPage = 1
+    //         } else if (toWhere == 'prev') {
+    //             if (_paging.curPage <= 1) return "첫 페이지입니다."
+    //             _paging.curPage = (_paging.curPage <= 1) ? 1 : parseInt(_paging.curPage) - 1
+    //         } else if (toWhere == 'next') {
+    //             if (_paging.curPage >= _paging.totalPage) return "마지막 페이지입니다."
+    //             _paging.curPage = (_paging.curPage >= _paging.totalPage) ? _paging.totalPage : parseInt(_paging.curPage) + 1
+    //         } else if (toWhere == 'last') {
+    //             if (_paging.curPage >= _paging.totalPage) return "마지막 페이지입니다."
+    //             _paging.curPage = _paging.totalPage
+    //         } else if (toWhere == 'prevSet') { //일반적인 UI에서는 잘 사용하지 않으나 사용자 요청이 있을 경우 쓰기로 함
+    //             if (_paging.curPageArr[0] <= 1) return "첫 페이지셋입니다."
+    //             _paging.curPage = (_paging.curPageArr[0] <= 1) ? _paging.curPageArr[0] : _paging.curPageArr[0] - parseInt(_paging.pagePerNav)
+    //         } else if (toWhere == 'nextSet') { //일반적인 UI에서는 잘 사용하지 않으나 사용자 요청이 있을 경우 쓰기로 함
+    //             if (_paging.curPageArr[0] + parseInt(_paging.pagePerNav) > _paging.totalPage) return "마지막 페이지셋입니다."
+    //             _paging.curPage = (_paging.curPageArr[0] + parseInt(_paging.pagePerNav) > _paging.totalPage) ? _paging.curPageArr[0] : _paging.curPageArr[0] + parseInt(_paging.pagePerNav)
+    //         } else {
+    //             _paging.curPage = toWhere
+    //         }
+    //         return ""
+    //     }, 
+        
+    //     setPageNav : function(totalRow) { //서버로부터 totalRow를 응답받아서 페이지 네비게이션을 만들어냄
+    //         const _paging = paging.value
+    //         _paging.totalRow = totalRow
+    //         _paging.totalPage = (typeof totalRow == "undefined" || totalRow == 0) ? 0 : Math.ceil(totalRow / _paging.rowPerPage)    
+    //         const pageStart = parseInt(_paging.pagePerNav) * (Math.ceil(parseInt(_paging.curPage) / parseInt(_paging.pagePerNav)) - 1) + 1
+    //         const pageEnd = pageStart + parseInt(_paging.pagePerNav) - 1
+    //         _paging.curPageArr = []
+    //         for (let i = pageStart; i <= pageEnd; i++) {
+    //             if (i > _paging.totalPage) break
+    //             _paging.curPageArr.push(i)
+    //         }
+    //     }, 
+        
+    //     getListWithPager : async function(_toWhere, _rq, _promise, _scrollArea, msgCallback) {
+    //         const _paging = paging.value
+    //         if (_toWhere) {
+    //             const msg = list.setCurPage(_toWhere)
+    //             if (msg) {
+    //                 if (typeof msgCallback == "function") msgCallback(msg)
+    //                 return
+    //             } 
+    //         } else {
+    //             if (_paging.savedPage) { //recalling page
+    //                 _paging.curPage = _paging.savedPage
+    //                 _paging.savedPage = 0
+    //             } else {
+    //                 list.setCurPage(1)
+    //             }
+    //         }
+    //         const req = _rq
+    //         req.pageRq = { curPage : _paging.curPage, rowPerPage : _paging.rowPerPage }
+    //         _promise(req).then((totalRow) => {
+    //             list.setPageNav(totalRow)
+    //             setTimeout(function() {
+    //                 if (_scrollArea) {
+    //                     const scrollPos = _scrollArea.value
+    //                     scrollPos.scrollLeft = scrollPosRecall.x
+    //                     scrollPos.scrollTop = scrollPosRecall.y
+    //                 } else {
+
+    //                 }
+    //             }, 10) 
+    //         }).catch((err) => {
+    //             alert("getListWithPager: " + err)
+    //         })
+    //     }
+
+    // }    
 
 })
 

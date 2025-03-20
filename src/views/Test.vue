@@ -13,11 +13,10 @@
     document.title = "DM"
 
     function test() {
-        //router.push({ path : '/main/home/channel/20250122084532918913033403/20250214231036369429013674' }) //사업계획 채널 (희망퇴직 가즈아) 2025-02-14 (금) 23:10
-        gst.selChanId = "20250122084532918913033403"
         gst.selGrId = "20250120084532918913033423"
-        gst.selMsgId = "20250214231036369429013674" //onActivated() in HoeBody.vue에서 null로 처리됨
-        router.push({ path : '/main/home' }) //사업계획 채널 (희망퇴직 가즈아) 2025-02-14 (금) 23:10
+        gst.selChanId = "20250122084532918913033403" //사업계획 채널
+        gst.selMsgId = "20250214231036369429013674" //희망퇴직 가즈아 2025-02-14 (금) 23:10 => onActivated() in HoeBody.vue에서 null로 처리됨
+        router.push({ path : '/main/home' })
     }
 </script>
 

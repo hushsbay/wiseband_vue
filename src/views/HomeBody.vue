@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
-    import { useRoute } from 'vue-router'
+    import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
     
@@ -8,26 +8,28 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
-    //import HomeRight from "/src/views/HomeRight.vue"
-    
+        
     const gst = GeneralStore()
     const route = useRoute()
+    const router = useRouter()
 
     //현재 Back() 또는 원래 열렸던 노드 클릭시 keepalive를 이용해 첫 데이터로 돌아가지 않고는 있으나 스크롤이 맨 위로 올라가버림 => 원래 있었던 위치에 있어야 함
     //https://stackoverflow.com/questions/75584410/how-to-maintain-scroll-position-in-a-division-after-a-division-is-redisplayed-in
     //https://medium.com/chekiprice/caching-routes-in-vuejs-using-keep-alive-advanced-guide-e399839f2673
 
-    let thread = ref({ msgid: null })
+    const MAX_PICTURE_CNT = 11
 
+    let thread = ref({ msgid: null })
     const scrollArea = ref(null)
+
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
-    
-    const MAX_PICTURE_CNT = 11
+        
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), msgidInChan = ref('')
     let msglist = ref([])
+
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
     let msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
@@ -85,11 +87,10 @@
            router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함
     */
 
-    onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
-        try { //:key속성이 적용되는 <router-view 이므로 onMounted가 router.push마다 실행됨을 유의 //console.log("########homebody.vue")
+    onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
+        try {
             gst.selChanId = route.params.chanid
             gst.selGrId = route.params.grid
-            //await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt })  
             await getList({ lastMsgMstCdt: savLastMsgMstCdt })
             inEditor.value.focus()
         } catch (ex) {
@@ -98,12 +99,11 @@
     })
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 //onDeactivated(() => { //DOM에서 제거되고 캐시로 전환될 때 또는 마운트 해제될 때마다 호출
-        console.log("HomeBody==> "+gst.selGrId+" ^^^^^^^^^^"+gst.selChanId+" ^^^^^^^^^^"+gst.selMsgId)
         if (gst.selMsgId) {
-            console.log("HomeBody1==> "+gst.selGrId+" ^^^^^^^^^^"+gst.selChanId+" ^^^^^^^^^^"+gst.selMsgId)
+            console.log("HomeBody1 ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
             msgidInChan.value = gst.selMsgId
             gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
-            await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //임시 -> 메시지 하나 전후로 가져와서 보여 주는 UI 필요
+            //await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //임시 -> 메시지 하나 전후로 가져와서 보여 주는 UI 필요
         }
     })
 
@@ -144,7 +144,6 @@
     }
 
     async function qryPrev() {
-        //await getList({ grid: gst.selGrId, chanid: gst.selChanId, lastMsgMstCdt: savLastMsgMstCdt }) //Endless Scrolling
         await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //Endless Scrolling
     }
 
@@ -427,11 +426,11 @@
         gst.ctx.show(e)
     }
 
-    function rowEnter(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+    function rowEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = true
     }
 
-    function rowLeave(row) { //just for hovering (css만으로는 처리가 힘들어 코딩으로 구현)
+    function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = false
     }
 
