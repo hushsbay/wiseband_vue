@@ -29,8 +29,7 @@
     
     onMounted(async () => { //Main.vue는 App.vue에서 keepalive없는 router-view에서 호출됨
         try {
-            document.title = "WiSEBand 메인" //다른 곳에서 title이 업데이트 될 것임
-            //console.log(route.fullPath + " : Main.vue") //route.fullPath = /main/home/home_body/20250120084532918913033423/20250122084532918913033403임을 유의
+            setBasicInfo() //console.log(route.fullPath + " : Main.vue") //route.fullPath = /main/home/home_body/20250120084532918913033423/20250122084532918913033403임을 유의
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return   
@@ -52,8 +51,13 @@
     })
 
     watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
+        setBasicInfo()
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
     })
+
+    function setBasicInfo() {
+        document.title = "WiSEBand 메인" //다른 곳에서 title이 업데이트 될 것임
+    }
 
     function decideSeeMore() {
         try {

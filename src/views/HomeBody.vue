@@ -89,8 +89,7 @@
 
     onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         try {
-            gst.selChanId = route.params.chanid
-            gst.selGrId = route.params.grid
+            setBasicInfo()
             await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //EndlessScroll : lastMsgMstCdt 조건으로 조회하는 것이 일반적임
             inEditor.value.focus()
         } catch (ex) {
@@ -98,14 +97,20 @@
         }
     })
 
-    onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 //onDeactivated(() => { //DOM에서 제거되고 캐시로 전환될 때 또는 마운트 해제될 때마다 호출
-        if (gst.selMsgId) {
-            console.log("HomeBody1 ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
+    onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
+        setBasicInfo()
+        if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
+            //console.log("HomeBody1 ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
             msgidInChan.value = gst.selMsgId
             gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
             //await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //임시 -> 메시지 하나 전후로 가져와서 보여 주는 UI 필요
         }
     })
+
+    function setBasicInfo() {
+        gst.selChanId = route.params.chanid
+        gst.selGrId = route.params.grid
+    }
 
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
@@ -168,12 +173,12 @@
             if (!rs) {
                 onGoingGetList = false
                 return
-            }            
+            }
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
             chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             document.title = channm.value + "[채널]"
-            chanmemUnder.value = [] //대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
+            chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             for (let i = 0; i < rs.data.chandtl.length; i++) {
                 const row = rs.data.chandtl[i]                
                 if (row.PICTURE == null) {
@@ -189,18 +194,18 @@
             }
             chandtl.value = rs.data.chandtl
             const msgArr = rs.data.msglist
-            if (msgArr.length > 0) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
-                for (let i = 0; i < msgArr.length; i++) { //if (row.msgimg.length > 0) debugger
+            //if (msgArr.length > 0) {
+                for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                     const row = msgArr[i]
                     for (let item of row.msgimg) {
-                        if (!item.BUFFER) continue //임시코딩 - 테스트 - 나중에 제거
+                        if (!item.BUFFER) continue //잘못 insert된 것임
                         const uInt8Array = new Uint8Array(item.BUFFER.data)
                         const blob = new Blob([uInt8Array], { type: "image/png" })
                         const blobUrl = URL.createObjectURL(blob)
                         item.url = blobUrl
                         item.hover = false
                         item.cdt = item.CDT
-                    } //if (row.msgfile.length > 0) debugger
+                    }
                     for (let item of row.msgfile) {
                         item.hover = false
                         item.name = item.BODY
@@ -230,7 +235,7 @@
                             const prevCdt = msgArr[i + 1].CDT.substring(0, 19)
                             const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
                             const minuteDiff = parseInt(secondDiff / 60)
-                            row.stickToPrev = (minuteDiff <= 1) ? true : false
+                            row.stickToPrev = (minuteDiff <= 1) ? true : false //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식 입장)
                         }
                     }
                     if (i == 0) {
@@ -242,25 +247,25 @@
                             const nextCdt = msgArr[i - 1].CDT.substring(0, 19)
                             const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
                             const minuteDiff = parseInt(secondDiff / 60)
-                            row.hasSticker = (minuteDiff <= 1) ? true : false
+                            row.hasSticker = (minuteDiff <= 1) ? true : false //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (부모 입장)
                         }
                     }
-                    if (firstMsgMstCdt) {
+                    if (firstMsgMstCdt) { //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [31일, 30일, 29일]
                         if (i == 0) {
-                            msglist.value.push(row)
+                            msglist.value.push(row) //기존 메시지리스트 맨 아래에 추가
                         } else {
-                            msglist.value.splice(msgArr.length - i, 0, row)    
+                            msglist.value.splice(msgArr.length - i, 0, row) //jQuery의 prepend와 동일 (방금 추가한 항목 바로 위에 삽입)
                         }                        
-                    } else {
-                        msglist.value.splice(0, 0, row)
+                    } else { //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
+                        msglist.value.splice(0, 0, row) //jQuery의 prepend와 동일 (메시지리스트 맨 위에 삽입)
                     }
                     if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
                     if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
                 }
-            }
-            if (firstMsgMstCdt) {
+            //}
+            //if (firstMsgMstCdt) {
                 //2) 설명 참조
-            } else {
+            //} else {
                 imgBlobArr.value = []
                 for (let item of rs.data.tempimagelist) {
                     const uInt8Array = new Uint8Array(item.BUFFER.data)
@@ -285,7 +290,7 @@
                     }
                     linkArr.value.push({ hover: false, text: text, url: url, cdt: item.CDT })
                 }
-            }
+            //}
             await nextTick()
             if (!lastMsgMstCdt || lastMsgMstCdt == gst.cons.cdtAtFirst) {
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
@@ -568,10 +573,11 @@
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
         try { //파일,이미지,링크가 있다면 미리 업로드된 상태이며 crud가 C일 때만 업로드 되며 U일 때는 슬랙과 동일하게 업로드되지 않음 (본문만 수정저장됨)
-            let body = document.getElementById('msgContent').innerHTML
+            let body = document.getElementById('msgContent').innerHTML.trim()
+            if (body == "") return
             const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/
             const result = reg.exec(body)
-            if (result != null) {
+            if (result != null && !body.includes("<a href=\"" + result[0] + "\" target=\"_blank\" ")) { //웹에디터에서 이미 링크로 변환한 데이터는 또 변환하면 안됨
                 let node = document.createElement('a')
                 node.setAttribute("href", result[0])
                 node.setAttribute("target", "_blank")
@@ -648,12 +654,11 @@
     }
 
     function addEmoti() {
-        debugger
-        setTimeout(function() {
-            const ele = document.getElementById("chan_center_body")
-            ele.scrollTo({ top: 100 })
-        }, 2000)
-        return
+        // debugger
+        // setTimeout(function() {
+        //     const ele = document.getElementById("chan_center_body")
+        //     ele.scrollTo({ top: 100 })
+        // }, 2000)
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
         const text1 = "https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection?aaa=가나다"
