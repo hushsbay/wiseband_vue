@@ -9,6 +9,7 @@ const GeneralStore = defineStore('General', () => {
     const router = useRouter()
     const $cookie = inject('$cookies')
 
+    let objSaved = ref({}) //여기에 각 메시지별 (Back하기전에 기억한) 스크롤 위치 등이 저장되어 있음
     let selSideMenu = ref(""), selChanId = ref(''), selGrId = ref(''), selMsgId = '' //selSideMenuTimeTag = ref("") ##87
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
@@ -241,6 +242,7 @@ const GeneralStore = defineStore('General', () => {
     
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
+        objSaved,
         selSideMenu, selChanId, selGrId, selMsgId, //selSideMenuTimeTag ##87
         snackBar, toast, auth, cons, ctx, html, util
     }

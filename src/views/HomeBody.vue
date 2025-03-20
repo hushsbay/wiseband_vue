@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
@@ -105,6 +105,12 @@
             gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
             //await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //임시 -> 메시지 하나 전후로 가져와서 보여 주는 UI 필요
         }
+        if (gst.objSaved[gst.selChanId]) scrollArea.value.scrollTop = gst.objSaved[gst.selChanId].scrollY
+    })
+
+    onDeactivated(() => {
+        if (!gst.objSaved[gst.selChanId]) gst.objSaved[gst.selChanId] = {}
+        gst.objSaved[gst.selChanId].scrollY = prevScrollY
     })
 
     function setBasicInfo() {
@@ -296,7 +302,7 @@
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else {
                 if (msgArr.length > 0) {
-                    const ele = document.getElementById(idTop)
+                    const ele = document.getElementById(idTop) //데이터를 더 읽어와 추가했으므로 scrollHeight는 더 커진 상태이므로 이전에 봤던 ele를 기준으로 위치 설정함
                     if (ele) scrollArea.value.scrollTo({ top: ele.offsetTop - ele.offsetHeight - 10}) //10은 마진/패딩 등 알파값 
                 }
             }
@@ -440,7 +446,7 @@
     }
 
     const onScrollEnd = debounce(async (e) => { //2) 관련
-        const sTop = scrollArea.value.scrollTop
+        const sTop = scrollArea.value.scrollTop //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight)
         const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down"
         prevScrollY = sTop //console.log(sTop+"@@@@@@@@@@@"+which)
         if (which == "up" && sTop < 100) { 
@@ -654,11 +660,6 @@
     }
 
     function addEmoti() {
-        // debugger
-        // setTimeout(function() {
-        //     const ele = document.getElementById("chan_center_body")
-        //     ele.scrollTo({ top: 100 })
-        // }, 2000)
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
         const text1 = "https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection?aaa=가나다"
