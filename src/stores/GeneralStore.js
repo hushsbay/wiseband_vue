@@ -64,7 +64,8 @@ const GeneralStore = defineStore('General', () => {
         PWD_MISMATCH : '-811',
         auth_err_prefix : "-8",
         deli : "$~$",
-        cdtAtFirst : "9999-99-99",
+        cdtAtFirst : "1111-11-11",
+        cdtAtLast : "9999-99-99",
         uploadLimitSize : 10 * 1024 * 1024, //10MB
         uploadMaxCount : 10,
         toastSec : 3,
