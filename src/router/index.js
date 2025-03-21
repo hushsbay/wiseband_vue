@@ -32,7 +32,7 @@ const router = createRouter({
                     component: Home,
                     children: [
                         {
-                            path: 'home_body/:grid/:chanid', //params 순서 유의 (아래 beforeEach arr[] 참조)
+                            path: 'home_body/:grid/:chanid',
                             name: 'home_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
                             component: HomeBody                            
                         }
