@@ -156,6 +156,12 @@
         alert("hahaha")
     }
 
+    function chkWithinTime(dt1, dt2) {
+        const secondDiff = hush.util.getDateTimeDiff(dt1, dt2)
+        const minuteDiff = parseInt(secondDiff / 60)
+        return (minuteDiff <= 1) ? true : false
+    }
+
     //grid, chanid는 기본 param
     //1) lastMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) firstMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
@@ -247,39 +253,64 @@
                         item.url = arr[1]
                     }
                 }
+                //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
-                if (i == msgArr.length - 1) {
-                    row.stickToPrev = false
-                } else {
-                    if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 오래된 것임
+                if (firstMsgMstCdt) { //오름차순으로 일부를 읽어옴
+                    if (i == 0) {
                         row.stickToPrev = false
                     } else {
-                        const prevCdt = msgArr[i + 1].CDT.substring(0, 19)
-                        const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
-                        const minuteDiff = parseInt(secondDiff / 60)
-                        row.stickToPrev = (minuteDiff <= 1) ? true : false //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식 입장)
+                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 오래된 것임
+                            row.stickToPrev = false
+                        } else {
+                            const prevCdt = msgArr[i - 1].CDT.substring(0, 19)
+                            row.stickToPrev = chkWithinTime(prevCdt, curCdt)
+                            // const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
+                            // const minuteDiff = parseInt(secondDiff / 60)
+                            // row.stickToPrev = (minuteDiff <= 1) ? true : false
+                        }
                     }
-                }
-                if (i == 0) {
-                    row.hasSticker = false
-                } else {
-                    if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 최근임
+                    if (i == msgArr.length - 1) {
                         row.hasSticker = false
                     } else {
-                        const nextCdt = msgArr[i - 1].CDT.substring(0, 19)
-                        const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
-                        const minuteDiff = parseInt(secondDiff / 60)
-                        row.hasSticker = (minuteDiff <= 1) ? true : false //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (부모 입장)
-                    }
-                }
-                if (firstMsgMstCdt) { //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [31일, 30일, 29일]
-                    if (i == 0) {
-                        msglist.value.push(row) //기존 메시지리스트 맨 아래에 추가
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 최근임
+                            row.hasSticker = false
+                        } else {
+                            const nextCdt = msgArr[i + 1].CDT.substring(0, 19)
+                            row.hasSticker = chkWithinTime(curCdt, nextCdt)
+                            //const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
+                            //const minuteDiff = parseInt(secondDiff / 60)
+                            //row.hasSticker = (minuteDiff <= 1) ? true : false
+                        }
+                    } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [29일, 30일, 31일]
+                    msglist.value.push(row) //기존 메시지리스트 맨 아래에 추가
+                } else {
+                    if (i == msgArr.length - 1) {
+                        row.stickToPrev = false
                     } else {
-                        msglist.value.splice(msgArr.length - i, 0, row) //jQuery의 prepend와 동일 (방금 추가한 항목 바로 위에 삽입)
-                    }                        
-                } else { //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 오래된 것임
+                            row.stickToPrev = false
+                        } else {
+                            const prevCdt = msgArr[i + 1].CDT.substring(0, 19)
+                            row.stickToPrev = chkWithinTime(prevCdt, curCdt)
+                            //const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
+                            //const minuteDiff = parseInt(secondDiff / 60)
+                            //row.stickToPrev = (minuteDiff <= 1) ? true : false
+                        }
+                    }
+                    if (i == 0) {
+                        row.hasSticker = false
+                    } else {
+                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 최근임
+                            row.hasSticker = false
+                        } else {
+                            const nextCdt = msgArr[i - 1].CDT.substring(0, 19)
+                            row.hasSticker = chkWithinTime(curCdt, nextCdt)
+                            //const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
+                            //const minuteDiff = parseInt(secondDiff / 60)
+                            //row.hasSticker = (minuteDiff <= 1) ? true : false
+                        }
+                    } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
                     msglist.value.splice(0, 0, row) //jQuery의 prepend와 동일 (메시지리스트 맨 위에 삽입)
                 }
                 if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
@@ -330,7 +361,7 @@
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
             } else if (firstMsgMstCdt) {
                 debugger
-                scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
+                //scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
             }
             onGoingGetList = false //console.log(msgArr.length+"=====")
         } catch (ex) {
@@ -472,25 +503,25 @@
         row.hover = false
     }
 
-    const onScrollEnd = async (e) => { //debounce(async (e) => { //처음엔 debounce가 필요할 거 같았는데 적용해보니 필요없음
+    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음
         const sTop = scrollArea.value.scrollTop 
         const ele = document.getElementById("chan_center_body")
-        const topEntryPoint = 100
-        const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 100 //max ScrollTop보다 100정도 작게 정함
+        const topEntryPoint = 200
+        const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
         //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight+"@@@@"+ele.offsetHeight)
-        const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down"
+        const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
         prevScrollY = sTop
-        //const chkPoint = scrollArea.value.scrollHeight / 2
-        //resultCnt => 읽어온 데이터가 없는데 chkpoint가 절반이하라고 해서 계속 getList()를 실행하고 있는 것을 체크함
-        //debugger
-        if (which == "up" && sTop < topEntryPoint) { //if (which == "up" && sTop < chkPoint) { //스크롤이 위 방향으로 절반(이하)에 오게 되면 실행
+        //resultCnt => 읽어온 데이터가 없을 땐 getList() 호출하지 말기
+        if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
             prevScrollHeight = scrollArea.value.scrollHeight
             if (resultCnt != 0) await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-        } else if (scrollDirection == "down" && which == "down" && sTop > bottomEntryPoint) { //수동스크롤과 자동스크롤 구분이 필요한데 못찾음
-            //getList()를 데이터가 붙어서 스크롤이 자꾸 내려갈 때만 또 아래 getList()가 수행되므로 마지막 getList() 방식이 firstMsgMstCdt+kind(none)일 경우만 아래 처리하도록 하기
+        } else if (scrollDirection == "down" && which == "down" && sTop > bottomEntryPoint) { 
+            //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
+            //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
+            //마지막 getList() 방식이 scrollDirection(down)일 경우만 아래 처리하도록 하기
             if (resultCnt != 0) await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
         }
-    } //, 500)
+    }
 
     const getTopMsgBody = () => { //2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
         const rect = hush.util.getRect("#chan_center_body")
@@ -695,7 +726,9 @@
         //참고로, let currentNode = window.getSelection().focusNode에서 parent로 올라가면 에디터 노드를 만날 수 있음
     }
 
-    function addEmoti() {
+    async function addEmoti() {
+        await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+        return
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
         const text1 = "https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection?aaa=가나다"
