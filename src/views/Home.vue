@@ -13,6 +13,7 @@
     const LIGHT = "whitesmoke_", DARK = "violet_"
 
     let kind = ref('my'), listChan = ref([])
+    let mounting = true
     //아래는 resizing 관련
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
@@ -34,9 +35,13 @@
     })
 
     onActivated(async () => { //초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
-        setBasicInfo() //console.log("onActivated Home ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId)
-        debugger
-        loopListChan(gst.selGrId, gst.selChanId)
+        //setBasicInfo() //console.log("onActivated Home ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId)
+        if (mounting) {
+            mounting = false
+        } else {
+            setBasicInfo()
+            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
+        } //loopListChan(gst.selGrId, gst.selChanId)
     })
 
     watch(kind, async () => { //gst.xxx일 경우 () => gst.xxx로 처리해야 동작함
@@ -44,9 +49,9 @@
         await getList() 
     })
 
-    watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
-        displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
-    })
+    // watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
+    //     displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
+    // })
 
     // watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
     //     console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue") //console.log(route.fullPath+"@@@@@@@main.vue")
@@ -84,9 +89,7 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             listChan.value = rs.list
-            const lastSelGrid = localStorage.wiseband_lastsel_grid
-            const lastSelChanid = localStorage.wiseband_lastsel_chanid
-            loopListChan(lastSelGrid, lastSelChanid)
+            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -146,13 +149,13 @@
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID //console.log("router.push:" + row.CHANNM)
                 const obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }} //path와 param는 같이 사용 X (name 이용)
-                debugger
-                if (!sessionStorage.wiseband_home_at_first) { //Main.vue가 Home.vue를 라우팅할 때는 
-                    router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
-                } else {
+                //debugger
+                //if (!sessionStorage.wiseband_home_at_first) { //Main.vue가 Home.vue를 라우팅할 때는 
+                //    router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
+                //} else {
                     router.push(obj)
-                }
-                sessionStorage.wiseband_home_at_first = true
+                //}
+                //sessionStorage.wiseband_home_at_first = true
             }
         } catch (ex) {
             gst.util.showEx(ex, true)

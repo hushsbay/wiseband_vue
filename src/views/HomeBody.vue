@@ -115,9 +115,10 @@
     })
 
     function setBasicInfo() {
-        debugger
-        gst.selChanId = route.params.chanid
-        gst.selGrId = route.params.grid
+        if (route.params.chanid && route.params.grid) {
+            gst.selChanId = route.params.chanid
+            gst.selGrId = route.params.grid
+        }
     }
 
     function chanCtxMenu(e) {

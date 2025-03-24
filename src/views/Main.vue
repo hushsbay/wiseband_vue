@@ -42,9 +42,13 @@
             let idx = -1            
             const lastSelMenu = localStorage.wiseband_lastsel_menu
             if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
-            idx = (idx == -1) ? 0 : idx
-            const row = listSel.value[idx]
-            sideClick(row.ID, row, idx) //PopupList.vue내 이벤트에서 popupId(row.ID)가 별도로 필요한 상황이라 row말고도 row.ID param 추가함
+            if (idx == -1) {
+                const row = listSel.value[0]
+                sideClick("mnuHome", row, idx) //-1로 넘기기
+            } else {
+                const row = listSel.value[idx]
+                sideClick(row.ID, row, idx) //PopupList.vue내 이벤트에서 popupId(row.ID)가 별도로 필요한 상황이라 row말고도 row.ID param 추가함
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -129,12 +133,12 @@
                 if (listSel.value[i].sel) listSel.value[i].sel = false
             }
             row.sel = true
-            if (id == gst.selSideMenu) return
+            if (idx > -1 && id == gst.selSideMenu) return //사용자 최초 시작은 -1이고 채널트리도 없는 상황이니 멈추지 말고 아래 실행해야 함
             if (popupId != "mnuSeeMore") {
                 gst.selSideMenu = id
                 localStorage.wiseband_lastsel_menu = id
             }
-            const obj = { row: row, idx: idx }
+            const obj = { row: row, idx: (idx == -1) ? 0 : idx }
             procMenu[id].call(null, obj)
         } catch (ex) {
             gst.util.showEx(ex, true)

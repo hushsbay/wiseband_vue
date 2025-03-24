@@ -35,7 +35,6 @@
 
     onActivated(async () => { //초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
         setBasicInfo() //console.log("onActivated Home ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId)
-        debugger
         //loopListChan(gst.selGrId, gst.selChanId)
     })
 
@@ -144,13 +143,13 @@
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID //console.log("router.push:" + row.CHANNM)
                 const obj = { name : 'list_body', params : { grid: row.GR_ID, chanid: row.CHANID }} //path와 param는 같이 사용 X (name 이용)
-                debugger
-                if (!sessionStorage.wiseband_list_body_at_first) { //Main.vue가 Home.vue를 라우팅할 때는 
-                   router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
-                } else {
-                   router.push(obj)
-                }
-                sessionStorage.wiseband_list_body_at_first = true
+                //debugger
+                //if (!sessionStorage.wiseband_list_body_at_first) { //Main.vue가 Home.vue를 라우팅할 때는 
+                //  router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
+                //} else {
+                //  router.push(obj)
+                //}
+                //sessionStorage.wiseband_list_body_at_first = true
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
