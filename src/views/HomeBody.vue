@@ -19,6 +19,7 @@
 
     const MAX_PICTURE_CNT = 11
 
+    let mounting = true
     let thread = ref({ msgid: null })
     const scrollArea = ref(null)
 
@@ -26,8 +27,9 @@
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
         
+    let grId, chanId, msgidInChan = ref('')
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
-    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), msgidInChan = ref('')
+    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
@@ -98,26 +100,31 @@
     })
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
-        setBasicInfo()
-        if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
-            //console.log("HomeBody1 ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
-            msgidInChan.value = gst.selMsgId
-            gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
-            await getList({ msgid: msgidInChan.value, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+        if (mounting) {
+            mounting = false
         } else {
-            if (gst.objSaved[gst.selChanId]) scrollArea.value.scrollTop = gst.objSaved[gst.selChanId].scrollY
-        }        
+            setBasicInfo()
+            if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
+                //console.log("HomeBody1 ==> " + grId + " ^^^ " + chanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
+                msgidInChan.value = gst.selMsgId
+                gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
+                await getList({ msgid: msgidInChan.value, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+            } else {
+                if (gst.objSaved[chanId]) scrollArea.value.scrollTop = gst.objSaved[chanId].scrollY
+            }      
+        }
     })
 
     onDeactivated(() => {
-        if (!gst.objSaved[gst.selChanId]) gst.objSaved[gst.selChanId] = {}
-        gst.objSaved[gst.selChanId].scrollY = prevScrollY
+        if (!chanId) return
+        if (!gst.objSaved[chanId]) gst.objSaved[chanId] = {}
+        gst.objSaved[chanId].scrollY = prevScrollY
     })
 
     function setBasicInfo() {
         if (route.params.chanid && route.params.grid) {
-            gst.selChanId = route.params.chanid
-            gst.selGrId = route.params.grid
+            chanId = route.params.chanid
+            grId = route.params.grid
         }
     }
 
@@ -174,7 +181,7 @@
         try {
             onGoingGetList = true
             resultCnt = 0
-            let param = { grid: gst.selGrId, chanid: gst.selChanId } //기본 param
+            let param = { grid: grId, chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt
@@ -361,7 +368,7 @@
 
     async function getMsg(addedParam, verbose) {
         try {
-            let param = { chanid: gst.selChanId } //기본 param
+            let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryMsg", param)
             const rs = gst.util.chkAxiosCode(res.data)
@@ -377,7 +384,7 @@
 
     async function qryAction(addedParam) {
         try {
-            let param = { chanid: gst.selChanId } //기본 param
+            let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryAction", param)
             const rs = gst.util.chkAxiosCode(res.data)
@@ -390,7 +397,7 @@
 
     async function qryActionForUser(addedParam) {
         try {
-            let param = { chanid: gst.selChanId } //기본 param
+            let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryActionForUser", param)
             const rs = gst.util.chkAxiosCode(res.data)
@@ -480,7 +487,7 @@
                 try {
                     //if (!window.confirm("삭제후엔 복구가 불가능합니다. 진행할까요?")) return
                     const res = await axios.post("/chanmsg/delMsg", { 
-                        msgid: row.MSGID, chanid: gst.selChanId
+                        msgid: row.MSGID, chanid: chanId
                     })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
@@ -540,7 +547,7 @@
                 cdt = (msgid == "temp") ? linkArr.value[idx].cdt : msglist.value[index].msglink[idx].cdt
             }
             const res = await axios.post("/chanmsg/delBlob", { 
-                msgid: msgid, chanid: gst.selChanId, kind: kind, cdt: cdt
+                msgid: msgid, chanid: chanId, kind: kind, cdt: cdt
             })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -591,7 +598,7 @@
                     return
                 }
                 const fd = new FormData()
-                fd.append("chanid", gst.selChanId)
+                fd.append("chanid", chanId)
                 fd.append("kind", "I")
                 fd.append("body", "") //width x height 미리 넣을 필요없어 보이며 대신 빈칸으로 넣어야 함
                 fd.append("filesize", blob.size)
@@ -660,7 +667,7 @@
             msgbody.value = body //document.getElementById('msgContent').innerHTML //이 행이 없으면 발송 2회차부터 msgbody가 계속 본문에 남아 있음
             let crud = (editMsgId.value) ? "U" : "C"
             const rq = { 
-                crud: crud, chanid: gst.selChanId, msgid: editMsgId.value, body: msgbody.value, //document.getElementById('msgContent').innerHTML,
+                crud: crud, chanid: chanId, msgid: editMsgId.value, body: msgbody.value, //document.getElementById('msgContent').innerHTML,
                 num_file: (editMsgId.value) ? 0 : fileBlobArr.value.length, 
                 num_image: (editMsgId.value) ? 0 : imgBlobArr.value.length, 
                 num_link: (editMsgId.value) ? 0 : linkArr.value.length
@@ -669,7 +676,7 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             if (crud == "C") {
-                //await getList({ grid: gst.selGrId, chanid: gst.selChanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
+                //await getList({ grid: grId, chanid: chanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
                 await getList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
             } else { //아래 막은 것은 getMsg()를 사용하지 않는 방법인데 나중에 어차피 다른 사용자화면에 실시간반영을 위해서는 소켓으로 통보받도록 하고 getMsg()를 써야 할 것임
                 //const item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
@@ -1032,7 +1039,7 @@
                 return
             }
             if (kind == "addlink") {
-                const rq = { chanid: gst.selChanId, kind: "L", body: linkText.value + gst.cons.deli + linkUrl.value }
+                const rq = { chanid: chanId, kind: "L", body: linkText.value + gst.cons.deli + linkUrl.value }
                 const res = await axios.post("/chanmsg/uploadBlob", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
@@ -1083,7 +1090,7 @@
             const filesToUpload = []            
             for (let i = 0; i < files.length; i++) {
                 const fd = new FormData()
-                fd.append("chanid", gst.selChanId)
+                fd.append("chanid", chanId)
                 fd.append("kind", "F")
                 fd.append("body", files[i].name)
                 fd.append("filesize", files[i].size)
@@ -1109,7 +1116,7 @@
 
     function downloadFile(msgid, row) { //msgid = temp or real msgid
         try {
-            const query = "?msgid=" + msgid + "&chanid=" + gst.selChanId + "&kind=F&cdt=" + row.cdt + "&name=" + row.name
+            const query = "?msgid=" + msgid + "&chanid=" + chanId + "&kind=F&cdt=" + row.cdt + "&name=" + row.name
             axios.get("/chanmsg/readBlob" +query, { 
                 responseType: "blob"
             }).then(res => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
@@ -1140,7 +1147,7 @@
     async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
         try {
             
-            const rq = { chanid: gst.selChanId, msgid: msgid, kind: kind }
+            const rq = { chanid: chanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -1159,7 +1166,7 @@
             if (kind == 'later' || kind == 'stored' || kind == 'finished' || kind == 'fixed') {
                 job = (!newKind) ? "delete" : newKind
             }
-            const rq = { chanid: gst.selChanId, msgid: msgid, kind: kind, job: job }
+            const rq = { chanid: chanId, msgid: msgid, kind: kind, job: job }
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -1205,7 +1212,7 @@
     }
     
     async function test() {
-        const res = await axios.post("/chanmsg/qry", { grid : gst.selGrId, chanid : gst.selChanId })
+        const res = await axios.post("/chanmsg/qry", { grid : grId, chanid : chanId })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return            
         grnm.value = rs.data.chanmst.GR_NM
@@ -1356,7 +1363,7 @@
     <div class="chan_center">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><!-- - {{ gst.selChanId }}-->
+                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><!-- - {{ chanId }}-->
                 <div class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}]</div>
             </div>
             <div class="chan_center_header_right">

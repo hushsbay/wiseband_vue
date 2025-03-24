@@ -39,7 +39,7 @@
             window.addEventListener('resize', () => { decideSeeMore() })
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
-            let idx = -1            
+            let idx = -1    
             const lastSelMenu = localStorage.wiseband_lastsel_menu
             if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
             if (idx == -1) {
