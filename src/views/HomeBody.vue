@@ -103,7 +103,6 @@
             //console.log("HomeBody1 ==> " + gst.selGrId + " ^^^ " + gst.selChanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
             msgidInChan.value = gst.selMsgId
             gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
-            debugger
             await getList({ msgid: msgidInChan.value, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
         } else {
             if (gst.objSaved[gst.selChanId]) scrollArea.value.scrollTop = gst.objSaved[gst.selChanId].scrollY
@@ -116,6 +115,7 @@
     })
 
     function setBasicInfo() {
+        debugger
         gst.selChanId = route.params.chanid
         gst.selGrId = route.params.grid
     }
@@ -220,7 +220,7 @@
             }
             chandtl.value = rs.data.chandtl
             if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
-            const msgArr = rs.data.msglist            
+            const msgArr = rs.data.msglist   
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
                 if (msgid && (kind == "atHome" || kind == "withReply")) {
@@ -265,9 +265,6 @@
                         } else {
                             const prevCdt = msgArr[i - 1].CDT.substring(0, 19)
                             row.stickToPrev = chkWithinTime(prevCdt, curCdt)
-                            // const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
-                            // const minuteDiff = parseInt(secondDiff / 60)
-                            // row.stickToPrev = (minuteDiff <= 1) ? true : false
                         }
                     }
                     if (i == msgArr.length - 1) {
@@ -278,9 +275,6 @@
                         } else {
                             const nextCdt = msgArr[i + 1].CDT.substring(0, 19)
                             row.hasSticker = chkWithinTime(curCdt, nextCdt)
-                            //const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
-                            //const minuteDiff = parseInt(secondDiff / 60)
-                            //row.hasSticker = (minuteDiff <= 1) ? true : false
                         }
                     } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [29일, 30일, 31일]
                     msglist.value.push(row) //기존 메시지리스트 맨 아래에 추가
@@ -293,9 +287,6 @@
                         } else {
                             const prevCdt = msgArr[i + 1].CDT.substring(0, 19)
                             row.stickToPrev = chkWithinTime(prevCdt, curCdt)
-                            //const secondDiff = hush.util.getDateTimeDiff(prevCdt, curCdt)
-                            //const minuteDiff = parseInt(secondDiff / 60)
-                            //row.stickToPrev = (minuteDiff <= 1) ? true : false
                         }
                     }
                     if (i == 0) {
@@ -306,9 +297,6 @@
                         } else {
                             const nextCdt = msgArr[i - 1].CDT.substring(0, 19)
                             row.hasSticker = chkWithinTime(curCdt, nextCdt)
-                            //const secondDiff = hush.util.getDateTimeDiff(curCdt, nextCdt)
-                            //const minuteDiff = parseInt(secondDiff / 60)
-                            //row.hasSticker = (minuteDiff <= 1) ? true : false
                         }
                     } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
                     msglist.value.splice(0, 0, row) //jQuery의 prepend와 동일 (메시지리스트 맨 위에 삽입)
@@ -360,7 +348,6 @@
             } else if (firstMsgMstCdt && kind == "scrollToBottom") { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
             } else if (firstMsgMstCdt) {
-                debugger
                 //scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
             }
             onGoingGetList = false //console.log(msgArr.length+"=====")
@@ -392,6 +379,19 @@
             let param = { chanid: gst.selChanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryAction", param)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return null
+            return rs.data
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function qryActionForUser(addedParam) {
+        try {
+            let param = { chanid: gst.selChanId } //기본 param
+            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+            const res = await axios.post("/chanmsg/qryActionForUser", param)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return null
             return rs.data
@@ -438,9 +438,6 @@
                 
             }},
             { nm: "메시지 전달", img: "dimgray_forward.png", func: function(item, idx) {
-                
-            }},
-            { nm: "나중을 위해 저장", img: "dimgray_later.png", deli: true, func: function(item, idx) {
                 
             }},
             { nm: "읽지않음으로 표시", func: function(item, idx) {
@@ -1139,8 +1136,9 @@
         }
     }
 
-    async function toggleAction(msgid, kind) {
+    async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
         try {
+            
             const rq = { chanid: gst.selChanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -1149,6 +1147,28 @@
             if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
             const item = msglist.value.find(function(row) { return row.MSGID == msgid })
             if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function changeAction(msgid, kind, newKind) { //changeAction은 보안상 크게 문제없는 액션만 처리하기로 함 : newKind 없으면 서버에서 kind로만 판단해 처리
+        try {
+            let job = ""
+            if (kind == 'later' || kind == 'stored' || kind == 'finished' || kind == 'fixed') {
+                job = (!newKind) ? "delete" : newKind
+            }
+            const rq = { chanid: gst.selChanId, msgid: msgid, kind: kind, job: job }
+            const res = await axios.post("/chanmsg/changeAction", rq)
+            let rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            rs = await qryActionForUser({ msgid: msgid })
+            if (rs == null) return
+            const item = msglist.value.find(function(row) { return row.MSGID == msgid })
+            if (item) {
+                item.act_later = rs.act_later
+                item.act_fixed = rs.act_fixed
+            }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1374,8 +1394,10 @@
                     <span style="margin-left:9px;color:dimgray">{{ displayDt(row.CDT) }}</span>
                 </div>
                 <div style="display:flex;margin:10px 0">
-                    <div style="width:40px;display:flex;align-items:center;color:dimgray;cursor:pointer">
+                    <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
                         <span v-show="row.stickToPrev && row.hover">{{ displayDt(row.CDT, true) }}</span>
+                        <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
+                        <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                     </div>
                     <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>                    
                 </div>
@@ -1445,10 +1467,15 @@
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_later.png')" title="나중에" @click="procLater(row.MSGID)"></span>
+                    <span class="procAct">
+                        <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
+                    </span>
+                    <span class="procAct">
+                        <img class="coImg18" :src="gst.html.getImageUrl(!row.act_fixed ? 'dimgray_fixed.png' : 'violet_fixed.png')" title="고정" @click="changeAction(row.MSGID, 'fixed')">
+                    </span>
                     <span class="procAct">
                         <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
-                    </span>
+                    </span>                    
                 </div>
             </div>
         </div>

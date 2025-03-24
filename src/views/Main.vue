@@ -155,21 +155,35 @@
     const procMenu = { //obj.idx and obj.row
         ["mnuHome"] : (obj) => {
             try {
-                router.replace({ path : '/main/home' })
+                router.replace({ path: '/main/home' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
-        },
+        },        
         ["mnuDm"] : (obj) => {
             try {
-                router.push({ path : '/main/test' })
+                router.push({ path: '/main/test' })
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }
         },
         ["mnuMyAct"] : (obj) => {
             try {
-                router.push({ path : '/main/test' })
+                router.push({ path: '/main/test' })
+            } catch (ex) {
+                gst.util.showEx(ex, true)
+            }
+        },
+        ["mnuLater"] : (obj) => {
+            try {
+                router.push({ name: 'listleft', params : { act: "later" }})
+            } catch (ex) {
+                gst.util.showEx(ex, true)
+            }
+        },
+        ["mnuFixed"] : (obj) => {
+            try {
+                router.push({ name: 'listleft', params : { act: "fixed" }})
             } catch (ex) {
                 gst.util.showEx(ex, true)
             }

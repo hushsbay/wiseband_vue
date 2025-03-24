@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '/src/views/Login.vue'
 import Main from '/src/views/Main.vue'
 import Home from '/src/views/Home.vue'
+import ListLeft from '/src/views/ListLeft.vue'
 import HomeBody from '/src/views/HomeBody.vue'
 import Test from '/src/views/Test.vue'
 
@@ -35,6 +36,18 @@ const router = createRouter({
                             path: 'home_body/:grid/:chanid',
                             name: 'home_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
                             component: HomeBody                            
+                        }
+                    ]
+                },
+                {                    
+                    path: ':act',
+                    name: 'listleft',
+                    component: ListLeft,
+                    children: [
+                        {
+                            path: 'list_body/:grid/:chanid',
+                            name: 'list_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            component: HomeBody
                         }
                     ]
                 },
