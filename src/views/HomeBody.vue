@@ -1585,7 +1585,8 @@
             </div>
         </div>
     </div>
-    <div class="chan_right" v-show="thread.msgid">
+    <div class="chan_right" v-if="thread.msgid">
+        
         <!--<home-right :thread="thread" />-->
         <!-- <div class="chan_right_header">
             <div class="chan_right_header_left">

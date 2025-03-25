@@ -60,7 +60,7 @@
     })
 
     function setBasicInfo() {
-        document.title = "WiSEBand 메인" //다른 곳에서 title이 업데이트 될 것임
+        //document.title = "WiSEBand 메인" //다른 곳에서 title이 업데이트 될 것임
     }
 
     function decideSeeMore() {
@@ -156,6 +156,7 @@
     }
 
     function goRoute(obj, onMounted) { //사이드메뉴 클릭시 맨 처음 로드시 push로 라우팅하면 오른쪽 공백이 생김
+        Object.assign(obj, { query : { ver : Math.random() }}) //obj에 merge : 사이드메뉴 클릭시 (예:Home.vue 호출) 캐시 제거하고 호출해야 HomeBody.vue 안뜨는 상황 방지될 것임
         if (onMounted) {
             router.replace(obj)
         } else {
@@ -207,7 +208,7 @@
                 </div>
             </div>
             <div class="main">
-                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/home의 home을 가져옴 -->
+                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/home의 'home'을 가져옴 : arr[2] -->
                     <router-view v-slot="{ Component }">
                         <keep-alive>
                             <component :is="Component" :key="route.fullPath.split('/')[2]" />
