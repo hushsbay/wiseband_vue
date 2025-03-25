@@ -21,7 +21,7 @@
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
-            debugger
+            //debugger
             setBasicInfo()
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) kind.value = lastSelKind
@@ -90,7 +90,7 @@
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            debugger
+            //debugger
             listChan.value = rs.list
             loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         } catch (ex) {

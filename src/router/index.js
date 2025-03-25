@@ -35,7 +35,14 @@ const router = createRouter({
                         {
                             path: 'home_body/:grid/:chanid',
                             name: 'home_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
-                            component: HomeBody                            
+                            component: HomeBody,
+                            // children: [
+                            //     {
+                            //         path: 'reply/:msgid',
+                            //         name: 'reply', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            //         component: HomeBody
+                            //     }
+                            // ]                            
                         }
                     ]
                 },

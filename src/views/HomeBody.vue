@@ -1,17 +1,32 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated, computed, defineAsyncComponent } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
-    
+
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
+    import HomeBody from '/src/views/HomeBody.vue'
         
     const gst = GeneralStore()
     const route = useRoute()
     const router = useRouter()
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    const props = defineProps({ pdata: Object }) //props update 문제 유의
+    //const emits = defineEmits(["ev-click", "ev-leave"])
+
+    let pdata = ref({ 
+        on: true
+    })
+
+    function hasProp() {
+        if (props && props.pdata) return true //우측에 HomeBody.vue가 댓글을 가지고 열린 상태임을 의미
+        return false
+    }
+    /////////////////////////////////////////////////////////////////////////////////////
 
     //현재 Back() 또는 원래 열렸던 노드 클릭시 keepalive를 이용해 첫 데이터로 돌아가지 않고는 있으나 스크롤이 맨 위로 올라가버림 => 원래 있었던 위치에 있어야 함
     //https://stackoverflow.com/questions/75584410/how-to-maintain-scroll-position-in-a-division-after-a-division-is-redisplayed-in
@@ -21,6 +36,7 @@
 
     let mounting = true
     let thread = ref({ msgid: null })
+    let widthChanCenter = ref(hasProp() ? 'calc(100% - 20px)' : 'calc(100% - 620px)'), widthChanRight = ref(hasProp() ? '0px' : '600px')
     const scrollArea = ref(null)
 
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
@@ -93,9 +109,18 @@
 
     onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         try {
-            setBasicInfo()
-            if (!gst.selMsgId) await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
-            inEditor.value.focus()
+            if (hasProp()) {
+                console.log("aaa-"+props.pdata)
+                if (route.params.chanid && route.params.grid) { //임시코딩
+                    chanId = route.params.chanid
+                    grId = route.params.grid
+                    await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                }
+            } else {
+                setBasicInfo()
+                if (!gst.selMsgId) await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
+                inEditor.value.focus()
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -105,19 +130,22 @@
         if (mounting) {
             mounting = false
         } else {
-            //debugger
-            setBasicInfo()
-            if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
-                //console.log("HomeBody1 ==> " + grId + " ^^^ " + chanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
-                msgidInChan = gst.selMsgId
-                gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
-                await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+            if (hasProp()) {
+                console.log("bbb-"+props.pdata) //댓글 HomeBody.vue는 keepalive가 되어 있지 않은 상태이므로 onActivated로 들어올 일이 없을 것으로 판단됨
             } else {
-                const key = sideMenu + chanId
-                console.log(gst.objSaved[key]+"00==="+key)
-                if (gst.objSaved[key]) {
-                    console.log("11==="+gst.objSaved[key].scrollY)
-                    scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+                setBasicInfo()
+                if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
+                    //console.log("HomeBody1 ==> " + grId + " ^^^ " + chanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
+                    msgidInChan = gst.selMsgId
+                    gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
+                    await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+                } else {
+                    const key = sideMenu + chanId
+                    console.log(gst.objSaved[key]+"00==="+key)
+                    if (gst.objSaved[key]) {
+                        console.log("11==="+gst.objSaved[key].scrollY)
+                        scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+                    }
                 }
             }
         }
@@ -136,6 +164,14 @@
         if (!gst.objSaved[key]) gst.objSaved[key] = {}
         gst.objSaved[key].scrollY = prevScrollY*/
     })
+
+    /*const componentLoader = computed(() => { //https://empty-castle.tistory.com/3, https://blogcreator.blog/post/33
+        //console.log(menuId.value) //3) debugger 빼면 안되서 console.log 추가 (menuId.value를 아래 Promise안에서는 인식안됨!?)
+        return defineAsyncComponent(() => //4) defineAsyncComponent 사용시 옵션 가능하나 여기서는 사용하지 않음
+            import("/src/views/HomeBody.vue")
+        )
+    })*/
+
 
     function setBasicInfo() {        
         test1.value = gst.selSideMenu + route.fullPath
@@ -1258,7 +1294,11 @@
     
     ///////////////////////////////////////////////////////////////////////////아래는 thread 관련임
     function openThread(msgid) {
+        //const obj = { name : 'reply', params : { msgid: msgid }} //path와 param는 같이 사용 X (name 이용)
+        //router.push(obj)
         thread.value.msgid = msgid
+        //widthChanCenter.value = ref('calc(100% - 820px)')
+        //widthChanRight.value = ref('800px')
     }
 
     ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임
@@ -1395,7 +1435,7 @@
 </script>
 
 <template>
-    <div class="chan_center">
+    <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
                 <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><!-- - {{ chanId }}-->
@@ -1585,23 +1625,10 @@
             </div>
         </div>
     </div>
-    <div class="chan_right" v-if="thread.msgid">
-        
-        <!--<home-right :thread="thread" />-->
-        <!-- <div class="chan_right_header">
-            <div class="chan_right_header_left">
-                   
-            </div>
-            <div class="chan_right_header_right">
-                
-            </div>
-        </div>
-        <div class="chan_right_body">
-            
-        </div>
-        <div class="chan_right_footer">
-            
-        </div> -->
+    <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
+        <home-body :pdata="pdata"></home-body>
+        <!-- <component :is="componentLoader" :pdata="pdata" @ev-click="clickFromProp" @ev-leave="pdata=null" :key="qwerty"></component> -->
+        <!-- <router-view /> -->
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-common ref="imgPopupRef" :kind="popupRefKind">
@@ -1620,7 +1647,7 @@
 
 <style scoped>    
     .chan_center {
-        width:calc(100% - 20px);height:100%;padding: 0 0 0 10px;
+        height:100%;padding: 0 0 0 10px;
         display:flex;flex-direction:column;
     }
     .chan_center_header {
@@ -1690,41 +1717,8 @@
         width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
     }
     .chan_right {
-        width:800px;height:100%; /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
+        height:100%;border:2px solid red; /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
-    /*.chan_right_header {
-        width:100%;height:70px;display:flex;justify-content:space-between;
-    }
-    .chan_right_header_left {
-        width:70%;height:100%;display:flex;align-items:center;
-    }
-    .chan_right_header_right {
-        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;
-    }
-    .chan_right_body {
-        width:100%;height:100%;display:flex;flex-direction:column;
-    }
-    .chan_right_footer {
-        width:100%;height:150px;display:flex;
-    }
-    .chan_side_top {
-        width:100%;height:50px;display:flex;justify-content:space-between;
-    }
-    .chan_side_top_left {
-        width:50%;height:100%;padding-left:10px;display:flex;align-items:center;
-    }
-    .chan_side_top_right {
-        width:50%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
-    }
-    .chan_side_main {
-        width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;
-    }
-    .node {
-        width:calc(100% - 30px);min-height:36px;padding:0 10px;margin:0 5px;
-        display:flex;align-items:center;justify-content:space-between;
-        font-size:15px;color:var(--text-white-color);border-radius:5px;cursor:pointer;
-    }
-    .nodeRight { display:flex;align-items:center;justify-content:flex-end; }*/
     .topMenu { border-radius:5px;cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
     .topMenu:active { background:var(--active-color);font-weight:bold }
