@@ -21,14 +21,15 @@
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
+            //debugger
             setBasicInfo()
-            const lastSelKind = localStorage.wiseband_lastsel_kind
-            if (lastSelKind) kind.value = lastSelKind
-            await getList()
-            mainSide = document.getElementById('main_side') //Main.vue 참조
-            resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
-            leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
-            rightSide = document.getElementById('chan_main') //resizer.nextElementSibling
+            // const lastSelKind = localStorage.wiseband_lastsel_kind
+            // if (lastSelKind) kind.value = lastSelKind
+            // await getList()
+            // mainSide = document.getElementById('main_side') //Main.vue 참조
+            // resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
+            // leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
+            // rightSide = document.getElementById('chan_main') //resizer.nextElementSibling
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -39,7 +40,7 @@
             mounting = false
         } else {
             setBasicInfo()
-            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
+            //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         }
     })
 
@@ -317,6 +318,7 @@
                 </div>
             </div>
         </div>
+        <div style="color:white">{{ $route.fullPath }}</div>
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">  <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->

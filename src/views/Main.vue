@@ -44,10 +44,10 @@
             if (lastSelMenu) idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
             if (idx == -1) {
                 const row = listSel.value[0]
-                sideClick("mnuHome", row, idx) //-1로 넘기기
+                sideClick("mnuHome", row, true) //onMounted=true
             } else {
                 const row = listSel.value[idx]
-                sideClick(row.ID, row, idx) //PopupList.vue내 이벤트에서 popupId(row.ID)가 별도로 필요한 상황이라 row말고도 row.ID param 추가함
+                sideClick(row.ID, row, true) //onMounted=true
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -120,12 +120,12 @@
         }
     }
 
-    function sideClick(popupId, row, idx) {
-        clickPopupRow(popupId, row, idx)
+    function sideClick(popupId, row, onMounted) {
+        clickPopupRow(popupId, row, onMounted)
     }
 
     //더보기 메뉴는 로컬에 저장하기 않는 전제임 (더보기 누르면 나오는 목록 클릭시 저장) row까지 argument로 받는 것은 좀 과하다 싶지만 일단 개발 편의 고려해 처리하고자 함
-    function clickPopupRow(popupId, row, idx) {
+    function clickPopupRow(popupId, row, onMounted) {
         try {
             popupMenuOn.value = false
             const id = (popupId == "mnuSeeMore") ? row.ID : popupId //mnuSeeMore일 경우는 무조건 mnuHome
@@ -133,13 +133,12 @@
                 if (listSel.value[i].sel) listSel.value[i].sel = false
             }
             row.sel = true
-            if (idx > -1 && id == gst.selSideMenu) return //사용자 최초 시작은 -1이고 채널트리도 없는 상황이니 멈추지 말고 아래 실행해야 함
+            if (!onMounted && id == gst.selSideMenu) return //사용자 최초 시작시엔 무조건 Home.vue or ListLeft.vue 등을 호출함
             if (popupId != "mnuSeeMore") {
                 gst.selSideMenu = id
                 localStorage.wiseband_lastsel_menu = id
             }
-            const obj = { row: row, idx: (idx == -1) ? 0 : idx }
-            procMenu[id].call(null, obj)
+            procMenu[id].call(null, row, onMounted)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -156,41 +155,23 @@
         localStorage.wiseband_lastsel_menu = popupId
     }
 
-    const procMenu = { //obj.idx and obj.row
-        ["mnuHome"] : (obj) => {
-            try {
-                router.replace({ path: '/main/home' })
-            } catch (ex) {
-                gst.util.showEx(ex, true)
-            }
+    function goRoute(obj, onMounted) { //사이드메뉴 클릭시 맨 처음 로드시 push로 라우팅하면 오른쪽 공백이 생김
+        if (onMounted) {
+            router.replace(obj)
+        } else {
+            router.push(obj)
+        }
+    }
+
+    const procMenu = {
+        ["mnuHome"] : (row, onMounted) => {
+            goRoute({ path: '/main/home' }, onMounted)
         },        
-        ["mnuDm"] : (obj) => {
-            try {
-                router.push({ path: '/main/test' })
-            } catch (ex) {
-                gst.util.showEx(ex, true)
-            }
+        ["mnuLater"] : (row, onMounted) => {
+            goRoute({ name: 'listleft', params : { act: "later" }}, onMounted)
         },
-        ["mnuMyAct"] : (obj) => {
-            try {
-                router.push({ path: '/main/test' })
-            } catch (ex) {
-                gst.util.showEx(ex, true)
-            }
-        },
-        ["mnuLater"] : (obj) => {
-            try {
-                router.push({ name: 'listleft', params : { act: "later" }})
-            } catch (ex) {
-                gst.util.showEx(ex, true)
-            }
-        },
-        ["mnuFixed"] : (obj) => {
-            try {
-                router.push({ name: 'listleft', params : { act: "fixed" }})
-            } catch (ex) {
-                gst.util.showEx(ex, true)
-            }
+        ["mnuFixed"] : (row, onMounted) => {
+            goRoute({ name: 'listleft', params : { act: "fixed" }}, onMounted)
         },
     }
 </script>
@@ -204,7 +185,7 @@
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop">
                     <div id="sideTop" class="sideTop">
-                        <div v-for="(row, idx) in listSel" @click="sideClick(row.ID, row, idx)" :id="row.ID + 'Target'" class="menu cntTarget">
+                        <div v-for="(row, idx) in listSel" @click="sideClick(row.ID, row)" :id="row.ID + 'Target'" class="menu cntTarget">
                             <div :id="row.ID" class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
                                 <img :class="['coMenuImg', row.sel ? 'coMenuImgSel' : '']" :src="gst.html.getImageUrl(row.IMG)">
                             </div>
@@ -226,10 +207,10 @@
                 </div>
             </div>
             <div class="main">
-                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
+                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/home의 home을 가져옴 -->
                     <router-view v-slot="{ Component }">
                         <keep-alive>
-                            <component :is="Component" />
+                            <component :is="Component" :key="route.fullPath.split('/')[2]" />
                         </keep-alive>
                     </router-view>
                 </div>

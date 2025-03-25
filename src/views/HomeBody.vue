@@ -27,7 +27,7 @@
     const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
         
-    let grId, chanId, msgidInChan = ref('')
+    let sideMenu, grId, chanId, msgidInChan
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([])
@@ -39,6 +39,8 @@
 
     let savFirstMsgMstCdt = gst.cons.cdtAtFirst, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 오래된 일시와 최근 일시시
     let onGoingGetList = false, prevScrollY, prevScrollHeight, resultCnt = 0, scrollDirection = ""
+
+    let test1 = ref('')
     
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -103,29 +105,60 @@
         if (mounting) {
             mounting = false
         } else {
+            //debugger
             setBasicInfo()
             if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
                 //console.log("HomeBody1 ==> " + grId + " ^^^ " + chanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
-                msgidInChan.value = gst.selMsgId
+                msgidInChan = gst.selMsgId
                 gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
-                await getList({ msgid: msgidInChan.value, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+                await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
             } else {
-                if (gst.objSaved[chanId]) scrollArea.value.scrollTop = gst.objSaved[chanId].scrollY
-            }      
+                const key = sideMenu + chanId
+                console.log(gst.objSaved[key]+"00==="+key)
+                if (gst.objSaved[key]) {
+                    console.log("11==="+gst.objSaved[key].scrollY)
+                    scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+                }
+            }
         }
     })
 
     onDeactivated(() => {
-        if (!chanId) return
-        if (!gst.objSaved[chanId]) gst.objSaved[chanId] = {}
-        gst.objSaved[chanId].scrollY = prevScrollY
+        //HomeBody.vue가 비활성화되는 싯점은 아래 1), 2)에 따라 다름
+        //1) 사이드메뉴에서 '홈->나중에'를 누르는 경우는 HomeBody.vue의 onDeactivated()보다 ListLeft.vue가 먼저 호출되므로 ListLeft.vue에서 이미 gst.selSideMenu는 mnuLater로 변경되어 있음
+        //2) 그러나, 홈에서 Back()을 눌러 나중에도 돌아가는 경우는 HomeBody.vue의 onDeactivated()가 먼저 호출되므로 gst.selSideMenu는 mnuHome으로 남아 있음
+        //캐시된 HomeBody.vue인 경우 Home.vue보다 먼저 올라오면 Home.vue의 gst.selSideMenu 값을 받는 setBasicInfo()보다 여기 setBasicInfo()가 먼저 실행되어 gst.selSideMenu가 빈값일 수 있음
+        //따라서, 아예 onDeactivated hook에서 일관되게 저장된 사이드메뉴값은 별도로 만들어 사용(sideMenu)하고, gst.selSideMenu는 Home.vue, ListLeft.vue등에서만 사용하기로 하며
+        //아래 setBasicInfo()에서도 route.fullPath를 읽어 sideMenu를 무조건 가져오게 함
+        //debugger
+        /*if (!sideMenu || !chanId) return
+        const key = sideMenu + chanId        
+        if (!gst.objSaved[key]) gst.objSaved[key] = {}
+        gst.objSaved[key].scrollY = prevScrollY*/
     })
 
-    function setBasicInfo() {
+    function setBasicInfo() {        
+        test1.value = gst.selSideMenu + route.fullPath
+        //debugger
+        sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
+        if (!sideMenu) { //gst.selSideMenu가 빈값으로 넘어 오는 경우가 가끔 있는데 비동기실행이 어딘지 찾기가 어려워 일단 아래 코딩 보완
+            //예) /main/home/home_body/20250120084532918913033423/20250122084532918913033403 : arr[2] = "home"
+            const arr = route.fullPath.split("/")
+            sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
+        }        
         if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
             grId = route.params.grid
+            gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
+            gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
+    }
+
+    function saveCurScrollY(posY) {
+        if (!sideMenu || !chanId) return
+        const key = sideMenu + chanId        
+        if (!gst.objSaved[key]) gst.objSaved[key] = {}
+        gst.objSaved[key].scrollY = posY
     }
 
     function chanCtxMenu(e) {
@@ -516,6 +549,7 @@
         //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight+"@@@@"+ele.offsetHeight)
         const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
         prevScrollY = sTop
+        saveCurScrollY(prevScrollY)
         //resultCnt => 읽어온 데이터가 없을 땐 getList() 호출하지 말기
         if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
             prevScrollHeight = scrollArea.value.scrollHeight
@@ -732,7 +766,8 @@
     }
 
     async function addEmoti() {
-        await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+        //await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+        test1.value = route.fullPath
         return
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
@@ -1364,7 +1399,7 @@
         <div class="chan_center_header">
             <div class="chan_center_header_left">
                 <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><!-- - {{ chanId }}-->
-                <div class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}]</div>
+                <div id="chan_nm" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] - {{ test1 }}</div>
             </div>
             <div class="chan_center_header_right">
                 <div class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"

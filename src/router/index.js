@@ -67,7 +67,7 @@ const router = createRouter({
     //console.log("from.path: " + from.path + " *** " + JSON.stringify(from.params)) 
     //console.log("to.path: " + to.path + " *** " + JSON.stringify(to.params))
     if (to.path.startsWith("/main/home")) {
-        gst.selSideMenu = "mnuHome" //향후, 나중에, 내활동 구현시 이 부분 개선하기. 나중에 첫글자 대문자 치환으로 하드코딩 제거 코딩하기 (그리 많지 않으면 그냥 둬도 무방)
+        //gst.selSideMenu = "mnuHome" //향후, 나중에, 내활동 구현시 이 부분 개선하기. 나중에 첫글자 대문자 치환으로 하드코딩 제거 코딩하기 (그리 많지 않으면 그냥 둬도 무방)
         if (to.path == "/main/home") {
             //gst.selSideMenuTimeTag = "/main/home: " + (new Date()).toString() ##87
         } else if (to.path.startsWith("/main/home/home_body")) {            

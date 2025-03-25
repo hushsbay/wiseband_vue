@@ -21,6 +21,7 @@
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
+            debugger
             setBasicInfo()
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) kind.value = lastSelKind
@@ -35,10 +36,12 @@
     })
 
     onActivated(async () => { //초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
+        //debugger
         if (mounting) {
             mounting = false
-        } else {
+        } else { //아래는 onMounted()시에는 실행되지 않도록 함 (onActivated()시에는 onMounted()내 실행이 안되도록 함)
             setBasicInfo()
+            //debugger
             loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         }
     })
@@ -48,9 +51,9 @@
         await getList() 
     })
 
-    // watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
-    //     displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
-    // })
+    watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
+        displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
+    }) //HomeBody.vue의 $$44 참조
 
     // watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
     //     console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue") //console.log(route.fullPath+"@@@@@@@main.vue")
@@ -83,10 +86,11 @@
     }
 
     async function getList() {
-        try {            
+        try {  
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            debugger
             listChan.value = rs.list
             loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         } catch (ex) {
@@ -148,13 +152,12 @@
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID //console.log("router.push:" + row.CHANNM)
                 const obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }} //path와 param는 같이 사용 X (name 이용)
-                //debugger
-                if (!sessionStorage.wiseband_home_at_first) { //Main.vue가 Home.vue를 라우팅할 때는 
+                const ele = document.getElementById("chan_nm")
+                if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
                     router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
                 } else {
                     router.push(obj)
-                }
-                sessionStorage.wiseband_home_at_first = true
+                }                
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -317,6 +320,7 @@
                 </div>
             </div>
         </div>
+        <div style="color:white">{{ $route.fullPath }}</div>
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">  <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
@@ -328,7 +332,7 @@
                 <component :is="Component" :key="$route.fullPath" />
             </keep-alive>
         </router-view>
-    </div>
+    </div>    
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 

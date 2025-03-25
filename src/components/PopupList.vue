@@ -10,8 +10,8 @@
     const borderLineBottom = ref('none') //기본값
     if (props.popupData.lines) borderLineBottom.value = "1px solid var(--border-color)"
 
-    function listRowClick(e, row, idx) { //alert(e.target.id + "===" + idx + "===" + JSON.stringify(row))
-        emits("ev-click", props.popupData.id, row, idx)
+    function listRowClick(row) {
+        emits("ev-click", props.popupData.id, row)
     }
 
     //아래는 지우기 말기 (vue말고 순수 javascript로 구현해 본 것임) : Main.vue에서 맨 처음 테스트
@@ -48,7 +48,7 @@
                 <div class="popupHeaderLeft">더보기</div>
             </div>
             <div class="popupList coScrollable">
-                <div v-for="(row, idx) in list" @click="(e) => listRowClick(e, row, idx)" :id="row.ID" class="coHover" 
+                <div v-for="(row, idx) in list" @click="listRowClick(row)" :id="row.ID" class="coHover" 
                     style="width:100%;min-height:50px;display:flex;align-items:center" :style="{ borderBottom: borderLineBottom }">
                     <div style="width:50px;height:100%;display:flex;align-items:center;justify-content:center">
                         <div class="coMenuContext">
