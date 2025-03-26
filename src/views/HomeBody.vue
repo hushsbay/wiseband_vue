@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, computed, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
@@ -16,20 +16,26 @@
 
     /////////////////////////////////////////////////////////////////////////////////////
     //스레드 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
-    //thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식    
-    const props = defineProps({ pdata: Object }) //자식에서만 사용 : props update 문제 유의
+    //thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
+    //부모와 자식이 동시에 떠 있는 경우 문제가 되는 element id는 파일업로드(file_upload)와 웹에디터(msgContent) 2개가 있음
+    //- hasProp()으로 구분해 2개의 아이디 만들어 사용하면 될 것임
+    
+    const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
     const emits = defineEmits(["ev-click"])
 
-    const hasProp = computed(() => { //Props를 사용하는 것은 자식이므로 hasProp으로 명명
-        //템플리트 밖<script setup>에서는 반드시 true/false로만 비교해야 함 => if (hasProp) 식으로 비교하면 안됨!!!
-        if (props.pdata && props.pdata.msgid) {
-            return true //자식이 열린 상태임을 의미
-        } else {
-            return false
-        }
-    })
+    // const hasProp = computed(() => { //바로 아래 함수 참조
+    //     //템플리트 밖<script setup>에서는 반드시 true/false로만 비교해야 함 => if (hasProp) 식으로 비교하면 안됨!!!
+    //     if (props.data && props.data.msgid) return true //자식이 열린 상태임을 의미
+    //     return false
+    // })
 
-    let thread = ref({ msgid: null }) //부모에서만 사용 (컴포넌트에서 자식에게 pdata로 전달함)
+    function hasProp() { //Props를 사용하는 것은 자식이므로 hasProp으로 명명
+        //위 computed 이용해 처리하고자 했으나 동작이 이상해 포기하고 (결과 캐싱없이 매번 계산하긴 하나) 이 함수로 사용하기로 함
+        if (props.data && props.data.msgid) return true //자식이 열린 상태임을 의미
+        return false
+    }
+
+    let thread = ref({ msgid: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
 
     function openThread(msgid) { //부모에서만 사용
         //const obj = { name : 'reply', params : { msgid: msgid }} //path와 param는 같이 사용 X (name 이용)
@@ -151,12 +157,12 @@
         //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
         //HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생하는 희안한 일이 발생함. :key="$route.fullPath"를 사용해도 마찬가지 현상임
         try {
-            if (hasProp == true) {
-                console.log("자식 - " + JSON.stringify(props.pdata))
+            if (hasProp()) {
+                console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
-                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                await getList({ msgid: props.data.msgid, kind: "withReply" })
             } else {
-                console.log("부모 - " + props.pdata) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기 !!!!!!!!!!!!!!!!!
+                console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기 !!!!!!!!!!!!!!!!!
                 setBasicInfo()
                 if (!gst.selMsgId) await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
                 inEditor.value.focus()
@@ -171,11 +177,11 @@
             console.log("부모AAAAA")
             mounting = false
         } else {
-            if (hasProp == true) {
-                console.log("자식A - " + props.pdata)
+            if (hasProp()) {
+                console.log("자식A - " + props.data)
                 setBasicInfoInProp()
             } else {
-                console.log("부모A - " + props.pdata) //새로고침시 부모AAAAA 나온 이후에도 여기로 실행되는 것은 이상함 (결국 onMounted와 완전히 분리하지 못한다는 의미일 수도..)
+                console.log("부모A - " + props.data) //새로고침시 부모AAAAA 나온 이후에도 여기로 실행되는 것은 이상함 (결국 onMounted와 완전히 분리하지 못한다는 의미일 수도..)
                 setBasicInfo()
                 if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
                     msgidInChan = gst.selMsgId
@@ -285,7 +291,7 @@
     //grid, chanid는 기본 param
     //1) lastMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) firstMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
-    //3) firstMstMsgCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함
+    //3) firstMstMsgCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
     //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
     //5) msgid + kind(withReply) : 1. 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI 2. 나중에..내활동..에서 기본 클릭시 보여 주는 UI
     async function getList(addedParam) {
@@ -376,7 +382,7 @@
                 //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
-                if (firstMsgMstCdt) { //오름차순으로 일부를 읽어옴
+                if (firstMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
                     if (i == 0) {
                         row.stickToPrev = false
                     } else {
@@ -451,7 +457,7 @@
             resultCnt = msgArr.length
             await nextTick()
             if (msgid && (kind == "atHome" || kind == "withReply")) {
-                const ele = document.getElementById(msgid)
+                const ele = document.getElementById(msgid) //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
                 if (ele) ele.scrollIntoView()
             } else if (lastMsgMstCdt == gst.cons.cdtAtLast) {
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
@@ -621,8 +627,9 @@
     }
 
     const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음
+        if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         const sTop = scrollArea.value.scrollTop 
-        const ele = document.getElementById("chan_center_body")
+        const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
         const topEntryPoint = 200
         const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
         //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight+"@@@@"+ele.offsetHeight)
@@ -641,13 +648,13 @@
         }
     }
 
-    const getTopMsgBody = () => { //2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
-        const rect = hush.util.getRect("#chan_center_body")
-        const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
-        let yy = rect.top + 6
-        const ele = document.elementFromPoint(xx, yy)
-        return ele
-    }
+    // const getTopMsgBody = () => { //지우지 말 것. 2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
+    //     const rect = hush.util.getRect("#chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+    //     const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
+    //     let yy = rect.top + 6
+    //     const ele = document.elementFromPoint(xx, yy)
+    //     return ele
+    // }
 
     async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid
         try { //index는 메시지 배열의 항목 인덱스. idx는 그 항목내 file or image or link array의 인덱스
@@ -1472,12 +1479,12 @@
     <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                <img v-if="!hasProp" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
-                <div v-if="!hasProp" id="chan_nm" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
-                <div v-if="hasProp" style="margin-right:5px">스레드</div>
+                <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
+                <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
+                <div v-if="hasProp()" style="margin-right:5px">스레드</div>
             </div>
             <div class="chan_center_header_right">
-                <div v-if="!hasProp" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
+                <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
                     @click="chanProperty('member')">
                     <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
                         <img v-if="row.url" :src="row.url" style='width:100%;height:100%;border-radius:12px'>
@@ -1485,15 +1492,15 @@
                     </div>
                     <span>{{ chandtl.length }}</span>
                 </div>
-                <div v-if="!hasProp" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                     <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
                 </div>
-                <div v-if="hasProp" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                     <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => { emits('ev-click', { type: 'close' })}">
                 </div>
             </div>
         </div>
-        <div v-if="!hasProp" class="chan_center_nav" id="chan_center_nav">
+        <div v-if="!hasProp()" class="chan_center_nav">
             <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="chanMsg('M')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
@@ -1586,7 +1593,7 @@
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span>
-                    <span v-if="!hasProp" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
+                    <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span>
                     <span class="procAct">
                         <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
@@ -1664,8 +1671,8 @@
         </div>
     </div>
     <div class="chan_right" v-if="thread.msgid":style="{ width: widthChanRight }">
-        <home-body :pdata="thread" @ev-click="clickFromProp" ></home-body>
-        <!-- <component :is="componentLoader" :pdata="pdata" @ev-click="clickFromProp" @ev-leave="pdata=null" :key="qwerty"></component> -->
+        <home-body :data="thread" @ev-click="clickFromProp" ></home-body>
+        <!-- <component :is="componentLoader" :data="thread" @ev-click="clickFromProp" :key="qwerty"></component> -->
         <!-- <router-view /> -->
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
