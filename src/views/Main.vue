@@ -208,10 +208,12 @@
                 </div>
             </div>
             <div class="main">
-                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/home의 'home'을 가져옴 : arr[2] -->
+                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/home의 'home'을 가져옴 : arr[2]
+                    <component :is="Component" :key="route.fullPath.split('/')[2]" />로 구현시 HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생하는 희안한 일이 발생함
+                    :key="$route.fullPath"를 사용해도 마찬가지 현상임. 결국, 일단 key 사용하지 않고 여기 자리 Component는 공통으로 모듈화하지 않고 각각 만들어서 적용해야 캐싱 문제없을 듯 -->
                     <router-view v-slot="{ Component }">
                         <keep-alive>
-                            <component :is="Component" :key="route.fullPath.split('/')[2]" />
+                            <component :is="Component" />
                         </keep-alive>
                     </router-view>
                 </div>

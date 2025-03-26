@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, onUnmounted, nextTick, useTemplateRef, onActivated, onDeactivated, computed, defineAsyncComponent } from 'vue' 
+    import { ref, computed, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
@@ -8,7 +8,7 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
-    import HomeBody from '/src/views/HomeBody.vue'
+    //import HomeBody from '/src/views/HomeBody.vue'
         
     const gst = GeneralStore()
     const route = useRoute()
@@ -21,8 +21,12 @@
     const emits = defineEmits(["ev-click"])
 
     const hasProp = computed(() => { //Props를 사용하는 것은 자식이므로 hasProp으로 명명
-        if (props.pdata && props.pdata.msgid) return true //자식이 열린 상태임을 의미
-        return false
+        //템플리트 밖<script setup>에서는 반드시 true/false로만 비교해야 함 => if (hasProp) 식으로 비교하면 안됨!!!
+        if (props.pdata && props.pdata.msgid) {
+            return true //자식이 열린 상태임을 의미
+        } else {
+            return false
+        }
     })
 
     let thread = ref({ msgid: null }) //부모에서만 사용 (컴포넌트에서 자식에게 pdata로 전달함)
@@ -52,6 +56,13 @@
                 widthChanCenter.value = 'calc(100% - 620px)'
                 widthChanRight.value = '600px'
             }
+        }
+    }
+
+    function setBasicInfoInProp() {
+        if (route.params.chanid && route.params.grid) {
+            chanId = route.params.chanid
+            grId = route.params.grid
         }
     }
     /////////////////////////////////////////////////////////////////////////////////////
@@ -136,16 +147,16 @@
     */
 
     onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
+        //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
+        //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
+        //HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생하는 희안한 일이 발생함. :key="$route.fullPath"를 사용해도 마찬가지 현상임
         try {
-            if (hasProp) {
-                console.log("aaa-"+props.pdata)
-                if (route.params.chanid && route.params.grid) { //임시코딩
-                    chanId = route.params.chanid
-                    grId = route.params.grid
-                    await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-                }
+            if (hasProp == true) {
+                console.log("자식 - " + JSON.stringify(props.pdata))
+                setBasicInfoInProp()
+                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
             } else {
-                console.log("111-"+props.pdata)
+                console.log("부모 - " + props.pdata) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기 !!!!!!!!!!!!!!!!!
                 setBasicInfo()
                 if (!gst.selMsgId) await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
                 inEditor.value.focus()
@@ -155,29 +166,26 @@
         }
     })
 
-    onUnmounted(() => {
-        console.log("111111111111111111111111")
-    })
-
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
         if (mounting) {
+            console.log("부모AAAAA")
             mounting = false
         } else {
-            if (hasProp) {
-                console.log("bbb-"+props.pdata) //댓글 HomeBody.vue는 keepalive가 되어 있지 않은 상태이므로 onActivated로 들어올 일이 없을 것으로 판단됨
+            if (hasProp == true) {
+                console.log("자식A - " + props.pdata)
+                setBasicInfoInProp()
             } else {
-                console.log("222-"+props.pdata)
+                console.log("부모A - " + props.pdata) //새로고침시 부모AAAAA 나온 이후에도 여기로 실행되는 것은 이상함 (결국 onMounted와 완전히 분리하지 못한다는 의미일 수도..)
                 setBasicInfo()
                 if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
-                    //console.log("HomeBody1 ==> " + grId + " ^^^ " + chanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
                     msgidInChan = gst.selMsgId
                     gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
                     await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
                 } else {
                     const key = sideMenu + chanId
-                    console.log(gst.objSaved[key]+"00==="+key)
+                    //console.log(gst.objSaved[key]+"00==="+key)
                     if (gst.objSaved[key]) {
-                        console.log("11==="+gst.objSaved[key].scrollY)
+                        //console.log("11==="+gst.objSaved[key].scrollY)
                         scrollArea.value.scrollTop = gst.objSaved[key].scrollY
                     }
                 }
@@ -185,7 +193,7 @@
         }
     })
 
-    onDeactivated(() => {
+    //onDeactivated(() => {
         //HomeBody.vue가 비활성화되는 싯점은 아래 1), 2)에 따라 다름
         //1) 사이드메뉴에서 '홈->나중에'를 누르는 경우는 HomeBody.vue의 onDeactivated()보다 ListLeft.vue가 먼저 호출되므로 ListLeft.vue에서 이미 gst.selSideMenu는 mnuLater로 변경되어 있음
         //2) 그러나, 홈에서 Back()을 눌러 나중에도 돌아가는 경우는 HomeBody.vue의 onDeactivated()가 먼저 호출되므로 gst.selSideMenu는 mnuHome으로 남아 있음
@@ -193,11 +201,12 @@
         //따라서, 아예 onDeactivated hook에서 일관되게 저장된 사이드메뉴값은 별도로 만들어 사용(sideMenu)하고, gst.selSideMenu는 Home.vue, ListLeft.vue등에서만 사용하기로 하며
         //아래 setBasicInfo()에서도 route.fullPath를 읽어 sideMenu를 무조건 가져오게 함
         //debugger
-        /*if (!sideMenu || !chanId) return
+        /* onScrollEnd에서 처리하는 것으로 변경하고 막음
+        if (!sideMenu || !chanId) return
         const key = sideMenu + chanId        
         if (!gst.objSaved[key]) gst.objSaved[key] = {}
         gst.objSaved[key].scrollY = prevScrollY*/
-    })
+    //})
 
     /*const componentLoader = computed(() => { //https://empty-castle.tistory.com/3, https://blogcreator.blog/post/33
         //console.log(menuId.value) //3) debugger 빼면 안되서 console.log 추가 (menuId.value를 아래 Promise안에서는 인식안됨!?)
@@ -206,10 +215,10 @@
         )
     })*/
 
-
     function setBasicInfo() {        
         //test1.value = gst.selSideMenu + route.fullPath
         //debugger
+        console.log("setBasicInfo")
         sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
         if (!sideMenu) { //gst.selSideMenu가 빈값으로 넘어 오는 경우가 가끔 있는데 비동기실행이 어딘지 찾기가 어려워 일단 아래 코딩 보완
             //예) /main/home/home_body/20250120084532918913033423/20250122084532918913033403 : arr[2] = "home"
