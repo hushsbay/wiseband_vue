@@ -1463,11 +1463,12 @@
     <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header">
             <div class="chan_center_header_left">
-                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><!-- - {{ chanId }}-->
-                <div id="chan_nm" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] - {{ chanId }}</div>
+                <img v-if="!hasProp" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
+                <div v-if="!hasProp" id="chan_nm" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
+                <div v-if="hasProp" style="margin-right:5px">스레드</div>
             </div>
             <div class="chan_center_header_right">
-                <div class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
+                <div v-if="!hasProp" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
                     @click="chanProperty('member')">
                     <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
                         <img v-if="row.url" :src="row.url" style='width:100%;height:100%;border-radius:12px'>
@@ -1475,7 +1476,7 @@
                     </div>
                     <span>{{ chandtl.length }}</span>
                 </div>
-                <div class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                <div v-if="!hasProp" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                     <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
                 </div>
                 <div v-if="hasProp" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
@@ -1483,7 +1484,7 @@
                 </div>
             </div>
         </div>
-        <div class="chan_center_nav" id="chan_center_nav">
+        <div v-if="!hasProp" class="chan_center_nav" id="chan_center_nav">
             <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="chanMsg('M')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
@@ -1576,7 +1577,7 @@
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
+                    <span v-if="!hasProp" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
                     <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span>
                     <span class="procAct">
                         <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
