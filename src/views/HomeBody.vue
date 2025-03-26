@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated, computed, defineAsyncComponent } from 'vue' 
+    import { ref, onMounted, onUnmounted, nextTick, useTemplateRef, onActivated, onDeactivated, computed, defineAsyncComponent } from 'vue' 
     import { useRoute, useRouter } from 'vue-router'
     import axios from 'axios'
     import { debounce } from 'lodash'
@@ -15,16 +15,44 @@
     const router = useRouter()
 
     /////////////////////////////////////////////////////////////////////////////////////
-    const props = defineProps({ pdata: Object }) //props update 문제 유의
-    //const emits = defineEmits(["ev-click", "ev-leave"])
+    //스레드 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
+    //thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식    
+    const props = defineProps({ pdata: Object }) //자식에서만 사용 : props update 문제 유의
+    const emits = defineEmits(["ev-click"])
 
-    let pdata = ref({ 
-        on: true
+    const hasProp = computed(() => { //Props를 사용하는 것은 자식이므로 hasProp으로 명명
+        if (props.pdata && props.pdata.msgid) return true //자식이 열린 상태임을 의미
+        return false
     })
 
-    function hasProp() {
-        if (props && props.pdata) return true //우측에 HomeBody.vue가 댓글을 가지고 열린 상태임을 의미
-        return false
+    let thread = ref({ msgid: null }) //부모에서만 사용 (컴포넌트에서 자식에게 pdata로 전달함)
+
+    function openThread(msgid) { //부모에서만 사용
+        //const obj = { name : 'reply', params : { msgid: msgid }} //path와 param는 같이 사용 X (name 이용)
+        //router.push(obj)
+        thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
+        setWidthForThread()
+    }
+
+    function clickFromProp(obj) { //부모에서만 사용하나 자식에게서 전달받아 이벤트 처리하는 것임
+        if (obj.type == "close") {
+            thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
+            setWidthForThread(null, obj.type)
+        }
+    }
+
+    function setWidthForThread(openWith, type) { //openWith : 향후 마우스 드래그로 넓이 조정 가능하도록 하기
+        if (type == "close") {
+            widthChanCenter.value = 'calc(100% - 20px)'
+            widthChanRight.value = '0px'
+        } else {
+            if (openWith) {
+
+            } else {
+                widthChanCenter.value = 'calc(100% - 620px)'
+                widthChanRight.value = '600px'
+            }
+        }
     }
     /////////////////////////////////////////////////////////////////////////////////////
 
@@ -35,8 +63,8 @@
     const MAX_PICTURE_CNT = 11
 
     let mounting = true
-    let thread = ref({ msgid: null })
-    let widthChanCenter = ref(hasProp() ? 'calc(100% - 20px)' : 'calc(100% - 620px)'), widthChanRight = ref(hasProp() ? '0px' : '600px')
+    
+    let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //HomeBody가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
     const scrollArea = ref(null)
 
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
@@ -56,7 +84,7 @@
     let savFirstMsgMstCdt = gst.cons.cdtAtFirst, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 오래된 일시와 최근 일시시
     let onGoingGetList = false, prevScrollY, prevScrollHeight, resultCnt = 0, scrollDirection = ""
 
-    let test1 = ref('')
+    //let test1 = ref('')
     
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -109,7 +137,7 @@
 
     onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         try {
-            if (hasProp()) {
+            if (hasProp) {
                 console.log("aaa-"+props.pdata)
                 if (route.params.chanid && route.params.grid) { //임시코딩
                     chanId = route.params.chanid
@@ -117,6 +145,7 @@
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
             } else {
+                console.log("111-"+props.pdata)
                 setBasicInfo()
                 if (!gst.selMsgId) await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
                 inEditor.value.focus()
@@ -126,13 +155,18 @@
         }
     })
 
+    onUnmounted(() => {
+        console.log("111111111111111111111111")
+    })
+
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
         if (mounting) {
             mounting = false
         } else {
-            if (hasProp()) {
+            if (hasProp) {
                 console.log("bbb-"+props.pdata) //댓글 HomeBody.vue는 keepalive가 되어 있지 않은 상태이므로 onActivated로 들어올 일이 없을 것으로 판단됨
             } else {
+                console.log("222-"+props.pdata)
                 setBasicInfo()
                 if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
                     //console.log("HomeBody1 ==> " + grId + " ^^^ " + chanId + " ^^^ " + gst.selMsgId + " === " + savLastMsgMstCdt)
@@ -174,7 +208,7 @@
 
 
     function setBasicInfo() {        
-        test1.value = gst.selSideMenu + route.fullPath
+        //test1.value = gst.selSideMenu + route.fullPath
         //debugger
         sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
         if (!sideMenu) { //gst.selSideMenu가 빈값으로 넘어 오는 경우가 가끔 있는데 비동기실행이 어딘지 찾기가 어려워 일단 아래 코딩 보완
@@ -803,7 +837,7 @@
 
     async function addEmoti() {
         //await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
-        test1.value = route.fullPath
+        //test1.value = route.fullPath
         return
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
@@ -1292,15 +1326,6 @@
         msglist.value = [...msglist.value, ...rs.data.msglist]
     }
     
-    ///////////////////////////////////////////////////////////////////////////아래는 thread 관련임
-    function openThread(msgid) {
-        //const obj = { name : 'reply', params : { msgid: msgid }} //path와 param는 같이 사용 X (name 이용)
-        //router.push(obj)
-        thread.value.msgid = msgid
-        //widthChanCenter.value = ref('calc(100% - 820px)')
-        //widthChanRight.value = ref('800px')
-    }
-
     ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임
     //https://velog.io/@msdio/window%EC%9D%98-Selection%EA%B3%BC-range%EC%97%90-%EB%8C%80%ED%95%B4%EC%84%9C-%EC%95%8C%EC%95%84%EB%B3%B4%EC%9E%90
     //selection 타입 : none, range, caret. range는 유저가 선택한(드래그한) 범위 / caret은 범위가 아닌 특정 위치의 커서
@@ -1439,7 +1464,7 @@
         <div class="chan_center_header">
             <div class="chan_center_header_left">
                 <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px"><!-- - {{ chanId }}-->
-                <div id="chan_nm" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] - {{ test1 }}</div>
+                <div id="chan_nm" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] - {{ chanId }}</div>
             </div>
             <div class="chan_center_header_right">
                 <div class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
@@ -1452,6 +1477,9 @@
                 </div>
                 <div class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                     <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
+                </div>
+                <div v-if="hasProp" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                    <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => { emits('ev-click', { type: 'close' })}">
                 </div>
             </div>
         </div>
@@ -1625,8 +1653,8 @@
             </div>
         </div>
     </div>
-    <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
-        <home-body :pdata="pdata"></home-body>
+    <div class="chan_right" v-if="thread.msgid":style="{ width: widthChanRight }">
+        <home-body :pdata="thread" @ev-click="clickFromProp" ></home-body>
         <!-- <component :is="componentLoader" :pdata="pdata" @ev-click="clickFromProp" @ev-leave="pdata=null" :key="qwerty"></component> -->
         <!-- <router-view /> -->
     </div>   
@@ -1717,7 +1745,7 @@
         width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
     }
     .chan_right {
-        height:100%;border:2px solid red; /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
+        height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
     .topMenu { border-radius:5px;cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
