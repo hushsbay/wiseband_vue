@@ -1,0 +1,196 @@
+:root {
+  --main-color:rgb(182, 181, 181); /* 기존 vue 사용색상이므로 일단 그대로 두기 */
+  --primary-color:rgb(63, 14, 64); /* same as #3F0E40 => viloet icon */
+  --second-color:rgb(90, 46, 93); /* rgb(131, 56, 138) */
+  --second-hover-color:rgb(106, 56, 114); /* rgb(131, 56, 138) */
+  --second-select-color:whitesmoke; /* same as #f5f5f5 => whitesmoke icon */
+  --text-white-color:whitesmoke; /* same as #f5f5f5 */
+  --border-color:lightgray; /* dimgray #696969 => dimgray icon */  /* ContextMenu.vue, PopupList.vue 2군데만 사용 */  
+  --shadow-color:gray; /* ContextMenu.vue, PopupList.vue 2군데만 사용 */  
+  --bottom-color:whitesmoke; /* ContextMenu.vue, PopupList.vue 2군데만 사용 */  
+  --menu-color:white;
+  --active-color:lightsteelblue;
+}
+
+html, body { 
+  width: 100%; height: 100%; margin: 0;
+  font-family:"맑은 고딕";font-size:14px; 
+  overscroll-behavior: contain; /* disable pull_to_refresh 화면 끌어 내리면 새로고침되는 것 막음. iOS는 안됨. 크롬/삼성브라우저 OK */
+  -webkit-text-size-adjust : none; /* 모바일에서 알아서 글자크기를 조정하는 것을 막음. 크롬, 사파리, 오페라 신버전 */
+  -moz-text-size-adjust : none; /* 파이어폭스 */
+}
+
+#app { width:100%;height:100%; margin: 0; }
+input[type="text"] { height:22px; }
+input[type="search"] { width:150px;height:28px; }
+select { height:28px; }
+
+/* Slack 전용 : coMenuDiv는 육안으로 보이는 메뉴 여부에 사용하므로 주의 */
+.coMenuDiv, coMenuContext { width:35px;height:35px;display:flex;flex-direction:column;justify-content:center;align-items:center; }
+.coMenuImg { width:20px;height:20px;padding:6px;border-radius:8px; }
+.coMenuImg:hover { width:22px;height:22px;background:var(--second-color); }
+.coMenuImgSel { width:22px;height:22px;background:dimgray; }
+.coMenuText { font-size:12px;color:var(--menu-color);font-weight:bold }
+
+/* 레이아웃 : 기본 (시작) : 그리드 메뉴처럼 좌우 윈도우사이즈를 달리해도 항상 가운데 위치하도록 함 (with #app) */
+
+.coMain {
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+}
+
+.coMainWrapper {
+  width:calc(100% - 14px);height:100%;padding:0 7px;
+  display:flex;flex-direction:column;
+}
+
+.coHeader {
+  width:100%;height:35px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.coTitle {
+  width:50%;
+  font-size:20px;font-weight:bold;color:darkblue;
+}
+.coHeaderRight {
+  width:50%;
+  display:flex;justify-content:flex-end;align-items:center;
+  overflow:hidden;
+}
+
+.coMenubar { /* 내부에 탭말고도 다른 스타일의 메뉴형식도 들어갈 수 있게 하는 것이 컨셉임 */
+  width:100%;height:40px;
+  display:flex;align-items:center;
+}
+.coTabMenu {
+  width:100%;height:100%;
+  display:flex;justify-content:space-around;align-items:center;
+  border-top: 1px solid var(--main-color);border-left: 1px solid var(--main-color);
+}
+.coTabCell {
+height:100%;
+flex:1;display:flex;justify-content:center;align-items:center;
+border-right: 1px solid var(--main-color);border-bottom: 1px solid var(--main-color);cursor:pointer;
+}
+
+/* 아래 검색 관련 클래스는 목록에만 존재할 것임 */
+.coSearchbar {
+  width:100%;height:40px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.coSearchLeft {
+width:240px;
+display:flex;align-items:center;
+}
+.coSearchRight {
+width:calc(100% - 200px);
+display:flex;justify-content:flex-end;align-items:center;
+overflow:hidden;
+}
+
+/* 아래 2개 클래스는 목록, 문서에 각각 사용 ;border: 1px solid red */
+.coList { display:flex;flex-direction:column;align-items:flex-start;flex:1;overflow-y:auto;margin-bottom:1px; } /* 목록 */
+.coDoc { display:flex;flex-direction:column;align-items:flex-start;flex:1;overflow-y:auto;margin-bottom:1px; } /* 문서 */
+
+/* 아래 테이블 관련은 목로과 문서로 구분하지 않고 헤더가 필요한 곳에서 사용함
+ 원래 간단한 css였는데 헤더행 고정(position:sticky;top:0)때문에 아래처럼 복잡해짐 */
+.coTable { 
+  width:calc(100% - 1px);
+  display:table;table-layout:fixed;border-collapse:collapse;border-spacing:0;border-left:1px solid var(--main-color)
+}
+.coTrh { display:table-row;cursor:default;height:30px; }
+.coTh { 
+position:sticky;top:0;display:table-cell; /* border-bottom이 아닌 border로 하면 스크롤될 때 헤더가 불안정하게 움직이고 잔상이 보임 */
+border-right:1px solid var(--main-color);border-bottom:1px solid var(--main-color);background-color:rgb(228, 232, 238);
+text-align:center;vertical-align:middle;z-index:9998; /*스크롤중에 투명하게 변하는 문제때문에 z-index 설정 : Snackbar가 9999임*/
+}
+.coTr { /* tr에 relative와 hidden이 들어간 상태에서 td에 coOverflowHidden(height:100%;position:absolute;overflow:hidden;) 3가지가 들어가야 overflow:hidden이 제대로 구현되게 됨 */
+  position:relative;height:40px;display:table-row;overflow:hidden;cursor:pointer; 
+}
+.coTd { display:table-cell;padding:4px;border-right:1px solid var(--main-color);border-bottom:1px solid var(--main-color); } /* border로만 하면 overflow:hidden일 때 border가 중첩되어 보임 */
+.coOverflowHidden { height:100%;position:absolute;overflow:hidden; } /* 대부분 coDotDot으로 커버될 것이나, 셀높이만큼만(예:2행) 보여줄 때 사용 */
+.coLeft { text-align:left;vertical-align:middle; }
+.coCenter { text-align:center;vertical-align:middle; }
+.coRight { text-align:right;vertical-align:middle; }
+.coFlexLeft { width:100%;height:100%;display:flex;justify-content:flex-start;align-items:center; } /* 테이블내 이미지 등 복잡한 태그가 정렬이 먹히지 않을 때 사용하기 */
+.coFlexCenter { width:100%;height:100%;display:flex;justify-content:center;align-items:center; } /* 테이블내 이미지 등 복잡한 태그가 정렬이 먹히지 않을 때 사용하기 */
+.coFlexRight { width:100%;height:100%;display:flex;justify-content:flex-end;align-items:center; } /* 테이블내 이미지 등 복잡한 태그가 정렬이 먹히지 않을 때 사용하기 */
+
+/* 아래 테이블 관련은 헤더가 필요없는 곳에서 사용 (나머지는 위 클래스를 그대로 사용하면 됨) */
+.coTableNh { width:calc(100% - 1px);margin:3px 0;display:table;table-layout:fixed;border-collapse:collapse;border-spacing:0;border-top:1px solid var(--main-color) }
+.coTdLbl { display:table-cell;padding:0px 4px;border:1px solid var(--main-color);background-color:rgb(246, 247, 248);color:dimgray }
+
+/* 아래 페이징(coNaver, coPager) 관련 클래스는 목록에만 존재하고 파일첨부(coFiler)는 문서에만 존재할 것임 */
+.coNaver, .coFiler {
+  width:100%;height:50px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-top:1px solid var(--main-color);
+}
+.coNaverLeft {
+  display:flex;justify-content:flex-start;align-items:center;
+}
+.coPager {
+  display:flex;justify-content:center;align-items:center;
+}
+.coNaverRight {
+  display:flex;justify-content:flex-end;align-items:center;
+  color:dimgray;
+}
+
+/* 아래는 목록과 문서로 클래스를 분리 */
+.coFooter {
+  width:100%;height:50px;
+  display:flex;align-items:center;
+  overflow:hidden;border-top:1px solid var(--main-color);
+}
+
+/* 레이아웃 : 기본 (끝) ****************************************************/
+
+.coInputOneRow { width:calc(100% - 8px) } /* 테이블내 한행으로 설정되는 TD내 input */
+
+.coButton {
+  height:36px;padding:0 8px;margin:5px 10px 5px 0;
+  display:flex;justify-content:center;align-items:center;
+  border:1px solid var(--main-color);border-radius:5px;cursor:pointer;
+}
+
+.coDisabled { background-color:lightgray; }
+.coSel { background-color:steelblue;color:white }
+
+.coMenu:hover { background-color:hsla(160, 100%, 37%, 0.1);cursor:pointer; }
+.coMenu:active { color:white;background-color: steelblue;cursor:pointer; }
+.coHover:hover { background:hsla(160, 100%, 37%, 0.1);cursor:pointer; }
+
+.coScrollable { 
+    /* scrollbar-color: white rgb(216, 216, 216);  */
+    scrollbar-color:dimgray var(--second-color);
+    scrollbar-width:thin;  
+}
+
+.coDotDot { overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
+
+.coImg14 { width:14px;height:14px }
+.coImg18 { width:18px;height:18px;cursor:pointer; }
+.coImg20 { width:20px;height:20px;cursor:pointer; }
+.coImg24 { width:24px;height:24px;cursor:pointer; }
+.coImg32 { width:32px;height:32px;cursor:pointer; }
+.coImg64 { width:64px;height:64px;cursor:pointer; }
+
+.coImgBtn {
+  padding:4px;
+  display:flex;justify-content:center;align-items:center;
+  border:1px solid var(--main-color);border-radius:5px;cursor:pointer;
+}
+
+.coImgRound {
+  padding:4px;
+  display:flex;justify-content:center;align-items:center;
+  border:1px solid var(--main-color);border-radius:50px;cursor:pointer;
+}
+
+@media screen and (max-device-width: 500px) { 
+  .coLogin { padding-top: 50px; display: flex; flex-direction: column; justify-content: flex-start; } /* login.html : 모바일인 경우 키보드 올라오는 경우 대비해 상단 배치 */
+}
+@media screen and (min-device-width: 501px) { /* 일단 위와 동일하나 향후 변경사항 있을 것이므로 그대로 두기 */
+  .coLogin { padding-top: 50px; display: flex; flex-direction: column; justify-content: flex-start; } /* login.html : 모바일인 경우 키보드 올라오는 경우 대비해 상단 배치 */
+}
