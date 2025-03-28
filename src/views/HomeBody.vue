@@ -18,7 +18,7 @@
     //스레드 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
     //thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
     //부모와 자식이 동시에 떠 있는 경우 문제가 되는 element id는 파일업로드(file_upload)와 웹에디터(msgContent) 2개가 있음
-    //- hasProp()으로 구분해 2개의 아이디 만들어 사용하면 될 것임
+    //- hasProp()으로 구분해 2개의 element id 만들어 사용하면 될 것임
     
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
     const emits = defineEmits(["ev-click"])
@@ -36,6 +36,7 @@
     }
 
     let thread = ref({ msgid: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
+    const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
     function openThread(msgid) { //부모에서만 사용
         //const obj = { name : 'reply', params : { msgid: msgid }} //path와 param는 같이 사용 X (name 이용)
@@ -109,7 +110,7 @@
     //아래 변수는 storeCursorPosition()의 주석 참조
     let prevRange //let cursorPos = { node: null, startOffset: 0, endOffset: 0 } curPos 말고 prevRange로 기억하면 훨씬 간편해서 막음 (코딩은 그대로 둠)
     let editorIn = ref(false), editorBlurDt = Date.now()
-    let inEditor = useTemplateRef('editorRef') //editor = document.getElementById('msgContent') editor 대신 inEditor (템플릿 참조) 사용
+    let inEditor = useTemplateRef('editorRef') //editor = document.getElementById(editorId) editor 대신 inEditor (템플릿 참조) 사용
 
     /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
@@ -594,7 +595,7 @@
             }},
             { nm: "메시지 편집", func: function(item, idx) {
                 editMsgId.value = row.MSGID
-                prevEditData = document.getElementById('msgContent').innerHTML
+                prevEditData = document.getElementById(editorId).innerHTML
                 if (prevEditData.trim() != "") {
                     //gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
                     //return
@@ -771,7 +772,7 @@
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
         try { //파일,이미지,링크가 있다면 미리 업로드된 상태이며 crud가 C일 때만 업로드 되며 U일 때는 슬랙과 동일하게 업로드되지 않음 (본문만 수정저장됨)
-            let body = document.getElementById('msgContent').innerHTML.trim()
+            let body = document.getElementById(editorId).innerHTML.trim()
             if (body == "") return
             const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/
             const result = reg.exec(body)
@@ -784,10 +785,11 @@
                 body = body.replace(result[0], node.outerHTML)
                 node.remove()
             }
-            msgbody.value = body //document.getElementById('msgContent').innerHTML //이 행이 없으면 발송 2회차부터 msgbody가 계속 본문에 남아 있음
+            msgbody.value = body //document.getElementById(editorId).innerHTML //이 행이 없으면 발송 2회차부터 msgbody가 계속 본문에 남아 있음
             let crud = (editMsgId.value) ? "U" : "C"
             const rq = { 
-                crud: crud, chanid: chanId, msgid: editMsgId.value, body: msgbody.value, //document.getElementById('msgContent').innerHTML,
+                crud: crud, chanid: chanId, msgid: editMsgId.value, replyto: hasProp() ? props.data.msgid : null,
+                body: msgbody.value, //document.getElementById(editorId).innerHTML,
                 num_file: (editMsgId.value) ? 0 : fileBlobArr.value.length, 
                 num_image: (editMsgId.value) ? 0 : imgBlobArr.value.length, 
                 num_link: (editMsgId.value) ? 0 : linkArr.value.length
@@ -796,8 +798,12 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             if (crud == "C") {
-                //await getList({ grid: grId, chanid: chanId, firstMsgMstCdt: savFirstMsgMstCdt }) //저장한 메시지 추가
-                await getList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
+                if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
+                    await getList({ msgid: props.data.msgid, kind: "withReply" })
+                    scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+                } else {
+                    await getList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
+                }
             } else { //아래 막은 것은 getMsg()를 사용하지 않는 방법인데 나중에 어차피 다른 사용자화면에 실시간반영을 위해서는 소켓으로 통보받도록 하고 getMsg()를 써야 할 것임
                 //const item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
                 //item.BODY = msgbody.value
@@ -950,7 +956,7 @@
         }
         range.collapse(false)
         inEditor.value.focus()
-        //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
+        //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
         return
     }
 
@@ -1054,7 +1060,7 @@
         }
         range.collapse(false)
         inEditor.value.focus()
-        //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
+        //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
         return
     }
 
@@ -1081,7 +1087,7 @@
         node1.append(content1) 
         console.log(msgbody.value+"@@@"+node1.outerHTML)
 
-        const ele = document.getElementById("msgContent")
+        const ele = document.getElementById(editorId)
         let range1 = document.createRange()        
         range1.setStart(ele, 0)
         range1.setEnd(ele, 2)
@@ -1137,7 +1143,7 @@
         }
         range.collapse(false)
         inEditor.value.focus()
-        //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
+        //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
         return
         }
     
@@ -1176,7 +1182,7 @@
                 range.deleteContents()
                 range.insertNode(node)
                 range.collapse(false)
-                //msgbody.value = document.getElementById('msgContent').innerHTML //데이터가 필요시 처리하면 됨
+                //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
             }
             linkText.value = ""
             linkUrl.value = ""
@@ -1384,14 +1390,14 @@
             range.insertNode(node)
             range.collapse(false)
             inEditor.value.focus()
-            //msgbody.value = document.getElementById('msgContent').innerHTML //처리할 필요가 있을 때 추가하기로 함
+            //msgbody.value = document.getElementById(editorId).innerHTML //처리할 필요가 있을 때 추가하기로 함
             return true
         } else if (type == "text/plain") {
             range.deleteContents()
             range.insertNode(document.createTextNode(str))
             range.collapse(false)
             inEditor.value.focus()
-            //msgbody.value = document.getElementById('msgContent').innerHTML //처리할 필요가 있을 때 추가하기로 함
+            //msgbody.value = document.getElementById(editorId).innerHTML //처리할 필요가 있을 때 추가하기로 함
             return true
         } else {
             gst.util.setToast("복사/붙이기는 Text/Html/Image만 지원 가능합니다.", 3)
@@ -1401,7 +1407,7 @@
 
     function chkSelectionInTagFailed(tag, str) { //코딩 실패 케이스 (donotdelete)
         let currentNode = window.getSelection().focusNode
-        while (currentNode && (currentNode.nodeName == '#text' || currentNode.id != 'msgContent')) {
+        while (currentNode && (currentNode.nodeName == '#text' || currentNode.id != editorId)) {
             if (tag == "B") { //아래는 초창기에 생각한 해법이었으나 focusNode로는 해결이 안되었음
                 //결론은 selection/range내 노드는 여러개 있을 수 있으나 currentNode는 focusNode 기준이므로 한개만 추출됨
                 //예) <p>구름에 "달 <b>가듯이</b>" 가는 나그네<br>술익는 마을마다 <span style="color:red;font-weight:bold">타는 저녁놀</span> 하하</p>
@@ -1450,7 +1456,7 @@
     }
 
     function chkCurTagType(currentNode, type) {
-        while (currentNode && currentNode.id != 'msgContent') {
+        while (currentNode && currentNode.id != editorId) {
             if (type == "B") {
                 if (currentNode.tagName == type || currentNode.tagName == "STRONG" || (currentNode.style && currentNode.style["font-weight"] === "bold")) {
                     return true
@@ -1471,7 +1477,7 @@
 
     function htmlView() {
         showHtml.value = true
-        msgbody.value = document.getElementById('msgContent').innerHTML
+        msgbody.value = document.getElementById(editorId).innerHTML
     }
 </script>
 
@@ -1618,10 +1624,18 @@
                 </div>
                 <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_addlink.png')" 
                     title="링크추가" @click="uploadLink('addlink')">
-                <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
-                <label v-if="!editMsgId" for="file_upload">
-                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
-                </label>
+                <span v-if="hasProp()">
+                    <input v-if="!editMsgId" id="file_upload_prop" type=file multiple hidden @change="uploadFile" />
+                    <label v-if="!editMsgId" for="file_upload_prop">
+                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
+                    </label>
+                </span>
+                <span v-else>
+                    <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
+                    <label v-if="!editMsgId" for="file_upload">
+                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
+                    </label>
+                </span>
                 <div style="width:8px;height:20px;margin-left:12px;border-left:1px solid dimgray"></div>
                 <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" 
                     :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="addEmoti()">
@@ -1634,7 +1648,10 @@
                 <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
                     @click="htmlView()"><!--개발자사용-->
             </div>
-            <div id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+            <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+            </div>
+            <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
                 @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
             </div>
             <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
