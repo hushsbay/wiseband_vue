@@ -45,10 +45,18 @@
         setWidthForThread()
     }
 
-    function clickFromProp(obj) { //부모에서만 사용하나 자식에게서 전달받아 이벤트 처리하는 것임
+    async function clickFromProp(obj) { //부모에서만 사용하나 자식에게서 전달받아 이벤트 처리하는 것임
         if (obj.type == "close") {
             thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
             setWidthForThread(null, obj.type)
+        } else if (obj.type == "refreshParentReply") {
+            const rs = await getMsg({ msgid: obj.msgid }, true)
+            if (rs == null) return
+            let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
+            if (item) {
+                item.reply = rs.reply
+                item.replyinfo = rs.replyinfo
+            }
         }
     }
 
@@ -71,6 +79,10 @@
             chanId = route.params.chanid
             grId = route.params.grid
         }
+    }
+
+    function evClick(obj) { //자식에서만 사용됨
+        emits('ev-click', obj)
     }
     /////////////////////////////////////////////////////////////////////////////////////
 
@@ -611,6 +623,7 @@
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
+                    if (hasProp()) evClick({ type: "refreshParentReply", msgid: props.data.msgid })
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
@@ -801,17 +814,15 @@
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
                     await getList({ msgid: props.data.msgid, kind: "withReply" })
                     scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+                    evClick({ type: "refreshParentReply", msgid: props.data.msgid })
                 } else {
                     await getList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
                 }
-            } else { //아래 막은 것은 getMsg()를 사용하지 않는 방법인데 나중에 어차피 다른 사용자화면에 실시간반영을 위해서는 소켓으로 통보받도록 하고 getMsg()를 써야 할 것임
-                //const item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
-                //item.BODY = msgbody.value
-                //item.UDT = rs.data.udt
+            } else {
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
                 if (rs == null) return
-                const item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
-                if (item) {
+                let item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
+                if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
                     item.BODY = rs.msgmst.BODY
                     item.UDT = rs.msgmst.UDT
                 }
@@ -1502,7 +1513,7 @@
                     <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
                 </div>
                 <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
-                    <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => { emits('ev-click', { type: 'close' })}">
+                    <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => evClick({ type: 'close' })">
                 </div>
             </div>
         </div>
@@ -1527,13 +1538,13 @@
                     <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
                     <span style="margin-left:9px;color:dimgray">{{ displayDt(row.CDT) }}</span>
                 </div>
-                <div style="display:flex;margin:10px 0">
+                <div style="width:100%;display:flex;margin:10px 0">
                     <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
                         <span v-show="row.stickToPrev && row.hover">{{ displayDt(row.CDT, true) }}</span>
                         <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
                         <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                     </div>
-                    <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>                    
+                    <div v-html="row.BODY" @copy="(e) => msgCopied(e)" style=""></div>
                 </div>
                 <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
@@ -1771,9 +1782,7 @@
         border:1px solid lightgray;border-radius:5px;
     }
     .editor_header {
-        width:100%;height:40px;
-        display:flex;align-items:center;
-        background:whitesmoke;
+        width:100%;height:40px;display:flex;align-items:center;overflow-x:hidden;background:whitesmoke;
     }
     .editor_body {
         width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
