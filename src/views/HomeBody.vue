@@ -1321,30 +1321,53 @@
     }
 
     function blobSetting(e, row, idx, row5, idx5) { //row와 idx는 메시지 배열 항목 및 인덱스. row5와 idx5는 file,image,link의 배열 항목 및 인덱스
-        let target = ""
-        if (row5.KIND == "F") {
-            target = "파일"
-        } else if (row5.KIND == "I") {
-            target = "이미지"
-        } else if (row5.KIND == "L") {
-            target = "링크"
-        }
         gst.ctx.data.header = ""
-        gst.ctx.menu = [
-            { nm: "링크로 복사", func: function() {
-                
-            }},
-            { nm: "나중을 위해 저장", func: function() {
-                
-            }},
-            { nm: target + " 삭제", color: 'red', func: function() {
-                delBlob(row5.KIND, row.MSGID, idx5, idx)
-            }}
-        ]
-        if (row.KIND == "I") {
-            gst.ctx.menu.splice(0, 0, { nm: "이미지(원본) 복사", func: function() {
-                //이미지 원본 사이즈는 처음 이미지 저장후 load 완료싯점에 다시 한번 서버 호출해 width x height 저장하기로 함
-            }})
+        //let target = ""
+        if (row5.KIND == "F") {
+            //target = "파일"
+            gst.ctx.menu = [
+                { nm: "복사", func: function() {
+                    
+                }},
+                { nm: "복사후 에디터에 붙이기", func: function() {
+                    
+                }},
+                { nm: "삭제", color: 'red', func: function() {
+                    delBlob(row5.KIND, row.MSGID, idx5, idx)
+                }}
+            ]
+        } else if (row5.KIND == "I") { //클릭시 레이어팝업 메뉴 1) 회전 2) 줌인/줌아웃 3) 클릭시 50%/200% 4) 파일로 다운로드 5) 새창에서 열기 6) 삭제
+            //target = "이미지"
+            gst.ctx.menu = [
+                { nm: "새창에서 열기", func: function() {
+                    
+                }},
+                { nm: "파일로 다운로드", func: function() {
+                    
+                }},
+                { nm: "복사", func: function() {
+                    
+                }},
+                { nm: "복사후 에디터에 붙이기", func: function() {
+                    
+                }},
+                { nm: "삭제", color: 'red', func: function() {
+                    delBlob(row5.KIND, row.MSGID, idx5, idx)
+                }}
+            ]
+        } else if (row5.KIND == "L") {
+            //target = "링크"
+            gst.ctx.menu = [
+                { nm: "복사", func: function() {
+                    
+                }},
+                { nm: "복사후 에디터에 붙이기", func: function() {
+                    
+                }},
+                { nm: "삭제", color: 'red', func: function() {
+                    delBlob(row5.KIND, row.MSGID, idx5, idx)
+                }}
+            ]
         }
         gst.ctx.show(e)
     }
