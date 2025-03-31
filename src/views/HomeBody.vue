@@ -7,6 +7,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
+    import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
     //import HomeBody from '/src/views/HomeBody.vue'
         
@@ -766,7 +767,6 @@
     
     function showImage(row) { //msgid = temp or real msgid
         try {
-            popupRefKind.value = 'image'
             imgPopupUrl.value = row.url
             imgPopupStyle.value = { width: row.realWidth + "px", height: row.realHeight + "px" }
             imgPopupRef.value.open()
@@ -1727,11 +1727,11 @@
         <!-- <router-view /> -->
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
-    <popup-common ref="imgPopupRef" :kind="popupRefKind">
-        <div>
+    <popup-image ref="imgPopupRef">
+        <!-- <div> -->
             <img :src="imgPopupUrl" :style='imgPopupStyle'>
-        </div>
-    </popup-common>
+        <!-- </div> -->
+    </popup-image>
     <popup-common ref="linkPopupRef" :kind="popupRefKind" @ev-click="okPopup">
         <div style="display:flex;flex-direction:column">
             <input v-model="linkText" style="width:300px;height:24px;border:1px solid dimgray" placeholder="표시 텍스트" />
