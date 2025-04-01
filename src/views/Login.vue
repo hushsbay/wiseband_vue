@@ -8,7 +8,7 @@
     const router = useRouter()
     const gst = GeneralStore()    
     
-    let uid = ref('oldclock'), pwd = ref('newclock'), saveId = ref(true)
+    let uid = ref(''), pwd = ref(''), saveId = ref(true)
     let uid1 = ref(null), pwd1 = ref(null) //for focusing
 
     onMounted(() => {
