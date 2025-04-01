@@ -65,13 +65,13 @@
         gst.selSideMenu = "mnuHome" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 HomeBody.vue에 Balnk가 표시됨
     }
 
-    function loopListChan(grid, chanid) {
+    function loopListChan(grid, chanid, refresh) { //getList()에서 호출하는 것은 onMounted()이므로 캐싱 아님. onActivated()에서 부르는 것은 캐싱임
         try {
             listChan.value.forEach((item, index) => {
                 if (item.GR_ID == grid) {
                     item.exploded = true
                     if (item.CHANID == chanid) {
-                        chanClick(item, index)
+                        chanClick(item, index, refresh)
                     } else {
                         procChanRowImg(item)
                     }
@@ -90,9 +90,9 @@
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //debugger
+            debugger
             listChan.value = rs.list
-            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
+            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid, true)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -125,7 +125,7 @@
         }
     }
 
-    function chanClick(row, idx) {
+    function chanClick(row, idx, refresh) {
         try {
             if (row.DEPTH == "1") { //접기 or 펼치기
                 if (row.exploded) {
@@ -151,7 +151,7 @@
                 procChanRowImg(row)
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID //console.log("router.push:" + row.CHANNM)
-                goHomeBody(row)
+                goHomeBody(row, refresh)
                 // const obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }} //path와 param는 같이 사용 X (name 이용)
                 // const ele = document.getElementById("msgContent")
                 // if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남

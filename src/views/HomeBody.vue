@@ -178,8 +178,13 @@
             } else {
                 console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기 !!!!!!!!!!!!!!!!!
                 setBasicInfo()
-                if (!gst.selMsgId) await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
-                inEditor.value.focus()
+                if (!gst.selMsgId) {
+                    console.log("getList")
+                    //##$ 여기서 가끔 msgArr.length > 0 으로 가져와서 위 루프에서 msglist.value.push(row) 했는데도 화면에 랜더링이 안되는 경우가 발생함 - keepalive 문제인가 아닌가??!!
+                    await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
+                    console.log("getList11")
+                }
+                try { inEditor.value.focus() } catch {}
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -203,9 +208,9 @@
                     await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
                 } else {
                     const key = sideMenu + chanId
-                    //console.log(gst.objSaved[key]+"00==="+key)
+                    console.log("00==="+key)
                     if (gst.objSaved[key]) {
-                        //console.log("11==="+gst.objSaved[key].scrollY)
+                        console.log("11==="+gst.objSaved[key].scrollY)
                         scrollArea.value.scrollTop = gst.objSaved[key].scrollY
                     }
                 }
@@ -244,7 +249,7 @@
             //예) /main/home/home_body/20250120084532918913033423/20250122084532918913033403 : arr[2] = "home"
             const arr = route.fullPath.split("/")
             sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
-        }        
+        }
         if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
             grId = route.params.grid
@@ -470,6 +475,7 @@
             }
             resultCnt = msgArr.length
             await nextTick()
+            //##$ 여기서 가끔 msgArr.length > 0 으로 가져와서 위 루프에서 msglist.value.push(row) 했는데도 화면에 랜더링이 안되는 경우가 발생함 - keepalive 문제인가 아닌가??!!
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 const ele = document.getElementById(msgid) //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
                 if (ele) ele.scrollIntoView()
