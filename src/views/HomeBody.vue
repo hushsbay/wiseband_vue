@@ -99,7 +99,7 @@
     const scrollArea = ref(null)
 
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
-    const imgPopupRef = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
+    const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
         
     let sideMenu, grId, chanId, msgidInChan
@@ -765,8 +765,11 @@
         }
     } 
     
-    function showImage(row) { //msgid = temp or real msgid
+    function showImage(row, msgid) { //msgid = temp or real msgid
         try {
+            imgParam.value = row
+            imgParam.value.msgid = msgid
+            imgParam.value.chanid = chanId
             imgPopupUrl.value = row.url
             imgPopupStyle.value = { width: row.realWidth + "px", height: row.realHeight + "px" }
             imgPopupRef.value.open()
@@ -1597,7 +1600,7 @@
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
                     <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
-                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5)">
+                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
                         <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
                         <div v-show="row5.hover" class="msg_file_seemore">
                             <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
@@ -1690,7 +1693,7 @@
             </div>
             <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
             <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
-                <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row)" class="msg_image_each">
+                <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row, 'temp')" class="msg_image_each">
                     <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
                     <div v-show="row.hover" class="msg_file_del">
                         <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('I', 'temp', idx)">
@@ -1727,10 +1730,8 @@
         <!-- <router-view /> -->
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
-    <popup-image ref="imgPopupRef">
-        <!-- <div> -->
-            <img :src="imgPopupUrl" :style='imgPopupStyle'>
-        <!-- </div> -->
+    <popup-image ref="imgPopupRef" :param="imgParam">
+        <img :src="imgPopupUrl" :style='imgPopupStyle'>
     </popup-image>
     <popup-common ref="linkPopupRef" :kind="popupRefKind" @ev-click="okPopup">
         <div style="display:flex;flex-direction:column">

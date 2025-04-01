@@ -1,14 +1,16 @@
 <script setup>
     import { ref } from 'vue' 
+    import axios from 'axios'
 
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
-    const props = defineProps({ kind: String })
-    const emits = defineEmits(["ev-click"])
+    const props = defineProps({ param: Object })
+    //const emits = defineEmits(["ev-click"])
     defineExpose({ open, close })
 
-    let show = ref(false), vRotate = ref(0), vScale = ref(10)
+    let show = ref(false), vRotate = ref(0), vScale = ref(10), scalMin = ref(10), scaleMax = ref(20)
+    let menuShow = ref(false)
 
     function open() {
         show.value = true
@@ -27,8 +29,44 @@
             vScale.value = parseInt(vScale.value) + 1
         } else if (bool == false) {
             vScale.value = parseInt(vScale.value) - 1
+        } else if (bool == 'toggle') {
+            vScale.value = (vScale.value == scalMin.value) ? scaleMax.value : scalMin.value
         } else {
-            vScale.value = 10
+            vScale.value = scalMin.value
+        }
+    }
+
+    function popupEnter() {
+        menuShow.value = true
+    }
+
+    function popupLeave() {
+        menuShow.value = false
+    }
+
+    function downloadImg() {
+        try {
+            const query = "?msgid=" + props.param.msgid + "&chanid=" + props.param.chanid + "&kind=I&cdt=" + props.param.cdt
+            axios.get("/chanmsg/readBlob" + query, { 
+                responseType: "blob"
+            }).then(res => {
+                const tagId = "btn_download"
+                const elem = document.getElementById(tagId)
+                if (elem) elem.remove()
+                const url = window.URL.createObjectURL(new Blob([res.data]))
+                const link = document.createElement('a')
+                link.id = tagId
+                link.href = url
+                link.setAttribute('download', props.param.msgid + "_" + props.param.cdt + ".png")                
+                document.body.appendChild(link)
+                link.click()
+                gst.util.setToast("")                
+            }).catch(exception => {
+                gst.util.setToast("")
+                gst.util.setSnack("파일 다운로드 실패\n" + exception.toString(), true)
+            })
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 </script>
@@ -36,23 +74,22 @@
 <template>
     <Transition>
         <div v-if="show">
-            <div class="popup">
-                <div :style="{ transform: 'rotate(' + vRotate + 'deg) scale(' + parseFloat(vScale/10) + ',' + parseFloat(vScale/10) + ')' }">
+            <div class="popup" @mouseenter="popupEnter" @mouseleave="popupLeave" >
+                <div :style="{ transform: 'rotate(' + vRotate + 'deg) scale(' + parseFloat(vScale/10) + ',' + parseFloat(vScale/10) + ')' }" @click="zoomImg('toggle')">
                     <slot></slot>
                 </div>
-                <div class="menu">
+                <div v-show="menuShow" class="menu">
                     <div style="display:flex;margin-left:20px">
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_rotate_right.png')" @click="rotateImg" >
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_minus.png')" @click="zoomImg(false)" >
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_rotate_right.png')" @click="rotateImg" title="회전">
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_minus.png')" @click="zoomImg(false)" title="축소">
                         <input type="range" min="10" max="20" v-model="vScale">
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_plus.png')" @click="zoomImg(true)" >
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_reset.png')" @click="zoomImg()" >
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_plus.png')" @click="zoomImg(true)" title="확대">
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_reset.png')" @click="zoomImg()" title="리셋">
                     </div>
                     <div style="display:flex;margin-right:20px">
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_delete.png')" @click="deleteImg" >
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_copy.png')" @click="copyImg" >
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_download.png')" @click="downloadImgAsFile" >
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('close.png')" @click="close">
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_copy.png')" @click="copyImg" title="복사">
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_download.png')" @click="downloadImg" title="파일다운로드">
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('close.png')" @click="close" title="닫기">
                     </div>
                 </div>
             </div>
