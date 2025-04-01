@@ -1,7 +1,7 @@
 <script setup>
     import { ref } from 'vue' 
     import axios from 'axios'
-
+    
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
@@ -14,6 +14,7 @@
 
     function open() {
         show.value = true
+        zoomImg()
     }
 
     function close() {
@@ -26,8 +27,10 @@
 
     function zoomImg(bool) {
         if (bool == true) {
+            if (vScale.value >= scaleMax.value) return
             vScale.value = parseInt(vScale.value) + 1
         } else if (bool == false) {
+            if (vScale.value >= scalMin.value) return
             vScale.value = parseInt(vScale.value) - 1
         } else if (bool == 'toggle') {
             vScale.value = (vScale.value == scalMin.value) ? scaleMax.value : scalMin.value
@@ -44,27 +47,17 @@
         menuShow.value = false
     }
 
-    function downloadImg() {
+    function copyImg() { //이미지를 클립보드에 복사
         try {
-            const query = "?msgid=" + props.param.msgid + "&chanid=" + props.param.chanid + "&kind=I&cdt=" + props.param.cdt
-            axios.get("/chanmsg/readBlob" + query, { 
-                responseType: "blob"
-            }).then(res => {
-                const tagId = "btn_download"
-                const elem = document.getElementById(tagId)
-                if (elem) elem.remove()
-                const url = window.URL.createObjectURL(new Blob([res.data]))
-                const link = document.createElement('a')
-                link.id = tagId
-                link.href = url
-                link.setAttribute('download', props.param.msgid + "_" + props.param.cdt + ".png")                
-                document.body.appendChild(link)
-                link.click()
-                gst.util.setToast("")                
-            }).catch(exception => {
-                gst.util.setToast("")
-                gst.util.setSnack("파일 다운로드 실패\n" + exception.toString(), true)
-            })
+            gst.util.downloadBlob("I", props.param.msgid, props.param.chanid, props.param.cdt, "copyImage")
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function downloadFile() { //이미지를 파일로 만들어 다운로드드
+        try {
+            gst.util.downloadBlob("I", props.param.msgid, props.param.chanid, props.param.cdt, props.param.msgid + "_" + props.param.cdt + ".png")
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -88,7 +81,7 @@
                     </div>
                     <div style="display:flex;margin-right:20px">
                         <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_copy.png')" @click="copyImg" title="복사">
-                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_download.png')" @click="downloadImg" title="파일다운로드">
+                        <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('dimgray_download.png')" @click="downloadFile" title="파일다운로드">
                         <img class="coImg24 editorMenu" :src="gst.html.getImageUrl('close.png')" @click="close" title="닫기">
                     </div>
                 </div>

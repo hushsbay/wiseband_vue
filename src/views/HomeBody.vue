@@ -1257,29 +1257,7 @@
 
     function downloadFile(msgid, row) { //msgid = temp or real msgid
         try {
-            const query = "?msgid=" + msgid + "&chanid=" + chanId + "&kind=F&cdt=" + row.cdt + "&name=" + row.name
-            axios.get("/chanmsg/readBlob" +query, { 
-                responseType: "blob"
-            }).then(res => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
-                //https://stackoverflow.com/questions/55218597/is-it-good-to-access-dom-in-vue-js
-                //index.html의 <body><div id="app">와 main.js의 app.mount('#app')를 보면 알 수 있듯이 vue realm은 app이 루트엘레먼트가 되서
-                //아래 document.body.appendChild(link)는 app의 밖이므로 문제없어 보임. 다만, 처리후 삭제하는 코딩은 callback/promise가 필요해 보이는데
-                //더 간편하게 처리하려면 차라리 시작할 때 기존 정해진 아이디를 지우는 게 나아 보이긴 함
-                const tagId = "btn_download"
-                const elem = document.getElementById(tagId)
-                if (elem) elem.remove()
-                const url = window.URL.createObjectURL(new Blob([res.data]))
-                const link = document.createElement('a')
-                link.id = tagId
-                link.href = url
-                link.setAttribute('download', row.name)                
-                document.body.appendChild(link)
-                link.click()
-                gst.util.setToast("")                
-            }).catch(exception => {
-                gst.util.setToast("")
-                gst.util.setSnack("파일 다운로드 실패\n" + exception.toString(), true)
-            })
+            gst.util.downloadBlob("F", msgid, chanId, row.cdt, row.name)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -1329,10 +1307,7 @@
         if (row5.KIND == "F") {
             //target = "파일"
             gst.ctx.menu = [
-                { nm: "복사", func: function() {
-                    
-                }},
-                { nm: "복사후 에디터에 붙이기", func: function() {
+                { nm: "에디터에 붙이기", func: function() {
                     
                 }},
                 { nm: "삭제", color: 'red', func: function() {
@@ -1345,13 +1320,13 @@
                 { nm: "새창에서 열기", func: function() {
                     
                 }},
-                { nm: "파일로 다운로드", func: function() {
+                { nm: "파일 다운로드", func: function() {
                     
                 }},
-                { nm: "복사", func: function() {
+                { nm: "이미지 복사", func: function() {
                     
                 }},
-                { nm: "복사후 에디터에 붙이기", func: function() {
+                { nm: "에디터에 붙이기", func: function() {
                     
                 }},
                 { nm: "삭제", color: 'red', func: function() {
@@ -1361,7 +1336,7 @@
         } else if (row5.KIND == "L") {
             //target = "링크"
             gst.ctx.menu = [
-                { nm: "복사", func: function() {
+                { nm: "URL링크 복사", func: function() {
                     
                 }},
                 { nm: "복사후 에디터에 붙이기", func: function() {

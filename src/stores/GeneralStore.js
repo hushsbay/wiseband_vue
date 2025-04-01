@@ -1,6 +1,7 @@
 import { ref, inject, nextTick } from "vue"
 import { useRouter } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
+import axios from 'axios'
 
 import hush from '/src/stores/Common.js'
 
@@ -213,6 +214,38 @@ const GeneralStore = defineStore('General', () => {
             }
             util.setToast("")
             util.setSnack(msg, sec)
+        },
+
+        downloadBlob : function(kind, msgid, chanid, cdt, name) {
+            const query = "?msgid=" + msgid + "&chanid=" + chanid + "&kind=" + kind + "&cdt=" + cdt //+ "&name=" + row.name
+            axios.get("/chanmsg/readBlob" + query, { 
+                responseType: "blob"
+            }).then(async (res) => { //비즈니스로직 실패시 오류처리에 대한 부분 구현이 현재 어려움 (procDownloadFailure in common.ts 참조)
+                //https://stackoverflow.com/questions/55218597/is-it-good-to-access-dom-in-vue-js
+                //index.html의 <body><div id="app">와 main.js의 app.mount('#app')를 보면 알 수 있듯이 vue realm은 app이 루트엘레먼트가 되서
+                //아래 document.body.appendChild(link)는 app의 밖이므로 문제없어 보임. 다만, 처리후 삭제하는 코딩은 callback/promise가 필요해 보이는데
+                //더 간편하게 처리하려면 차라리 시작할 때 기존 정해진 아이디를 지우는 게 나아 보이긴 함
+                if (name == "copyImage") {
+                    const blob = new Blob([res.data], { type: 'image/png' })
+                    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+                    util.setToast("이미지 복사 완료")
+                } else {
+                    const tagId = "btn_download"
+                    const elem = document.getElementById(tagId)
+                    if (elem) elem.remove()
+                    const url = window.URL.createObjectURL(new Blob([res.data]))
+                    const link = document.createElement('a')
+                    link.id = tagId
+                    link.href = url
+                    link.setAttribute('download', name)
+                    document.body.appendChild(link)
+                    link.click()
+                    util.setToast("파일 다운로드 완료")
+                }
+            }).catch(exception => {
+                util.setToast("")
+                util.setSnack("파일 다운로드 실패\n" + exception.toString(), true)
+            })
         },
 
         //아래 함수는 main.js의 axios.defaults.baseURL로 해결했으므로 더 이상 사용하지 않아도 됨 (포트 3000으로의 호출시 쿠키 전송안되는것은 Cors Issue - nest/axios)
