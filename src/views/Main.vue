@@ -155,24 +155,24 @@
         localStorage.wiseband_lastsel_menu = popupId
     }
 
-    function goRoute(obj, onMounted) { //사이드메뉴 클릭시 맨 처음 로드시 push로 라우팅하면 오른쪽 공백이 생김
+    async function goRoute(obj, onMounted) { //사이드메뉴 클릭시 맨 처음 로드시 push로 라우팅하면 오른쪽 공백이 생김
         Object.assign(obj, { query : { ver : Math.random() }}) //obj에 merge : 사이드메뉴 클릭시 (예:Home.vue 호출) 캐시 제거하고 호출해야 HomeBody.vue 안뜨는 상황 방지될 것임
         if (onMounted) {
-            router.replace(obj)
+            await router.replace(obj)
         } else {
-            router.push(obj)
+            await router.push(obj)
         }
     }
 
     const procMenu = {
-        ["mnuHome"] : (row, onMounted) => {
-            goRoute({ path: '/main/home' }, onMounted)
+        ["mnuHome"] : async (row, onMounted) => {
+            await goRoute({ path: '/main/home' }, onMounted)
         },        
-        ["mnuLater"] : (row, onMounted) => {
-            goRoute({ name: 'listleft', params : { act: "later" }}, onMounted)
+        ["mnuLater"] : async (row, onMounted) => {
+            await goRoute({ name: 'listleft', params : { act: "later" }}, onMounted)
         },
-        ["mnuFixed"] : (row, onMounted) => {
-            goRoute({ name: 'listleft', params : { act: "fixed" }}, onMounted)
+        ["mnuFixed"] : async (row, onMounted) => {
+            await goRoute({ name: 'listleft', params : { act: "fixed" }}, onMounted)
         },
     }
 </script>

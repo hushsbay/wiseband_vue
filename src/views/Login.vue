@@ -28,7 +28,7 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.auth.setCookieForUser(rs.data, saveId.value)
-            router.replace({ name : 'main' })
+            await router.replace({ name : 'main' })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }

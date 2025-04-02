@@ -1,22 +1,19 @@
 <script setup>
     import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
-    import { useRoute, useRouter } from 'vue-router'
+    import { useRoute } from 'vue-router'
     import axios from 'axios'
-    import { debounce } from 'lodash'
-
+    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
-    //import HomeBody from '/src/views/HomeBody.vue'
         
     const gst = GeneralStore()
     const route = useRoute()
-    const router = useRouter()
 
     /////////////////////////////////////////////////////////////////////////////////////
-    //스레드 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
+    //스레드(댓글) 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
     //thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
     //부모와 자식이 동시에 떠 있는 경우 문제가 되는 element id는 파일업로드(file_upload)와 웹에디터(msgContent) 2개가 있음
     //- hasProp()으로 구분해 2개의 element id 만들어 사용하면 될 것임
@@ -170,6 +167,9 @@
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
         //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
         //HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생하는 희안한 일이 발생함. :key="$route.fullPath"를 사용해도 마찬가지 현상임
+        //또 다른 현상은 새로고침하면 Home.vue가 먼저 실행되는 것이 아닌 HomeBody.vue의 onMounted가 먼저 실행되어서 Home.vue가 실행되면서 
+        //호출하는 HomeBody.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
+console.log("zzzzzzzzzzzz")
         try {
             if (hasProp()) {
                 console.log("자식 - " + JSON.stringify(props.data))
@@ -250,6 +250,7 @@
             const arr = route.fullPath.split("/")
             sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
         }
+        console.log(route.params.chanid+" 666666666")
         if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
             grId = route.params.grid
@@ -647,7 +648,7 @@
         row.hover = false
     }
 
-    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음
+    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
         if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         const sTop = scrollArea.value.scrollTop 
         const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
@@ -655,6 +656,7 @@
         const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
         //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight+"@@@@"+ele.offsetHeight)
         const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
+        console.log("onScroll---"+sTop)
         prevScrollY = sTop
         saveCurScrollY(prevScrollY)
         //resultCnt => 읽어온 데이터가 없을 땐 getList() 호출하지 말기

@@ -20,6 +20,7 @@
     let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
+        console.log("yyyyyyyyyyyyyy")
         try {
             //debugger
             setBasicInfo()
@@ -90,9 +91,10 @@
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            debugger
             listChan.value = rs.list
+            console.log("home111")
             loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid, true)
+            console.log("home111222")
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -125,7 +127,7 @@
         }
     }
 
-    function chanClick(row, idx, refresh) {
+    async function chanClick(row, idx, refresh) {
         try {
             if (row.DEPTH == "1") { //접기 or 펼치기
                 if (row.exploded) {
@@ -151,13 +153,14 @@
                 procChanRowImg(row)
                 localStorage.wiseband_lastsel_grid = row.GR_ID
                 localStorage.wiseband_lastsel_chanid = row.CHANID //console.log("router.push:" + row.CHANNM)
-                goHomeBody(row, refresh)
+                console.log("home333333333")
+                await goHomeBody(row, refresh)
                 // const obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }} //path와 param는 같이 사용 X (name 이용)
                 // const ele = document.getElementById("msgContent")
                 // if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
-                //     router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
+                //     await router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
                 // } else {
-                //     router.push(obj)
+                //     await router.push(obj)
                 // }                
             }
         } catch (ex) {
@@ -193,14 +196,16 @@
         }
     }
 
-    function goHomeBody(row, refresh) {
+    async function goHomeBody(row, refresh) {
         let obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
         const ele = document.getElementById("msgContent")
         if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
-            router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
+            console.log("home33333333344444444")
+            await router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
         } else {
-            router.push(obj)
+            console.log("home333333333555555555")
+            await router.push(obj)
         }
     }
 
