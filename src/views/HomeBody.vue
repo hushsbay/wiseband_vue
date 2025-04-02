@@ -14,21 +14,18 @@
 
     /////////////////////////////////////////////////////////////////////////////////////
     //스레드(댓글) 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
-    //thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
-    //부모와 자식이 동시에 떠 있는 경우 문제가 되는 element id는 파일업로드(file_upload)와 웹에디터(msgContent) 2개가 있음
-    //- hasProp()으로 구분해 2개의 element id 만들어 사용하면 될 것임
+    //네이밍 규칙을 정해서, thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
+    //부모/자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개 : 각각 element id 만들어 hasProp()으로 구분해 사용하면 됨
     
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
     const emits = defineEmits(["ev-click"])
 
-    // const hasProp = computed(() => { //바로 아래 함수 참조
-    //     //템플리트 밖<script setup>에서는 반드시 true/false로만 비교해야 함 => if (hasProp) 식으로 비교하면 안됨!!!
-    //     if (props.data && props.data.msgid) return true //자식이 열린 상태임을 의미
+    // const hasProp = computed(() => { //바로 아래 함수 참조. 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
+    //     if (props.data && props.data.msgid) return true
     //     return false
     // })
 
-    function hasProp() { //Props를 사용하는 것은 자식이므로 hasProp으로 명명
-        //위 computed 이용해 처리하고자 했으나 동작이 이상해 포기하고 (결과 캐싱없이 매번 계산하긴 하나) 이 함수로 사용하기로 함
+    function hasProp() { //props 사용하는 것은 자식이므로 hasProp으로 명명. 위 computed 이용해 처리하고자 했으나 동작 이상 포기 : 캐싱없이 매번 계산하나 이 함수 사용
         if (props.data && props.data.msgid) return true //자식이 열린 상태임을 의미
         return false
     }
@@ -36,9 +33,7 @@
     let thread = ref({ msgid: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
-    function openThread(msgid) { //부모에서만 사용
-        //const obj = { name : 'reply', params : { msgid: msgid }} //path와 param는 같이 사용 X (name 이용)
-        //router.push(obj)
+    function openThread(msgid) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
         thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
         setWidthForThread()
     }
@@ -58,13 +53,13 @@
         }
     }
 
-    function setWidthForThread(openWith, type) { //openWith : 향후 마우스 드래그로 넓이 조정 가능하도록 하기
+    function setWidthForThread(openWith, type) { //openWith : 향후 마우스 드래그나 버튼 방식으로 넓이 조정 가능하도록 하기 위함
         if (type == "close") {
             widthChanCenter.value = 'calc(100% - 20px)'
             widthChanRight.value = '0px'
         } else {
             if (openWith) {
-
+                //위 설명 참조
             } else {
                 widthChanCenter.value = 'calc(100% - 620px)'
                 widthChanRight.value = '600px'
@@ -84,12 +79,7 @@
     }
     /////////////////////////////////////////////////////////////////////////////////////
 
-    //현재 Back() 또는 원래 열렸던 노드 클릭시 keepalive를 이용해 첫 데이터로 돌아가지 않고는 있으나 스크롤이 맨 위로 올라가버림 => 원래 있었던 위치에 있어야 함
-    //https://stackoverflow.com/questions/75584410/how-to-maintain-scroll-position-in-a-division-after-a-division-is-redisplayed-in
-    //https://medium.com/chekiprice/caching-routes-in-vuejs-using-keep-alive-advanced-guide-e399839f2673
-
     const MAX_PICTURE_CNT = 11
-
     let mounting = true
     
     let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //HomeBody가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
@@ -105,15 +95,13 @@
     let msglist = ref([])
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
-    let msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
-    let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시
+    let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
+    let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
-    let savFirstMsgMstCdt = gst.cons.cdtAtFirst, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 오래된 일시와 최근 일시시
+    let savFirstMsgMstCdt = gst.cons.cdtAtFirst, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 오래된 일시와 최근 일시
     let onGoingGetList = false, prevScrollY, prevScrollHeight, resultCnt = 0, scrollDirection = ""
 
-    //let test1 = ref('')
-    
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
     //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/ => 목적이 다르고 헛점도 많이 보이지만 참고할 만한 내용도 많음
@@ -122,67 +110,51 @@
     let editorIn = ref(false), editorBlurDt = Date.now()
     let inEditor = useTemplateRef('editorRef') //editor = document.getElementById(editorId) editor 대신 inEditor (템플릿 참조) 사용
 
-    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (결론은 맨 마지막에 있음)
+    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (스레드(댓글)용으로 손자안에 동일한 손자(HomeBody)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
     1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
        그 다음에 router.push해도 다시 마운트(아예 호출도) 안됨 : onMounted가 한번만 호출되고 끝.
     2. 그런데, <router-view :key="$route.fullPath"></router-view>와 같이 :key속성을 사용하면 router.push할 때마다 다시 마운트됨
     3. 그런데, Main.vue에서도 :key를 사용하면 Home.vue에서 router.push할 때에도 Main.vue의 onMounted가 호출되어 문제가 됨
-    4. 따라서, 현재 구조에서는 여기 손자인 HomeBody.vue를 호출하는 자식인 Home.vue에서만 :key를 적용하면
-       슬랙과 똑같이 채널노드를 클릭할 때마다 라우팅되도록 할 수 있음
+    4. 따라서, 현재 구조에서는 여기 손자인 HomeBody.vue를 호출하는 자식인 Home.vue에서만 :key를 적용하면 슬랙과 똑같이 채널노드를 클릭할 때마다 라우팅되도록 할 수 있음
        - 만일 손자 아래 증손자가 필요하고 그것도 라우팅으로 처리하려면 매우 복잡한 핸들링이 필요하므로
-       - 아예 증손자는 만들지 말든지 아니면 만들어도 라우틴이 아닌 비동기컴포넌트 호출(defineAsyncComponent)하기로 함
-       - 슬랙과 똑같이 만드는 목표이기 때문에 이런 라우팅을 했으며 그게 아니라면 애초부터 defineAsyncComponent()를 사용했을 것임
-       - 슬랙은 그 이유가 URL로 독자적으로 해당 채널을 부르는 페이지를 제공하려 했을 것인데 그것도 defineAsyncComponent()으로 안될 게 없을 것임
-    5. back()시 초기화되는 Vue의 특성상 back()시 이전 채널 선택 상태 복원, 이전 메시지 위치로 스크롤 등의 구현은 반드시 구현 필요
-       - <KeepAlive>가 Component의 이전 상태를 그대로 유지해 준다는데 파악 및 테스트가 필요함 
-       - 사용자가 마지막으로 선택한 채널, 콤보박스 등은 localStorage로 구현되어 있는데 문제없는지 다시 테스트해보기로 함 */
+       - 아예 증손자는 만들지 말든지 아니면 만들어도 라우팅 아닌 컴포넌트 호출(또는 비동기로 defineAsyncComponent)하기로 함
+    5. keepalive때문에 back()시 이전에 열었던 채널 상태 복원되나, 이전 스크롤위치는 구현 필요 */
 
-    /* 위와 같이 처리했는데, HomeBody.vue에서 Endless Scroll을 구현후 Back()시 초기상태로 되돌아가므로
-       해당 스크롤 포지션까지 돌아 가는 것을 구현하려면 <keep-alive>가 반드시 필요하게 됨
-       1. App.vue, Home.vue, HomeBody.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
-            <router-view v-slot="{ Component }">
-                <keep-alive>
-                    <component :is="Component" :key="$route.fullPath" /> :key속성을 router-view가 아닌 component에 넣어야 잘 동작함
-                </keep-alive>
-            </router-view>
-        2. 위에서 안되는 부분
-           1) login후 /main에서 멈춤 (화면 블랭크) 2) 채널 클릭시 펼쳐진 다른 그룹은 접혀짐 3) back()시 노드 선택 색상이 안움직이는데 변경 필요
-        3. 제일 중요한 부분은 채널 클릭시 HomeBody.vue의 onMounted()가 여러번 누적적으로 증가 실행되어, named view로 해결 글도 있긴 한데 구조적으로 어려워,
-           App.vue, Home.vue는 기존대로 <router-view />로 다시 돌리고, HomeBody.vue만 <keep-alive 위처럼 적용하니 일단 누적/중복호출은 없어져서
-           이 환경을 기본으로 문제들을 해결해 나가기로 함 (데이터 가져오기는 <keep-alive>가 지켜주나 스크롤포지션은 안지켜주는데 그 부분은 코딩으로 해결하면 됨)
-           1) back()시 노드 선택 색상이 안움직이는데 변경 필요 - router.beforeEach((to, from)로 해결 완료
-        4. 채널내 라우팅은 해결했으나 홈 >> DM >> Back()시 HomeBody.vue의 상태 복원은 안되고 있음. :key="$route.fullPath" 제거후 누적/중복호출 해결. 상태 복원도 잘 됨
-            <router-view v-slot="{ Component }">
-                <keep-alive>
-                    <component :is="Component" />
-                </keep-alive>
-            </router-view>
-           1) 홈 >> DM >> Back()시 Main.vue의 홈 선택 복원은 안되고 있음 : router.beforeEach((to, from)로 해결 완료
-           2) 홈 클릭시 HomeBody.vue 블랭크 페이지 나옴 해결 필요 (이미 히스토리에 있으므로 안나오는데 슬랙은 그 상태로 다시 보여줌) : gst.selSideMenuTimeTag로 해결 완료
-        5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 
-           router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함
-    */
+    /* <keep-alive> 구현시
+    1. App.vue, Home.vue, HomeBody.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
+        <router-view v-slot="{ Component }">
+            <keep-alive>
+                <component :is="Component" :key="$route.fullPath" /> :key속성을 router-view가 아닌 이 행에 Component에 넣어야 잘 동작함
+            </keep-alive>
+        </router-view>
+    2. 위에서 안되는 부분
+       1) login후 /main에서 멈춤 (화면 블랭크) 2) 채널 클릭시 펼쳐진 다른 그룹은 접혀짐 3) back()시 노드 선택 색상이 안움직이는데 변경 필요
+    3. 제일 중요한 부분은 채널 클릭시 HomeBody.vue의 onMounted()가 여러번 누적적으로 증가 실행되어, named view로 해결 글도 있긴 한데 구조적으로 어려워,
+       App.vue, Home.vue는 기존대로 <router-view />로 다시 돌리고, HomeBody.vue만 <keep-alive 위처럼 적용하니 일단 누적/중복호출은 없어져서
+       이 환경을 기본으로 문제들을 해결해 나가기로 함 (데이터 가져오기는 <keep-alive>가 지켜주나 스크롤포지션은 안지켜주는데 그 부분은 코딩으로 해결하면 됨)
+       1) back()시 노드 선택 색상이 안움직이는데 변경 필요 - router.beforeEach((to, from)로 해결 완료
+    4. 채널내 라우팅은 해결했으나 홈 >> DM >> Back()시 HomeBody.vue의 상태 복원은 안되고 있음. :key="$route.fullPath" 제거후 누적/중복호출 해결. 상태 복원도 잘 됨
+       1) 홈 >> DM >> Back()시 Main.vue의 홈 선택 복원은 안되고 있음 : router.beforeEach((to, from)로 해결 완료
+       2) 홈 클릭시 HomeBody.vue 블랭크 페이지 나옴 해결 필요 (이미 히스토리에 있으므로 안나오는데 슬랙은 그 상태로 다시 보여줌) : gst.selSideMenuTimeTag로 해결 완료
+    5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 
+       router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함 */
 
     onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
         //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
-        //HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생하는 희안한 일이 발생함. :key="$route.fullPath"를 사용해도 마찬가지 현상임
+        //HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생함. :key="$route.fullPath"를 사용해도 마찬가지 현상임
         //또 다른 현상은 새로고침하면 Home.vue가 먼저 실행되는 것이 아닌 HomeBody.vue의 onMounted가 먼저 실행되어서 Home.vue가 실행되면서 
         //호출하는 HomeBody.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
-console.log("zzzzzzzzzzzz")
         try {
             if (hasProp()) {
                 console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
                 await getList({ msgid: props.data.msgid, kind: "withReply" })
             } else {
-                console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기 !!!!!!!!!!!!!!!!!
+                console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
                 setBasicInfo()
-                if (!gst.selMsgId) {
-                    console.log("getList")
-                    //##$ 여기서 가끔 msgArr.length > 0 으로 가져와서 위 루프에서 msglist.value.push(row) 했는데도 화면에 랜더링이 안되는 경우가 발생함 - keepalive 문제인가 아닌가??!!
-                    await getList({ lastMsgMstCdt: savLastMsgMstCdt }) //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
-                    console.log("getList11")
+                if (!gst.selMsgId) { //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
+                    await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
                 try { inEditor.value.focus() } catch {}
             }
@@ -193,14 +165,13 @@ console.log("zzzzzzzzzzzz")
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
         if (mounting) {
-            console.log("부모AAAAA")
             mounting = false
         } else {
             if (hasProp()) {
-                console.log("자식A - " + props.data)
+                console.log("자식A - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
             } else {
-                console.log("부모A - " + props.data) //새로고침시 부모AAAAA 나온 이후에도 여기로 실행되는 것은 이상함 (결국 onMounted와 완전히 분리하지 못한다는 의미일 수도..)
+                console.log("부모A - " + JSON.stringify(props.data))
                 setBasicInfo()
                 if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
                     msgidInChan = gst.selMsgId
@@ -208,9 +179,7 @@ console.log("zzzzzzzzzzzz")
                     await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
                 } else {
                     const key = sideMenu + chanId
-                    console.log("00==="+key)
                     if (gst.objSaved[key]) {
-                        console.log("11==="+gst.objSaved[key].scrollY)
                         scrollArea.value.scrollTop = gst.objSaved[key].scrollY
                     }
                 }
@@ -225,7 +194,6 @@ console.log("zzzzzzzzzzzz")
         //캐시된 HomeBody.vue인 경우 Home.vue보다 먼저 올라오면 Home.vue의 gst.selSideMenu 값을 받는 setBasicInfo()보다 여기 setBasicInfo()가 먼저 실행되어 gst.selSideMenu가 빈값일 수 있음
         //따라서, 아예 onDeactivated hook에서 일관되게 저장된 사이드메뉴값은 별도로 만들어 사용(sideMenu)하고, gst.selSideMenu는 Home.vue, ListLeft.vue등에서만 사용하기로 하며
         //아래 setBasicInfo()에서도 route.fullPath를 읽어 sideMenu를 무조건 가져오게 함
-        //debugger
         /* onScrollEnd에서 처리하는 것으로 변경하고 막음
         if (!sideMenu || !chanId) return
         const key = sideMenu + chanId        
@@ -233,24 +201,13 @@ console.log("zzzzzzzzzzzz")
         gst.objSaved[key].scrollY = prevScrollY*/
     //})
 
-    /*const componentLoader = computed(() => { //https://empty-castle.tistory.com/3, https://blogcreator.blog/post/33
-        //console.log(menuId.value) //3) debugger 빼면 안되서 console.log 추가 (menuId.value를 아래 Promise안에서는 인식안됨!?)
-        return defineAsyncComponent(() => //4) defineAsyncComponent 사용시 옵션 가능하나 여기서는 사용하지 않음
-            import("/src/views/HomeBody.vue")
-        )
-    })*/
-
     function setBasicInfo() {        
-        //test1.value = gst.selSideMenu + route.fullPath
-        //debugger
-        console.log("setBasicInfo")
         sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
         if (!sideMenu) { //gst.selSideMenu가 빈값으로 넘어 오는 경우가 가끔 있는데 비동기실행이 어딘지 찾기가 어려워 일단 아래 코딩 보완
             //예) /main/home/home_body/20250120084532918913033423/20250122084532918913033403 : arr[2] = "home"
             const arr = route.fullPath.split("/")
             sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
         }
-        console.log(route.params.chanid+" 666666666")
         if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
             grId = route.params.grid
@@ -476,7 +433,6 @@ console.log("zzzzzzzzzzzz")
             }
             resultCnt = msgArr.length
             await nextTick()
-            //##$ 여기서 가끔 msgArr.length > 0 으로 가져와서 위 루프에서 msglist.value.push(row) 했는데도 화면에 랜더링이 안되는 경우가 발생함 - keepalive 문제인가 아닌가??!!
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 const ele = document.getElementById(msgid) //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
                 if (ele) ele.scrollIntoView()
@@ -656,7 +612,6 @@ console.log("zzzzzzzzzzzz")
         const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
         //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight+"@@@@"+ele.offsetHeight)
         const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
-        console.log("onScroll---"+sTop)
         prevScrollY = sTop
         saveCurScrollY(prevScrollY)
         //resultCnt => 읽어온 데이터가 없을 땐 getList() 호출하지 말기
@@ -880,9 +835,6 @@ console.log("zzzzzzzzzzzz")
     }
 
     async function addEmoti() {
-        //await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
-        //test1.value = route.fullPath
-        return
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
         const text1 = "https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection?aaa=가나다"
@@ -1311,24 +1263,21 @@ console.log("zzzzzzzzzzzz")
 
     function blobSetting(e, row, idx, row5, idx5) { //row와 idx는 메시지 배열 항목 및 인덱스. row5와 idx5는 file,image,link의 배열 항목 및 인덱스
         gst.ctx.data.header = ""
-        //let target = ""
         if (row5.KIND == "F") {
-            //target = "파일"
             gst.ctx.menu = [
                 { nm: "에디터에 붙이기", func: function() {
                     
                 }},
-                { nm: "삭제", color: 'red', func: function() {
+                { nm: "파일 삭제", color: 'red', func: function() {
                     delBlob(row5.KIND, row.MSGID, idx5, idx)
                 }}
             ]
         } else if (row5.KIND == "I") { //클릭시 레이어팝업 메뉴 1) 회전 2) 줌인/줌아웃 3) 클릭시 50%/200% 4) 파일로 다운로드 5) 새창에서 열기 6) 삭제
-            //target = "이미지"
             gst.ctx.menu = [
                 { nm: "새창에서 열기", func: function() {
                     
                 }},
-                { nm: "파일 다운로드", func: function() {
+                { nm: "파일로 다운로드", func: function() {
                     
                 }},
                 { nm: "이미지 복사", func: function() {
@@ -1337,12 +1286,11 @@ console.log("zzzzzzzzzzzz")
                 { nm: "에디터에 붙이기", func: function() {
                     
                 }},
-                { nm: "삭제", color: 'red', func: function() {
+                { nm: "이미지 삭제", color: 'red', func: function() {
                     delBlob(row5.KIND, row.MSGID, idx5, idx)
                 }}
             ]
         } else if (row5.KIND == "L") {
-            //target = "링크"
             gst.ctx.menu = [
                 { nm: "URL링크 복사", func: function() {
                     
@@ -1350,7 +1298,7 @@ console.log("zzzzzzzzzzzz")
                 { nm: "복사후 에디터에 붙이기", func: function() {
                     
                 }},
-                { nm: "삭제", color: 'red', func: function() {
+                { nm: "링크 삭제", color: 'red', func: function() {
                     delBlob(row5.KIND, row.MSGID, idx5, idx)
                 }}
             ]
@@ -1709,8 +1657,6 @@ console.log("zzzzzzzzzzzz")
     </div>
     <div class="chan_right" v-if="thread.msgid":style="{ width: widthChanRight }">
         <home-body :data="thread" @ev-click="clickFromProp" ></home-body>
-        <!-- <component :is="componentLoader" :data="thread" @ev-click="clickFromProp" :key="qwerty"></component> -->
-        <!-- <router-view /> -->
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-image ref="imgPopupRef" :param="imgParam">

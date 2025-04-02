@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, nextTick, watch } from 'vue' 
-    import { useRoute, useRouter } from 'vue-router'
+    import { useRouter } from 'vue-router'
     import axios from 'axios'
 
     import hush from '/src/stores/Common.js'
@@ -8,7 +8,6 @@
     import PopupList from "/src/components/PopupList.vue"
 
     const gst = GeneralStore()
-    const route = useRoute()
     const router = useRouter()
 
     const POPUPHEIGHT = 300
@@ -22,14 +21,11 @@
 
     let prevX, prevY
 
-    //1. 아래 localStorage 처리 이전에 SPA내에서 Home >> DM 및 A채널 >> B채널과 같이 내부적으로 이동시 이전 상태를 기억하는 것부터 먼저 코딩 => keepalive로 해결함
-    //2. localStorage를 사용하는 곳은 1. Main.vue(1개) 2. Home.vue(3개) 총 4군데임 (save/recall)
-    //   A) Main.vue = 1) 사이드 메뉴
-    //   B) Home.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
+    //localStorage를 사용하는 곳은 1. Main.vue(1개) 2. Home.vue(3개) 총 4군데임 (save/recall)
+    //A) Main.vue = 1) 사이드 메뉴 B) Home.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
     
     onMounted(async () => { //Main.vue는 App.vue에서 keepalive없는 router-view에서 호출됨
         try {
-            setBasicInfo() //console.log(route.fullPath + " : Main.vue") //route.fullPath = /main/home/home_body/20250120084532918913033423/20250122084532918913033403임을 유의
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return   
@@ -55,13 +51,8 @@
     })
 
     watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
-        setBasicInfo()
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
     })
-
-    function setBasicInfo() {
-        //document.title = "WiSEBand 메인" //다른 곳에서 title이 업데이트 될 것임
-    }
 
     function decideSeeMore() {
         try {
