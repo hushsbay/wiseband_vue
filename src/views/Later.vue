@@ -1,18 +1,17 @@
 <script setup>
     import { ref, onMounted, onActivated, watch } from 'vue' 
-    import { useRoute, useRouter } from 'vue-router'
+    import { useRouter } from 'vue-router'
     import axios from 'axios'
 
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     
     const gst = GeneralStore()
-    const route = useRoute()
     const router = useRouter()
 
     const LIGHT = "whitesmoke_", DARK = "violet_"
 
-    let kind = ref('my'), listChan = ref([])
+    let kind = ref(''), listLater = ref([])
     let mounting = true
     //아래는 resizing 관련
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
@@ -21,15 +20,14 @@
 
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
-            //debugger
             setBasicInfo()
-            // const lastSelKind = localStorage.wiseband_lastsel_kind
-            // if (lastSelKind) kind.value = lastSelKind
-            // await getList()
-            // mainSide = document.getElementById('main_side') //Main.vue 참조
-            // resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
-            // leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
-            // rightSide = document.getElementById('chan_main') //resizer.nextElementSibling
+            //const lastSelKind = localStorage.wiseband_lastsel_kind
+            //if (lastSelKind) kind.value = lastSelKind
+            await getList()
+            //mainSide = document.getElementById('main_side') //Main.vue 참조
+            //resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
+            //leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
+            //rightSide = document.getElementById('chan_main') //resizer.nextElementSibling
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -38,38 +36,24 @@
     onActivated(async () => { //초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
         if (mounting) {
             mounting = false
-        } else {
+        } else { //아래는 onMounted()시에는 실행되지 않도록 함 (onActivated()시에는 onMounted()내 실행이 안되도록 함)
             setBasicInfo()
             //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         }
     })
-
-    watch(kind, async () => {
-        localStorage.wiseband_lastsel_kind = kind.value
-        await getList() 
-    })
-
-    // watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
-    //     displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
-    // })
-
-    // watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
-    //     console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue") //console.log(route.fullPath+"@@@@@@@main.vue")
-    //     loopListChan(gst.selGrId, gst.selChanId)
-    // }) ##87 지우지 말 것 : selSideMenuTimeTag 대신 onActivated() 사용해 해결 - keepalive인 경우임
 
     function setBasicInfo() {
         document.title = "WiSEBand 나중에" //다른 곳에서 title이 업데이트 될 것임
         gst.selSideMenu = "mnuLater" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 HomeBody.vue에 Balnk가 표시됨
     }
 
-    function loopListChan(grid, chanid) {
+    function loopListChan(grid, chanid, refresh) { //getList()에서 호출하는 것은 onMounted()이므로 캐싱 아님. onActivated()에서 부르는 것은 캐싱임
         try {
             listChan.value.forEach((item, index) => {
                 if (item.GR_ID == grid) {
                     item.exploded = true
                     if (item.CHANID == chanid) {
-                        chanClick(item, index)
+                        chanClick(item, index, refresh)
                     } else {
                         procChanRowImg(item)
                     }
@@ -84,12 +68,13 @@
     }
 
     async function getList() {
-        try {            
-            const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
+        try {  
+            const res = await axios.post("/menu/qryLater")
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            listChan.value = rs.list
-            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
+            debugger
+            listLater.value = rs.list
+            //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid, true)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -122,7 +107,7 @@
         }
     }
 
-    function chanClick(row, idx) {
+    async function chanClick(row, idx, refresh) {
         try {
             if (row.DEPTH == "1") { //접기 or 펼치기
                 if (row.exploded) {
@@ -147,15 +132,8 @@
                 row.sel = true
                 procChanRowImg(row)
                 localStorage.wiseband_lastsel_grid = row.GR_ID
-                localStorage.wiseband_lastsel_chanid = row.CHANID //console.log("router.push:" + row.CHANNM)
-                const obj = { name : 'list_body', params : { grid: row.GR_ID, chanid: row.CHANID }} //path와 param는 같이 사용 X (name 이용)
-                //debugger
-                if (!sessionStorage.wiseband_list_at_first) { //Main.vue가 Home.vue를 라우팅할 때는 
-                    router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
-                } else {
-                    router.push(obj)
-                }
-                sessionStorage.wiseband_list_at_first = true
+                localStorage.wiseband_lastsel_chanid = row.CHANID
+                await goHomeBody(row, refresh)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -190,6 +168,17 @@
         }
     }
 
+    async function goHomeBody(row, refresh) {
+        let obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }}
+        if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
+        const ele = document.getElementById("msgContent")
+        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+            await router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
+        } else {
+            await router.push(obj)
+        }
+    }
+
     async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         const img = row.nodeImg.replace(LIGHT, DARK)        
         const nm = !row.CHANID ? row.GR_NM : row.CHANNM
@@ -201,8 +190,11 @@
             ]
         } else {
             gst.ctx.menu = [
+                { nm: "채널 새로고침", func: function(item, idx) {
+                    goHomeBody(row, true)
+                }},
                 { nm: "채널정보 보기", func: function(item, idx) {
-                    
+
                 }},
                 { nm: "즐겨찾기" },
                 { nm: "사용자 초대" },
@@ -221,13 +213,11 @@
     function mouseEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         if (row.sel) return
         row.hover = true
-        //procChanRowImg(row)
     }
 
     function mouseLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
         if (row.sel) return
         row.hover = false
-        //procChanRowImg(row)
     }
 
     function procExpCol(type) { //모두필치기,모두접기
@@ -301,24 +291,17 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable"> <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도
-            @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 index.html <body>에서 막는 것으로 해결 -->
-            <div v-for="(row, idx) in listChan" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
-                @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
-                <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', , row.sel ? 'nodeSel' : '']">
-                    <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM">
-                        <img class="coImg14" :src="gst.html.getImageUrl(row.nodeImg)">
-                        {{ row.DEPTH == '1' ? row.GR_NM : row.CHANNM }}
-                    </div>
-                    <div class="nodeRight">
-                        <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
-                        <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
-                        <img v-if="row.otherImg" class="coImg14" :src="gst.html.getImageUrl(row.otherImg)" title="다른 채널">
-                    </div>
+        <div class="chan_side_main coScrollable">
+            <div v-for="(row, idx) in listLater" :id="row.MSGID" style="display:flex;flex-direction:column" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
+                @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                <div style="color:white">{{ row.CHANNM }}</div>
+                <div class="node">
+                    <img :src="gst.html.getImageUrl('user.png')" style='width:32px;height:32px'>
+                    <div>{{ row.AUTHORNM }}</div>    
                 </div>
+                <div class="coDotDot" v-html="row.BODY" style="height:50px;"></div>
             </div>
         </div>
-        <div style="color:white">{{ $route.fullPath }}</div>
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">  <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
@@ -330,7 +313,7 @@
                 <component :is="Component" :key="$route.fullPath" />
             </keep-alive>
         </router-view>
-    </div>
+    </div>    
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 

@@ -160,7 +160,7 @@
             await goRoute({ path: '/main/home' }, onMounted)
         },        
         ["mnuLater"] : async (row, onMounted) => {
-            await goRoute({ name: 'listleft', params : { act: "later" }}, onMounted)
+            await goRoute({ name: 'later' }, onMounted)
         },
         ["mnuFixed"] : async (row, onMounted) => {
             await goRoute({ name: 'listleft', params : { act: "fixed" }}, onMounted)

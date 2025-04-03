@@ -3,9 +3,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '/src/views/Login.vue'
 import Main from '/src/views/Main.vue'
 import Home from '/src/views/Home.vue'
-import ListLeft from '/src/views/ListLeft.vue'
+import Later from '/src/views/Later.vue'
 import HomeBody from '/src/views/HomeBody.vue'
-import Test from '/src/views/Test.vue'
 
 //import GeneralStore from '/src/stores/GeneralStore.js'
 //let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
@@ -39,21 +38,26 @@ const router = createRouter({
                     ]
                 },
                 {                    
-                    path: ':act',
-                    name: 'listleft',
-                    component: ListLeft,
-                    children: [
-                        {
-                            path: 'list_body/:grid/:chanid',
-                            name: 'list_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
-                            component: HomeBody
-                        }
-                    ]
+                    path: 'later',
+                    name: 'later',
+                    component: Later                    
                 },
-                {
-                    path: 'test',
-                    component: Test,
-                }
+                // {                    
+                //     path: ':act',
+                //     name: 'listleft',
+                //     component: ListLeft,
+                //     children: [
+                //         {
+                //             path: 'list_body/:grid/:chanid',
+                //             name: 'list_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                //             component: HomeBody
+                //         }
+                //     ]
+                // },
+                // {
+                //     path: 'test',
+                //     component: Test,
+                // }
             ]
         }        
     ],
