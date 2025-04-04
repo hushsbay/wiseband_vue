@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, onActivated, watch } from 'vue' 
+    import { ref, onMounted, onActivated, nextTick } from 'vue' 
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -14,6 +14,10 @@
 
     let kind = ref('later'), listLater = ref([]), cntLater = ref(-1)
     let mounting = true
+    const scrollArea = ref(null)
+    let savLastMsgMstCdt = gst.cons.cdtAtLast //가장 최근 일시
+    let prevScrollY, prevScrollHeight
+
     //아래는 resizing 관련
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
@@ -37,7 +41,9 @@
             mounting = false
         } else { //아래는 onMounted()시에는 실행되지 않도록 함 (onActivated()시에는 onMounted()내 실행이 안되도록 함)
             setBasicInfo()
-            //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
+            if (gst.objSaved[kind.value]) {
+                scrollArea.value.scrollTop = gst.objSaved[kind.value].scrollY
+            }
         }
     })
 
@@ -66,11 +72,32 @@
         }
     }
 
+    function saveCurScrollY(posY) {
+        if (!gst.objSaved[kind.value]) gst.objSaved[kind.value] = {}
+        gst.objSaved[kind.value].scrollY = posY
+    }
+
+    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
+        const sTop = scrollArea.value.scrollTop 
+        const which = (prevScrollY && sTop <= prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
+        prevScrollY = sTop
+        saveCurScrollY(prevScrollY)
+        if (which == "up" && sTop < 200) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
+            prevScrollHeight = scrollArea.value.scrollHeight
+            await getList(kind.value)
+        }
+    }
+
     async function getList(kindStr) {
         try {
-            kind.value = kindStr ? kindStr : "later"
-            localStorage.wiseband_lastsel_later = kind.value
-            const res = await axios.post("/menu/qryLater", { kind: kind.value })
+            if (kind.value != kindStr) {
+                kind.value = kindStr ? kindStr : "later"
+                localStorage.wiseband_lastsel_later = kind.value
+                listLater.value = []
+                savLastMsgMstCdt = gst.cons.cdtAtLast
+            }
+            const lastMsgMstCdt = savLastMsgMstCdt
+            const res = await axios.post("/menu/qryLater", { kind: kind.value, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             for (let i = 0; i < rs.list.length; i++) {
@@ -80,9 +107,19 @@
                 } else {
                     row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
+                listLater.value.splice(0, 0, row) //jQuery의 prepend와 동일 (메시지리스트 맨 위에 삽입)
+                if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
-            listLater.value = rs.list
-            //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid, true)
+            await nextTick()
+            if (lastMsgMstCdt == gst.cons.cdtAtLast) {
+                scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+            } else if (lastMsgMstCdt) {
+                if (rs.list.length > 0) {
+                    scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
+                } else {
+                    //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
+                }
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -296,8 +333,8 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable">
-            <div v-for="(row, idx) in listLater" :id="row.MSGID" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer" 
+        <div class="chan_side_main coScrollable" ref="scrollArea" @scrollend="onScrollEnd">
+        <div v-for="(row, idx) in listLater" :id="row.MSGID" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer" 
                 :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
                 @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="color:lightgray">
