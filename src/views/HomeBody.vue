@@ -520,16 +520,16 @@
         gst.ctx.show(e)
     }
 
-    function displayDt(dtStr, tmOnly) { //vue의 computed method 이용할 경우 아규먼트 전달방법을 아직 파악하지 못해 일반 함수로 처리함
-        if (dtStr.length < 19) return null
-        const arr = dtStr.split(" ")
-        if (tmOnly) {
-            return arr[1].substring(0, 5)
-        } else {
-            const hday = hush.util.getDayFromDateStr(arr[0])
-            return arr[0] + " (" + hday + ") " + arr[1].substring(0, 5)
-        }
-    }
+    // function displayDt(dtStr, tmOnly) { //vue의 computed method 이용할 경우 아규먼트 전달방법을 아직 파악하지 못해 일반 함수로 처리함
+    //     if (dtStr.length < 19) return null
+    //     const arr = dtStr.split(" ")
+    //     if (tmOnly) {
+    //         return arr[1].substring(0, 5)
+    //     } else {
+    //         const hday = hush.util.getDayFromDateStr(arr[0])
+    //         return arr[0] + " (" + hday + ") " + arr[1].substring(0, 5)
+    //     }
+    // }
 
     function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         gst.ctx.data.header = ""
@@ -680,14 +680,14 @@
 
     async function pasteData(e) { //from paste event
         try {
-            if (editMsgId.value) {
-                gst.util.setToast("편집중인 메시지에는 이미지 붙이기가 불가능합니다.", 3)
-                return
-            }
             e.preventDefault() //tage의 .prevent가 안먹혀서 여기서 처리
             const pastedData = e.clipboardData.items //e.originalEvent.clipboardData.items
             if (pastedData.length == 0) return
             if (pastedData[0].type.includes("image")) { //예) image/png
+                if (editMsgId.value) {
+                    gst.util.setToast("편집중인 메시지에는 이미지 붙이기가 불가능합니다.", 3)
+                    return
+                }
                 const clipboardItem = pastedData[0]
                 const blob = clipboardItem.getAsFile() //서버에 보낼 데이터
                 const blobUrl = URL.createObjectURL(blob) //화면에 보여줄 데이터
@@ -753,6 +753,7 @@
         try { //파일,이미지,링크가 있다면 미리 업로드된 상태이며 crud가 C일 때만 업로드 되며 U일 때는 슬랙과 동일하게 업로드되지 않음 (본문만 수정저장됨)
             let body = document.getElementById(editorId).innerHTML.trim()
             if (body == "") return
+            let bodytext = document.getElementById(editorId).innerText.trim()
             const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/
             const result = reg.exec(body)
             if (result != null && !body.includes("<a href=\"" + result[0] + "\" target=\"_blank\" ")) { //웹에디터에서 이미 링크로 변환한 데이터는 또 변환하면 안됨
@@ -768,7 +769,7 @@
             let crud = (editMsgId.value) ? "U" : "C"
             const rq = { 
                 crud: crud, chanid: chanId, msgid: editMsgId.value, replyto: hasProp() ? props.data.msgid : null,
-                body: msgbody.value, //document.getElementById(editorId).innerHTML,
+                body: msgbody.value, bodytext: bodytext,
                 num_file: (editMsgId.value) ? 0 : fileBlobArr.value.length, 
                 num_image: (editMsgId.value) ? 0 : imgBlobArr.value.length, 
                 num_link: (editMsgId.value) ? 0 : linkArr.value.length
@@ -1493,11 +1494,11 @@
                         class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row)">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)">
                     <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
-                    <span style="margin-left:9px;color:dimgray">{{ displayDt(row.CDT) }}</span>
+                    <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
                 </div>
                 <div style="width:100%;display:flex;margin:10px 0">
                     <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
-                        <span v-show="row.stickToPrev && row.hover">{{ displayDt(row.CDT, true) }}</span>
+                        <span v-show="row.stickToPrev && row.hover">{{ hush.util.displayDt(row.CDT, true) }}</span>
                         <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
                         <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                     </div>
@@ -1525,7 +1526,7 @@
                             <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
                             <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
                             <span style="margin:0 4px;color:dimgray">최근 :</span>
-                            <span style="color:dimgray">{{ displayDt(row.replyinfo[0].CDT_MAX) }}</span>
+                            <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
                         </div>
                     </div>
                 </div>

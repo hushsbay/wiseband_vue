@@ -23,6 +23,19 @@ const hush = {
             const dtCur = hush.util.getDateTimeStamp(cur)
             return parseInt((dtCur - dtPrev) / 1000) //return seconds / 60 : 분으로 리턴
         },
+        displayDt(dtStr, tm) {
+            if (dtStr.length < 19) return null
+            const arr = dtStr.split(" ")
+            if (tm == true) { //일자없이 시각만 표시
+                return arr[1].substring(0, 5)
+            } else if (tm == false) {
+                const hday = hush.util.getDayFromDateStr(arr[0])
+                return arr[0] + " (" + hday + ")"
+            } else {
+                const hday = hush.util.getDayFromDateStr(arr[0])
+                return arr[0] + " (" + hday + ") " + arr[1].substring(0, 5)
+            }
+        },
         formatBytes : function (bytes) {
             let units = ["B", "KB", "MB", "GB", "TB"], i
             for (i = 0; bytes >= 1024 && i < 4; i++) bytes /= 1024
@@ -37,6 +50,11 @@ const hush = {
         getAngle : (x1, y1, x2, y2) => {
             var rad = Math.atan2(y2 - y1, x2 - x1)
             return (rad * 180) / Math.PI
+        },
+        getImageBlobUrl : (bufferData) => {
+            const uInt8Array = new Uint8Array(bufferData)
+            const blob = new Blob([uInt8Array], { type: "image/png" })
+            return URL.createObjectURL(blob)
         }
     }
 

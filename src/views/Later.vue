@@ -3,6 +3,7 @@
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
+    import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     
@@ -11,7 +12,7 @@
 
     const LIGHT = "whitesmoke_", DARK = "violet_"
 
-    let kind = ref(''), listLater = ref([])
+    let kind = ref('later'), listLater = ref([]), cntLater = ref(-1)
     let mounting = true
     //아래는 resizing 관련
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
@@ -21,9 +22,7 @@
     onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
         try {
             setBasicInfo()
-            //const lastSelKind = localStorage.wiseband_lastsel_kind
-            //if (lastSelKind) kind.value = lastSelKind
-            await getList()
+            await getList(localStorage.wiseband_lastsel_later)
             //mainSide = document.getElementById('main_side') //Main.vue 참조
             //resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
             //leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
@@ -67,12 +66,21 @@
         }
     }
 
-    async function getList() {
-        try {  
-            const res = await axios.post("/menu/qryLater")
+    async function getList(kindStr) {
+        try {
+            kind.value = kindStr ? kindStr : "later"
+            localStorage.wiseband_lastsel_later = kind.value
+            const res = await axios.post("/menu/qryLater", { kind: kind.value })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            debugger
+            for (let i = 0; i < rs.list.length; i++) {
+                const row = rs.list[i]                
+                if (row.PICTURE == null) {
+                    row.url = null
+                } else {
+                    row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
+                }
+            }
             listLater.value = rs.list
             //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid, true)
         } catch (ex) {
@@ -272,34 +280,43 @@
 <template>
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
-            <div class="chan_side_top_left">
-                <select v-model="kind" style="background:var(--second-color);color:var(--text-white-color);border:none">
-                    <option value="my">내 채널</option>
-                    <option value="other">다른 채널</option>
-                    <option value="all">모든 채널</option>
-                </select>
-            </div>
+            <div class="chan_side_top_left">나중에</div>
             <div class="chan_side_top_right">
-                <div style="padding:5px;border-radius:8px;" @click="procExpCol('C')">
-                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'collapseall.png')" title="모두접기기">
+                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('later')"
+                    :style="{ borderBottom: (kind == 'later') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
+                    진행중<span style="margin-left:3px">{{ cntLater }}</span>
                 </div>
-                <div style="padding:5px;border-radius:8px;" @click="procExpCol('E')">
-                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'expandall.png')" title="모두펼치기">
+                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('stored')"
+                    :style="{ borderBottom: (kind == 'stored') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
+                    보관됨<span style="margin-left:3px"></span>
                 </div>
-                <div style="padding:5px;border-radius:8px;" @click="newMsg">
-                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'compose.png')" title="새메시지">
+                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('finished')"
+                    :style="{ borderBottom: (kind == 'finished') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }" >
+                    완료됨<span style="margin-left:3px"></span>
                 </div>
             </div>
         </div>
         <div class="chan_side_main coScrollable">
-            <div v-for="(row, idx) in listLater" :id="row.MSGID" style="display:flex;flex-direction:column" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
+            <div v-for="(row, idx) in listLater" :id="row.MSGID" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer" 
+                :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
                 @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
-                <div style="color:white">{{ row.CHANNM }}</div>
-                <div class="node">
-                    <img :src="gst.html.getImageUrl('user.png')" style='width:32px;height:32px'>
-                    <div>{{ row.AUTHORNM }}</div>    
+                <div style="color:lightgray">
+                    <img class="coImg14" :src="gst.html.getImageUrl(LIGHT + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
+                    {{ row.CHANNM }}
                 </div>
-                <div class="coDotDot" v-html="row.BODY" style="height:50px;"></div>
+                <div class="node">
+                    <div style="display:flex;align-items:center">
+                        <img v-if="row.url" :src="row.url" style='width:32px;height:32px;border-radius:16px'>
+                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:32px;height:32px'>
+                        <div style="color:whitesmoke;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
+                    </div>
+                    <div style="display:flex;align-items:center;color:lightgray">
+                        {{ hush.util.displayDt(row.CDT, false) }}
+                    </div>
+                </div>
+                <div class="coDotDot"> <!-- 원래 coDotDot으로만 해결되어야 하는데 데이터가 있으면 넓이가 예) 1px 늘어남 -->
+                    <div style="width:100px;color:white">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
+                </div>
             </div>
         </div>
     </div>
@@ -323,21 +340,21 @@
         display:flex;flex-direction:column;background:var(--second-color);border-top-left-radius:10px;border-bottom-left-radius:10px;
     }
     .chan_side_top {
-        width:100%;height:50px;display:flex;justify-content:space-between;
+        width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:1px solid lightgray;cursor:pointer
     }
     .chan_side_top_left {
-        width:50%;height:100%;padding-left:10px;display:flex;align-items:center;
+        width:20%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
     }
     .chan_side_top_right {
-        width:50%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
+        width:80%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
     }
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .node {
-        width:calc(100% - 30px);min-height:36px;padding:0 10px;margin:0 5px;
+        width:100%;height:45px;
         display:flex;align-items:center;justify-content:space-between;
-        font-size:15px;color:var(--text-white-color);border-radius:5px;cursor:pointer;
+        font-size:15px;color:var(--text-white-color);cursor:pointer;
     }
     .nodeRight { display:flex;align-items:center;justify-content:flex-end; }
     .coImg20:hover { background:var(--second-hover-color); }
