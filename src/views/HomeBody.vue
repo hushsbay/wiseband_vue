@@ -153,9 +153,18 @@
             } else {
                 console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
                 setBasicInfo()
-                if (!gst.selMsgId) { //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
+                //if (!gst.selMsgId) { //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
+                if (msgidInChan) { //여기는 Later.vue로부터 호출됨
+                    await getList({ msgid: msgidInChan, kind: "atHome" })
+                } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
+                //} else { //여기는 Later.vue로부터 호출됨
+                //   debugger
+                //   msgidInChan = gst.selMsgId
+                //   gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기까지 오는데 사용하는 임시 변수임
+                //   await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+                //}
                 try { inEditor.value.focus() } catch {}
             }
         } catch (ex) {
@@ -173,16 +182,21 @@
             } else {
                 console.log("부모A - " + JSON.stringify(props.data))
                 setBasicInfo()
-                if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
-                    msgidInChan = gst.selMsgId
-                    gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기가지 오는데 사용하는 임시 변수임
-                    await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+                //if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
+                //    msgidInChan = gst.selMsgId
+                //    gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기까지 오는데 사용하는 임시 변수임
+                //    await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
+                //} else {
+                if (msgidInChan) { //여기는 Later.vue로부터 호출됨
+                    debugger
+                    await getList({ msgid: msgidInChan, kind: "atHome" })
                 } else {
                     const key = sideMenu + chanId
                     if (gst.objSaved[key]) {
                         scrollArea.value.scrollTop = gst.objSaved[key].scrollY
                     }
                 }
+                //}
             }
         }
     })
@@ -213,6 +227,10 @@
             grId = route.params.grid
             gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
             gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
+        }
+        debugger
+        if (route.params.msgid) {
+            msgidInChan = route.params.msgid
         }
     }
 
@@ -276,6 +294,7 @@
         try {
             onGoingGetList = true
             resultCnt = 0
+            debugger
             let param = { grid: grId, chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt

@@ -28,6 +28,7 @@ const router = createRouter({
             children: [
                 {                    
                     path: 'home',
+                    name: 'home',
                     component: Home,
                     children: [
                         {
@@ -40,7 +41,14 @@ const router = createRouter({
                 {                    
                     path: 'later',
                     name: 'later',
-                    component: Later                    
+                    component: Later,
+                    children: [
+                        {
+                            path: 'home_body_later/:grid/:chanid/:msgid',
+                            name: 'home_body_later', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            component: HomeBody,
+                        }
+                    ]                  
                 },
                 // {                    
                 //     path: ':act',

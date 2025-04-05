@@ -52,26 +52,6 @@
         gst.selSideMenu = "mnuLater" //이 행이 없으면 DM 라우팅후 Back()후 홈을 누르면 이 값이 mnuDm이므로 HomeBody.vue에 Balnk가 표시됨
     }
 
-    function loopListChan(grid, chanid, refresh) { //getList()에서 호출하는 것은 onMounted()이므로 캐싱 아님. onActivated()에서 부르는 것은 캐싱임
-        try {
-            listChan.value.forEach((item, index) => {
-                if (item.GR_ID == grid) {
-                    item.exploded = true
-                    if (item.CHANID == chanid) {
-                        chanClick(item, index, refresh)
-                    } else {
-                        procChanRowImg(item)
-                    }
-                } else {
-                    item.exploded = false
-                    procChanRowImg(item)
-                }
-            })
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
-
     function saveCurScrollY(posY) {
         if (!gst.objSaved[kind.value]) gst.objSaved[kind.value] = {}
         gst.objSaved[kind.value].scrollY = posY
@@ -124,99 +104,26 @@
             gst.util.showEx(ex, true)
         }
     }
-
-    function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
-        if (item.DEPTH == "1") {
-            item.nodeImg = item.exploded ? LIGHT + "expanded.png" : LIGHT + "collapsed.png"
-            item.notioffImg = ""
-            item.bookmarkImg = ""
-            item.otherImg = ""
-        } else {
-            if (item.CHANID == null) {
-                item.nodeImg = LIGHT + "channel.png"
-                item.notioffImg = ""
-                item.bookmarkImg = ""
-                item.otherImg = ""
-                item.CHANNM = "없음"
-            } else {
-                item.nodeImg = (item.STATE == "A") ? "channel.png" : "lock.png"
-                item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
-                item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
-                item.otherImg = (item.OTHER == "other") ? "other.png" : ""
-                const color = item.sel ? DARK : LIGHT
-                item.nodeImg = color + item.nodeImg
-                if (item.notioffImg) item.notioffImg = color + item.notioffImg
-                if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
-                if (item.otherImg) item.otherImg = color + item.otherImg
-            }
-        }
-    }
-
-    async function chanClick(row, idx, refresh) {
+    
+    async function laterClick(row, idx, refresh) {
         try {
-            if (row.DEPTH == "1") { //접기 or 펼치기
-                if (row.exploded) {
-                    row.exploded = false
-                } else {
-                    row.exploded = true
-                }
-                procChanRowImg(row)
-                for (let i = idx + 1; i < listChan.value.length; i++) {
-                    if (listChan.value[i].DEPTH == "1") break
-                    listChan.value[i].exploded = row.exploded
-                }
-                if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
-            } else {
-                for (let i = 0; i < listChan.value.length; i++) {
-                    if (listChan.value[i].DEPTH == "2") {
-                        listChan.value[i].sel = false
-                        listChan.value[i].hover = false
-                        procChanRowImg(listChan.value[i])
-                    }
-                }
-                row.sel = true
-                procChanRowImg(row)
-                localStorage.wiseband_lastsel_grid = row.GR_ID
-                localStorage.wiseband_lastsel_chanid = row.CHANID
-                await goHomeBody(row, refresh)
-            }
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
-
-    function displayChanAsSelected(chanid, grid) {
-        try {
-            for (let i = 0; i < listChan.value.length; i++) {
-                const row = listChan.value[i]
-                if (grid == row.GR_ID) {
-                    row.exploded = true //dept1이든 2든 펼치기
-                    if (row.DEPTH == "2") {
-                        if (chanid == row.CHANID) {
-                            row.sel = true
-                            localStorage.wiseband_lastsel_grid = row.GR_ID
-                            localStorage.wiseband_lastsel_chanid = row.CHANID
-                        } else {
-                            row.sel = false
-                        }
-                    } else {
-                        localStorage.wiseband_lastsel_grid = row.GR_ID
-                    }
-                } else { //row.exploded = false //row.exploded는 사용자가 본 그대로 (접지 말고) 둬야 함
-                    row.sel = false
-                    row.hover = false
-                }
-                procChanRowImg(row)
-            }
+            listLater.value.map((item) => {
+                item.sel = false
+                item.hover = false
+            })
+            row.sel = true
+            //localStorage.wiseband_lastsel_grid = row.GR_ID
+            //localStorage.wiseband_lastsel_chanid = row.CHANID
+            await goHomeBody(row, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
     async function goHomeBody(row, refresh) {
-        let obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }}
+        let obj = { name : 'home_body_later', params : { grid: row.GR_ID, chanid: row.CHANID, msgid: row.MSGID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
-        const ele = document.getElementById("msgContent")
+        const ele = document.getElementById("chan_center_body")
         if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
             await router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
         } else {
@@ -225,33 +132,27 @@
     }
 
     async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        const img = row.nodeImg.replace(LIGHT, DARK)        
-        const nm = !row.CHANID ? row.GR_NM : row.CHANNM
-        gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
-        if (!row.CHANID) {            
-            gst.ctx.menu = [
-                { nm: "채널 생성" },
-                { nm: "환경 설정" }
-            ]
-        } else {
-            gst.ctx.menu = [
-                { nm: "채널 새로고침", func: function(item, idx) {
-                    goHomeBody(row, true)
-                }},
-                { nm: "채널정보 보기", func: function(item, idx) {
+        gst.ctx.data.header = ""
+        gst.ctx.menu = [
+            { nm: "홈에서 열기", func: function(item, idx) {
+                
+            }},
+            { nm: "새창에서 열기", func: function(item, idx) {
 
-                }},
-                { nm: "즐겨찾기" },
-                { nm: "사용자 초대" },
-                { nm: "복사", img: DARK + "other.png", child: [
-                    { nm: "채널 복사", func: function(item, idx) { 
-                        
-                    }},
-                    { nm: "링크 복사" }
-                ]},                
-                { nm: "채널 나가기", color: "red" }
-            ]            
-        }
+            }},
+            { nm: "보관", disable: (kind.value == "stored") ? true : false, func: function(item, idx) {
+
+            }},
+            { nm: "완료", disable: (kind.value == "finished") ? true : false, func: function(item, idx) {
+
+            }},
+            { nm: "진행", disable: (kind.value == "later") ? true : false, func: function(item, idx) {
+
+            }},
+            { nm: "'나중에'에서 제거", func: function(item, idx) {
+
+            }},
+        ]            
         gst.ctx.show(e)
     }
 
@@ -265,14 +166,7 @@
         row.hover = false
     }
 
-    function procExpCol(type) { //모두필치기,모두접기
-        const exploded = (type == "E") ? true : false
-        for (let i = 0; i < listChan.value.length; i++) {
-            listChan.value[i].exploded = exploded
-            procChanRowImg(listChan.value[i])
-        }
-    }
-
+    
     function newMsg() {
         alert('newMsg')
     }
@@ -334,12 +228,17 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" ref="scrollArea" @scrollend="onScrollEnd">
-        <div v-for="(row, idx) in listLater" :id="row.MSGID" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer" 
+            <div v-for="(row, idx) in listLater" :id="row.MSGID" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer" 
                 :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
                 @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
-                <div style="color:lightgray">
-                    <img class="coImg14" :src="gst.html.getImageUrl(LIGHT + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
-                    {{ row.CHANNM }}
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div style="display:flex;align-items:center;color:lightgray">
+                        <img class="coImg14" :src="gst.html.getImageUrl(LIGHT + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
+                        {{ row.CHANNM }} 
+                    </div>
+                    <div style="display:flex;align-items:center;color:lightgray">
+                        {{ row.REPLYTO ? '댓글' : '' }}
+                    </div>
                 </div>
                 <div class="node">
                     <div style="display:flex;align-items:center">
@@ -396,8 +295,8 @@
     .nodeRight { display:flex;align-items:center;justify-content:flex-end; }
     .coImg20:hover { background:var(--second-hover-color); }
     .coImg20:active { background:var(--active-color);border-radius:9px }
-    .nodeHover { background:var(--second-hover-color); }
-    .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
+    .nodeHover, .nodeSel { background:var(--second-hover-color); }
+    /* .nodeSel { background:var(--second-hover-color); } */
     .resizer {
         background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
     }
