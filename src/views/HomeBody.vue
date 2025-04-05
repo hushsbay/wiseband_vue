@@ -83,7 +83,7 @@
     let mounting = true
     
     let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //HomeBody가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
-    const scrollArea = ref(null)
+    const scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
 
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
@@ -92,7 +92,7 @@
     let sideMenu, grId, chanId, msgidInChan
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
-    let msglist = ref([])
+    let msglist = ref([]), fetchByScrollEnd = ref(false)
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
     let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
@@ -100,7 +100,7 @@
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = gst.cons.cdtAtFirst, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 오래된 일시와 최근 일시
-    let onGoingGetList = false, prevScrollY, prevScrollHeight, resultCnt = 0, scrollDirection = ""
+    let onGoingGetList = false, prevScrollY, prevScrollHeight, resultCnt = 0, getAlsoWhenDown = ""
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -188,7 +188,7 @@
                 //    await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
                 //} else {
                 if (msgidInChan) { //여기는 Later.vue로부터 호출됨
-                    debugger
+                    //debugger
                     await getList({ msgid: msgidInChan, kind: "atHome" })
                 } else {
                     const key = sideMenu + chanId
@@ -228,7 +228,6 @@
             gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
             gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
-        debugger
         if (route.params.msgid) {
             msgidInChan = route.params.msgid
         }
@@ -294,7 +293,6 @@
         try {
             onGoingGetList = true
             resultCnt = 0
-            debugger
             let param = { grid: grId, chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
@@ -309,14 +307,16 @@
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 savFirstMsgMstCdt = gst.cons.cdtAtFirst
                 savLastMsgMstCdt = gst.cons.cdtAtLast
-            }
-            if ((firstMsgMstCdt && !kind) || (msgid && kind == "atHome")) {
-                scrollDirection = "down"
+            } //if ((firstMsgMstCdt && !kind) || (msgid && kind == "atHome")) { //아래로 대체
+            debugger
+            if (route.fullPath.includes("/later_body/") || (firstMsgMstCdt && !kind)) {
+                getAlsoWhenDown = "down" //up은 기본이고 down 스크롤시에도 데이터 가져와야 한다는 의미임
             } else {
-                scrollDirection = ""
+                getAlsoWhenDown = ""
             }
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data)
+            fetchByScrollEnd.value = false
             if (!rs) {
                 onGoingGetList = false
                 resultCnt = 0
@@ -345,8 +345,8 @@
             const msgArr = rs.data.msglist   
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
-                if (msgid && (kind == "atHome" || kind == "withReply")) {
-                    if (row.MSGID == msgid) row.background = "beige"
+                if (msgid && (kind == "atHome" || kind == "withReply")) {                    
+                    if (row.MSGID == msgid) row.background = "lightsteelblue"
                 }
                 for (let item of row.msgimg) {
                     if (!item.BUFFER) continue //잘못 insert된 것임
@@ -425,6 +425,7 @@
                 }
                 if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+                msgRow.value[row.MSGID.toString()] = row.MSGID
             }
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
@@ -454,7 +455,7 @@
             await nextTick()
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 const ele = document.getElementById(msgid) //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
-                if (ele) ele.scrollIntoView()
+                if (ele) msgRow.value[msgid].scrollIntoView()
             } else if (lastMsgMstCdt == gst.cons.cdtAtLast) {
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else if (lastMsgMstCdt) {
@@ -630,18 +631,31 @@
         const topEntryPoint = 200
         const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
         //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight+"@@@@"+ele.offsetHeight)
-        const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
+        //const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
+        let which = "stop"
+        if (prevScrollY) {
+            if (sTop < prevScrollY) {
+                which = "up"
+            } else if (sTop > prevScrollY) {
+                which = "down"
+            }
+        }
         prevScrollY = sTop
-        saveCurScrollY(prevScrollY)
-        //resultCnt => 읽어온 데이터가 없을 땐 getList() 호출하지 말기
+        saveCurScrollY(prevScrollY) //resultCnt => 읽어온 데이터가 없을 땐 getList() 호출하지 말기
         if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
             prevScrollHeight = scrollArea.value.scrollHeight
-            if (resultCnt != 0) await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-        } else if (scrollDirection == "down" && which == "down" && sTop > bottomEntryPoint) { 
+            //if (resultCnt != 0) {
+                fetchByScrollEnd.value = true
+                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+            //}
+        } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
             //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
             //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
-            //마지막 getList() 방식이 scrollDirection(down)일 경우만 아래 처리하도록 하기
-            if (resultCnt != 0) await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+            //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
+            //if (resultCnt != 0) {
+                fetchByScrollEnd.value = true
+                await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+            //}
         }
     }
 
@@ -1476,6 +1490,7 @@
                 <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
                 <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
                 <div v-if="hasProp()" style="margin-right:5px">스레드</div>
+                <span v-show="fetchByScrollEnd" style="color:red;margin-left:20px">data by scrolling</span> 
             </div>
             <div class="chan_center_header_right">
                 <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
@@ -1503,9 +1518,12 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px">
+                <span style="margin-left:20px">{{ route.fullPath }}</span> 
+            </div>
         </div> 
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
-            <div v-for="(row, idx) in msglist" :id="row.MSGID" class="msg_body procMenu"  
+            <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
                 :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
                 <div style="display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
