@@ -18,7 +18,7 @@
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
     let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0
 
-    onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
+    onMounted(async () => {
         try {
             setBasicInfo()
             const lastSelKind = localStorage.wiseband_lastsel_kind

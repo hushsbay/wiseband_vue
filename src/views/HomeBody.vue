@@ -182,9 +182,7 @@
                 setBasicInfo()
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
-            if (gst.objSaved[key]) {
-               scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            }
+            if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
         }
     })
 
@@ -414,7 +412,7 @@
                             row.hasSticker = chkWithinTime(curCdt, nextCdt)
                         }
                     } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
-                    msglist.value.splice(0, 0, row) //jQuery의 prepend와 동일 (메시지리스트 맨 위에 삽입)
+                    msglist.value.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 }
                 if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT

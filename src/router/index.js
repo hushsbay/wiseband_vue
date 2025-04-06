@@ -50,53 +50,25 @@ const router = createRouter({
                         }
                     ]                  
                 },
-                // {                    
-                //     path: ':act',
-                //     name: 'listleft',
-                //     component: ListLeft,
-                //     children: [
-                //         {
-                //             path: 'list_body/:grid/:chanid',
-                //             name: 'list_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
-                //             component: HomeBody
-                //         }
-                //     ]
-                // },
-                // {
-                //     path: 'test',
-                //     component: Test,
-                // }
             ]
         }        
     ],
-    //scrollBehavior는 포기 : 구현 못함 : overflow:hidden 빼면 가능하다고 하나 구현 어려움
-    //대신 keppalive로 되어 있는 Home 및 HomeBody에서 필요하므로 Activate/Deactivated hook에서 처리해 보고자 함
+    //scrollBehavior는 포기 : overflow:hidden 빼면 가능하다고 하나 구현 어려움
+    //대신 keepalive + onscrollend + Activate hook에서 더 자유도 높게 해결함
 })
-
-/*router.beforeEach((to, from) => {
-    if (to.path.startsWith("/main/home/home_body")) {            
-            const arr = to.path.split("/")
-            if (arr.length >= 6) { //=>/main/home/home_body/20250120084532918913033423/20250122084532918913033401
-                gst.selGrId = arr[4]
-                gst.selChanId = arr[5]                
-            }
-        }
-    }
-    return true
-})*/
 
 router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고는 안 먹혀도 여기 beforeEach와 Activeted/Deactivated는 먹힘
     //if (!gst) gst = GeneralStore() //(1)
-    console.log("from.path: " + from.path + " *** " + JSON.stringify(from.params))
-    console.log("to.path: " + to.path + " *** " + JSON.stringify(to.params))
+    //console.log("from.path: " + from.path + " *** " + JSON.stringify(from.params))
+    //console.log("to.path: " + to.path + " *** " + JSON.stringify(to.params))
     if (from.path == "/" && to.path.startsWith("/main/home/home_body/")) {
         console.log("redirect to home : no issue until now but ready for being issue")
         return { path: '/main/home', query : { ver : Math.random() }}
-    }
-    if (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) { //from,to가 반대로 호출되고 있음
+    } //아래는 from,to가 반대로 호출되고 있어서 여기서 흐름을 막아주면 문제없음 (현재까지 대안 못찾음)
+    if (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) {
         console.log("home_body -> home issue : routing return false")
         return false //HomeBody.vue의 $$76 참조
-    } else if (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) { //from,to가 반대로 호출되고 있음
+    } else if (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) {
         console.log("later_body -> later issue : routing return false")
         return false //HomeBody.vue의 $$76 참조
     }

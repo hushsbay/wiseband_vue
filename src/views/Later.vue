@@ -18,19 +18,33 @@
     let savLastMsgMstCdt = gst.cons.cdtAtLast //가장 최근 일시
     let prevScrollY, prevScrollHeight
 
-    //아래는 resizing 관련
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
+    //패널 리사이징 : 다른 vue에서 필요시 나머지 유지하되 localStorage이름만 바꾸됨
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px')
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
-    let mainSide, resizer, leftSide, rightSide, mainSideWidth, posX = 0, leftWidth = 0
+    const resizeEle = { mainSide: null, resizer: null, leftSide: null, rightSide: null }
+    const resizeObj = { mainSideWidth: 0, posX: 0, leftWidth: 0 }
 
-    onMounted(async () => { //Main.vue와는 달리 라우팅된 상태에서 Back()을 누르면 여기가 실행됨
+    function downHandler(e) {
+        gst.resize.downHandler(e, resizeEle, resizeObj, moveHandler, upHandler)
+    }
+
+    function moveHandler(e) {
+        const dx = gst.resize.moveHandler(e, resizeEle, resizeObj)
+        chanSideWidth.value = `${resizeObj.leftWidth + dx + resizeObj.mainSideWidth}px` //아래 % 대신에 바로 px 적용
+        chanMainWidth.value = `calc(100% - ${chanSideWidth.value})`
+    }
+
+    function upHandler() {
+        gst.resize.upHandler(resizeEle, moveHandler, upHandler)
+        localStorage.wiseband_lastsel_latersidewidth = chanSideWidth.value
+    }
+    //////////////////////////////////////////////////////////////////////////////////////
+
+    onMounted(async () => {
         try {
             setBasicInfo()
             await getList(localStorage.wiseband_lastsel_later)
-            //mainSide = document.getElementById('main_side') //Main.vue 참조
-            //resizer = document.getElementById('dragMe') //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
-            //leftSide = document.getElementById('chan_side') //resizer.previousElementSibling
-            //rightSide = document.getElementById('chan_main') //resizer.nextElementSibling
+            gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -41,9 +55,7 @@
             mounting = false
         } else { //아래는 onMounted()시에는 실행되지 않도록 함 (onActivated()시에는 onMounted()내 실행이 안되도록 함)
             setBasicInfo()
-            if (gst.objSaved[kind.value]) {
-                scrollArea.value.scrollTop = gst.objSaved[kind.value].scrollY
-            }
+            if (gst.objSaved[kind.value]) scrollArea.value.scrollTop = gst.objSaved[kind.value].scrollY
         }
     })
 
@@ -87,33 +99,32 @@
                 } else {
                     row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
-                listLater.value.splice(0, 0, row) //jQuery의 prepend와 동일 (메시지리스트 맨 위에 삽입)
+                listLater.value.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
-            if (lastMsgMstCdt == gst.cons.cdtAtLast) {
+            if (lastMsgMstCdt == gst.cons.cdtAtLast) { //맨 처음엔 최신인 맨 아래로 스크롤 이동
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-            } else if (lastMsgMstCdt) {
-                if (rs.list.length > 0) {
+            } else if (lastMsgMstCdt) { //1) 이후에 스크롤 위로 올려서 이전 데이터를 가지고 오면 높이가 커지면서
+                if (rs.list.length > 0) { //직전에 육안으로 보고 있던 이전 행이 안보이게 되는데 그걸 해결하기 위해
+                    //prevScrollY(이전 위치) + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop으로 주면 됨
                     scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
-                } else {
-                    //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
-                }
+                } //2) 이게 만일 최신일자순으로 위에서부터 뿌리면 스크롤 아래로 내릴 때 데이터 가져오는 거라면 
+                //계산할 필요도 없이 육안으로 그냥 보이게 하면 되나 스크롤 아래 내릴 때 계산해야 하는 불편은 있음
+                //* 일단 슬랙의 오른쪽 메인의 메시지 목록이 위로 올라가면서 EndlessScroll를 하므로 여기도 동일한 UX(1)로 한 것임
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
     
-    async function laterClick(row, idx, refresh) {
-        try {
+    async function laterClick(row, idx, refresh) { //채널트리와 다르게 여기선 최초 로드시에도 이전 선택한 행을 기억하지 않고
+        try { //오른쪽 공간을 공백으로 두기로 함 (필요하면 localStorage 등을 사용하면 되나 나중에/고정 조회 화면까지 그럴 필요는 없어 보임)
             listLater.value.map((item) => {
-                item.sel = false
-                item.hover = false
-            })
+                item.sel = false //루프 돌리지 말고 이전에 선택된 행만 원복하고 새로 선택한 행을 표시하면 효율적일텐데 Object가 아닌 
+                item.hover = false //배열이라 어차피 루프 돌려야 한다는 생각에 이대로 처리함
+            }) //배열 인덱스로 찾아 처리하는 것도 배열이 변하는 것을 신경써야 하므로 일단 이대로 처리
             row.sel = true
-            //localStorage.wiseband_lastsel_grid = row.GR_ID
-            //localStorage.wiseband_lastsel_chanid = row.CHANID
             await goHomeBody(row, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -124,16 +135,19 @@
         let obj = { name : 'later_body', params : { grid: row.GR_ID, chanid: row.CHANID, msgid: row.MSGID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
         const ele = document.getElementById("chan_center_body")
-        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
-            await router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
+        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로 
+            await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
         } else {
             await router.push(obj)
         }
     }
 
-    async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
+    async function mouseRight(e, row) {
         gst.ctx.data.header = ""
         gst.ctx.menu = [
+            { nm: "채널 새로고침", func: function(item, idx) {
+                goHomeBody(row, true)
+            }},
             { nm: "홈에서 열기", func: function(item, idx) {
                 
             }},
@@ -156,56 +170,15 @@
         gst.ctx.show(e)
     }
 
-    function mouseEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
+    function mouseEnter(row) {
         if (row.sel) return
         row.hover = true
     }
 
-    function mouseLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
+    function mouseLeave(row) {
         if (row.sel) return
         row.hover = false
     }
-
-    
-    function newMsg() {
-        alert('newMsg')
-    }
-
-    //////////////////////////////////////마우스다운후 채널바 리사이징
-    function mouseDownHandler(e) {
-        posX = e.clientX//마우스 위치 X값
-        leftWidth = leftSide.getBoundingClientRect().width
-        mainSideWidth = mainSide.getBoundingClientRect().width
-        document.addEventListener('mousemove', mouseMoveHandler)
-        document.addEventListener('mouseup', mouseUpHandler)
-    }
-
-    async function mouseMoveHandler(e) {
-        const dx = e.clientX - posX //마우스가 움직이면 기존 초기 마우스 위치에서 현재 위치값과의 차이를 계산
-        document.body.style.cursor = 'col-resize' //크기 조절중 마우스 커서 변경 (resizer에 적용하면 위치가 변경되면서 커서가 해제되기 때문에 body에 적용)
-        leftSide.style.userSelect = 'none' //이동중 양쪽 영역(왼쪽, 오른쪽)에서 마우스 이벤트와 텍스트 선택을 방지하기 위해 추가 (4행)
-        leftSide.style.pointerEvents = 'none'        
-        rightSide.style.userSelect = 'none'
-        rightSide.style.pointerEvents = 'none'        
-        chanSideWidth.value = `${leftWidth + dx + mainSideWidth}px` //아래 % 대신에 바로 px 적용
-        chanMainWidth.value = `calc(100% - ${chanSideWidth.value})`
-        //초기 width 값과 마우스 드래그 거리를 더한 뒤 상위요소(container) 너비 이용해 퍼센티지 구해 left의 width로 적용
-        //const newLeftWidth = ((leftWidth + dx) * 100) / resizer.parentNode.getBoundingClientRect().width
-        //leftSide.style.width = `${newLeftWidth}%`
-    }
-
-    function mouseUpHandler() { //모든 커서 관련 사항은 마우스 이동이 끝나면 제거됨
-        resizer.style.removeProperty('cursor')
-        document.body.style.removeProperty('cursor')
-        leftSide.style.removeProperty('user-select')
-        leftSide.style.removeProperty('pointer-events')
-        rightSide.style.removeProperty('user-select')
-        rightSide.style.removeProperty('pointer-events')
-        document.removeEventListener('mousemove', mouseMoveHandler)
-        document.removeEventListener('mouseup', mouseUpHandler)
-        localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
-    }
-    //////////////////////////////////////마우스다운후 채널바 리사이징
 </script>
 
 <template>
@@ -250,30 +223,29 @@
                         {{ hush.util.displayDt(row.CDT, false) }}
                     </div>
                 </div>
-                <div class="coDotDot"> <!-- 원래 coDotDot으로만 해결되어야 하는데 데이터가 있으면 넓이가 예) 1px 늘어남 -->
+                <div class="coDotDot"> <!-- 원래 coDotDot으로만 해결되어야 하는데 데이터가 있으면 넓이가 예) 1px 늘어나 육안으로 흔들림 -->
                     <div style="width:100px;color:white">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
                 </div>
             </div>
         </div>
     </div>
-    <div class="resizer" id="dragMe" @mousedown="(e) => mouseDownHandler(e)"></div>
-    <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">  <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 여기 Home.vue에서만 :key를 사용하는 이유는 HomeBody.vue에서 설명 -->
-        <!-- <router-view :key="$route.fullPath"></router-view> -->
-        <!-- <keep-alive><router-view :key="$route.fullPath"></router-view></keep-alive> keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
+    <div class="resizer" id="dragMe" @mousedown="(e) => downHandler(e)"></div>
+    <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">
+        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용하는 이유는 HomeBody.vue에서 설명 -->
+        <!-- keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" />
             </keep-alive>
         </router-view>
-    </div>    
+    </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 
 <style scoped>    
     .chan_side {
         height:100%; /* width는 resizing처리됨 */
-        display:flex;flex-direction:column;background:var(--second-color);border-top-left-radius:10px;border-bottom-left-radius:10px;
+        display:flex;flex-direction:column;background:var(--second-color);border-top-left-radius:10px;border-bottom-left-radius:10px
     }
     .chan_side_top {
         width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:1px solid lightgray;cursor:pointer
@@ -285,23 +257,19 @@
         width:80%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
     }
     .chan_side_main {
-        width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;
+        width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto
     }
     .node {
         width:100%;height:45px;
         display:flex;align-items:center;justify-content:space-between;
-        font-size:15px;color:var(--text-white-color);cursor:pointer;
+        font-size:15px;color:var(--text-white-color);cursor:pointer
     }
-    .nodeRight { display:flex;align-items:center;justify-content:flex-end; }
-    .coImg20:hover { background:var(--second-hover-color); }
-    .coImg20:active { background:var(--active-color);border-radius:9px }
-    .nodeHover, .nodeSel { background:var(--second-hover-color); }
-    /* .nodeSel { background:var(--second-hover-color); } */
+    .nodeHover, .nodeSel { background:var(--second-hover-color) }
     .resizer {
-        background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
+        background-color:transparent;cursor:ew-resize;height:100%;width:5px /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
     }
     .chan_main {
         height:100%;display:flex; /* width:100%;는 resizing처리됨 */
-        background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
+        background:white;border-top-right-radius:10px;border-bottom-right-radius:10px
     }
 </style>
