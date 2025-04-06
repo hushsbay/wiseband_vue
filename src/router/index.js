@@ -93,8 +93,11 @@ router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고�
         console.log("redirect to home : no issue until now but ready for being issue")
         return { path: '/main/home', query : { ver : Math.random() }}
     }
-    if (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) {
+    if (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) { //from,to가 반대로 호출되고 있음
         console.log("home_body -> home issue : routing return false")
+        return false //HomeBody.vue의 $$76 참조
+    } else if (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) { //from,to가 반대로 호출되고 있음
+        console.log("later_body -> later issue : routing return false")
         return false //HomeBody.vue의 $$76 참조
     }
     return true

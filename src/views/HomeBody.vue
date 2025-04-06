@@ -30,11 +30,12 @@
         return false
     }
 
-    let thread = ref({ msgid: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
+    let thread = ref({ msgid: null, msgidChild: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
-    function openThread(msgid) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
+    function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
         thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
+        thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
         setWidthForThread()
     }
 
@@ -72,6 +73,10 @@
             chanId = route.params.chanid
             grId = route.params.grid
         }
+        if (props.data.msgid) { //route가 아님을 유의
+            msgidInChan = props.data.msgid //댓글의 msgid일 수도 있음
+            //props.data.msgidChild도 있는데 별도 변수에 담지 않고 바로 사용하기로 함
+        }
     }
 
     function evClick(obj) { //자식에서만 사용됨
@@ -100,7 +105,7 @@
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = gst.cons.cdtAtFirst, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 오래된 일시와 최근 일시
-    let onGoingGetList = false, prevScrollY, prevScrollHeight, resultCnt = 0, getAlsoWhenDown = ""
+    let onGoingGetList = false, prevScrollY, prevScrollHeight, getAlsoWhenDown = ""
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -149,22 +154,15 @@
             if (hasProp()) {
                 console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
-                await getList({ msgid: props.data.msgid, kind: "withReply" })
+                await getList({ msgid: msgidInChan, kind: "withReply" })
             } else {
                 console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
                 setBasicInfo()
-                //if (!gst.selMsgId) { //홈에서 열기시에도 해당 채널 처음 열면 여기로 오므로 onActivated()와 충돌 체크 필요 : gst.selMsgId
                 if (msgidInChan) { //여기는 Later.vue로부터 호출됨
                     await getList({ msgid: msgidInChan, kind: "atHome" })
                 } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
-                //} else { //여기는 Later.vue로부터 호출됨
-                //   debugger
-                //   msgidInChan = gst.selMsgId
-                //   gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기까지 오는데 사용하는 임시 변수임
-                //   await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
-                //}
                 try { inEditor.value.focus() } catch {}
             }
         } catch (ex) {
@@ -182,21 +180,10 @@
             } else {
                 console.log("부모A - " + JSON.stringify(props.data))
                 setBasicInfo()
-                //if (gst.selMsgId) { //onMounted일 경우는 null값이므로 if절 실행안됨
-                //    msgidInChan = gst.selMsgId
-                //    gst.selMsgId = null //그렇지 않으면 Home.vue에서 채널노드 선택시 오류 발생할 수도 있음. gst.selMsgId는 나중에~ 등의 화면에서 여기까지 오는데 사용하는 임시 변수임
-                //    await getList({ msgid: msgidInChan, kind: "atHome" }) //홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
-                //} else {
-                if (msgidInChan) { //여기는 Later.vue로부터 호출됨
-                    //debugger
-                    await getList({ msgid: msgidInChan, kind: "atHome" })
-                } else {
-                    const key = sideMenu + chanId
-                    if (gst.objSaved[key]) {
-                        scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-                    }
-                }
-                //}
+            }
+            const key = msgidInChan ? msgidInChan : sideMenu + chanId
+            if (gst.objSaved[key]) {
+               scrollArea.value.scrollTop = gst.objSaved[key].scrollY
             }
         }
     })
@@ -229,13 +216,13 @@
             gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
         if (route.params.msgid) {
-            msgidInChan = route.params.msgid
+            msgidInChan = route.params.msgid //댓글의 msgid일 수도 있음
         }
     }
 
     function saveCurScrollY(posY) {
         if (!sideMenu || !chanId) return
-        const key = sideMenu + chanId        
+        const key = msgidInChan ? msgidInChan : sideMenu + chanId
         if (!gst.objSaved[key]) gst.objSaved[key] = {}
         gst.objSaved[key].scrollY = posY
     }
@@ -292,7 +279,6 @@
         if (onGoingGetList) return
         try {
             onGoingGetList = true
-            resultCnt = 0
             let param = { grid: grId, chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
@@ -308,7 +294,6 @@
                 savFirstMsgMstCdt = gst.cons.cdtAtFirst
                 savLastMsgMstCdt = gst.cons.cdtAtLast
             } //if ((firstMsgMstCdt && !kind) || (msgid && kind == "atHome")) { //아래로 대체
-            debugger
             if (route.fullPath.includes("/later_body/") || (firstMsgMstCdt && !kind)) {
                 getAlsoWhenDown = "down" //up은 기본이고 down 스크롤시에도 데이터 가져와야 한다는 의미임
             } else {
@@ -319,7 +304,6 @@
             fetchByScrollEnd.value = false
             if (!rs) {
                 onGoingGetList = false
-                resultCnt = 0
                 return
             }
             grnm.value = rs.data.chanmst.GR_NM
@@ -342,11 +326,21 @@
             }
             chandtl.value = rs.data.chandtl
             if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
-            const msgArr = rs.data.msglist   
+            const msgArr = rs.data.msglist
+            const msgidParent = rs.data.msgidParent //atHome만 사용함
+            const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
-                if (msgid && (kind == "atHome" || kind == "withReply")) {                    
-                    if (row.MSGID == msgid) row.background = "lightsteelblue"
+                if (kind == "atHome" || kind == "withReply") {
+                    if (msgidParent) {
+                        if (row.MSGID == msgidParent) row.background = "lightsteelblue"
+                    } else {
+                        if (row.MSGID == msgid) { //댓글의 부모글은 무조건 베이지
+                            row.background = "beige"
+                        } else if (props.data && row.MSGID == props.data.msgidChild && route.fullPath.includes("/later_body/")) {
+                            row.background = "lightsteelblue" //props.data.msgidChild는 스레드에서 '나중에'등으로 표시된 댓글임
+                        }
+                    }
                 }
                 for (let item of row.msgimg) {
                     if (!item.BUFFER) continue //잘못 insert된 것임
@@ -374,8 +368,7 @@
                         item.text = arr[0]
                         item.url = arr[1]
                     }
-                }
-                //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
+                } //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
                 if (firstMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
@@ -451,11 +444,18 @@
                 }
                 linkArr.value.push({ hover: false, text: text, url: url, cdt: item.CDT })
             }
-            resultCnt = msgArr.length
             await nextTick()
-            if (msgid && (kind == "atHome" || kind == "withReply")) {
-                const ele = document.getElementById(msgid) //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
-                if (ele) msgRow.value[msgid].scrollIntoView()
+            if (msgidParent && kind == "atHome") { //msgid가 댓글인 경우 부모의 msgid가 필요함 (msgidParent)
+                if (msgRow.value[msgidParent]) { //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
+                    msgRow.value[msgidParent].scrollIntoView()
+                }
+                if (msgidParent != msgidChild) { //atHome만 해당. 댓글에 '나중에'가 있어서 열어서 표시 필요
+                    setTimeout(function() { openThread(msgidParent, msgidChild) }, 500) //setTimeout() 크게 문제되어 보이지 않음
+                }
+            } else if (msgid && (kind == "withReply")) { //이미 openThread()되어 있는 상태
+                if (msgRow.value[props.data.msgidChild]) {
+                    msgRow.value[props.data.msgidChild].scrollIntoView()
+                }
             } else if (lastMsgMstCdt == gst.cons.cdtAtLast) {
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else if (lastMsgMstCdt) {
@@ -471,12 +471,11 @@
             } else if (firstMsgMstCdt && kind == "scrollToBottom") { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
             } else if (firstMsgMstCdt) {
-                //scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
+                //그냥 두면 됨
             }
             onGoingGetList = false //console.log(msgArr.length+"=====")
         } catch (ex) {
             onGoingGetList = false
-            resultCnt = 0
             gst.util.showEx(ex, true)
         }
     }
@@ -539,17 +538,6 @@
         ]
         gst.ctx.show(e)
     }
-
-    // function displayDt(dtStr, tmOnly) { //vue의 computed method 이용할 경우 아규먼트 전달방법을 아직 파악하지 못해 일반 함수로 처리함
-    //     if (dtStr.length < 19) return null
-    //     const arr = dtStr.split(" ")
-    //     if (tmOnly) {
-    //         return arr[1].substring(0, 5)
-    //     } else {
-    //         const hday = hush.util.getDayFromDateStr(arr[0])
-    //         return arr[0] + " (" + hday + ") " + arr[1].substring(0, 5)
-    //     }
-    // }
 
     function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         gst.ctx.data.header = ""
@@ -625,13 +613,14 @@
     }
 
     const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-        if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
-        const sTop = scrollArea.value.scrollTop 
+        const sTop = scrollArea.value.scrollTop     
+        if (hasProp()) {
+            prevScrollY = sTop //자식에서도 prevScrollY는 필요함    
+            return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
+        }        
         const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
         const topEntryPoint = 200
         const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
-        //console.log(scrollArea.value.scrollTop+"@@@@"+scrollArea.value.scrollHeight+"@@@@"+ele.offsetHeight)
-        //const which = (prevScrollY && sTop < prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
         let which = "stop"
         if (prevScrollY) {
             if (sTop < prevScrollY) {
@@ -641,21 +630,19 @@
             }
         }
         prevScrollY = sTop
-        saveCurScrollY(prevScrollY) //resultCnt => 읽어온 데이터가 없을 땐 getList() 호출하지 말기
+        saveCurScrollY(prevScrollY) 
+        //읽어온 데이터가 없을 땐 getList() 호출하지 않으면 베스트인데 onScrollEnd()와 getList()가 각각 비동기로 처리되므로
+        //여기서 예를 들어, if (resultCnt != 0)인 경우만 다시 호출하는 것은 맞지 않음. 나중에 방법을 찾기로 함
         if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
             prevScrollHeight = scrollArea.value.scrollHeight
-            //if (resultCnt != 0) {
-                fetchByScrollEnd.value = true
-                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-            //}
+            fetchByScrollEnd.value = true
+            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
         } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
             //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
             //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
             //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
-            //if (resultCnt != 0) {
-                fetchByScrollEnd.value = true
-                await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
-            //}
+            fetchByScrollEnd.value = true
+            await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
         }
     }
 
@@ -1517,9 +1504,6 @@
             <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="chanMsg('F')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
-            </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px">
-                <span style="margin-left:20px">{{ route.fullPath }}</span> 
             </div>
         </div> 
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">

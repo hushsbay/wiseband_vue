@@ -120,7 +120,7 @@
         }
     }
 
-    async function goHomeBody(row, refresh) {
+    async function goHomeBody(row, refresh) { //댓글 클릭시는 댓글의 MSGID로 호출됨
         let obj = { name : 'later_body', params : { grid: row.GR_ID, chanid: row.CHANID, msgid: row.MSGID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
         const ele = document.getElementById("chan_center_body")
