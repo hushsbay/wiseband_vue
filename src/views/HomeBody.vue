@@ -18,7 +18,7 @@
     //부모/자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개 : 각각 element id 만들어 hasProp()으로 구분해 사용하면 됨
     
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
-    const emits = defineEmits(["ev-click"])
+    const emits = defineEmits(["ev-click", "ev-apply"])
 
     // const hasProp = computed(() => { //바로 아래 함수 참조. 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
     //     if (props.data && props.data.msgid) return true
@@ -298,7 +298,7 @@
                 getAlsoWhenDown = ""
             }
             const res = await axios.post("/chanmsg/qry", param)
-            const rs = gst.util.chkAxiosCode(res.data)
+            const rs = gst.util.chkAxiosCode(res.data)      
             fetchByScrollEnd.value = false
             if (!rs) {
                 onGoingGetList = false
@@ -814,6 +814,11 @@
             }
             msgbody.value = ""            
             editMsgId.value = null
+            if (route.fullPath.includes("/home_body/")) {
+
+            } else if (route.fullPath.includes("/later_body/")) {
+                if (crud == "U") emits('ev-apply', "update", rq)
+            }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1326,13 +1331,8 @@
     }
     
     async function test() {
-        const res = await axios.post("/chanmsg/qry", { grid : grId, chanid : chanId })
-        const rs = gst.util.chkAxiosCode(res.data)
-        if (!rs) return            
-        grnm.value = rs.data.chanmst.GR_NM
-        channm.value = rs.data.chanmst.CHANNM
-        document.title = channm.value
-        msglist.value = [...msglist.value, ...rs.data.msglist]
+        const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
+        emits('ev-test', obj)
     }
     
     ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임
@@ -1502,6 +1502,10 @@
             <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="chanMsg('F')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
+            </div>
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="test">
+                <img class="coImg18" :src="gst.html.getImageUrl('apply.png')">
+                <span style="margin-left:5px">테스트</span> 
             </div>
         </div> 
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
