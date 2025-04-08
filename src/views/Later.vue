@@ -20,7 +20,7 @@
     
     let scrollArea = ref(null)
     let mounting = true, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 최근 일시
-    let prevScrollY, prevScrollHeight
+    let prevScrollY = 0, prevScrollHeight
 
     //패널 리사이징 : 다른 vue에서 필요시 나머지 유지하되 localStorage이름만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px')
@@ -73,15 +73,25 @@
         gst.objSaved[gst.kindLater].scrollY = posY
     }
 
+    // const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
+    //     const sTop = scrollArea.value.scrollTop 
+    //     const which = (prevScrollY && sTop <= prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
+    //     prevScrollY = sTop
+    //     saveCurScrollY(prevScrollY)
+    //     if (which == "up" && sTop < 200) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
+    //         prevScrollHeight = scrollArea.value.scrollHeight
+    //         await getList(gst.kindLater)
+    //     }
+    // } //취신을 맨 아래로 두는 내용인데 일단 지우지 말고 두기로 함
+
     const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-        const sTop = scrollArea.value.scrollTop 
-        const which = (prevScrollY && sTop <= prevScrollY) ? "up" : "down" //e로 찾아도 있을 것임
+        const sTop = scrollArea.value.scrollTop     
+        let which = (sTop <= prevScrollY) ? "up" : "down" //down만 필요하므로 stop,up은 필요없으므로 <=로 체크함
         prevScrollY = sTop
-        saveCurScrollY(prevScrollY)
-        if (which == "up" && sTop < 200) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
-            prevScrollHeight = scrollArea.value.scrollHeight
-            await getList(gst.kindLater)
-        }
+        saveCurScrollY(prevScrollY) 
+        const ele = document.getElementById("chan_side_main")
+        const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
+        if (which == "down" && sTop > bottomEntryPoint) await getList(gst.kindLater)
     }
 
     async function getList(kindStr, refresh) {
@@ -103,18 +113,14 @@
                 } else {
                     row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
-                gst.listLater.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
+                gst.listLater.push(row) //gst.listLater.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
-            if (lastMsgMstCdt == gst.cons.cdtAtLast) { //맨 처음엔 최신인 맨 아래로 스크롤 이동
-                scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-            } else if (lastMsgMstCdt) { //1) 이후에 스크롤 위로 올려서 이전 데이터를 가지고 오면 높이가 커지면서
-                if (rs.list.length > 0) { //직전에 육안으로 보고 있던 이전 행이 안보이게 되는데 그걸 해결하기 위해
-                    //prevScrollY(이전 위치) + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop으로 주면 됨
-                    scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
-                } //2) 이게 만일 최신일자순으로 위에서부터 뿌리면 스크롤 아래로 내릴 때 데이터 가져오는 거라면 계산할 필요도 없이 육안으로 그냥 보이게 하면 될 것임
-                //일단 슬랙의 오른쪽 메인의 메시지 목록이 위로 올라가면서 EndlessScroll를 하므로 여기도 동일한 UX(1)로 해 본 것임
+            if (lastMsgMstCdt == gst.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
+                scrollArea.value.scrollTo({ top: 0 }) //scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+            } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
+                //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
             gst.later.getCount() //진행중인 (나중에) 카운팅
         } catch (ex) {
@@ -204,7 +210,7 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable" ref="scrollArea" @scrollend="onScrollEnd">
+        <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scrollend="onScrollEnd">
             <div v-for="(row, idx) in gst.listLater" :key="row.MSGID" :id="row.MSGID" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
                 style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer"                 
                 @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">

@@ -152,8 +152,8 @@ const GeneralStore = defineStore('General', () => {
                         }
                         let added = false
                         const len = listLater.value.length
-                        for (let i = 0; i < len; i++) { //listLater는 최근일시가 맨 아래에 있음
-                            if (obj.msgid < listLater.value[i].MSGID) {
+                        for (let i = 0; i < len; i++) { //listLater는 최근일시가 맨 위에 있음
+                            if (obj.msgid > listLater.value[i].MSGID) {
                                 listLater.value.splice(i, 0, row)
                                 added = true
                                 break
