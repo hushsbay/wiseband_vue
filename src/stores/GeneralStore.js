@@ -15,6 +15,13 @@ const GeneralStore = defineStore('General', () => {
     let selSideMenu = ref("")
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
+
+    //아래는 특정 vue에서만 공유하는 스토어로 GeneralStore와는 별도로 만들어 사용하려 했으나 별도 사용시 문제점이 발견되어 - 예) 배열 루프 돌리는데 엄청 느림
+    //해결할 시간보다는 일단 여기 GeneralStore에서 별도의 ref 변수와 별도의 객체(예: const later =)를 두어 props로 넘기고 ev-apply 등과 같은 emits를 복잡하게 사용하지 않고 
+    //효율적으로 코딩하는 것을 목적으로 함 (예: 아래 listLater와 const later =는 Later.vue 전용으로서 Later.vue와 통신해야 하는 모든 .vue에서 사용 가능)
+    /////////////////////////////////////////////////아래 const later = 참조
+    let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
+    ///////////////////////////////////////////////////////////////////////
     
     const auth = {
 
@@ -116,6 +123,59 @@ const GeneralStore = defineStore('General', () => {
 
         getImageUrl : function(strFile) { //<template>의 <img>에서 사용
             return new URL('/src/assets/images/' + strFile, import.meta.url).href //예) import.meta.url => http://localhost:5173/src/views/current.vue?t=1730165570470
+        }
+
+    }
+
+    const later = { //Later.vue와 관련된 화면 업데이트는 아래와 같이 6가지임
+        //1) Later -> HomeBody 2) Later -> HomeBody (Thread가 열린 경우) 3) HomeBody -> Later 4) HomeBody (Thread가 열린 경우) -> Later
+        //이 중, 아래 procFromBody, getCount는 3),4) 경우 사용함
+
+        procFromBody : async function(type, obj) { //HomeBody.vue에서 데이터 처리하고 Later.vue 패널 화면 업데이트하는 것임
+            if (type == "update") { //HomeBody.vue의 saveMsg() 참조 : rq
+                const row = listLater.value.find((item) => item.MSGID == obj.msgid)
+                if (row) row.BODYTEXT = obj.bodytext
+            } else if (type == "work") { //HomeBody.vue의 changeAction() 참조 : { msgid: msgid, work: work }
+                if (obj.work == "delete") { 
+                    const idx = listLater.value.findIndex((item) => item.MSGID == obj.msgid)
+                    if (idx > -1) listLater.value.splice(idx, 1)
+                } else { //create (화면에 없는 걸 보이게 하는 것임)
+                    if (kindLater.value == "later") { //'나중에' 패널에서 진행중(later)탭이 아니면 추가된 행 화면업뎃할 일 없음
+                        const res = await axios.post("/menu/qryLater", { msgid: obj.msgid })
+                        const rs = util.chkAxiosCode(res.data)
+                        if (!rs || rs.list.length == 0) return
+                        const row = rs.list[0]
+                        if (row.PICTURE == null) {
+                            row.url = null
+                        } else {
+                            row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
+                        }
+                        let added = false
+                        const len = listLater.value.length
+                        for (let i = 0; i < len; i++) { //listLater는 최근일시가 맨 아래에 있음
+                            if (obj.msgid < listLater.value[i].MSGID) {
+                                listLater.value.splice(i, 0, row)
+                                added = true
+                                break
+                            }
+                        }
+                        if (!added) listLater.value.push(row)
+                    }
+                }
+                later.getCount() //화면에 갯수 업데이트
+            }
+        },
+
+        getCount : async function(kindStr) { //현재는 kindStr없이 사용 (later만 해당)
+            try {
+                const kind = kindStr ?? "later"
+                const res = await axios.post("/menu/qryLaterCount", { kind: kind })
+                const rs = util.chkAxiosCode(res.data)
+                if (!rs) return
+                cntLater.value = rs.list[0].CNT
+            } catch (ex) {
+                gst.util.showEx(ex, true)
+            }
         }
 
     }
@@ -324,7 +384,8 @@ const GeneralStore = defineStore('General', () => {
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, 
-        snackBar, toast, auth, cons, ctx, html, resize, util
+        snackBar, toast, auth, cons, ctx, html, resize, util,
+        later, listLater, cntLater, kindLater
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

@@ -8,9 +8,9 @@
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
-        
-    const gst = GeneralStore()
+            
     const route = useRoute()
+    const gst = GeneralStore()
 
     /////////////////////////////////////////////////////////////////////////////////////
     //스레드(댓글) 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
@@ -18,7 +18,7 @@
     //부모/자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개 : 각각 element id 만들어 hasProp()으로 구분해 사용하면 됨
     
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
-    const emits = defineEmits(["ev-click", "ev-apply"])
+    const emits = defineEmits(["ev-click"]) //가능하면 스토어에서 함수 만들어 처리하는데 여기는 HoneBody와 HomeBody 사이의 통신이라 구분지어 emits로 처리해 보는 것임
 
     // const hasProp = computed(() => { //바로 아래 함수 참조. 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
     //     if (props.data && props.data.msgid) return true
@@ -594,6 +594,9 @@
                     if (!rs) return
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                     if (hasProp()) evClick({ type: "refreshParentReply", msgid: props.data.msgid })
+                    if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
+                        gst.later.procFromBody("work", { msgid: row.MSGID, work: "delete" }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
+                    }
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
@@ -814,10 +817,8 @@
             }
             msgbody.value = ""            
             editMsgId.value = null
-            if (route.fullPath.includes("/home_body/")) {
-
-            } else if (route.fullPath.includes("/later_body/")) {
-                if (crud == "U") emits('ev-apply', "update", rq)
+            if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
+                if (crud == "U") gst.later.procFromBody("update", rq)
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -1264,21 +1265,25 @@
     }
 
     async function changeAction(msgid, kind, newKind) { //changeAction은 보안상 크게 문제없는 액션만 처리하기로 함 : newKind 없으면 서버에서 kind로만 판단해 처리
-        try {
-            let job = ""
+        try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
+            let jobIfExist = "" //데이터가 있을 경우에 한해 delete면 지우고 delete가 아닌 값이면 그 값으로 update하면 됨
             if (kind == 'later' || kind == 'stored' || kind == 'finished' || kind == 'fixed') {
-                job = (!newKind) ? "delete" : newKind
-            }
-            const rq = { chanid: chanId, msgid: msgid, kind: kind, job: job }
+                jobIfExist = (!newKind) ? "delete" : newKind
+            } //else 체크 필요함
+            const rq = { chanid: chanId, msgid: msgid, kind: kind, job: jobIfExist }
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            const work = rs.data.work
             rs = await qryActionForUser({ msgid: msgid })
             if (rs == null) return
-            const item = msglist.value.find(function(row) { return row.MSGID == msgid })
-            if (item) {
-                item.act_later = rs.act_later
-                item.act_fixed = rs.act_fixed
+            const obj = msglist.value.find((item) => item.MSGID == msgid)
+            if (obj) {
+                obj.act_later = rs.act_later
+                obj.act_fixed = rs.act_fixed
+            }
+            if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
+                gst.later.procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
