@@ -13,6 +13,25 @@
     const gst = GeneralStore()
 
     /////////////////////////////////////////////////////////////////////////////////////
+    //여기는 Home.vue나 Later.vue처럼 왼쪽패널에서 HomeBody로 통신할 때 사용하는 부분임
+    //아래 defineExpose()에 정의된 함수를 패널에서 호출 (이 프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js const later = 부분에 정리해 두었음)
+    defineExpose({ procFromParent })
+
+    function procFromParent(kind, obj) {
+        if (kind == "later" && obj.work == "delete") {
+            const msgid = (obj.msgid == obj.msgidParent) ? obj.msgid : obj.msgidParent
+            const row = msglist.value.find((item) => item.MSGID == msgid)
+            if (row) {
+                row.act_later = null //자식에 '나중에'처리되어 있고 부모는 색상만 리셋하면 되나 여기 어차피 null이니 이 부분도 처리해서 공통화시킴
+                row.background = ""
+            }
+            if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함
+                if (homebodyRef.value) homebodyRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
+            }
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////
     //스레드(댓글) 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
     //네이밍 규칙을 정해서, thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
     //부모/자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개 : 각각 element id 만들어 hasProp()으로 구분해 사용하면 됨
@@ -30,6 +49,7 @@
         return false
     }
 
+    const homebodyRef = ref(null) //HomeBody(부모)가 HomeBody(자식)의 procFromParent()를 호출하기 위함
     let thread = ref({ msgid: null, msgidChild: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
@@ -329,15 +349,22 @@
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
-                if (kind == "atHome" || kind == "withReply") {
-                    if (msgidParent) {
-                        if (row.MSGID == msgidParent) row.background = "lightsteelblue"
-                    } else {
-                        if (row.MSGID == msgid) { //댓글의 부모글은 무조건 베이지
-                            row.background = "beige"
-                        } else if (props.data && row.MSGID == props.data.msgidChild && route.fullPath.includes("/later_body/")) {
-                            row.background = "lightsteelblue" //props.data.msgidChild는 스레드에서 '나중에'등으로 표시된 댓글임
-                        }
+                // if (kind == "atHome" || kind == "withReply") {
+                //     if (msgidParent) {
+                //         if (row.MSGID == msgidParent) row.background = "lightsteelblue"
+                //     } else {
+                //         if (row.MSGID == msgid) { //댓글의 부모글은 무조건 베이지
+                //             row.background = "beige"
+                //         } else if (props.data && row.MSGID == props.data.msgidChild && route.fullPath.includes("/later_body/")) {
+                //             row.background = "lightsteelblue" //props.data.msgidChild는 스레드에서 '나중에'등으로 표시된 댓글임
+                //         }
+                //     }
+                // }
+                if (kind == "withReply" && i == 0) {
+                    row.background = "beige"
+                } else {
+                    if (row.act_later || (msgidParent && row.MSGID == msgidParent)) {
+                        row.background = "lightsteelblue"
                     }
                 }
                 for (let item of row.msgimg) {
@@ -1530,7 +1557,8 @@
                         <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
                         <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                     </div>
-                    <div v-html="row.BODY" @copy="(e) => msgCopied(e)" style=""></div>
+                    <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
+                    <!-- <div style="color:red">{{ row.act_later }}</div> -->
                 </div>
                 <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
@@ -1685,7 +1713,7 @@
         </div>
     </div>
     <div class="chan_right" v-if="thread.msgid":style="{ width: widthChanRight }">
-        <home-body :data="thread" @ev-click="clickFromProp" ></home-body>
+        <home-body :data="thread" @ev-click="clickFromProp" ref="homebodyRef"></home-body>
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-image ref="imgPopupRef" :param="imgParam">

@@ -16,10 +16,33 @@ const GeneralStore = defineStore('General', () => {
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
 
-    //아래는 특정 vue에서만 공유하는 스토어로 GeneralStore와는 별도로 만들어 사용하려 했으나 별도 사용시 문제점이 발견되어 - 예) 배열 루프 돌리는데 엄청 느림
-    //해결할 시간보다는 일단 여기 GeneralStore에서 별도의 ref 변수와 별도의 객체(예: const later =)를 두어 props로 넘기고 ev-apply 등과 같은 emits를 복잡하게 사용하지 않고 
-    //효율적으로 코딩하는 것을 목적으로 함 (예: 아래 listLater와 const later =는 Later.vue 전용으로서 Later.vue와 통신해야 하는 모든 .vue에서 사용 가능)
-    /////////////////////////////////////////////////아래 const later = 참조
+    /* Vue에서의 컴포넌트간 통신은 여러가지 기법이 있는데 콤포넌트간 통신이 필요한 경우는 아래와 같음 
+       Later.vue 패널을 예로 설명. 여기서는 자식과 손주(스레드댓글)가 동일한 HomeBody임을 유의!!
+       1) Later -> HomeBody : 부모 -> 자식 (라우팅)
+       2) Later -> HomeBody(스레드댓글) : 부모 -> 손자 (라우팅도 컴포넌트호출도 아닌 중간에 자식이 전달받아서 전달해야 함)
+       3) HomeBody -> Later : 자식 -> 부모
+       4) HomeBody(스레드댓글) -> Later : 손자 -> 부모
+       5) HomeBody -> HomeBody(스레드댓글) : 자식 -> 손자 (둘의 입장에서는 부모 -> 자식. 라우팅)
+       6) HomeBody(스레드댓글) -> HomeBody : 손자 -> 자식 (둘의 입장에서는 자식 -> 부모)
+       이 프로젝트에서는 HomeBody.vue가 스레드댓글에서도 다시 사용되므로 생각없이 되는대로 통신하는 것은 향후 코딩(유지보수)에 어려움을 줄 수가 있음
+       따라서, 아래와 같이 규칙을 정해서 적용하려고 함 (사실, 모든 걸 스토어에 두고 관리하거나 props/emits로 처리해도 될 것이나 향후 복잡하게 얽힐 것임)
+       1),2) 처럼 부모가 자식에게 전달하고자 할 때 (특히, 1)은 라우팅이므로 props 사용안하고 2)도 5)를 생각해서 혼란줄이기 위해 props 쓰지 말기)
+         - HomeBody에 defineExpose({ procFromPanel })처럼 정의하고, Later에서 homebodyRef.value.procFromPanel(row)와 같이 호출함
+         - 이 때 Later에서는 const homebodyRef = ref(null)로 선언하고 <component :is="Component" :key="$route.fullPath" ref="homebodyRef" />에서처럼 homebodyRef를 추가함
+         - 부모가 손주에게는 이 방식(2)으로 바로 전달되지 않고 부모가 다시 자식에게 동일한 방식으로 전달해야 함 : HomeBody->HomeBody스레드댓글의 경우 아래 5) 참조
+       3),4) 처럼 자식이나 손주가 부모에게 전달하려 할 때 
+         - 자식이나 손주에서 const emits = defineEmits(["ev-click"])처럼 사용하면 되겠으나 이미 HomeBody(스레드댓글)->HomeBody의 경우에서 사용하고 있으므로
+         - Later로 전달할 때도 그리 사용하면 향후엔 너무 혼란스러운 상황이 발생할 것임
+         - 그래서, 이 프로젝트에서는 이 경우에 한해 스토어에서 변수 및 함수를 공유하는 것으로 함
+         - 다만, 특정 vue끼리만 공유하기 위해 GeneralStore와는 별도로 만들어 사용하려 했으나 배열 루프 돌리는데 엄청 느린 현상이 발생해
+           해결할 시간을 투여하지 않고 일단 여기 GeneralStore에서 ref 변수와 객체(예: const later =)를 두어 처리함 (**77)
+       5) 처럼 (HomeBody간의 통신에 한해서) 부모가 자식에게 전달하고자 할 때 : omeBody->HomeBody스레드댓글
+         - props와 defineExpose 사용하기
+       6) 처럼 (HomeBody간의 통신에 한해서) 자식이 부모에게 전달하고자 할 때 : HomeBody(스레드댓글)->HomeBody
+         - emits 사용하기
+    */
+
+    /////////////////////////////////////////////////아래 const later = 참조 (**77)
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     ///////////////////////////////////////////////////////////////////////
     
@@ -127,9 +150,9 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const later = { //Later.vue와 관련된 화면 업데이트는 아래와 같이 6가지임
+    const later = { //Later.vue와 관련된 화면 업데이트는 아래와 같이 4가지임
         //1) Later -> HomeBody 2) Later -> HomeBody (Thread가 열린 경우) 3) HomeBody -> Later 4) HomeBody (Thread가 열린 경우) -> Later
-        //이 중, 아래 procFromBody, getCount는 3),4) 경우 사용함
+        //이 중, 아래 procFromBody, getCount는 3),4) 경우 사용함. 1),2)는 맨 위 설명 참조
 
         procFromBody : async function(type, obj) { //HomeBody.vue에서 데이터 처리하고 Later.vue 패널 화면 업데이트하는 것임
             if (type == "update") { //HomeBody.vue의 saveMsg() 참조 : rq

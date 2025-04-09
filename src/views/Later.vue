@@ -17,6 +17,8 @@
     //1) 마우스오버 및 클릭시 색상 변경 등은 { "327846325832467": { hover: true, sel: false }.. } 으로 가능하므로 최대한 object로 처리하도록 노력
     //2) 나머지는 육안으로 화면에 보이는 것만 업데이트 등을 고려했으나 
     //사실, EndlessScroll해봤자 10000개를 넘으면 많은 것일테니 루프 도는데 크게 부담갖지 말고 처리하기로 함
+
+    const homebodyRef = ref(null)
     
     let scrollArea = ref(null)
     let mounting = true, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 최근 일시
@@ -152,29 +154,47 @@
         }
     }
 
+    async function changeAction(kind, row) {
+        try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
+            const msgid = row.MSGID
+            const rq = { chanid: row.CHANID, msgid: msgid, kind: gst.kindLater, job: kind }
+            const res = await axios.post("/chanmsg/changeAction", rq)
+            let rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return //뭐가 되었던 아래 Later패널에서는 제거해야 함. //const work = rs.data.work은 여기서는 무시하고 무조건 delete
+            const idx = gst.listLater.findIndex((item) => item.MSGID == msgid)
+            if (idx > -1) gst.listLater.splice(idx, 1)
+            gst.later.getCount() //화면에 갯수 업데이트
+            if (kind != "delete") return //delete인 경우만 오른쪽 패널 업데이트
+            const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 '나중에' 처리되어 있는 경우는 부모 색상도 원위치 필요함
+            homebodyRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "채널 새로고침", func: function(item, idx) {
-                goHomeBody(row, true)
+            { nm: "새로고침(오른쪽패널)", func: function(item, idx) {
+                //goHomeBody(row, true) => 오른쪽 패널에 버튼 마련하기
             }},
-            { nm: "홈에서 열기", func: function(item, idx) {
-                
+            { nm: "홈에서 열기", func: function(item, idx) { 
+                //여기에서 처리하면 되는데 왜 홈에서 열어야 하는지 모르겠음 (슬랙은 자식에 나중처리된 경우 해당 부모 메시지에 자식들이 딸린 UI여서 그럴수도..)                
             }},
             { nm: "새창에서 열기", func: function(item, idx) {
 
             }},
-            { nm: "보관", disable: (gst.kindLater == "stored") ? true : false, func: function(item, idx) {
-
+            { nm: "보관", disable: (gst.kindLater == "stored") ? true : false, func: async function(item, idx) {
+                changeAction('stored', row)
             }},
             { nm: "완료", disable: (gst.kindLater == "finished") ? true : false, func: function(item, idx) {
-
+                changeAction('finished', row)
             }},
             { nm: "진행", disable: (gst.kindLater == "later") ? true : false, func: function(item, idx) {
-
+                changeAction('later', row)
             }},
             { nm: "'나중에'에서 제거", func: function(item, idx) {
-
+                changeAction('delete', row)                
             }},
         ]            
         gst.ctx.show(e)
@@ -245,7 +265,7 @@
         <!-- keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
-                <component :is="Component" :key="$route.fullPath" />
+                <component :is="Component" :key="$route.fullPath" ref="homebodyRef" />
             </keep-alive>
         </router-view>
     </div>
