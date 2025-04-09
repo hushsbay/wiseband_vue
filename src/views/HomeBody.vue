@@ -17,7 +17,7 @@
     //아래 defineExpose()에 정의된 함수를 패널에서 호출 (이 프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js const later = 부분에 정리해 두었음)
     defineExpose({ procFromParent })
 
-    function procFromParent(kind, obj) {
+    async function procFromParent(kind, obj) {
         if (kind == "later" && obj.work == "delete") {
             const msgid = (obj.msgid == obj.msgidParent) ? obj.msgid : obj.msgidParent
             const row = msglist.value.find((item) => item.MSGID == msgid)
@@ -27,6 +27,14 @@
             }
             if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함
                 if (homebodyRef.value) homebodyRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
+            }
+        } else if (kind == "saveMsg") {
+            const rs = await getMsg({ msgid: obj.msgid })
+            if (rs == null) return
+            let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
+            if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
+                item.BODY = rs.msgmst.BODY
+                item.UDT = rs.msgmst.UDT
             }
         }
     }
@@ -364,7 +372,7 @@
                     row.background = "beige"
                 } else {
                     if (row.act_later || (msgidParent && row.MSGID == msgidParent)) {
-                        row.background = "lightsteelblue"
+                        row.background = gst.cons.color_act_later
                     }
                 }
                 for (let item of row.msgimg) {
@@ -842,11 +850,13 @@
                     item.UDT = rs.msgmst.UDT
                 }
             }
-            msgbody.value = ""            
-            editMsgId.value = null
+            
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") gst.later.procFromBody("update", rq)
             }
+            if (homebodyRef.value) homebodyRef.value.procFromParent("saveMsg", { msgid: editMsgId.value })
+            msgbody.value = ""            
+            editMsgId.value = null
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1307,6 +1317,7 @@
             const obj = msglist.value.find((item) => item.MSGID == msgid)
             if (obj) {
                 obj.act_later = rs.act_later
+                obj.background = obj.act_later ? gst.cons.color_act_later : ""
                 obj.act_fixed = rs.act_fixed
             }
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거

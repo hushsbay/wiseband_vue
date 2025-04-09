@@ -98,6 +98,7 @@ const GeneralStore = defineStore('General', () => {
         deli : "$~$",
         cdtAtFirst : "1111-11-11",
         cdtAtLast : "9999-99-99",
+        color_act_later : "lightsteelblue",
         uploadLimitSize : 10 * 1024 * 1024, //10MB
         uploadMaxCount : 10,
         toastSec : 3,
