@@ -28,14 +28,19 @@
             if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함
                 if (homebodyRef.value) homebodyRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
             }
-        } else if (kind == "saveMsg") {
+        } else if (kind == "refreshMsg") {
             const rs = await getMsg({ msgid: obj.msgid })
             if (rs == null) return
             let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
             if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
                 item.BODY = rs.msgmst.BODY
                 item.UDT = rs.msgmst.UDT
+                item.act_later = rs.act_later
+                item.act_fixed = rs.act_fixed
             }
+        } else if (kind == "deleteMsg") {
+            const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
+            if (idx > -1) msglist.value.splice(idx, 1)
         }
     }
 
@@ -71,13 +76,16 @@
         if (obj.type == "close") {
             thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
             setWidthForThread(null, obj.type)
-        } else if (obj.type == "refreshParentReply") {
+        } else if (obj.type == "refreshFromReply") {
             const rs = await getMsg({ msgid: obj.msgid }, true)
             if (rs == null) return
             let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
-            if (item) {
+            if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
                 item.reply = rs.reply
                 item.replyinfo = rs.replyinfo
+                item.act_later = rs.act_later
+                item.act_fixed = rs.act_fixed
+                item.background = rs.act_later ? gst.cons.color_act_later : ""
             }
         }
     }
@@ -628,8 +636,12 @@
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
-                    if (hasProp()) evClick({ type: "refreshParentReply", msgid: props.data.msgid })
-                    if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
+                    if (hasProp()) { 
+                        evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+                    } else {
+                        if (homebodyRef.value) homebodyRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                    }
+                    if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때
                         gst.later.procFromBody("work", { msgid: row.MSGID, work: "delete" }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
                     }
                 } catch (ex) { 
@@ -837,7 +849,7 @@
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
                     await getList({ msgid: props.data.msgid, kind: "withReply" })
                     scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-                    evClick({ type: "refreshParentReply", msgid: props.data.msgid })
+                    evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
                     await getList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
                 }
@@ -849,12 +861,11 @@
                     item.BODY = rs.msgmst.BODY
                     item.UDT = rs.msgmst.UDT
                 }
-            }
-            
+            }            
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") gst.later.procFromBody("update", rq)
             }
-            if (homebodyRef.value) homebodyRef.value.procFromParent("saveMsg", { msgid: editMsgId.value })
+            if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
             msgbody.value = ""            
             editMsgId.value = null
         } catch (ex) { 
@@ -1319,6 +1330,11 @@
                 obj.act_later = rs.act_later
                 obj.background = obj.act_later ? gst.cons.color_act_later : ""
                 obj.act_fixed = rs.act_fixed
+            }
+            if (hasProp()) { 
+                evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+            } else {
+                if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
                 gst.later.procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
