@@ -46,6 +46,8 @@ const GeneralStore = defineStore('General', () => {
     /////////////////////////////////////////////////아래 const later = 참조 (**77)
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     ///////////////////////////////////////////////////////////////////////
+    let listHome = ref([]), kindHome = ref('my')
+    ///////////////////////////////////////////////////////////////////////
     
     const auth = {
 
@@ -412,7 +414,8 @@ const GeneralStore = defineStore('General', () => {
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, 
         snackBar, toast, auth, ctx, html, resize, util,
-        later, listLater, cntLater, kindLater
+        later, listLater, cntLater, kindLater,
+        listHome, kindHome
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

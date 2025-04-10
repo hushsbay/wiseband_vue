@@ -19,7 +19,7 @@
     const homebodyRef = ref(null)    
     let scrollArea = ref(null)
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
-    let prevScrollY = 0, prevScrollHeight
+    let prevScrollY = 0 //, prevScrollHeight
 
     /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px')

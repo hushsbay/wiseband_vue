@@ -10,8 +10,9 @@
     const router = useRouter()
     const gst = GeneralStore()
 
-    let kind = ref('my'), listChan = ref([])
+    let scrollArea = ref(null)
     let mounting = true
+    let prevScrollY = 0 //, prevScrollHeight
 
     /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
@@ -39,8 +40,26 @@
         try {
             setBasicInfo()
             const lastSelKind = localStorage.wiseband_lastsel_kind
-            if (lastSelKind) kind.value = lastSelKind
+            if (lastSelKind) gst.kindHome = lastSelKind
             await getList()
+            const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
+            gst.listHome.forEach((item, index) => {
+                if (arr.indexOf(item.GR_ID) == -1) {
+                    item.exploded = false
+                } else {
+                    item.exploded = true
+                }
+                procChanRowImg(item)
+                // if (item.GR_ID == grid) {                    
+                //     if (item.CHANID == chanid) {
+                //         chanClick(item, index, refresh)
+                //     } else {
+                //         procChanRowImg(item)
+                //     }
+                // } else {
+                //     procChanRowImg(item)
+                // }
+            })
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -52,18 +71,20 @@
             mounting = false
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
+            debugger
+            if (gst.objSaved[gst.kindHome]) scrollArea.value.scrollTop = gst.objSaved[gst.kindHome].scrollY
             loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         }
     })
 
-    watch(kind, async () => {
-        localStorage.wiseband_lastsel_kind = kind.value
-        await getList() 
-    })
+//    watch(gst.kindHome, async () => {
+//        localStorage.wiseband_lastsel_kind = gst.kindHome
+//        await getList() 
+//    })
 
-    watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
-        displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
-    }) //HomeBody.vue의 $$44 참조
+//    watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
+//        displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
+//    }) //HomeBody.vue의 $$44 참조
 
     // watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
     //     console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue")
@@ -75,18 +96,27 @@
         gst.selSideMenu = "mnuHome" //HomeBody.vue에 Blank 방지
     }
 
+    function saveCurScrollY(posY) {
+        if (!gst.objSaved[gst.kindHome]) gst.objSaved[gst.kindHome] = {}
+        gst.objSaved[gst.kindHome].scrollY = posY
+    }
+
+    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
+        prevScrollY = scrollArea.value.scrollTop
+        saveCurScrollY(prevScrollY) 
+    }
+
     function loopListChan(grid, chanid, refresh) { //getList()에서 호출하는 것은 onMounted()이므로 캐싱 아님. onActivated()에서 부르는 것은 캐싱임
         try {
-            listChan.value.forEach((item, index) => {
-                if (item.GR_ID == grid) {
-                    item.exploded = true
+            gst.listHome.forEach((item, index) => {
+                item.exploded = true
+                if (item.GR_ID == grid) {                    
                     if (item.CHANID == chanid) {
                         chanClick(item, index, refresh)
                     } else {
                         procChanRowImg(item)
                     }
                 } else {
-                    item.exploded = false
                     procChanRowImg(item)
                 }
             })
@@ -97,11 +127,11 @@
 
     async function getList() {
         try {  
-            const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
+            const res = await axios.post("/menu/qryChan", { kind : gst.kindHome }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            listChan.value = rs.list
-            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid, true)
+            gst.listHome = rs.list
+            //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -143,17 +173,18 @@
                     row.exploded = true
                 }
                 procChanRowImg(row)
-                for (let i = idx + 1; i < listChan.value.length; i++) {
-                    if (listChan.value[i].DEPTH == "1") break
-                    listChan.value[i].exploded = row.exploded
+                for (let i = idx + 1; i < gst.listHome.length; i++) {
+                    if (gst.listHome[i].DEPTH == "1") break
+                    gst.listHome[i].exploded = row.exploded
                 }
-                if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
+                //if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
+                //const filterd = gst.listHome.filter((item) => ) 펼쳐진 1depth만 모두 뽑아서 로컬에 저장 (나중에 다시 조회시 펼치기로 표시)
             } else {
-                for (let i = 0; i < listChan.value.length; i++) {
-                    if (listChan.value[i].DEPTH == "2") {
-                        listChan.value[i].sel = false
-                        listChan.value[i].hover = false
-                        procChanRowImg(listChan.value[i])
+                for (let i = 0; i < gst.listHome.length; i++) {
+                    if (gst.listHome[i].DEPTH == "2") {
+                        gst.listHome[i].sel = false
+                        gst.listHome[i].hover = false
+                        procChanRowImg(gst.listHome[i])
                     }
                 }
                 row.sel = true
@@ -169,8 +200,8 @@
 
     function displayChanAsSelected(chanid, grid) {
         try {
-            for (let i = 0; i < listChan.value.length; i++) {
-                const row = listChan.value[i]
+            for (let i = 0; i < gst.listHome.length; i++) {
+                const row = gst.listHome[i]
                 if (grid == row.GR_ID) {
                     row.exploded = true //dept1이든 2든 펼치기
                     if (row.DEPTH == "2") {
@@ -249,9 +280,9 @@
 
     function procExpCol(type) { //모두필치기,모두접기
         const exploded = (type == "E") ? true : false
-        for (let i = 0; i < listChan.value.length; i++) {
-            listChan.value[i].exploded = exploded
-            procChanRowImg(listChan.value[i])
+        for (let i = 0; i < gst.listHome.length; i++) {
+            gst.listHome[i].exploded = exploded
+            procChanRowImg(gst.listHome[i])
         }
     }
 </script>
@@ -260,7 +291,7 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
-                <select v-model="kind" style="background:var(--second-color);color:var(--text-white-color);border:none">
+                <select v-model="gst.kindHome" style="background:var(--second-color);color:var(--text-white-color);border:none">
                     <option value="my">내 채널</option>
                     <option value="other">다른 채널</option>
                     <option value="all">모든 채널</option>
@@ -278,9 +309,9 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable"> <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도
-            @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 index.html <body>에서 막는 것으로 해결 -->
-            <div v-for="(row, idx) in listChan" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
+        <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scrollend="onScrollEnd">
+            <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도 @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 index.html <body>에서 막는 것으로 해결 -->
+            <div v-for="(row, idx) in gst.listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
                 @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM">
@@ -323,10 +354,10 @@
         width:50%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
     }
     .chan_side_main {
-        width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;
+        width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;  
     }
-    .node {
-        width:calc(100% - 30px);min-height:36px;padding:0 10px;margin:0 5px;
+    .node { /* min-height:36px */
+        width:calc(100% - 30px);min-height:100px;padding:0 10px;margin:0 5px;
         display:flex;align-items:center;justify-content:space-between;
         font-size:15px;color:var(--text-white-color);border-radius:5px;cursor:pointer;
     }
