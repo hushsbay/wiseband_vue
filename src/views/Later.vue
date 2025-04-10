@@ -10,21 +10,18 @@
     const router = useRouter()
     const gst = GeneralStore()
 
-    const LIGHT = "whitesmoke_", DARK = "violet_"
-
     //목록의 순서때문에 Object나 Map을 이용하기 어려워 v-for에서는 주로 Array를 이용해 업뎃을 하는데 크기가 클수록 msigid를 찾는데 시간이 더 걸리는 구조임
     //{ "327846325832467" : 0(항목인덱스) .. } 식으로는 (항목 삭제도 없고 push만 있어야 가능한데 splice도 있으니 index 변함) 어려움
     //1) 마우스오버 및 클릭시 색상 변경 등은 { "327846325832467": { hover: true, sel: false }.. } 으로 가능하므로 최대한 object로 처리하도록 노력
-    //2) 나머지는 육안으로 화면에 보이는 것만 업데이트 등을 고려했으나 
-    //사실, EndlessScroll해봤자 10000개를 넘으면 많은 것일테니 루프 도는데 크게 부담갖지 말고 처리하기로 함
+    //2) 나머지는 육안으로 화면에 보이는 것만 업데이트 등을 고려
+    //사실, EndlessScroll해봤자 10000개를 넘으면 많은 것일테니 루프에 크게 부담갖지 말고 배열만으로 처리하기로 함
 
-    const homebodyRef = ref(null)
-    
+    const homebodyRef = ref(null)    
     let scrollArea = ref(null)
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let prevScrollY = 0, prevScrollHeight
 
-    //패널 리사이징 : 다른 vue에서 필요시 나머지 유지하되 localStorage이름만 바꾸면 됨
+    /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px')
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
     const resizeEle = { mainSide: null, resizer: null, leftSide: null, rightSide: null }
@@ -175,15 +172,17 @@
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "새로고침(오른쪽패널)", func: function(item, idx) {
-                //goHomeBody(row, true) => 오른쪽 패널에 버튼 마련하기
+            { nm: "새로고침(메인화면)", func: function(item, idx) {
+                goHomeBody(row, true)
             }},
-            { nm: "홈에서 열기", func: function(item, idx) { 
-                //여기에서 처리하면 되는데 왜 홈에서 열어야 하는지 모르겠음 (슬랙은 자식에 나중처리된 경우 해당 부모 메시지에 자식들이 딸린 UI여서 그럴수도..)                
+            { nm: "새창에서 열기", deli: true, func: function(item, idx) {
+                let url = "/main/later/later_body/" + row.GR_ID + "/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
+                window.open(url)
             }},
-            { nm: "새창에서 열기", func: function(item, idx) {
-
-            }},
+            //{ nm: "홈에서 열기", func: function(item, idx) { 
+                //슬랙은 자식에 '나중에' 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 그럴수도 있으나
+                //이 프로젝트는 부모/자식 모두 동일한 UI 제공하므로 여기에서 처리하면 되므로 굳이 '홈에서 열기'는 필요없음
+            //}},
             { nm: "보관", disable: (gst.kindLater == "stored") ? true : false, func: async function(item, idx) {
                 changeAction('stored', row)
             }},
@@ -193,7 +192,7 @@
             { nm: "진행", disable: (gst.kindLater == "later") ? true : false, func: function(item, idx) {
                 changeAction('later', row)
             }},
-            { nm: "'나중에'에서 제거", func: function(item, idx) {
+            { nm: "'나중에'에서 제거", color: "red", func: function(item, idx) {
                 changeAction('delete', row)                
             }},
         ]            
@@ -236,7 +235,7 @@
                 @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
-                        <img class="coImg14" :src="gst.html.getImageUrl(LIGHT + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
+                        <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
                         {{ row.CHANNM }} 
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
@@ -261,8 +260,7 @@
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => downHandler(e)"></div>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용하는 이유는 HomeBody.vue에서 설명 -->
-        <!-- keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
+        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용 (HomeBody.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
                 <component :is="Component" :key="$route.fullPath" ref="homebodyRef" />

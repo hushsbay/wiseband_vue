@@ -194,8 +194,13 @@
             } else {
                 console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
                 setBasicInfo()
-                if (msgidInChan) { //여기는 Later.vue로부터 호출됨
+                if (msgidInChan) { //여기는 Later.vue로부터 호출되기도 하지만 새창에서 열 때 (캐시제거하고) 비동기로 Later보다 HomeBody가 먼저 호출되기도 할 것임
                     await getList({ msgid: msgidInChan, kind: "atHome" })
+                    if (route.fullPath.includes("?newwin=")) { //새창에서 열기
+                        if (route.fullPath.includes("/later_body/")) {
+                            gst.later.procFromBody("set_color", { msgid: msgidInChan })
+                        }
+                    }
                 } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
@@ -1388,7 +1393,7 @@
         }
         gst.ctx.show(e)
     }
-    
+
     async function test() {
         gst.util.setToast("gggggg")
         //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
@@ -1564,7 +1569,7 @@
                 <span style="margin-left:5px">파일</span> 
             </div>
             <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="test">
-                <img class="coImg18" :src="gst.html.getImageUrl('apply.png')">
+                <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
                 <span style="margin-left:5px">테스트</span> 
             </div>
         </div> 

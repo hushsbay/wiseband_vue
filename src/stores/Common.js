@@ -16,6 +16,8 @@ const hush = {
         deli : "$~$",
         cdtAtFirst : "1111-11-11",
         cdtAtLast : "9999-99-99",
+        color_light : "whitesmoke_",
+        color_dark : "violet_",
         color_act_later : "lightsteelblue",
         uploadLimitSize : 10 * 1024 * 1024, //10MB
         uploadMaxCount : 10,
@@ -79,7 +81,7 @@ const hush = {
             const uInt8Array = new Uint8Array(bufferData)
             const blob = new Blob([uInt8Array], { type: "image/png" })
             return URL.createObjectURL(blob)
-        }
+        },
     }
 
 }

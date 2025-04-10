@@ -66,10 +66,10 @@ router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고�
         return { path: '/main/home', query : { ver : Math.random() }}
     } //아래는 from,to가 반대로 호출되고 있어서 여기서 흐름을 막아주면 문제없음 (현재까지 대안 못찾음)
     if (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) {
-        console.log("home_body -> home issue : routing return false")
+        console.log("home_body -> home issue : routing return false") //새창에서 열기시 
         return false //HomeBody.vue의 $$76 참조
     } else if (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) {
-        console.log("later_body -> later issue : routing return false")
+        console.log("later_body -> later issue : routing return false") //새창에서 열기시 
         return false //HomeBody.vue의 $$76 참조
     }
     return true

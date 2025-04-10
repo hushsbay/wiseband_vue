@@ -3,13 +3,12 @@
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
+    import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     
     const gst = GeneralStore()
     const router = useRouter()
-
-    const LIGHT = "whitesmoke_", DARK = "violet_"
 
     let kind = ref('my'), listChan = ref([])
     let mounting = true
@@ -95,13 +94,13 @@
 
     function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
         if (item.DEPTH == "1") {
-            item.nodeImg = item.exploded ? LIGHT + "expanded.png" : LIGHT + "collapsed.png"
+            item.nodeImg = item.exploded ? hush.cons.color_light + "expanded.png" : hush.cons.color_light + "collapsed.png"
             item.notioffImg = ""
             item.bookmarkImg = ""
             item.otherImg = ""
         } else {
             if (item.CHANID == null) {
-                item.nodeImg = LIGHT + "channel.png"
+                item.nodeImg = hush.cons.color_light + "channel.png"
                 item.notioffImg = ""
                 item.bookmarkImg = ""
                 item.otherImg = ""
@@ -111,7 +110,7 @@
                 item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
                 item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
                 item.otherImg = (item.OTHER == "other") ? "other.png" : ""
-                const color = item.sel ? DARK : LIGHT
+                const color = item.sel ? hush.cons.color_dark : hush.cons.color_light
                 item.nodeImg = color + item.nodeImg
                 if (item.notioffImg) item.notioffImg = color + item.notioffImg
                 if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
@@ -193,7 +192,7 @@
     }
 
     async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        const img = row.nodeImg.replace(LIGHT, DARK)        
+        const img = row.nodeImg.replace(hush.cons.color_light, hush.cons.color_dark)        
         const nm = !row.CHANID ? row.GR_NM : row.CHANNM
         gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
         if (!row.CHANID) {            
@@ -211,7 +210,7 @@
                 }},
                 { nm: "즐겨찾기" },
                 { nm: "사용자 초대" },
-                { nm: "복사", img: DARK + "other.png", child: [
+                { nm: "복사", img: hush.cons.color_dark + "other.png", child: [
                     { nm: "채널 복사", func: function(item, idx) { 
                         
                     }},
@@ -294,13 +293,13 @@
             </div>
             <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px;" @click="procExpCol('C')">
-                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'collapseall.png')" title="모두접기기">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'collapseall.png')" title="모두접기기">
                 </div>
                 <div style="padding:5px;border-radius:8px;" @click="procExpCol('E')">
-                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'expandall.png')" title="모두펼치기">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'expandall.png')" title="모두펼치기">
                 </div>
                 <div style="padding:5px;border-radius:8px;" @click="newMsg">
-                    <img class="coImg20" :src="gst.html.getImageUrl(LIGHT + 'compose.png')" title="새메시지">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새메시지">
                 </div>
             </div>
         </div>
