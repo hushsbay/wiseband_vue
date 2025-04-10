@@ -21,7 +21,7 @@
     const homebodyRef = ref(null)
     
     let scrollArea = ref(null)
-    let mounting = true, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 최근 일시
+    let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let prevScrollY = 0, prevScrollHeight
 
     //패널 리사이징 : 다른 vue에서 필요시 나머지 유지하되 localStorage이름만 바꾸면 됨
@@ -102,7 +102,7 @@
                 gst.kindLater = kindStr ? kindStr : "later"
                 localStorage.wiseband_lastsel_later = gst.kindLater
                 gst.listLater = []
-                savLastMsgMstCdt = gst.cons.cdtAtLast
+                savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
             const res = await axios.post("/menu/qryLater", { kind: gst.kindLater, lastMsgMstCdt: lastMsgMstCdt })
@@ -119,7 +119,7 @@
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
-            if (lastMsgMstCdt == gst.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
+            if (lastMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
                 scrollArea.value.scrollTo({ top: 0 }) //scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
             } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음

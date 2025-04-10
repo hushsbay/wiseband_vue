@@ -1,5 +1,5 @@
 import { ref, inject } from "vue"
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
 import axios from 'axios'
 
@@ -8,6 +8,7 @@ import hush from '/src/stores/Common.js'
 const GeneralStore = defineStore('General', () => {
 
     const router = useRouter()
+    const route = useRoute()
     const $cookie = inject('$cookies')
 
     let objSaved = ref({}) //각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
@@ -84,29 +85,29 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const cons = { //vue, react 등에 특화된 내용도 있을 수 있으니? 어쨋든 cons는 Common.js로 빼지 말고 그냥 쓰기
-        OK : '0',
-        NOT_OK : '-1',
-        NOT_FOUND : '-100',
-        BLANK_DATA : '-101',
-        JWT_NONE : '-801',
-        JWT_MISMATCH : '-802',
-        JWT_EXPIRED : '-803',
-        JWT_ETC : '-809',
-        PWD_MISMATCH : '-811',
-        auth_err_prefix : "-8",
-        deli : "$~$",
-        cdtAtFirst : "1111-11-11",
-        cdtAtLast : "9999-99-99",
-        color_act_later : "lightsteelblue",
-        uploadLimitSize : 10 * 1024 * 1024, //10MB
-        uploadMaxCount : 10,
-        toastSec : 3,
-        toastMsg : "처리중..",
-        done : "처리 완료",
-        doneWithCnt : "처리 완료 : ",
-        askDel : "삭제하시겠습니까?",
-    }
+    // const cons = { //vue, react 등에 특화된 내용도 있을 수 있으니? 어쨋든 cons는 Common.js로 빼지 말고 그냥 쓰기
+    //     OK : '0',
+    //     NOT_OK : '-1',
+    //     NOT_FOUND : '-100',
+    //     BLANK_DATA : '-101',
+    //     JWT_NONE : '-801',
+    //     JWT_MISMATCH : '-802',
+    //     JWT_EXPIRED : '-803',
+    //     JWT_ETC : '-809',
+    //     PWD_MISMATCH : '-811',
+    //     //auth_err_prefix : "-8",
+    //     //deli : "$~$",
+    //     //cdtAtFirst : "1111-11-11",
+    //     //cdtAtLast : "9999-99-99",
+    //     //color_act_later : "lightsteelblue",
+    //     //uploadLimitSize : 10 * 1024 * 1024, //10MB
+    //     //uploadMaxCount : 10,
+    //     //toastSec : 3,
+    //     //toastMsg : "처리중..",
+    //     //done : "처리 완료",
+    //     //doneWithCnt : "처리 완료 : ",
+    //     //askDel : "삭제하시겠습니까?",
+    // }
 
     const ctx = { 
         
@@ -259,7 +260,7 @@ const GeneralStore = defineStore('General', () => {
             } else if (Number.isInteger(toastSec)) {
                 snackBar.value.toastSec = toastSec
             } else { //기본 3초 토스트
-                snackBar.value.toastSec = cons.toastSec
+                snackBar.value.toastSec = hush.cons.toastSec
             }
             if (typeof ex == "string") {
                 strMsg = ex
@@ -294,7 +295,7 @@ const GeneralStore = defineStore('General', () => {
             } else if (Number.isInteger(toastSec)) {
                 toast.value.toastSec = toastSec //this.toast.toastSec = toastSec
             } else {//기본 3초 토스트            
-                toast.value.toastSec = cons.toastSec //this.toast.toastSec = cons.toastSec
+                toast.value.toastSec = hush.cons.toastSec //this.toast.toastSec = hush.cons.toastSec
             }
             if (typeof ex == "string") {
                 strMsg = ex
@@ -313,12 +314,11 @@ const GeneralStore = defineStore('General', () => {
 
         chkAxiosCode : function(data, notShowMsgIfNoData) { //data는 axios의 rs.data
             setTimeout(function() { util.setToast("") }, 1) //setting은 main.js axios에 있음
-            if (data.code != cons.OK) {
-                if (notShowMsgIfNoData && data.code == cons.NOT_FOUND) {
+            if (data.code != hush.cons.OK) {
+                if (notShowMsgIfNoData && data.code == hush.cons.NOT_FOUND) {
                     //데이터 없을 경우에 메시지없이 넘어가야 할 때가 있음
-                } else if (data.code.startsWith(cons.auth_err_prefix)) {
-                    //alert(data.msg + "[" + data.code + "]") //예) 인증이 필요합니다.
-                    router.replace({ name : 'login' })
+                } else if (!route.fullPath.startsWith("/login") && data.code.startsWith(hush.cons.auth_err_prefix)) {
+                    router.replace({ name : 'login' }) //alert(data.msg + "[" + data.code + "]") //예) 인증이 필요합니다.
                 } else {
                     util.setSnack("[" + data.code + "] " + data.msg, true)
                 }
@@ -408,7 +408,7 @@ const GeneralStore = defineStore('General', () => {
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, 
-        snackBar, toast, auth, cons, ctx, html, resize, util,
+        snackBar, toast, auth, ctx, html, resize, util,
         later, listLater, cntLater, kindLater
     }
 

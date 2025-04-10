@@ -2,6 +2,30 @@
 
 const hush = {
 
+    cons : {
+        OK : '0',
+        NOT_OK : '-1',
+        NOT_FOUND : '-100',
+        // BLANK_DATA : '-101',
+        // JWT_NONE : '-801',
+        // JWT_MISMATCH : '-802',
+        // JWT_EXPIRED : '-803',
+        // JWT_ETC : '-809',
+        // PWD_MISMATCH : '-811',
+        auth_err_prefix : "-8",
+        deli : "$~$",
+        cdtAtFirst : "1111-11-11",
+        cdtAtLast : "9999-99-99",
+        color_act_later : "lightsteelblue",
+        uploadLimitSize : 10 * 1024 * 1024, //10MB
+        uploadMaxCount : 10,
+        toastSec : 2,
+        toastMsg : "처리중..",
+        //done : "처리 완료",
+        //doneWithCnt : "처리 완료 : ",
+        //askDel : "삭제하시겠습니까?",
+    },
+
     util : {
         isvoid : function(obj) { //대신 a ?? b로 사용하기 (a가 null도 아니고 undefined도 아니면 a 반환. a가 0이거나 false라도 a를 반환)
             if (typeof obj == "undefined" || obj == null || obj == "undefined") return true

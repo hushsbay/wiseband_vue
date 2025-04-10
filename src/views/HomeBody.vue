@@ -85,7 +85,7 @@
                 item.replyinfo = rs.replyinfo
                 item.act_later = rs.act_later
                 item.act_fixed = rs.act_fixed
-                item.background = rs.act_later ? gst.cons.color_act_later : ""
+                item.background = rs.act_later ? hush.cons.color_act_later : ""
             }
         }
     }
@@ -140,7 +140,7 @@
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
-    let savFirstMsgMstCdt = gst.cons.cdtAtFirst, savLastMsgMstCdt = gst.cons.cdtAtLast //가장 오래된 일시와 최근 일시
+    let savFirstMsgMstCdt = hush.cons.cdtAtFirst, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 오래된 일시와 최근 일시
     let onGoingGetList = false, prevScrollY, prevScrollHeight, getAlsoWhenDown = ""
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -320,13 +320,13 @@
             const msgid = param.msgid
             const kind = param.kind
             //let idTop //$$50 참조 (막았지만 코딩 지우지 말기 - 향후 쓰임새가 있는 내용임)
-            //if (lastMsgMstCdt && lastMsgMstCdt != gst.cons.cdtAtFirst) {
+            //if (lastMsgMstCdt && lastMsgMstCdt != hush.cons.cdtAtFirst) {
             //    const eleTop = getTopMsgBody() //1) 케이스임 : 이전 데이터를 가져와 뿌린 후에 이젠에 육안으로 맨위에 보였던 idTop이 이젠 안보일테니 
             //    idTop = eleTop.id //idTop이 맨위에 보이게 스크롤하기 위해 여기서 기억하고 아래에서 처리함
             //}
             if (msgid && (kind == "atHome" || kind == "withReply")) {
-                savFirstMsgMstCdt = gst.cons.cdtAtFirst
-                savLastMsgMstCdt = gst.cons.cdtAtLast
+                savFirstMsgMstCdt = hush.cons.cdtAtFirst
+                savLastMsgMstCdt = hush.cons.cdtAtLast
             } //if ((firstMsgMstCdt && !kind) || (msgid && kind == "atHome")) { //아래로 대체
             if (route.fullPath.includes("/later_body/") || (firstMsgMstCdt && !kind)) {
                 getAlsoWhenDown = "down" //up은 기본이고 down 스크롤시에도 데이터 가져와야 한다는 의미임
@@ -380,7 +380,7 @@
                     row.background = "beige"
                 } else {
                     if (row.act_later || (msgidParent && row.MSGID == msgidParent)) {
-                        row.background = gst.cons.color_act_later
+                        row.background = hush.cons.color_act_later
                     }
                 }
                 for (let item of row.msgimg) {
@@ -401,7 +401,7 @@
                 for (let item of row.msglink) {
                     item.hover = false                        
                     item.cdt = item.CDT
-                    const arr = item.BODY.split(gst.cons.deli)
+                    const arr = item.BODY.split(hush.cons.deli)
                     if (arr.length == 1) {
                         item.text = item.BODY
                         item.url = item.BODY
@@ -475,7 +475,7 @@
             linkArr.value = []
             for (let item of rs.data.templinklist) {
                 let text, url
-                const arr = item.BODY.split(gst.cons.deli)
+                const arr = item.BODY.split(hush.cons.deli)
                 if (arr.length == 1) {
                     text = item.BODY
                     url = item.BODY
@@ -497,7 +497,7 @@
                 if (msgRow.value[props.data.msgidChild]) {
                     msgRow.value[props.data.msgidChild].scrollIntoView()
                 }
-            } else if (lastMsgMstCdt == gst.cons.cdtAtLast) {
+            } else if (lastMsgMstCdt == hush.cons.cdtAtLast) {
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else if (lastMsgMstCdt) {
                 if (msgArr.length > 0) {
@@ -759,8 +759,8 @@
                 const clipboardItem = pastedData[0]
                 const blob = clipboardItem.getAsFile() //서버에 보낼 데이터
                 const blobUrl = URL.createObjectURL(blob) //화면에 보여줄 데이터
-                if (blob.size > gst.cons.uploadLimitSize) {
-                    gst.util.setSnack("업로드 이미지 크기 제한은 " + hush.util.formatBytes(gst.cons.uploadLimitSize) + "입니다.\n" + "현재 => " + hush.util.formatBytes(blob.size), true)
+                if (blob.size > hush.cons.uploadLimitSize) {
+                    gst.util.setSnack("업로드 이미지 크기 제한은 " + hush.util.formatBytes(hush.cons.uploadLimitSize) + "입니다.\n" + "현재 => " + hush.util.formatBytes(blob.size), true)
                     return
                 }
                 const fd = new FormData()
@@ -1213,7 +1213,7 @@
                 return
             }
             if (kind == "addlink") {
-                const rq = { chanid: chanId, kind: "L", body: linkText.value + gst.cons.deli + linkUrl.value }
+                const rq = { chanid: chanId, kind: "L", body: linkText.value + hush.cons.deli + linkUrl.value }
                 const res = await axios.post("/chanmsg/uploadBlob", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
@@ -1244,14 +1244,14 @@
     async function uploadFile(e) {
         try {
             const files = e.target.files
-            if (fileBlobArr.value.length + files.length > gst.cons.uploadMaxCount) {
-                gst.util.setToast("업로드 파일 갯수는 메시지별로 " + gst.cons.uploadMaxCount + "개(기존 파일 포함)까지만 가능합니다.", 5, true)
+            if (fileBlobArr.value.length + files.length > hush.cons.uploadMaxCount) {
+                gst.util.setToast("업로드 파일 갯수는 메시지별로 " + hush.cons.uploadMaxCount + "개(기존 파일 포함)까지만 가능합니다.", 5, true)
                 return
             }            
             for (let i = 0; i < files.length; i++) {
                 const size = files[i].size
-                if (size > gst.cons.uploadLimitSize) {
-                    gst.util.setSnack("업로드 파일 크기 제한은 " + hush.util.formatBytes(gst.cons.uploadLimitSize) + "입니다.\n" + files[i].name + " => " + hush.util.formatBytes(size), true)
+                if (size > hush.cons.uploadLimitSize) {
+                    gst.util.setSnack("업로드 파일 크기 제한은 " + hush.util.formatBytes(hush.cons.uploadLimitSize) + "입니다.\n" + files[i].name + " => " + hush.util.formatBytes(size), true)
                     return
                 }
                 const exist = fileBlobArr.value.filter(x => x.name == files[i].name)
@@ -1328,7 +1328,7 @@
             const obj = msglist.value.find((item) => item.MSGID == msgid)
             if (obj) {
                 obj.act_later = rs.act_later
-                obj.background = obj.act_later ? gst.cons.color_act_later : ""
+                obj.background = obj.act_later ? hush.cons.color_act_later : ""
                 obj.act_fixed = rs.act_fixed
             }
             if (hasProp()) { 
@@ -1390,8 +1390,9 @@
     }
     
     async function test() {
-        const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
-        emits('ev-test', obj)
+        gst.util.setToast("gggggg")
+        //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
+        //emits('ev-test', obj)
     }
     
     ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임
