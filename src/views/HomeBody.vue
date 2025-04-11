@@ -224,6 +224,7 @@
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+            if (gst.objHome[chanId]) gst.home.procFromBody("recall", { chanid: chanId })
         }
     })
 
@@ -1535,7 +1536,7 @@
 
 <template>
     <div class="chan_center" :style="{ width: widthChanCenter }">
-        <div class="chan_center_header">
+        <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
                 <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
                 <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>

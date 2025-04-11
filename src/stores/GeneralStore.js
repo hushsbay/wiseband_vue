@@ -46,7 +46,7 @@ const GeneralStore = defineStore('General', () => {
     /////////////////////////////////////////////////아래 const later = 참조 (**77)
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     ///////////////////////////////////////////////////////////////////////
-    let listHome = ref([]), kindHome = ref('my')
+    let listHome = ref([]), kindHome = ref('my'), objHome = ref({}), scrollyHome = ref(0), selChanHome = ref('')
     ///////////////////////////////////////////////////////////////////////
     
     const auth = {
@@ -150,6 +150,19 @@ const GeneralStore = defineStore('General', () => {
 
         getImageUrl : function(strFile) { //<template>의 <img>에서 사용
             return new URL('/src/assets/images/' + strFile, import.meta.url).href //예) import.meta.url => http://localhost:5173/src/views/current.vue?t=1730165570470
+        }
+
+    }
+
+    const home = { //아래 const later 설명 참조
+
+        procFromBody : function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
+            if (type == "recall") {
+                if (objHome.value[obj.chanid]) {
+                    selChanHome.value = obj.chanid
+                    scrollyHome.value = objHome.value[obj.chanid].scrollY
+                }
+            }
         }
 
     }
@@ -415,7 +428,7 @@ const GeneralStore = defineStore('General', () => {
         objSaved, selSideMenu, 
         snackBar, toast, auth, ctx, html, resize, util,
         later, listLater, cntLater, kindLater,
-        listHome, kindHome
+        home, listHome, kindHome, objHome, scrollyHome, selChanHome
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

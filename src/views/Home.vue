@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, onActivated, watch } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
     import hush from '/src/stores/Common.js'
@@ -8,11 +8,23 @@
     import ContextMenu from "/src/components/ContextMenu.vue"
         
     const router = useRouter()
+    const route = useRoute()
     const gst = GeneralStore()
+
+    //1. Home 패널 상태 정의는 아래와 같음
+    //   1) Depth는 1,2 단계만 존재 : 1단계는 사내 그룹 (슬랙의 워크스페이스) 2단계는 채널
+    //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침)
+    //   3) 스크롤 위치도 2)와 마찬가지로 기억
+    //2. Home에서는 HomeBody의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
+    //   예를 들어, 뒤로 가면 라우팅이 HomeBody의 채널 심지어는 메시지아이디도 포함되어 있는데 여기에 맞춰 Home도 트리노드, 스크롤 등이 맞춰져야 함
+    //3. 상태를 가져오는 경우는 아래와 같음
+    //   1) 페이지 처음 열린 경우 및 새로 고침 : onMounted
+    //   2) 뒤로가기시 HomeBody가 A채널에서 B채널로 가는 경우 : 기존 B채널의 데이터가 캐싱되므로 그때 HomeBody의 스크롤/선택상태를 가져옴
+    //   3) 사이드메뉴에서 직접 홈을 누를 경우는 HomeBody가 아닌 Home이 라우팅되므로 그 홈에서 마지막 열었던 채널을 클릭해주면 됨
+    //   ** localStorage는 save후 1)3)에서 recall함 
 
     let scrollArea = ref(null)
     let mounting = true
-    let prevScrollY = 0 //, prevScrollHeight
 
     /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
@@ -41,25 +53,10 @@
             setBasicInfo()
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) gst.kindHome = lastSelKind
-            await getList()
+            await getList() //여기서만 호출
+            recallScrollY()
             const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
-            gst.listHome.forEach((item, index) => {
-                if (arr.indexOf(item.GR_ID) == -1) {
-                    item.exploded = false
-                } else {
-                    item.exploded = true
-                }
-                procChanRowImg(item)
-                // if (item.GR_ID == grid) {                    
-                //     if (item.CHANID == chanid) {
-                //         chanClick(item, index, refresh)
-                //     } else {
-                //         procChanRowImg(item)
-                //     }
-                // } else {
-                //     procChanRowImg(item)
-                // }
-            })
+            chanClickOnLoop(arr)
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -69,22 +66,30 @@
     onActivated(async () => {
         if (mounting) {
             mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
+        } else {
             setBasicInfo()
-            debugger
-            if (gst.objSaved[gst.kindHome]) scrollArea.value.scrollTop = gst.objSaved[gst.kindHome].scrollY
-            loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
+            if (route.path == "/main/home") {
+                chanClickOnLoop()
+            } else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
+                //스크롤 recall은 여기가 아닌 아래 watch에서 수행
+            }
         }
     })
 
-//    watch(gst.kindHome, async () => {
-//        localStorage.wiseband_lastsel_kind = gst.kindHome
-//        await getList() 
-//    })
+    watch([() => gst.scrollyHome, () => gst.selChanHome], () => { //HomeBody -> GeneralStore -> 여기 watch로 전달
+        //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 HomeBody의 라우팅에서 처리하는 것이 효율적임
+        scrollArea.value.scrollTop = gst.scrollyHome
+        chanClick(null, null, gst.selChanHome)
+    })
 
-//    watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
-//        displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
-//    }) //HomeBody.vue의 $$44 참조
+    watch(gst.kindHome, async () => {
+        localStorage.wiseband_lastsel_kind = gst.kindHome
+        await getList() 
+    })
+
+    // watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
+    //     displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
+    // }) //HomeBody.vue의 $$44 참조
 
     // watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
     //     console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue")
@@ -96,33 +101,32 @@
         gst.selSideMenu = "mnuHome" //HomeBody.vue에 Blank 방지
     }
 
-    function saveCurScrollY(posY) {
-        if (!gst.objSaved[gst.kindHome]) gst.objSaved[gst.kindHome] = {}
-        gst.objSaved[gst.kindHome].scrollY = posY
-    }
-
-    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-        prevScrollY = scrollArea.value.scrollTop
-        saveCurScrollY(prevScrollY) 
-    }
-
-    function loopListChan(grid, chanid, refresh) { //getList()에서 호출하는 것은 onMounted()이므로 캐싱 아님. onActivated()에서 부르는 것은 캐싱임
-        try {
-            gst.listHome.forEach((item, index) => {
-                item.exploded = true
-                if (item.GR_ID == grid) {                    
-                    if (item.CHANID == chanid) {
-                        chanClick(item, index, refresh)
-                    } else {
-                        procChanRowImg(item)
-                    }
-                } else {
-                    procChanRowImg(item)
-                }
-            })
-        } catch (ex) {
-            gst.util.showEx(ex, true)
+    function recallScrollY() {
+        if (localStorage.wiseband_home_scroll) {
+            setTimeout(function() { 
+                scrollArea.value.scrollTop = parseInt(localStorage.wiseband_home_scroll) 
+            }, 1) //비동기로 하지 않으면 값이 0으로 설정됨 (어느 부분에서 0으로 되는지 파악 필요)
         }
+    }
+
+    const onScrollEnd = () => { //saveScrollY
+        localStorage.wiseband_home_scroll = scrollArea.value.scrollTop
+    }
+
+    function chanClickOnLoop(arr) {
+        gst.listHome.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
+            if (arr) { //onMounted때만 해당
+                if (arr.indexOf(item.GR_ID) == -1) {
+                    item.exploded = false
+                } else {
+                    item.exploded = true
+                }
+                procChanRowImg(item)
+            }
+            if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
+                chanClick(item, index)
+            }
+        })
     }
 
     async function getList() {
@@ -131,7 +135,6 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.listHome = rs.list
-            //loopListChan(localStorage.wiseband_lastsel_grid, localStorage.wiseband_lastsel_chanid)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -164,62 +167,43 @@
         }
     }
 
-    async function chanClick(row, idx, refresh) {
-        try {
-            if (row.DEPTH == "1") { //접기 or 펼치기
-                if (row.exploded) {
-                    row.exploded = false
-                } else {
-                    row.exploded = true
-                }
+    async function chanClick(row, idx, chanid) { //depth 1,2를 미리 filter해서 하지 말기
+        try { //chanid 파라미터는 depth2에만 해당
+            if (!chanid && row.DEPTH == "1") { //접기 or 펼치기
+                row.exploded = (row.exploded) ? false : true
                 procChanRowImg(row)
                 for (let i = idx + 1; i < gst.listHome.length; i++) {
                     if (gst.listHome[i].DEPTH == "1") break
                     gst.listHome[i].exploded = row.exploded
-                }
-                //if (row.exploded) localStorage.wiseband_lastsel_grid = row.GR_ID
-                //const filterd = gst.listHome.filter((item) => ) 펼쳐진 1depth만 모두 뽑아서 로컬에 저장 (나중에 다시 조회시 펼치기로 표시)
+                }                
+                const arr = [] //브라우저 재실행해도 접기/펼치기 상태 기억해서 그대로 표시하기
+                gst.listHome.forEach((item) => {
+                    if (item.DEPTH == "1" && item.exploded) arr.push(item.GR_ID)
+                })
+                localStorage.wiseband_exploded_grid = arr.length == 0 ? "" : arr.join(',')                
             } else {
-                for (let i = 0; i < gst.listHome.length; i++) {
-                    if (gst.listHome[i].DEPTH == "2") {
-                        gst.listHome[i].sel = false
-                        gst.listHome[i].hover = false
-                        procChanRowImg(gst.listHome[i])
+                gst.listHome.forEach((item) => {
+                    if (item.DEPTH == "2") {
+                        item.sel = false
+                        item.hover = false
+                        procChanRowImg(item)
                     }
-                }
-                row.sel = true
-                procChanRowImg(row)
-                localStorage.wiseband_lastsel_grid = row.GR_ID
-                localStorage.wiseband_lastsel_chanid = row.CHANID
-                await goHomeBody(row, refresh)
-            }
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
-
-    function displayChanAsSelected(chanid, grid) {
-        try {
-            for (let i = 0; i < gst.listHome.length; i++) {
-                const row = gst.listHome[i]
-                if (grid == row.GR_ID) {
-                    row.exploded = true //dept1이든 2든 펼치기
-                    if (row.DEPTH == "2") {
-                        if (chanid == row.CHANID) {
-                            row.sel = true
-                            localStorage.wiseband_lastsel_grid = row.GR_ID
-                            localStorage.wiseband_lastsel_chanid = row.CHANID
-                        } else {
-                            row.sel = false
-                        }
-                    } else {
-                        localStorage.wiseband_lastsel_grid = row.GR_ID
+                })
+                if (chanid) { //Back()경우, HomeBody에 열린 채널의 원래 스크롤값을 watch에서 가져온 후 여기로 와서 채널노드의 색상 선택
+                    const row1 = gst.listHome.find((item) => item.CHANID == chanid)
+                    if (row1) {
+                        row1.sel = true
+                        procChanRowImg(row1)
+                        localStorage.wiseband_lastsel_chanid = chanid
                     }
-                } else { //row.exploded = false //row.exploded는 사용자가 본 그대로 (접지 말고) 둬야 함
-                    row.sel = false
-                    row.hover = false
+                } else {
+                    row.sel = true
+                    procChanRowImg(row)
+                    localStorage.wiseband_lastsel_chanid = row.CHANID
+                    if (!gst.objHome[row.CHANID]) gst.objHome[row.CHANID] = {}
+                    gst.objHome[row.CHANID].scrollY = scrollArea.value.scrollTop
+                    await goHomeBody(row)
                 }
-                procChanRowImg(row)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -229,8 +213,8 @@
     async function goHomeBody(row, refresh) {
         let obj = { name : 'home_body', params : { grid: row.GR_ID, chanid: row.CHANID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
-        const ele = document.getElementById("chan_center_body")
-        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_nm이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+        const ele = document.getElementById("chan_center_header") //chan_center_body
+        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
             await router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
         } else {
             await router.push(obj)

@@ -59,8 +59,8 @@ const router = createRouter({
 
 router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고는 안 먹혀도 여기 beforeEach와 Activeted/Deactivated는 먹힘
     //if (!gst) gst = GeneralStore() //(1)
-    //console.log("from.path: " + from.path + " *** " + JSON.stringify(from.params))
-    //console.log("to.path: " + to.path + " *** " + JSON.stringify(to.params))
+    console.log("from.path: " + from.path + " *** " + JSON.stringify(from.params))
+    console.log("to.path: " + to.path + " *** " + JSON.stringify(to.params))
     if (from.path == "/" && to.path.startsWith("/main/home/home_body/")) {
         console.log("redirect to home : no issue until now but ready for being issue")
         return { path: '/main/home', query : { ver : Math.random() }}
