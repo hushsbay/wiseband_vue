@@ -14,16 +14,17 @@
     //1. Home 패널 상태 정의는 아래와 같음
     //   1) Depth는 1,2 단계만 존재 : 1단계는 사내 그룹 (슬랙의 워크스페이스) 2단계는 채널
     //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침)
-    //   3) 스크롤 위치도 2)와 마찬가지로 기억
+    //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 함
     //2. Home에서는 HomeBody의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
     //   예를 들어, 뒤로 가면 라우팅이 HomeBody의 채널 심지어는 메시지아이디도 포함되어 있는데 여기에 맞춰 Home도 트리노드, 스크롤 등이 맞춰져야 함
-    //3. 상태를 가져오는 경우는 아래와 같음
+    //   그런데, 문제는 사이드메뉴 '홈'을 누르면 Home이 먼저 호출되고 HomeBody가 나중 호출되는데 뒤로 가기 누르면 HomeBody가 먼저 호출되는 경우가 많음
+    //   HomeBody가 먼저 호출되면 채널이 정해지므로 Home에게 어느 채널로 가라고 전달되는데 Home이 먼저 호출되면 
+    //3. 상태를 가져오는 경우는 아래와 같음 : localStorage는 save후 1)3)에서 recall함
     //   1) 페이지 처음 열린 경우 및 새로 고침 : onMounted
     //   2) 뒤로가기시 HomeBody가 A채널에서 B채널로 가는 경우 : 기존 B채널의 데이터가 캐싱되므로 그때 HomeBody의 스크롤/선택상태를 가져옴
     //   3) 사이드메뉴에서 직접 홈을 누를 경우는 HomeBody가 아닌 Home이 라우팅되므로 그 홈에서 마지막 열었던 채널을 클릭해주면 됨
-    //   ** localStorage는 save후 1)3)에서 recall함 
 
-    let scrollArea = ref(null)
+    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true
 
     /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
@@ -54,9 +55,8 @@
             const lastSelKind = localStorage.wiseband_lastsel_kind
             if (lastSelKind) gst.kindHome = lastSelKind
             await getList() //여기서만 호출
-            recallScrollY()
-            const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
-            chanClickOnLoop(arr)
+            //recallScrollY()
+            chanClickOnLoop()
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -68,7 +68,8 @@
             mounting = false
         } else {
             setBasicInfo()
-            if (route.path == "/main/home") {
+            if (route.path == "/main/home") { //사이드메뉴 '홈'을 누르면 Home이 먼저 호출되고 HomeBody가 나중 호출됨
+                //recallScrollY()
                 chanClickOnLoop()
             } else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
                 //스크롤 recall은 여기가 아닌 아래 watch에서 수행
@@ -76,13 +77,14 @@
         }
     })
 
-    watch([() => gst.scrollyHome, () => gst.selChanHome], () => { //HomeBody -> GeneralStore -> 여기 watch로 전달
+    watch([() => gst.selChanHome], () => { //HomeBody -> GeneralStore -> 여기 watch로 전달
         //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 HomeBody의 라우팅에서 처리하는 것이 효율적임
-        scrollArea.value.scrollTop = gst.scrollyHome
+        //scrollArea.value.scrollTop = gst.scrollyHome   
+        chanRow.value[gst.selChanHome].scrollIntoView({ behavior: "smooth", block: "nearest" })
         chanClick(null, null, gst.selChanHome)
     })
 
-    watch(gst.kindHome, async () => {
+    watch(() => gst.kindHome, async () => {
         localStorage.wiseband_lastsel_kind = gst.kindHome
         await getList() 
     })
@@ -101,19 +103,20 @@
         gst.selSideMenu = "mnuHome" //HomeBody.vue에 Blank 방지
     }
 
-    function recallScrollY() {
-        if (localStorage.wiseband_home_scroll) {
-            setTimeout(function() { 
-                scrollArea.value.scrollTop = parseInt(localStorage.wiseband_home_scroll) 
-            }, 1) //비동기로 하지 않으면 값이 0으로 설정됨 (어느 부분에서 0으로 되는지 파악 필요)
-        }
-    }
+    // function recallScrollY() {
+    //     if (localStorage.wiseband_home_scroll) {
+    //         setTimeout(function() { 
+    //             scrollArea.value.scrollTop = parseInt(localStorage.wiseband_home_scroll) 
+    //         }, 1) //비동기로 하지 않으면 값이 0으로 설정됨 (어느 부분에서 0으로 되는지 파악 필요)
+    //     }
+    // }
 
     const onScrollEnd = () => { //saveScrollY
-        localStorage.wiseband_home_scroll = scrollArea.value.scrollTop
+        //localStorage.wiseband_home_scroll = scrollArea.value.scrollTop
     }
 
-    function chanClickOnLoop(arr) {
+    function chanClickOnLoop() {
+        const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
         gst.listHome.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
                 if (arr.indexOf(item.GR_ID) == -1) {
@@ -124,6 +127,7 @@
                 procChanRowImg(item)
             }
             if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
+                chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
                 chanClick(item, index)
             }
         })
@@ -200,8 +204,9 @@
                     row.sel = true
                     procChanRowImg(row)
                     localStorage.wiseband_lastsel_chanid = row.CHANID
-                    if (!gst.objHome[row.CHANID]) gst.objHome[row.CHANID] = {}
-                    gst.objHome[row.CHANID].scrollY = scrollArea.value.scrollTop
+                    //if (!gst.objHome[row.CHANID]) gst.objHome[row.CHANID] = {}
+                    //setTimeout(function() { gst.objHome[row.CHANID].scrollY = scrollArea.value.scrollTop }, 500)
+                    //debugger
                     await goHomeBody(row)
                 }
             }
@@ -296,6 +301,7 @@
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scrollend="onScrollEnd">
             <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도 @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 index.html <body>에서 막는 것으로 해결 -->
             <div v-for="(row, idx) in gst.listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
+                :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }"
                 @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM">
@@ -341,7 +347,7 @@
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;  
     }
     .node { /* min-height:36px */
-        width:calc(100% - 30px);min-height:100px;padding:0 10px;margin:0 5px;
+        width:calc(100% - 30px);min-height:36px;padding:0 10px;margin:0 5px;
         display:flex;align-items:center;justify-content:space-between;
         font-size:15px;color:var(--text-white-color);border-radius:5px;cursor:pointer;
     }

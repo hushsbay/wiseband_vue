@@ -153,6 +153,7 @@
         } else {
             await router.push(obj)
         }
+        popupMenuOn.value = false
     }
 
     const procMenu = {

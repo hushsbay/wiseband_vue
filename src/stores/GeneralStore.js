@@ -11,7 +11,7 @@ const GeneralStore = defineStore('General', () => {
     const route = useRoute()
     const $cookie = inject('$cookies')
 
-    let objSaved = ref({}) //각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
+    let objSaved = ref({}) //현재는 HomeBody에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
 
     let selSideMenu = ref("")
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
@@ -46,7 +46,7 @@ const GeneralStore = defineStore('General', () => {
     /////////////////////////////////////////////////아래 const later = 참조 (**77)
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     ///////////////////////////////////////////////////////////////////////
-    let listHome = ref([]), kindHome = ref('my'), objHome = ref({}), scrollyHome = ref(0), selChanHome = ref('')
+    let listHome = ref([]), kindHome = ref('my'), selChanHome = ref('') //, objHome = ref({}), scrollyHome = ref(0)
     ///////////////////////////////////////////////////////////////////////
     
     const auth = {
@@ -86,30 +86,6 @@ const GeneralStore = defineStore('General', () => {
         }
 
     }
-
-    // const cons = { //vue, react 등에 특화된 내용도 있을 수 있으니? 어쨋든 cons는 Common.js로 빼지 말고 그냥 쓰기
-    //     OK : '0',
-    //     NOT_OK : '-1',
-    //     NOT_FOUND : '-100',
-    //     BLANK_DATA : '-101',
-    //     JWT_NONE : '-801',
-    //     JWT_MISMATCH : '-802',
-    //     JWT_EXPIRED : '-803',
-    //     JWT_ETC : '-809',
-    //     PWD_MISMATCH : '-811',
-    //     //auth_err_prefix : "-8",
-    //     //deli : "$~$",
-    //     //cdtAtFirst : "1111-11-11",
-    //     //cdtAtLast : "9999-99-99",
-    //     //color_act_later : "lightsteelblue",
-    //     //uploadLimitSize : 10 * 1024 * 1024, //10MB
-    //     //uploadMaxCount : 10,
-    //     //toastSec : 3,
-    //     //toastMsg : "처리중..",
-    //     //done : "처리 완료",
-    //     //doneWithCnt : "처리 완료 : ",
-    //     //askDel : "삭제하시겠습니까?",
-    // }
 
     const ctx = { 
         
@@ -158,10 +134,10 @@ const GeneralStore = defineStore('General', () => {
 
         procFromBody : function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
             if (type == "recall") {
-                if (objHome.value[obj.chanid]) {
+                //if (objHome.value[obj.chanid]) {
                     selChanHome.value = obj.chanid
-                    scrollyHome.value = objHome.value[obj.chanid].scrollY
-                }
+                    //scrollyHome.value = objHome.value[obj.chanid].scrollY
+                //}
             }
         }
 
@@ -428,7 +404,7 @@ const GeneralStore = defineStore('General', () => {
         objSaved, selSideMenu, 
         snackBar, toast, auth, ctx, html, resize, util,
         later, listLater, cntLater, kindLater,
-        home, listHome, kindHome, objHome, scrollyHome, selChanHome
+        home, listHome, kindHome, selChanHome //, objHome, scrollyHome
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

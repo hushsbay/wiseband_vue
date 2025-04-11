@@ -224,7 +224,11 @@
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            if (gst.objHome[chanId]) gst.home.procFromBody("recall", { chanid: chanId })
+            debugger
+            if (route.path.startsWith("/main/home/home_body")) {
+                //if (gst.objHome[chanId]) 
+                gst.home.procFromBody("recall", { chanid: chanId })
+            }
         }
     })
 
@@ -252,8 +256,8 @@
         if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
             grId = route.params.grid
-            gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
-            gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
+            //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
+            //gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
         if (route.params.msgid) {
             msgidInChan = route.params.msgid //댓글의 msgid일 수도 있음
@@ -570,7 +574,6 @@
     }
 
     function memProfile(e, row) {
-        //alert(JSON.stringify(row))
         gst.ctx.data.header = row.AUTHORNM
         gst.ctx.menu = [
             { nm: "메시지 보내기", func: function(item, idx) {
