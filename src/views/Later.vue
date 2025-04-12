@@ -59,6 +59,11 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (gst.objSaved[gst.kindLater]) scrollArea.value.scrollTop = gst.objSaved[gst.kindLater].scrollY
+            if (route.path == "/later/home") { //'나중에' 사이드버튼 누름
+
+            } else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
+                //Generalstore의 const later = 에서 처리
+            }
         }
     })
 

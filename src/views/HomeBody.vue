@@ -197,7 +197,7 @@
                 if (msgidInChan) { //여기는 Later.vue로부터 호출되기도 하지만 새창에서 열 때 (캐시제거하고) 비동기로 Later보다 HomeBody가 먼저 호출되기도 할 것임
                     await getList({ msgid: msgidInChan, kind: "atHome" })
                     if (route.fullPath.includes("?newwin=")) { //새창에서 열기
-                        if (route.fullPath.includes("/later_body/")) {
+                        if (route.path.startsWith("/main/later/later_body")) {
                             gst.later.procFromBody("set_color", { msgid: msgidInChan })
                         }
                     }
@@ -228,6 +228,8 @@
             if (route.path.startsWith("/main/home/home_body")) {
                 //if (gst.objHome[chanId]) 
                 gst.home.procFromBody("recall", { chanid: chanId })
+            } else if (route.path.startsWith("/main/later/later_body")) {
+                gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
     })

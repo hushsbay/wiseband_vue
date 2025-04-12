@@ -180,6 +180,10 @@ const GeneralStore = defineStore('General', () => {
                 }
                 later.getCount() //화면에 갯수 업데이트
             } else if (type == "set_color") { //새창에서 열기시 패널에 색상 표시
+                listLater.value.map((item) => {
+                    item.sel = false
+                    item.hover = false
+                })
                 const row = listLater.value.find((item) => item.MSGID == obj.msgid)
                 if (row) row.sel = true
             }

@@ -87,6 +87,7 @@
     watch(() => gst.kindHome, async () => {
         localStorage.wiseband_lastsel_kind = gst.kindHome
         await getList() 
+        chanClickOnLoop()
     })
 
     // watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
