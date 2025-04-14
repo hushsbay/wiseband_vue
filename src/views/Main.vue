@@ -160,6 +160,9 @@
         ["mnuHome"] : async (row, onMounted) => {
             await goRoute({ path: '/main/home' }, onMounted)
         },        
+        ["mnuDm"] : async (row, onMounted) => {
+            await goRoute({ name: 'dm' }, onMounted)
+        },
         ["mnuLater"] : async (row, onMounted) => {
             await goRoute({ name: 'later' }, onMounted)
         },

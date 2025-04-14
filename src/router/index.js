@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '/src/views/Login.vue'
 import Main from '/src/views/Main.vue'
 import Home from '/src/views/Home.vue'
+import Dm from '/src/views/Dm.vue'
 import Later from '/src/views/Later.vue'
 import HomeBody from '/src/views/HomeBody.vue'
 
@@ -50,6 +51,18 @@ const router = createRouter({
                         }
                     ]                  
                 },
+                {                    
+                    path: 'dm',
+                    name: 'dm',
+                    component: Dm,
+                    children: [
+                        {
+                            path: 'dm_body/:chanid',
+                            name: 'dm_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            component: HomeBody,
+                        }
+                    ]                  
+                },
             ]
         }        
     ],
@@ -70,6 +83,9 @@ router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고�
         return false //HomeBody.vue의 $$76 참조
     } else if (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) {
         console.log("later_body -> later issue : routing return false") //새창에서 열기시 
+        return false //HomeBody.vue의 $$76 참조
+    } else if (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) {
+        console.log("dm_body -> dm issue : routing return false") //새창에서 열기시 
         return false //HomeBody.vue의 $$76 참조
     }
     return true
