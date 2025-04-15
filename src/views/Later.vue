@@ -6,6 +6,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
+    import MemberPiceach from "/src/components/MemberPiceach.vue"
         
     const router = useRouter()
     const gst = GeneralStore()
@@ -249,8 +250,9 @@
                 </div>
                 <div class="node">
                     <div style="display:flex;align-items:center">
-                        <img v-if="row.url" :src="row.url" style='width:32px;height:32px;border-radius:16px'>
-                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:32px;height:32px'>
+                        <!-- <img v-if="row.url" :src="row.url" style='width:32px;height:32px;border-radius:16px'>
+                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:32px;height:32px'> -->
+                        <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
                         <div style="color:whitesmoke;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">

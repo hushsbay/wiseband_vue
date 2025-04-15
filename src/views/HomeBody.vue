@@ -8,6 +8,7 @@
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
+    import MemberPiceach from "/src/components/MemberPiceach.vue"
             
     const route = useRoute()
     const gst = GeneralStore()
@@ -1552,8 +1553,9 @@
                 <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
                     @click="chanProperty('member')">
                     <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
-                        <img v-if="row.url" :src="row.url" style='width:100%;height:100%;border-radius:12px'>
-                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:100%;height:100%'>
+                        <!-- <img v-if="row.url" :src="row.url" style='width:100%;height:100%;border-radius:12px'>
+                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:100%;height:100%'> -->
+                        <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                     </div>
                     <span>{{ chandtl.length }}</span>
                 </div>

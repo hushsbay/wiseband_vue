@@ -6,6 +6,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
+    import MemberPiclist from "/src/components/MemberPiclist.vue"
         
     const router = useRouter()
     const gst = GeneralStore()
@@ -104,7 +105,6 @@
                 gst.listDm.push(row) //gst.listDm.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
-            debugger
             await nextTick()
             if (lastMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
                 scrollArea.value.scrollTo({ top: 0 }) //scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
@@ -168,9 +168,9 @@
 <template>
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
-            <div class="chan_side_top_left">나중에</div>
+            <div class="chan_side_top_left">DM</div>
             <div class="chan_side_top_right">
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('later', true)"
+                <!-- <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('later', true)"
                     :style="{ borderBottom: (gst.kindLater == 'later') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
                     진행중<span style="margin-left:3px">{{ gst.cntLater }}</span>
                 </div>
@@ -181,7 +181,7 @@
                 <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('finished', true)"
                     :style="{ borderBottom: (gst.kindLater == 'finished') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }" >
                     완료됨<span style="margin-left:3px"></span>
-                </div>
+                </div> -->
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scrollend="onScrollEnd">
@@ -190,7 +190,7 @@
                 @click="dmClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
-                        {{  row.memcnt }} 명
+                        {{  row.memcnt }}명<!-- <span>{{ row.memnmcnt }}</span> -->
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
                         {{ hush.util.displayDt(row.LASTMSGDT, false) }}
@@ -198,29 +198,9 @@
                 </div>
                 <div class="node">
                     <div style="display:flex;align-items:center">
-                        <div v-if="row.memnmcnt <= 2"><!-- 1명 보여주기 (상대방일 수도 있고 본인일 수도 있음)-->
-                            <div v-for="(rowp) in row.url">                            
-                                <img v-if="rowp" :src="rowp" style='width:32px;height:32px;border-radius:16px'>
-                                <img v-else :src="gst.html.getImageUrl('user.png')" style='width:32px;height:32px'>
-                            </div>
-                        </div>
-                        <!-- <div v-else-if="row.memnmcnt <= 3" style="width:36px;height:32px;display:flex;align-items:center">
-                            <div v-for="(rowp) in row.url" style="display:flex;align-items:center">
-                                <img v-if="rowp" :src="rowp" style='width:18px;height:18px;border-radius:9px'>
-                                <img v-else :src="gst.html.getImageUrl('user.png')" style='width:18px;height:18px'>
-                            </div>
-                        </div> -->
-                        <div v-else style="width:36px;height:32px;display:flex;flex-wrap:wrap">
-                            <div v-for="(rowp) in row.url">
-                                <img v-if="rowp" :src="rowp" style='width:16px;height:16px;border-radius:8px;margin-right:2px'>
-                                <img v-else :src="gst.html.getImageUrl('user.png')" style='width:16px;height:16px;margin-right:2px'>
-                            </div>
-                        </div>
-                        <div style="color:whitesmoke;font-weight:bold;margin-left:8px">{{ row.memnm.join(", ") }}{{ row.memcnt > row.memnmcnt ? '..' : '' }}</div>    
+                        <member-piclist :row="row"></member-piclist>
+                        <div style="color:whitesmoke;font-weight:bold;margin-left:8px">{{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}</div>    
                     </div>
-                    <!-- <div style="display:flex;align-items:center;color:lightgray">
-                        {{ hush.util.displayDt(row.LASTMSGDT, false) }}
-                    </div> -->
                 </div>
                 <div class="coDotDot"> <!-- 원래 coDotDot으로만 해결되어야 하는데 데이터가 있으면 넓이가 예) 1px 늘어나 육안으로 흔들림 -->
                     <div style="width:100px;color:white">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
@@ -237,7 +217,7 @@
             </keep-alive>
         </router-view>
     </div>
-    <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
+    <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    
 </template>
 
 <style scoped>    
