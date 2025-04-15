@@ -3,7 +3,7 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     const gst = GeneralStore()
 
-    const props = defineProps({ picUrl: Object, sizeName: String })
+    const props = defineProps({ picUrl: String, sizeName: String })
 </script>
 
 <template>

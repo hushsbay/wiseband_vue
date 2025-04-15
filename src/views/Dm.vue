@@ -101,7 +101,9 @@
                     } else {
                         row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
                     }
-                }
+                }                
+                row.notioffImg = (row.NOTI == "X") ? hush.cons.color_light + "notioff.png" : ""
+                row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
                 gst.listDm.push(row) //gst.listDm.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
@@ -129,8 +131,8 @@
         }
     }
 
-    async function goHomeBody(row, refresh) { //댓글 클릭시는 댓글 MSGID로 호출됨
-        let obj = { name : 'dm_body', params : { chanid: row.CHANID, msgid: row.MSGID }}
+    async function goHomeBody(row, refresh) {
+        let obj = { name : 'dm_body', params : { chanid: row.CHANID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
         const ele = document.getElementById("chan_center_body")
         if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로 
@@ -149,6 +151,12 @@
             { nm: "새창에서 열기", deli: true, func: function(item, idx) {
                 let url = "/main/dm/dm_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
                 window.open(url)
+            }},
+            { nm: "노티 설정", func: function(item, idx) {
+                
+            }},
+            { nm: "즐겨찾기 설정", func: function(item, idx) {
+                
             }},
         ]            
         gst.ctx.show(e)
@@ -190,7 +198,9 @@
                 @click="dmClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
-                        {{  row.memcnt }}명<!-- <span>{{ row.memnmcnt }}</span> -->
+                        <span>{{ row.memcnt }}명</span>
+                        <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off" style="margin-left:3px">
+                        <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크" style="margin-left:3px">
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
                         {{ hush.util.displayDt(row.LASTMSGDT, false) }}

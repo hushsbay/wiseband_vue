@@ -164,7 +164,7 @@
     }
 
     .popupMenuItem {
-        width:calc(100% - 8px);height:35px;padding:0 8px;
+        width:calc(100% - 16px);height:35px;padding:0 8px;
         display:flex;align-items:center;border-bottom:1px solid var(--border-color)
     }
 
