@@ -119,6 +119,7 @@
                 } else {
                     row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
+                debugger
                 gst.listLater.push(row) //gst.listLater.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
@@ -183,7 +184,7 @@
                 goHomeBody(row, true)
             }},
             { nm: "새창에서 열기", deli: true, func: function(item, idx) {
-                let url = "/main/later/later_body/" + row.GR_ID + "/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
+                let url = "/main/later/later_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random() //+ row.GR_ID +
                 window.open(url)
             }},
             //{ nm: "홈에서 열기", func: function(item, idx) { 
@@ -242,8 +243,13 @@
                 @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
-                        <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
-                        {{ row.CHANNM }} 
+                        <div v-if="row.TYP=='GS'" style="display:flex;align-items:center">
+                            {{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}
+                        </div>
+                        <div v-else style="display:flex;align-items:center">
+                            <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
+                            {{ row.CHANNM }} {{ row.TYP }}
+                        </div>
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
                         {{ row.REPLYTO ? '댓글' : '' }}

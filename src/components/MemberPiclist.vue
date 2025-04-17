@@ -8,12 +8,12 @@
 </script>
 
 <template>
-    <div v-if="row.memnmcnt == 1"><!-- 1명 (본인도 포함)-->
+    <div v-if="row.picCnt == 1"><!-- 1명 (본인도 포함)-->
         <div class="wh32">
             <member-piceach :picUrl="row.url[0]" sizeName="wh32"></member-piceach>
         </div>
     </div>
-    <div v-else-if="row.memnmcnt == 2"><!-- 2명 보여주기 (본인제외) -->
+    <div v-else-if="row.picCnt == 2"><!-- 2명 보여주기 (본인제외) -->
         <div class="wh32">
             <div class="wh24" style="margin:-4px 0 0 0">
                 <member-piceach :picUrl="row.url[0]" sizeName="wh24"></member-piceach>
@@ -23,7 +23,7 @@
             </div>
         </div>
     </div>
-    <div v-else-if="row.memnmcnt == 3" class="wh32P" style="flex-direction:column"><!-- 3명 보여주기 (본인제외) -->
+    <div v-else-if="row.picCnt == 3" class="wh32P" style="flex-direction:column"><!-- 3명 보여주기 (본인제외) -->
         <div class="wh3216">
             <member-piceach :picUrl="row.url[0]" sizeName="wh16"></member-piceach>
         </div>
