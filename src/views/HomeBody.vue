@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
-    import { useRoute } from 'vue-router'
+    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
     
     import hush from '/src/stores/Common.js'
@@ -10,6 +10,7 @@
     import PopupCommon from "/src/components/PopupCommon.vue"
     import MemberPiceach from "/src/components/MemberPiceach.vue"
             
+    const router = useRouter()
     const route = useRoute()
     const gst = GeneralStore()
 
@@ -316,8 +317,13 @@
         alert("hahaha")
     }
 
-    function chanMsg(kind) {
-        alert("hahaha")
+    async function listMsg(kind) {
+        if (kind == 'all') {
+            savLastMsgMstCdt = hush.cons.cdtAtLast
+            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+        } else {
+            await getList({ kind: kind })
+        }        
     }
 
     function chkWithinTime(dt1, dt2) {
@@ -332,6 +338,7 @@
     //3) firstMstMsgCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
     //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
     //5) msgid + kind(withReply) : 1. 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI 2. 나중에..내활동..에서 기본 클릭시 보여 주는 UI
+    //6) kind(notyet or unread) : 1000개만 읽음
     async function getList(addedParam) {
         if (onGoingGetList) return
         try {
@@ -384,7 +391,7 @@
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
             }
             chandtl.value = rs.data.chandtl
-            if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
+            if ((msgid && (kind == "atHome" || kind == "withReply")) || kind == 'notyet' || kind == 'unread') msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
             const msgArr = rs.data.msglist
             const msgidParent = rs.data.msgidParent //atHome만 사용함
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
@@ -522,7 +529,7 @@
                 if (msgRow.value[props.data.msgidChild]) {
                     msgRow.value[props.data.msgidChild].scrollIntoView()
                 }
-            } else if (lastMsgMstCdt == hush.cons.cdtAtLast) {
+            } else if (lastMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 1000개만 가져옴
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else if (lastMsgMstCdt) {
                 if (msgArr.length > 0) {
@@ -1587,11 +1594,19 @@
             </div>
         </div>
         <div v-if="!hasProp()" class="chan_center_nav">
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="chanMsg('M')">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="listMsg('all')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="chanMsg('F')">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="listMsg('notyet')">
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
+            </div>
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="listMsg('unread')">
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
+            </div>
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="listMsg('file')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
@@ -1623,8 +1638,10 @@
                 <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                        <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                        <span style="margin-left:3px">{{ row1.CNT}}</span>
+                        <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" style="display:flex;align-items:center"> -->
+                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                            <span style="margin-left:3px">{{ row1.CNT}}</span>
+                        <!-- </div> -->
                     </div>
                     <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
                         <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">

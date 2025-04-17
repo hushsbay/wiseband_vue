@@ -204,10 +204,11 @@
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
                         <span>{{ row.memcnt }}명</span>
-                        <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off" style="margin-left:3px">
-                        <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크" style="margin-left:3px">
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
+                        <span style="margin-right:5px;color:darkgray">{{ row.notyetCnt == 0 ? "" : row.notyetCnt }}</span>
+                        <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off" style="margin-right:5px">
+                        <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크" style="margin-right:5px">
                         {{ hush.util.displayDt(row.LASTMSGDT, false) }}
                     </div>
                 </div>

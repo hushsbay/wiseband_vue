@@ -139,6 +139,7 @@
             const res = await axios.post("/menu/qryChan", { kind : gst.kindHome }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            debugger
             gst.listHome = rs.list
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -310,6 +311,7 @@
                         {{ row.DEPTH == '1' ? row.GR_NM : row.CHANNM }}
                     </div>
                     <div class="nodeRight">
+                        <span style="margin-right:5px;color:darkgray">{{ row.notyetCnt == 0 ? "" : row.notyetCnt }}</span>
                         <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
                         <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
                         <img v-if="row.otherImg" class="coImg14" :src="gst.html.getImageUrl(row.otherImg)" title="다른 채널">
