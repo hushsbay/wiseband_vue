@@ -152,12 +152,17 @@
                 let url = "/main/dm/dm_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
                 window.open(url)
             }},
+            { nm: "정보 보기", func: function(item, idx) {
+
+            }},
             { nm: "노티 설정", func: function(item, idx) {
                 
             }},
             { nm: "즐겨찾기 설정", func: function(item, idx) {
                 
             }},
+            { nm: "사용자 초대" },
+            { nm: "채널 나가기", color: "red" }
         ]            
         gst.ctx.show(e)
     }

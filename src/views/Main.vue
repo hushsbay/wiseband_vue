@@ -167,7 +167,7 @@
             await goRoute({ name: 'later' }, onMounted)
         },
         ["mnuFixed"] : async (row, onMounted) => {
-            await goRoute({ name: 'listleft', params : { act: "fixed" }}, onMounted)
+            await goRoute({ name: 'fixed' }, onMounted)
         },
     }
 </script>

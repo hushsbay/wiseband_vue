@@ -132,6 +132,22 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
+    const dm = { //아래 const later 설명 참조
+
+        procFromBody : function(type, obj) { //HomeBody.vue에서 호출해 Dm.vue 패널 화면 업데이트하는 것임
+            if (type == "update") {
+                const idx = listDm.value.findIndex((item) => item.CHANID == obj.chanid)
+                if (idx == -1) return
+                const row = listDm.value[idx]
+                row.BODYTEXT = obj.bodytext
+                if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
+                listDm.value.splice(idx, 1)
+                listDm.value.unshift(row)
+            }
+        }
+
+    }
+
     const home = { //아래 const later 설명 참조
 
         procFromBody : function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
@@ -410,7 +426,8 @@ const GeneralStore = defineStore('General', () => {
         objSaved, selSideMenu, 
         snackBar, toast, auth, ctx, html, resize, util,
         later, listLater, cntLater, kindLater,
-        home, listHome, kindHome, selChanHome //, objHome, scrollyHome
+        home, listHome, kindHome, selChanHome, //, objHome, scrollyHome
+        dm, listDm, kindDm
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

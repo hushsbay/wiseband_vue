@@ -33,23 +33,11 @@ const router = createRouter({
                     component: Home,
                     children: [
                         {
-                            path: 'home_body/:grid/:chanid',
+                            path: 'home_body/:chanid', //:grid/
                             name: 'home_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
                             component: HomeBody,
                         }
                     ]
-                },
-                {                    
-                    path: 'later',
-                    name: 'later',
-                    component: Later,
-                    children: [
-                        {
-                            path: 'later_body/:grid/:chanid/:msgid',
-                            name: 'later_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
-                            component: HomeBody,
-                        }
-                    ]                  
                 },
                 {                    
                     path: 'dm',
@@ -63,6 +51,30 @@ const router = createRouter({
                         }
                     ]                  
                 },
+                {                    
+                    path: 'later',
+                    name: 'later',
+                    component: Later,
+                    children: [
+                        {
+                            path: 'later_body/:chanid/:msgid', //:grid/
+                            name: 'later_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            component: HomeBody,
+                        }
+                    ]                  
+                },
+                // {                    
+                //     path: 'fixed',
+                //     name: 'fixed',
+                //     component: Later, ===========> Fixed로 만들기
+                //     children: [
+                //         {
+                //             path: 'fixed_body/:chanid/:msgid', //:grid/
+                //             name: 'fixed_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                //             component: HomeBody,
+                //         }
+                //     ]                  
+                // },
             ]
         }        
     ],

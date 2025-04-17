@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, onActivated, nextTick } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
     import hush from '/src/stores/Common.js'
@@ -9,6 +9,7 @@
     import MemberPiceach from "/src/components/MemberPiceach.vue"
         
     const router = useRouter()
+    const route = useRoute()
     const gst = GeneralStore()
 
     //목록의 순서때문에 Object나 Map을 이용하기 어려워 v-for에서는 주로 Array를 이용해 업뎃을 하는데 크기가 클수록 msigid를 찾는데 시간이 더 걸리는 구조임
@@ -147,7 +148,7 @@
     }
 
     async function goHomeBody(row, refresh) { //댓글 클릭시는 댓글 MSGID로 호출됨
-        let obj = { name : 'later_body', params : { grid: row.GR_ID, chanid: row.CHANID, msgid: row.MSGID }}
+        let obj = { name : 'later_body', params : { chanid: row.CHANID, msgid: row.MSGID }} //grid: row.GR_ID, 
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
         const ele = document.getElementById("chan_center_body")
         if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로 

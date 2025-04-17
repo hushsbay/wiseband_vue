@@ -14,7 +14,7 @@
     const gst = GeneralStore()
 
     /////////////////////////////////////////////////////////////////////////////////////
-    //여기는 Home.vue, Dm.vue, Later.vue처럼 왼쪽패널에서 HomeBody로 통신할 때 사용하는 부분임
+    //여기는 Home.vue나 Later.vue처럼 왼쪽패널에서 HomeBody로 통신할 때 사용하는 부분임
     //아래 defineExpose()에 정의된 함수를 패널에서 호출 (이 프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js const later = 부분에 정리해 두었음)
     defineExpose({ procFromParent })
 
@@ -106,13 +106,9 @@
     }
 
     function setBasicInfoInProp() {
-        // if (route.params.chanid && route.params.grid) {
-        //     chanId = route.params.chanid
-        //     grId = route.params.grid
-        // }
-        if (route.params.chanid) {
+        if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
-            //grId = route.params.grid
+            grId = route.params.grid
         }
         if (props.data.msgid) { //route가 아님을 유의
             msgidInChan = props.data.msgid //댓글의 msgid일 수도 있음
@@ -126,8 +122,7 @@
     /////////////////////////////////////////////////////////////////////////////////////
 
     const MAX_PICTURE_CNT = 11
-    const g_userid = gst.auth.getCookie("userid")
-    let mounting = true, appType
+    let mounting = true
     
     let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //HomeBody가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
     const scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
@@ -136,9 +131,9 @@
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
         
-    let sideMenu, chanId, msgidInChan //grId, 
+    let sideMenu, grId, chanId, msgidInChan
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
-    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
+    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([]), fetchByScrollEnd = ref(false)
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
@@ -193,7 +188,6 @@
         //또 다른 현상은 새로고침하면 Home.vue가 먼저 실행되는 것이 아닌 HomeBody.vue의 onMounted가 먼저 실행되어서 Home.vue가 실행되면서 
         //호출하는 HomeBody.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
-            appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan"
             if (hasProp()) {
                 console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
@@ -231,6 +225,7 @@
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+            debugger
             if (route.path.startsWith("/main/home/home_body")) {
                 //if (gst.objHome[chanId]) 
                 gst.home.procFromBody("recall", { chanid: chanId })
@@ -261,14 +256,9 @@
             const arr = route.fullPath.split("/")
             sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
         }
-        // if (route.params.chanid && route.params.grid) {
-        //     chanId = route.params.chanid
-        //     grId = route.params.grid
-        //     //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
-        //     //gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
-        // } else 
-        if (route.params.chanid) {
+        if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
+            grId = route.params.grid
             //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
             //gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
@@ -326,7 +316,7 @@
         return (minuteDiff <= 1) ? true : false
     }
 
-    //chanid는 기본 param //grid, 
+    //grid, chanid는 기본 param
     //1) lastMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) firstMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
     //3) firstMstMsgCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
@@ -336,7 +326,7 @@
         if (onGoingGetList) return
         try {
             onGoingGetList = true
-            let param = { chanid: chanId } //기본 param //grid: grId, 
+            let param = { grid: grId, chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt
@@ -368,7 +358,6 @@
             chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             document.title = channm.value + "[채널]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
-            chanmemFullExceptMe.value = []
             for (let i = 0; i < rs.data.chandtl.length; i++) {
                 const row = rs.data.chandtl[i]                
                 if (row.PICTURE == null) {
@@ -381,7 +370,6 @@
                 }
                 chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
                 if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
-                if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
             }
             chandtl.value = rs.data.chandtl
             if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
@@ -888,8 +876,6 @@
             }            
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") gst.later.procFromBody("update", rq)
-            } else if (route.fullPath.includes("/dm_body/")) {
-                gst.dm.procFromBody("update", rq)
             }
             if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
             msgbody.value = ""            
@@ -1558,13 +1544,8 @@
     <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
-                <div v-if="appType=='dm'" style="display:flex;align-items:center">
-                    <span>{{ chanmemFullExceptMe.join(", ") }}</span>
-                </div>
-                <div v-else style="display:flex;align-items:center">
-                    <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
-                    <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
-                </div>
+                <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
+                <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
                 <div v-if="hasProp()" style="margin-right:5px">스레드</div>
                 <span v-show="fetchByScrollEnd" style="color:red;margin-left:20px">data by scrolling</span> 
             </div>
@@ -1797,11 +1778,11 @@
         width:100%;min-height:50px;display:flex;justify-content:space-between;overflow:hidden
     }
     .chan_center_header_left {
-        width:70%;height:100%;display:flex;align-items:center;
+        width:50%;height:100%;display:flex;align-items:center;
         font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
-        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
+        width:50%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .chan_center_nav {
         width:100%;min-height:30px;display:flex;align-items:center;
