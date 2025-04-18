@@ -139,7 +139,6 @@
             const res = await axios.post("/menu/qryChan", { kind : gst.kindHome }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            debugger
             gst.listHome = rs.list
         } catch (ex) {
             gst.util.showEx(ex, true)

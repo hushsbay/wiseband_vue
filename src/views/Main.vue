@@ -174,7 +174,7 @@
 
 <template>
     <div class="coMain" @click="gst.ctx.hide">
-        <div class="header">
+        <div class="header" id="header"><!-- HomeBody에서 id 사용-->
 
         </div>
         <div class="body">

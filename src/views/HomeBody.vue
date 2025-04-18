@@ -215,6 +215,7 @@
                 }
                 try { inEditor.value.focus() } catch {}
             }
+            readMsgToBeSeen()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -731,13 +732,45 @@
         }
     }
 
-    // const getTopMsgBody = () => { //지우지 말 것. 2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
-    //     const rect = hush.util.getRect("#chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
-    //     const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
-    //     let yy = rect.top + 6
-    //     const ele = document.elementFromPoint(xx, yy)
-    //     return ele
-    // }
+    function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
+        const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
+        if (eleTop) {
+            const idTop = eleTop.id
+            let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
+            if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
+                const len = msglist.value.length
+                const start = (idx - 20 < 0) ? 0 : idx - 20
+                const end = (idx + 20 > len - 1) ? len - 1 : idx + 20
+                const eleParent = document.getElementById("chan_center_body")
+                const eleHeader = document.getElementById("header") //Main.vue 참조
+                const eleHeader1 = document.getElementById("chan_center_header")
+                const eleNav = document.getElementById("chan_center_nav")
+                const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + eleNav.offsetHeight
+                for (let i = start; i <= end; i++) {
+                    const msgid = msglist.value[i].MSGID
+                    const ele = msgRow.value[msgid]
+                    if (ele) {
+                        const rect = ele.getBoundingClientRect()
+                        let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
+                        if ((rect.top - topFrom + 60) >= 0 || (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
+                            bool = true
+                        } else {
+                            bool = false
+                        } //console.log(bool+"===="+msgid)
+                    }
+                }
+            }
+        }
+        setTimeout(function() { readMsgToBeSeen() }, 50000)
+    }
+
+    const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
+        const rect = hush.util.getRect("#chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+        const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
+        let yy = rect.top + 6
+        const ele = document.elementFromPoint(xx, yy)
+        return ele
+    }
 
     async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid
         try { //index는 메시지 배열의 항목 인덱스. idx는 그 항목내 file or image or link array의 인덱스
@@ -1599,7 +1632,7 @@
                 </div>
             </div>
         </div>
-        <div v-if="!hasProp()" class="chan_center_nav">
+        <div v-if="!hasProp()" class="chan_center_nav" id="chan_center_nav">
             <div class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
@@ -1669,6 +1702,7 @@
                             <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
                         </div>
                     </div>
+                    <span style="margin-left:9px;color:red">{{ row.MSGID }}</span>
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
                     <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 

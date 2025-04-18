@@ -83,6 +83,13 @@ const hush = {
             const blob = new Blob([uInt8Array], { type: "image/png" })
             return URL.createObjectURL(blob)
         },
+        isInViewport : (ele) => { //사실 vieport가 아니라 웹에디터 빼고 상단 빼고 등등해서 진짜 육안으로 보여야 하므로 왠만하면 사용하지 말기
+            const rect = ele.getBoundingClientRect()
+            return (rect.top >= 0 && rect.left >= 0 && 
+                    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            )
+        }
     }
 
 }
