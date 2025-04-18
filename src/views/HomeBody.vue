@@ -65,6 +65,7 @@
     }
 
     const homebodyRef = ref(null) //HomeBody(부모)가 HomeBody(자식)의 procFromParent()를 호출하기 위함
+    let listMsgSel = ref('all')
     let thread = ref({ msgid: null, msgidChild: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
@@ -318,6 +319,11 @@
     }
 
     async function listMsg(kind) {
+        if (kind == 'file') {
+            alert("not yet!!!")
+            return
+        }
+        listMsgSel.value = kind
         if (kind == 'all') {
             savLastMsgMstCdt = hush.cons.cdtAtLast
             await getList({ lastMsgMstCdt: savLastMsgMstCdt })
@@ -1573,7 +1579,7 @@
                     <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
                 </div>
                 <div v-if="hasProp()" style="margin-right:5px">스레드</div>
-                <span v-show="fetchByScrollEnd" style="color:red;margin-left:20px">data by scrolling</span> 
+                <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:20px">data by scrolling</span> 
             </div>
             <div class="chan_center_header_right">
                 <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
@@ -1594,19 +1600,19 @@
             </div>
         </div>
         <div v-if="!hasProp()" class="chan_center_nav">
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="listMsg('all')">
+            <div class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="listMsg('notyet')">
+            <div class="topMenu" :class="listMsgSel == 'notyet' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('notyet')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="listMsg('unread')">
+            <div class="topMenu" :class="listMsgSel == 'unread' ? 'list_msg_sel' : 'list_msg_unsel'"  @click="listMsg('unread')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="listMsg('file')">
+            <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('file')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
@@ -1614,6 +1620,7 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
                 <span style="margin-left:5px">테스트</span> 
             </div>
+            <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span> 
         </div> 
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
@@ -1824,6 +1831,8 @@
         width:100%;min-height:30px;display:flex;align-items:center;
         border-bottom:1px solid dimgray;overflow:hidden
     }
+    .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
+    .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
@@ -1877,7 +1886,7 @@
     .chan_right {
         height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
-    .topMenu { border-radius:5px;cursor:pointer }
+    .topMenu { cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
     .topMenu:active { background:var(--active-color);font-weight:bold }
     .replyAct { display:flex;align-items:center;cursor:pointer }
