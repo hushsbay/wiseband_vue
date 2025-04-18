@@ -214,8 +214,7 @@
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
                 try { inEditor.value.focus() } catch {}
-            }
-            readMsgToBeSeen()
+            }            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -553,6 +552,7 @@
             } else if (firstMsgMstCdt) {
                 //그냥 두면 됨
             }
+            readMsgToBeSeen()
             onGoingGetList = false //console.log(msgArr.length+"=====")
         } catch (ex) {
             onGoingGetList = false
@@ -701,7 +701,8 @@
     const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
         const sTop = scrollArea.value.scrollTop     
         if (hasProp()) {
-            prevScrollY = sTop //자식에서도 prevScrollY는 필요함    
+            prevScrollY = sTop //자식에서도 prevScrollY는 필요함
+            readMsgToBeSeen()
             return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         }        
         const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
@@ -729,39 +730,87 @@
             //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
             fetchByScrollEnd.value = true
             await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+        } else {
+            readMsgToBeSeen()
         }
     }
 
-    function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
+    async function refreshMsgDtlWithQryAction(msgid) {
+        let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
+        if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
+        const item = msglist.value.find(function(row) { return row.MSGID == msgid })
+        if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
+    }
+
+    async function updateWithNewKind(msgid, oldKind, newKind) {
+        try {            
+            const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
+            const res = await axios.post("/chanmsg/updateWithNewKind", rq)
+            let rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            await refreshMsgDtlWithQryAction(msgid)
+            //if (hasProp()) { //굳이 실행하지 않아도 될 듯
+            //    //evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+            //} else { //굳이 실행하지 않아도 될 듯
+            //    //if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
+            //}
+            if (route.fullPath.includes("/home_body/")) {
+                gst.home.procFromBody("update", rq)
+            } else if (route.fullPath.includes("/dm_body/")) {
+                gst.dm.procFromBody("update", rq)
+            }
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
         if (eleTop) {
             const idTop = eleTop.id
             let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
             if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
                 const len = msglist.value.length
-                const start = (idx - 20 < 0) ? 0 : idx - 20
-                const end = (idx + 20 > len - 1) ? len - 1 : idx + 20
+                const start = (idx - 10 < 0) ? 0 : idx - 10
+                const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
                 const eleParent = document.getElementById("chan_center_body")
                 const eleHeader = document.getElementById("header") //Main.vue 참조
                 const eleHeader1 = document.getElementById("chan_center_header")
                 const eleNav = document.getElementById("chan_center_nav")
                 const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + eleNav.offsetHeight
+                console.log(start+"#####################"+end)
                 for (let i = start; i <= end; i++) {
                     const msgid = msglist.value[i].MSGID
-                    const ele = msgRow.value[msgid]
-                    if (ele) {
-                        const rect = ele.getBoundingClientRect()
-                        let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
-                        if ((rect.top - topFrom + 60) >= 0 || (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
-                            bool = true
+                    const msgdtlArr = msglist.value[i].msgdtl
+                    const msgdtlRow = msgdtlArr.find(item => { //debugger용으로 일단 풀어서 코딩
+                        if ((item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid)) {
+                            return true
                         } else {
-                            bool = false
-                        } //console.log(bool+"===="+msgid)
+                            return false
+                        }
+                    })
+                    if (msgdtlRow) { //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
+                        console.log("@@@@"+msgid)                        
+                    } else {
+                        const ele = msgRow.value[msgid]
+                        if (ele) {
+                            const rect = ele.getBoundingClientRect()
+                            let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
+                            if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
+                                bool = true
+                                updateWithNewKind(msgid, "notyet", "read")
+                            } else {
+                                bool = false
+                            }
+                            console.log(bool+"===="+msgid)
+                        }
                     }
                 }
             }
+        } else {
+            console.log("ele없음")
         }
-        setTimeout(function() { readMsgToBeSeen() }, 50000)
+        //setTimeout(function() { readMsgToBeSeen() }, 5000)
     }
 
     const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
@@ -1369,16 +1418,12 @@
     }
 
     async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
-        try {
-            
+        try {            
             const rq = { chanid: chanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
-            if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
-            const item = msglist.value.find(function(row) { return row.MSGID == msgid })
-            if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
+            await refreshMsgDtlWithQryAction(msgid)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1678,11 +1723,15 @@
                 <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->
                     <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                        <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" style="display:flex;align-items:center"> -->
+                        <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                        <span style="margin-left:3px">{{ row1.CNT}}</span>
+                    </div>
+                    <!-- 나중에 정리되면 여기 열고 위에 닫기 <div v-for="(row1, idx1) in row.msgdtl">
+                        <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                             <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                             <span style="margin-left:3px">{{ row1.CNT}}</span>
-                        <!-- </div> -->
-                    </div>
+                        </div>
+                    </div> -->
                     <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
                         <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
                     </div>     

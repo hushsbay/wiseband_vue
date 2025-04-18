@@ -134,7 +134,7 @@ const GeneralStore = defineStore('General', () => {
 
     const dm = { //아래 const later 설명 참조
 
-        procFromBody : function(type, obj) { //HomeBody.vue에서 호출해 Dm.vue 패널 화면 업데이트하는 것임
+        procFromBody : async function(type, obj) { //HomeBody.vue에서 호출해 Dm.vue 패널 화면 업데이트하는 것임
             if (type == "update") {
                 const idx = listDm.value.findIndex((item) => item.CHANID == obj.chanid)
                 if (idx == -1) return
@@ -143,6 +143,13 @@ const GeneralStore = defineStore('General', () => {
                 if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
                 listDm.value.splice(idx, 1)
                 listDm.value.unshift(row)
+            } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+                const row = listDm.value.find((item) => item.CHANID == obj.chanid)
+                if (!row) return
+                const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
+                const rs = util.chkAxiosCode(res.data)
+                if (!rs) return
+                row.notyetCnt = rs.data.notyetCnt
             }
         }
 
@@ -150,12 +157,19 @@ const GeneralStore = defineStore('General', () => {
 
     const home = { //아래 const later 설명 참조
 
-        procFromBody : function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
+        procFromBody : async function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
             if (type == "recall") {
                 //if (objHome.value[obj.chanid]) {
                     selChanHome.value = obj.chanid
                     //scrollyHome.value = objHome.value[obj.chanid].scrollY
                 //}
+            } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+                const row = listHome.value.find((item) => item.CHANID == obj.chanid)
+                if (!row) return
+                const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
+                const rs = util.chkAxiosCode(res.data)
+                if (!rs) return
+                row.notyetCnt = rs.data.notyetCnt
             }
         }
 
