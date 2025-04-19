@@ -403,17 +403,6 @@
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
-                // if (kind == "atHome" || kind == "withReply") {
-                //     if (msgidParent) {
-                //         if (row.MSGID == msgidParent) row.background = "lightsteelblue"
-                //     } else {
-                //         if (row.MSGID == msgid) { //댓글의 부모글은 무조건 베이지
-                //             row.background = "beige"
-                //         } else if (props.data && row.MSGID == props.data.msgidChild && route.fullPath.includes("/later_body/")) {
-                //             row.background = "lightsteelblue" //props.data.msgidChild는 스레드에서 '나중에'등으로 표시된 댓글임
-                //         }
-                //     }
-                // }
                 if (kind == "withReply" && i == 0) {
                     row.background = "beige"
                 } else {
@@ -552,7 +541,11 @@
             } else if (firstMsgMstCdt) {
                 //그냥 두면 됨
             }
-            readMsgToBeSeen()
+            if (kind == "withReply") {
+                //setTimeout(function() { readMsgToBeSeen() }, 500)
+            } else {
+                readMsgToBeSeen()
+            }            
             onGoingGetList = false //console.log(msgArr.length+"=====")
         } catch (ex) {
             onGoingGetList = false
@@ -619,6 +612,23 @@
     }
 
     function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
+        debugger
+        let textRead, oldKind, newKind
+        const msgdtlRow = row.msgdtl.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+        if (msgdtlRow) {
+            oldKind = msgdtlRow.KIND
+            if (msgdtlRow.KIND == "read") {
+                textRead = "다시읽지않음으로 처리"
+                newKind = "unread"
+            } else {
+                textRead = "읽음으로 처리"
+                newKind = "read"
+            }
+        } else {
+            oldKind = "notyet"
+            textRead = "읽음으로 처리"
+            newKind = "read"
+        }
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "반응 추가", img: "dimgray_emoti.png", func: function(item, idx) {
@@ -630,8 +640,8 @@
             { nm: "메시지 전달", img: "dimgray_forward.png", func: function(item, idx) {
                 
             }},
-            { nm: "읽지않음으로 표시", func: function(item, idx) {
-                alert(item.nm+"@@@@"+idx)
+            { nm: textRead, func: function(item, idx) {
+                updateWithNewKind(row.MSGID, oldKind, newKind)
             }},
             { nm: "리마인더 받기", child: [
                 { nm: "1시간 후", func: function(item, idx) { 
@@ -754,6 +764,7 @@
             //} else { //굳이 실행하지 않아도 될 듯
             //    //if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
             //}
+            if (oldKind == "read" || oldKind == "unread") return //패널 업데이트 필요없음 (notyet은 변동없음)
             if (route.fullPath.includes("/home_body/")) {
                 gst.home.procFromBody("update", rq)
             } else if (route.fullPath.includes("/dm_body/")) {
@@ -766,7 +777,7 @@
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
-        if (eleTop) {
+        if (eleTop && eleTop.id) {
             const idTop = eleTop.id
             let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
             if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
@@ -808,7 +819,7 @@
                 }
             }
         } else {
-            console.log("ele없음")
+            console.log("ele 없거나 id가 없음")
         }
         //setTimeout(function() { readMsgToBeSeen() }, 5000)
     }
