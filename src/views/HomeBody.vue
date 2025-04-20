@@ -33,13 +33,17 @@
         } else if (kind == "refreshMsg") {
             const rs = await getMsg({ msgid: obj.msgid })
             if (rs == null) return
-            let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
-            if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-                item.BODY = rs.msgmst.BODY
-                item.UDT = rs.msgmst.UDT
-                item.act_later = rs.act_later
-                item.act_fixed = rs.act_fixed
-            }
+            // let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
+            // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
+            //     //아래는 3군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
+            //     item.BODY = rs.msgmst.BODY
+            //     item.UDT = rs.msgmst.UDT
+            //     item.reply = rs.reply
+            //     item.replyinfo = rs.replyinfo
+            //     item.act_later = rs.act_later
+            //     item.act_fixed = rs.act_fixed
+            // }
+            refreshWithGetMsg(rs, obj.msgid)
         } else if (kind == "deleteMsg") {
             const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
             if (idx > -1) msglist.value.splice(idx, 1)
@@ -82,14 +86,16 @@
         } else if (obj.type == "refreshFromReply") {
             const rs = await getMsg({ msgid: obj.msgid }, true)
             if (rs == null) return
-            let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
-            if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-                item.reply = rs.reply
-                item.replyinfo = rs.replyinfo
-                item.act_later = rs.act_later
-                item.act_fixed = rs.act_fixed
-                item.background = rs.act_later ? hush.cons.color_act_later : ""
-            }
+            // let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
+            // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
+            //     ////아래는 군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
+            //     item.reply = rs.reply
+            //     item.replyinfo = rs.replyinfo
+            //     item.act_later = rs.act_later
+            //     item.act_fixed = rs.act_fixed
+            //     item.background = rs.act_later ? hush.cons.color_act_later : ""
+            // }
+            refreshWithGetMsg(rs, obj.msgid)
         }
     }
 
@@ -403,6 +409,7 @@
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
+                //if (row.MSGID == '20250225230422955898008843') debugger
                 if (kind == "withReply" && i == 0) {
                     row.background = "beige"
                 } else {
@@ -541,11 +548,7 @@
             } else if (firstMsgMstCdt) {
                 //그냥 두면 됨
             }
-            if (kind == "withReply") {
-                //setTimeout(function() { readMsgToBeSeen() }, 500)
-            } else {
-                readMsgToBeSeen()
-            }            
+            readMsgToBeSeen()
             onGoingGetList = false //console.log(msgArr.length+"=====")
         } catch (ex) {
             onGoingGetList = false
@@ -566,6 +569,17 @@
             return rs.data
         } catch (ex) {
             gst.util.showEx(ex, true)
+        }
+    }
+
+    function refreshWithGetMsg(rs, msgid) {
+        let item = msglist.value.find(function(row) { return row.MSGID == msgid })
+        if (item) { //필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 것임
+            item.reply = rs.reply
+            item.replyinfo = rs.replyinfo
+            item.act_later = rs.act_later
+            item.act_fixed = rs.act_fixed
+            item.background = rs.act_later ? hush.cons.color_act_later : ""
         }
     }
 
@@ -612,7 +626,6 @@
     }
 
     function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        debugger
         let textRead, oldKind, newKind
         const msgdtlRow = row.msgdtl.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
         if (msgdtlRow) {
@@ -759,16 +772,19 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             await refreshMsgDtlWithQryAction(msgid)
-            //if (hasProp()) { //굳이 실행하지 않아도 될 듯
-            //    //evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+            if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
+                evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
+                const rs = await getMsg({ msgid: props.data.msgid })
+                if (rs == null) return
+                refreshWithGetMsg(rs, props.data.msgid)
             //} else { //굳이 실행하지 않아도 될 듯
             //    //if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
-            //}
+            }
             if (oldKind == "read" || oldKind == "unread") return //패널 업데이트 필요없음 (notyet은 변동없음)
             if (route.fullPath.includes("/home_body/")) {
-                gst.home.procFromBody("update", rq)
+                gst.home.procFromBody("updateUnreadCnt", rq)
             } else if (route.fullPath.includes("/dm_body/")) {
-                gst.dm.procFromBody("update", rq)
+                gst.dm.procFromBody("updateUnreadCnt", rq)
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -777,7 +793,11 @@
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
-        if (eleTop && eleTop.id) {
+        if (!eleTop) {
+            return
+        } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try
+            setTimeout(function() { readMsgToBeSeen() }, 500)
+        } else {
             const idTop = eleTop.id
             let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
             if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
@@ -785,43 +805,41 @@
                 const start = (idx - 10 < 0) ? 0 : idx - 10
                 const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
                 const eleParent = document.getElementById("chan_center_body")
-                const eleHeader = document.getElementById("header") //Main.vue 참조
-                const eleHeader1 = document.getElementById("chan_center_header")
-                const eleNav = document.getElementById("chan_center_nav")
+                const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
+                const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
+                const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨
                 const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + eleNav.offsetHeight
                 console.log(start+"#####################"+end)
                 for (let i = start; i <= end; i++) {
-                    const msgid = msglist.value[i].MSGID
                     const msgdtlArr = msglist.value[i].msgdtl
-                    const msgdtlRow = msgdtlArr.find(item => { //debugger용으로 일단 풀어서 코딩
-                        if ((item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid)) {
-                            return true
-                        } else {
-                            return false
-                        }
-                    })
+                    // const msgdtlRow = msgdtlArr.find(item => { //debugger용으로 일단 풀어서 코딩
+                    //     if ((item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid)) {
+                    //         return true
+                    //     } else {
+                    //         return false
+                    //     }
+                    // })
+                    const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+                    const msgid = msglist.value[i].MSGID
                     if (msgdtlRow) { //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-                        console.log("@@@@"+msgid)                        
+                        console.log("@@@@"+msgid) //테스트용                       
                     } else {
                         const ele = msgRow.value[msgid]
                         if (ele) {
                             const rect = ele.getBoundingClientRect()
                             let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
                             if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
-                                bool = true
+                                bool = true //테스트용
                                 updateWithNewKind(msgid, "notyet", "read")
                             } else {
-                                bool = false
+                                bool = false //테스트용
                             }
-                            console.log(bool+"===="+msgid)
+                            console.log(bool+"===="+msgid) //테스트용
                         }
                     }
                 }
             }
-        } else {
-            console.log("ele 없거나 id가 없음")
         }
-        //setTimeout(function() { readMsgToBeSeen() }, 5000)
     }
 
     const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
@@ -986,11 +1004,13 @@
             } else {
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
                 if (rs == null) return
-                let item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
-                if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-                    item.BODY = rs.msgmst.BODY
-                    item.UDT = rs.msgmst.UDT
-                }
+                // let item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
+                // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
+                //     //아래는 3군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
+                //     item.BODY = rs.msgmst.BODY
+                //     item.UDT = rs.msgmst.UDT
+                // }
+                refreshWithGetMsg(rs, editMsgId.value)
             }            
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") gst.later.procFromBody("update", rq)
@@ -1760,9 +1780,10 @@
                             <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
                             <span style="margin:0 4px;color:dimgray">최근 :</span>
                             <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
+                            <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
                         </div>
                     </div>
-                    <span style="margin-left:9px;color:red">{{ row.MSGID }}</span>
+                    <div style="margin-left:9px;color:red">{{ row.MSGID }}</div>
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
                     <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
@@ -2000,4 +2021,5 @@
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
+    .mynotyet { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:orange;color:white;font-size:12px;padding:4px;margin-left:10px }
 </style>

@@ -149,7 +149,7 @@ const GeneralStore = defineStore('General', () => {
                 const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
                 const rs = util.chkAxiosCode(res.data)
                 if (!rs) return
-                row.notyetCnt = rs.data.notyetCnt
+                row.mynotyetCnt = rs.data.mynotyetCnt
             }
         }
 
@@ -169,7 +169,7 @@ const GeneralStore = defineStore('General', () => {
                 const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
                 const rs = util.chkAxiosCode(res.data)
                 if (!rs) return
-                row.notyetCnt = rs.data.notyetCnt
+                row.mynotyetCnt = rs.data.mynotyetCnt
             }
         }
 

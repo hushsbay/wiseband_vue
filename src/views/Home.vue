@@ -310,7 +310,7 @@
                         {{ row.DEPTH == '1' ? row.GR_NM : row.CHANNM }}
                     </div>
                     <div class="nodeRight">
-                        <span style="margin-right:5px;color:darkgray">{{ row.notyetCnt == 0 ? "" : row.notyetCnt }}</span>
+                        <span style="margin-right:5px;color:darkgray">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
                         <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
                         <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
                         <img v-if="row.otherImg" class="coImg14" :src="gst.html.getImageUrl(row.otherImg)" title="다른 채널">

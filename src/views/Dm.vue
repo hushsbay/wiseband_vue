@@ -206,7 +206,7 @@
                         <span>{{ row.memcnt }}명</span>
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
-                        <span style="margin-right:5px;color:darkgray">{{ row.notyetCnt == 0 ? "" : row.notyetCnt }}</span>
+                        <span style="margin-right:5px;color:darkgray">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
                         <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off" style="margin-right:5px">
                         <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크" style="margin-right:5px">
                         {{ hush.util.displayDt(row.LASTMSGDT, false) }}
