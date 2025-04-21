@@ -74,6 +74,10 @@
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
     function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
+        if (thread.value.msgid) {
+            thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
+            setWidthForThread(null, "close")            
+        }
         thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
         thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
         setWidthForThread()
@@ -330,6 +334,7 @@
             return
         }
         listMsgSel.value = kind
+        msglist.value = []
         if (kind == 'all') {
             savLastMsgMstCdt = hush.cons.cdtAtLast
             await getList({ lastMsgMstCdt: savLastMsgMstCdt })
@@ -403,13 +408,13 @@
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
             }
             chandtl.value = rs.data.chandtl
-            if ((msgid && (kind == "atHome" || kind == "withReply")) || kind == 'notyet' || kind == 'unread') msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
+            if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
             const msgArr = rs.data.msglist
             const msgidParent = rs.data.msgidParent //atHome만 사용함
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
-                //if (row.MSGID == '20250225230422955898008843') debugger
+                if (row.MSGID == '20250122084532918913033404') debugger
                 if (kind == "withReply" && i == 0) {
                     row.background = "beige"
                 } else {
@@ -727,8 +732,10 @@
             prevScrollY = sTop //자식에서도 prevScrollY는 필요함
             readMsgToBeSeen()
             return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
-        }        
-        const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+        }
+        //const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+        const childbodyAttr = hasProp() ? true : false
+        const ele = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
         const topEntryPoint = 200
         const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
         let which = "stop"
@@ -780,7 +787,13 @@
             //} else { //굳이 실행하지 않아도 될 듯
             //    //if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
-            if (oldKind == "read" || oldKind == "unread") return //패널 업데이트 필요없음 (notyet은 변동없음)
+            if (oldKind == "read" || oldKind == "unread") {
+                if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
+                    const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
+                    if (idx > -1) msglist.value.splice(idx, 1)
+                }
+                return //패널 업데이트 필요없음 (notyet은 변동없음)
+            }
             if (route.fullPath.includes("/home_body/")) {
                 gst.home.procFromBody("updateUnreadCnt", rq)
             } else if (route.fullPath.includes("/dm_body/")) {
@@ -795,7 +808,7 @@
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
         if (!eleTop) {
             return
-        } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try
+        } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음 =>
             setTimeout(function() { readMsgToBeSeen() }, 500)
         } else {
             const idTop = eleTop.id
@@ -804,11 +817,13 @@
                 const len = msglist.value.length
                 const start = (idx - 10 < 0) ? 0 : idx - 10
                 const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
-                const eleParent = document.getElementById("chan_center_body")
+                //const eleParent = document.getElementById("chan_center_body")
+                const childbodyAttr = hasProp() ? true : false
+                const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
                 const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
                 const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
-                const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨
-                const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + eleNav.offsetHeight
+                const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
+                const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + (hasProp() ? 0 : eleNav.offsetHeight)
                 console.log(start+"#####################"+end)
                 for (let i = start; i <= end; i++) {
                     const msgdtlArr = msglist.value[i].msgdtl
@@ -843,7 +858,8 @@
     }
 
     const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
-        const rect = hush.util.getRect("#chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+        const childbodyAttr = hasProp() ? true : false
+        const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
         const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
         let yy = rect.top + 6
         const ele = document.elementFromPoint(xx, yy)
@@ -1731,7 +1747,7 @@
             </div>
             <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span> 
         </div> 
-        <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
+        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scrollend="onScrollEnd">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
                 :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
@@ -1744,7 +1760,8 @@
                 </div>
                 <div style="width:100%;display:flex;margin:10px 0">
                     <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
-                        <span v-show="row.stickToPrev && row.hover">{{ hush.util.displayDt(row.CDT, true) }}</span>
+                        <!-- <span v-show="row.stickToPrev && row.hover">{{ hush.util.displayDt(row.CDT, true) }}</span> -->
+                        <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
                         <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
                         <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                     </div>
