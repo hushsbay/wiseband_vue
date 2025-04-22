@@ -155,7 +155,7 @@
     .popupHeader {
         width:calc(100% - 12px);height:30px;padding:6px;
         display:flex;justify-content:space-between;align-items:center;
-        border-bottom:1px solid var(--border-color)
+        border-bottom:2px solid var(--border-color)
     }
 
     .popupHeaderItem {

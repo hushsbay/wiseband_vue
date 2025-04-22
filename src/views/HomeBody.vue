@@ -223,7 +223,9 @@
                 } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
-                try { inEditor.value.focus() } catch {}
+                try { 
+                    inEditor.value.focus() 
+                } catch {}
             }            
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -414,7 +416,7 @@
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
-                if (row.MSGID == '20250122084532918913033404') debugger
+                //if (row.MSGID == '20250419095152486066082566') debugger
                 if (kind == "withReply" && i == 0) {
                     row.background = "beige"
                 } else {
@@ -422,6 +424,13 @@
                         row.background = hush.cons.color_act_later
                     }
                 }
+                let tempBody = row.BODY, replaced = false
+                for (let item of row.msgdtlmention) {
+                    let exp = new RegExp("@" + item.USERNM, "g")
+                    tempBody = tempBody.replace(exp, "<span wiseband=true style='font-weight:bold'>@" + item.USERNM + "</span>")
+                    replaced = true
+                }
+                if (replaced) row.BODY = tempBody
                 for (let item of row.msgimg) {
                     if (!item.BUFFER) continue //잘못 insert된 것임
                     const uInt8Array = new Uint8Array(item.BUFFER.data)
@@ -448,7 +457,8 @@
                         item.text = arr[0]
                         item.url = arr[1]
                     }
-                } //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
+                } 
+                //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
                 if (firstMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
@@ -1075,6 +1085,35 @@
         //참고로, let currentNode = window.getSelection().focusNode에서 parent로 올라가면 에디터 노드를 만날 수 있음
     }
 
+    function mentionEnter(row, row1) {
+        let exp = new RegExp("@" + row1.USERNM, "g")
+        row.BODY = row.BODY.replace(exp, "<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>")
+    }
+
+    function mentionLeave(row, row1) {
+        let exp = new RegExp("<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>", "g")
+        row.BODY = row.BODY.replace(exp, "@" + row1.USERNM)
+    }
+
+    function procMention(e, row) {
+        let imgUrl
+        if (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) {
+            imgUrl = chandtlObj.value[row.USERID].url
+        } else {
+            imgUrl = gst.html.getImageUrl('user.png')
+        }
+        gst.ctx.data.header = "<img src='" + imgUrl + "' style='width:32px;height:32px'><span style='margin-left:5px'>" + row.USERNM + "</span>"
+        gst.ctx.menu = [
+            { nm: "DM으로 이동", func: function() {
+                
+            }},
+            { nm: "VIP 설정", func: function() {
+                
+            }}
+        ]
+        gst.ctx.show(e)            
+    }
+
     async function addEmoti() {
         const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
         const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
@@ -1553,8 +1592,8 @@
         gst.ctx.show(e)
     }
 
-    async function test() {
-        gst.util.setToast("gggggg")
+    async function test(e) {
+        //gst.util.setToast("gggggg")
         //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
         //emits('ev-test', obj)
     }
@@ -1741,7 +1780,7 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="test">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @mousedown.right="(e) => test(e)">
                 <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
                 <span style="margin-left:5px">테스트</span> 
             </div>
@@ -1801,6 +1840,14 @@
                         </div>
                     </div>
                     <div style="margin-left:9px;color:red">{{ row.MSGID }}</div>
+                </div>
+                <div class="msg_body_sub"><!-- Mention -->
+                    <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
+                        <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
+                        @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
+                            @{{ row1.USERNM }}
+                        </span>
+                    </div>
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
                     <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
