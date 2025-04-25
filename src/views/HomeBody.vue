@@ -1,6 +1,7 @@
 <script setup>
     import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
+    import { useInfiniteQuery } from '@tanstack/vue-query'
     import axios from 'axios'
     
     import hush from '/src/stores/Common.js'
@@ -1593,6 +1594,7 @@
     }
 
     async function test(e) {
+        fetchNextPage()
         //gst.util.setToast("gggggg")
         //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
         //emits('ev-test', obj)
@@ -1780,7 +1782,7 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @mousedown.right="(e) => test(e)">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="test">
                 <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
                 <span style="margin-left:5px">테스트</span> 
             </div>
