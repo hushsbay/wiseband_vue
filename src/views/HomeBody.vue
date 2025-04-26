@@ -572,6 +572,7 @@
         }
     }
 
+    //https://velog.io/@forest_xox/Tanstack-Query-7.-%EB%AC%B4%ED%95%9C-%EC%8A%A4%ED%81%AC%EB%A1%A4%EA%B3%BC-%EB%8D%94-%EB%B3%B4%EA%B8%B0
     async function getMsgList(addedParam) {
         if (onGoingGetList) return
         try {
