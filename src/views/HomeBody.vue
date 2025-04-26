@@ -222,7 +222,7 @@
                         }
                     }
                 } else {
-                    await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                    await getMsgList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
                 try { 
                     inEditor.value.focus() 
@@ -340,7 +340,7 @@
         msglist.value = []
         if (kind == 'all') {
             savLastMsgMstCdt = hush.cons.cdtAtLast
-            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+            await getMsgList({ lastMsgMstCdt: savLastMsgMstCdt })
         } else {
             await getList({ kind: kind })
         }        
@@ -572,6 +572,186 @@
         }
     }
 
+    async function getMsgList(addedParam) {
+        if (onGoingGetList) return
+        try {
+            onGoingGetList = true
+            let param = { chanid: chanId } //기본 param
+            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+            const lastMsgMstCdt = param.lastMsgMstCdt
+            const firstMsgMstCdt = param.firstMsgMstCdt
+            const kind = param.kind
+            const res = await axios.get("/chanmsg/getMsgList", { params: param })
+            const rs = gst.util.chkAxiosCode(res.data)      
+            fetchByScrollEnd.value = false
+            if (!rs) {
+                onGoingGetList = false
+                return
+            }
+            grnm.value = rs.data.chanmst.GR_NM
+            channm.value = rs.data.chanmst.CHANNM
+            chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+            document.title = channm.value + "[채널]"
+            chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
+            chanmemFullExceptMe.value = []
+            for (let i = 0; i < rs.data.chandtl.length; i++) {
+                const row = rs.data.chandtl[i]                
+                if (row.PICTURE == null) {
+                    row.url = null
+                } else {
+                    const uInt8Array = new Uint8Array(row.PICTURE.data)
+                    const blob = new Blob([uInt8Array], { type: "image/png" })
+                    const blobUrl = URL.createObjectURL(blob)
+                    row.url = blobUrl
+                }
+                chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
+                if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+                if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
+            }
+            chandtl.value = rs.data.chandtl
+            const msgArr = rs.data.msglist
+            for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
+                const row = msgArr[i]
+                //if (row.MSGID == '20250419095152486066082566') debugger
+                if (row.act_later) {
+                    row.background = hush.cons.color_act_later
+                }
+                let tempBody = row.BODY, replaced = false
+                for (let item of row.msgdtlmention) {
+                    let exp = new RegExp("@" + item.USERNM, "g")
+                    tempBody = tempBody.replace(exp, "<span wiseband=true style='font-weight:bold'>@" + item.USERNM + "</span>")
+                    replaced = true
+                }
+                if (replaced) row.BODY = tempBody
+                for (let item of row.msgimg) {
+                    if (!item.BUFFER) continue //잘못 insert된 것임
+                    const uInt8Array = new Uint8Array(item.BUFFER.data)
+                    const blob = new Blob([uInt8Array], { type: "image/png" })
+                    const blobUrl = URL.createObjectURL(blob)
+                    item.url = blobUrl
+                    item.hover = false
+                    item.cdt = item.CDT
+                }
+                for (let item of row.msgfile) {
+                    item.hover = false
+                    item.name = item.BODY
+                    item.size = item.FILESIZE
+                    item.cdt = item.CDT
+                }
+                for (let item of row.msglink) {
+                    item.hover = false                        
+                    item.cdt = item.CDT
+                    const arr = item.BODY.split(hush.cons.deli)
+                    if (arr.length == 1) {
+                        item.text = item.BODY
+                        item.url = item.BODY
+                    } else {
+                        item.text = arr[0]
+                        item.url = arr[1]
+                    }
+                } 
+                //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
+                const curAuthorId = row.AUTHORID
+                const curCdt = row.CDT.substring(0, 19)
+                if (firstMsgMstCdt) { //오름차순으로 일부를 읽어옴
+                    if (i == 0) {
+                        row.stickToPrev = false
+                    } else {
+                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 오래된 것임
+                            row.stickToPrev = false
+                        } else {
+                            const prevCdt = msgArr[i - 1].CDT.substring(0, 19)
+                            row.stickToPrev = chkWithinTime(prevCdt, curCdt)
+                        }
+                    }
+                    if (i == msgArr.length - 1) {
+                        row.hasSticker = false
+                    } else {
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 최근임
+                            row.hasSticker = false
+                        } else {
+                            const nextCdt = msgArr[i + 1].CDT.substring(0, 19)
+                            row.hasSticker = chkWithinTime(curCdt, nextCdt)
+                        }
+                    } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [29일, 30일, 31일]
+                    msglist.value.push(row) //기존 메시지리스트 맨 아래에 추가
+                } else {
+                    if (i == msgArr.length - 1) {
+                        row.stickToPrev = false
+                    } else {
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 오래된 것임
+                            row.stickToPrev = false
+                        } else {
+                            const prevCdt = msgArr[i + 1].CDT.substring(0, 19)
+                            row.stickToPrev = chkWithinTime(prevCdt, curCdt)
+                        }
+                    }
+                    if (i == 0) {
+                        row.hasSticker = false
+                    } else {
+                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 최근임
+                            row.hasSticker = false
+                        } else {
+                            const nextCdt = msgArr[i - 1].CDT.substring(0, 19)
+                            row.hasSticker = chkWithinTime(curCdt, nextCdt)
+                        }
+                    } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
+                    msglist.value.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
+                }
+                if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
+                if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+                msgRow.value[row.MSGID.toString()] = row.MSGID
+            }
+            imgBlobArr.value = []
+            for (let item of rs.data.tempimagelist) {
+                const uInt8Array = new Uint8Array(item.BUFFER.data)
+                const blob = new Blob([uInt8Array], { type: "image/png" })
+                const blobUrl = URL.createObjectURL(blob)
+                imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: item.CDT })
+            }
+            fileBlobArr.value = []
+            for (let item of rs.data.tempfilelist) {
+                fileBlobArr.value.push({ hover: false, name: item.BODY, size: item.FILESIZE, cdt: item.CDT })
+            }
+            linkArr.value = []
+            for (let item of rs.data.templinklist) {
+                let text, url
+                const arr = item.BODY.split(hush.cons.deli)
+                if (arr.length == 1) {
+                    text = item.BODY
+                    url = item.BODY
+                } else {
+                    text = arr[0]
+                    url = arr[1]
+                }
+                linkArr.value.push({ hover: false, text: text, url: url, cdt: item.CDT })
+            }
+            await nextTick()
+            if (lastMsgMstCdt == hush.cons.cdtAtLast) {
+                scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
+            } else if (lastMsgMstCdt) {
+                if (msgArr.length > 0) {
+                    //const ele = document.getElementById(idTop) //데이터를 더 읽어와 추가했으므로 scrollHeight는 더 커진 상태이므로 이전에 봤던 ele를 기준으로 위치 설정함
+                    //if (ele) scrollArea.value.scrollTo({ top: ele.offsetTop - ele.offsetHeight - 10}) //10은 마진/패딩 등 알파값
+                    //$$50 처음엔 위 2행으로 idTop을 기억해 처리했으나 생각해보니, 굳이 그럴 필요없이.. 
+                    //스크롤이전에 prevScrollY + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop을 구하면 됨
+                    scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
+                } else {
+                    //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
+                }
+            } else if (firstMsgMstCdt && kind == "scrollToBottom") { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
+                scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+            } else if (firstMsgMstCdt) {
+                //그냥 두면 됨
+            }
+            readMsgToBeSeen()
+            onGoingGetList = false //console.log(msgArr.length+"=====")
+        } catch (ex) {
+            onGoingGetList = false
+            gst.util.showEx(ex, true)
+        }
+    }
+
     async function getMsg(addedParam, verbose) {
         try {
             let param = { chanid: chanId } //기본 param
@@ -738,7 +918,7 @@
     }
 
     const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-        const sTop = scrollArea.value.scrollTop     
+        /*const sTop = scrollArea.value.scrollTop     
         if (hasProp()) {
             prevScrollY = sTop //자식에서도 prevScrollY는 필요함
             readMsgToBeSeen()
@@ -764,16 +944,17 @@
         if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
             prevScrollHeight = scrollArea.value.scrollHeight
             fetchByScrollEnd.value = true
-            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+            //await getList({ lastMsgMstCdt: savLastMsgMstCdt })
         } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
             //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
             //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
             //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
             fetchByScrollEnd.value = true
-            await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+            //await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
         } else {
             readMsgToBeSeen()
-        }
+        }*/
+        readMsgToBeSeen()
     }
 
     async function refreshMsgDtlWithQryAction(msgid) {
@@ -1026,7 +1207,7 @@
                     scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
-                    await getList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
+                    await getMsgList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
                 }
             } else {
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
