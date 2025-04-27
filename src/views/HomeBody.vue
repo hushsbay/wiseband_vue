@@ -1,7 +1,7 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onUnmounted } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
-    import { useQueryClient, useInfiniteQuery } from '@tanstack/vue-query'
+    import { useInfiniteQuery } from '@tanstack/vue-query'
     import axios from 'axios'
     
     import hush from '/src/stores/Common.js'
@@ -138,7 +138,8 @@
     }
     /////////////////////////////////////////////////////////////////////////////////////
 
-    let vueQuery
+    let vueQuery 
+    let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
 
     const MAX_PICTURE_CNT = 11
     const g_userid = gst.auth.getCookie("userid")
@@ -201,6 +202,31 @@
     5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 
        router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함 */
 
+    const observeBottomScroll = () => {
+        observerBottom.value = new IntersectionObserver((entry) => {
+            /**루트 요소와 타겟 요소가 교차하고 있고, 데이터 fetching이 이루어지고 있지 않다면 Fetching*/
+            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
+                vueQuery.fetchNextPage()
+            } else {
+                return
+            }
+        })
+        observerBottom.value.observe(observerBottomTarget.value)
+    }
+
+    const observeTopScroll = () => {
+        observerTop.value = new IntersectionObserver((entry) => {
+            /**루트 요소와 타겟 요소가 교차하고 있고, 데이터 fetching이 이루어지고 있지 않다면 Fetching*/
+            debugger
+            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
+                vueQuery.fetchPreviousPage()
+            } else {
+                return
+            }
+        })
+        observerTop.value.observe(observerTopTarget.value)
+    }
+
     onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
         //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
@@ -232,7 +258,9 @@
                 try { 
                     inEditor.value.focus() 
                 } catch {}
-            }            
+            } 
+            observeBottomScroll()
+            observeTopScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -258,6 +286,8 @@
                 gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
+        observeBottomScroll()
+        observeTopScroll()
     })
 
     //onDeactivated(() => {
@@ -274,6 +304,11 @@
         gst.objSaved[key].scrollY = prevScrollY*/
     //})
 
+    onUnmounted(() => {
+        observerBottom.value.disconnect()
+        observeTop.value.disconnect()
+    });
+
     const vueQueryPage = {}
 
     const setVueQuery = (vueQueryKey, vueQueryFn, vueQueryFnArg) => {
@@ -281,7 +316,6 @@
         return useInfiniteQuery({
             queryKey: vueQueryKey, //useInfiniteQuery에서는 반드시 배열로 해야 함
             queryFn: ({ pageParam }) => { //getNextPageParam가 반환하는 값이 다음 페이지의 pageParam이 된다
-                debugger
                 if (vueQueryFnArg) { //페이지(pageParam)가 변한다고 해서 vueQueryFnArg가 변하지 않음 queryFn은 setQuery안에서 호출되고 있음
                     let objInfo = vueQueryPage[vueQueryKey[0]]
                     if (!objInfo) objInfo = {}
@@ -290,7 +324,7 @@
                         const fnArg = objInfo[practicalPageParam] //practicalPageParam은 여기서만의 고유 로직임. getList에서 pageParam 담으면 여기서 +-1로 찾아야 함
                         if (fnArg) Object.assign(vueQueryFnArg, fnArg)
                         vueQueryFn = getMsgList
-                        vueQueryFnArg = { firstMsgMstCdt: savFirstMsgMstCdt }
+                        vueQueryFnArg = { lastMsgMstCdt: savLastMsgMstCdt } //vueQueryFnArg = { firstMsgMstCdt: savFirstMsgMstCdt }
                     }
                     Object.assign(vueQueryFnArg, { pageParam: pageParam }) //바로 위 if보다 아래여야 함
                     vueQueryFn(vueQueryFnArg)
@@ -308,11 +342,19 @@
                 return lastPageParam + 1
             },
             getPreviousPageParam: (firstPage, allPages, firstPageParam, allPageParams) => { //=> firstPage.prevCursor는 미파악
-                debugger
                 return firstPageParam -1
             }
         })
     }
+
+    //각 패널 업데이트, 자식/부모간의 HomeBody 업데이트가 복잡하게 있으므로 tanstack useMutation을 굳이 어렵게 적용할 이유가 없음 
+    // const setVueMutate = (vueQueryKey, vueMutateFn, vueMutateFnArg) => { //vueQueryKey는 반드시 배열로 해야 함
+    //     const queryClient = useQueryClient()
+    //     return useMutation({
+    //         mutationFn: () => vueMutateFn(vueMutateFnArg),
+    //         onSuccess: (data) => queryClient.invalidateQueries({ queryKey: vueQueryKey })
+    //     })
+    // }
 
     function setBasicInfo() {        
         sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
@@ -2037,6 +2079,9 @@
             <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span> 
         </div> 
         <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scrollend="onScrollEnd">
+            <div ref="observerTopTarget" style="background:beige;width:300px;height:300px">
+                {{ "Loading..." }}
+            </div>
             <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
                 :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
@@ -2149,6 +2194,9 @@
                         <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
                     </span>                    
                 </div>
+            </div>
+            <div ref="observerBottomTarget" style="background:beige;width:300px;height:300px">
+                {{ "Loading..." }}
             </div>
         </div>
         <div class="chan_center_footer">
