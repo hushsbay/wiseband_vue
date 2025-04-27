@@ -3,6 +3,7 @@ import '/src/assets/main.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import VueCookies from "vue-cookies"
+import { VueQueryPlugin } from '@tanstack/vue-query'
 import axios from 'axios'
 //import Vue3Sanitize  from 'vue-3-sanitize'
 
@@ -21,6 +22,12 @@ if (location.href.startsWith("http://localhost")) {
     domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
 }
 
+const vueQueryPluginOptions = {
+    queryClientConfig: {
+        defaultOptions: { queries: { staleTime: 0 } }
+    }
+}
+
 const app = createApp(App) 
 app.config.globalProperties.axios = axios //global로 설정했음에도 각 .vue마다 axios import하지 않고는 axios or this.axios로 호출시 오류 발생!?
 app.use(createPinia())
@@ -28,6 +35,7 @@ app.use(router)
 app.use(VueCookies, { path : '/', domain : hostnameStr, secure : true, sameSite : 'none' }) //none(모든 도메인에 쿠키가 전송), strict(동일한 사이트 내의 요청에만 전송)
 //const overridenOptions = { allowedTags: ['span'] }
 //app.use(Vue3Sanitize, overridenOptions)
+app.use(VueQueryPlugin, vueQueryPluginOptions)
 app.mount('#app')
 
 const gst = GeneralStore() //app위로 올리지 말기

@@ -1,7 +1,7 @@
 <script setup>
     import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
-    import { useInfiniteQuery } from '@tanstack/vue-query'
+    import { useQueryClient, useInfiniteQuery } from '@tanstack/vue-query'
     import axios from 'axios'
     
     import hush from '/src/stores/Common.js'
@@ -138,6 +138,8 @@
     }
     /////////////////////////////////////////////////////////////////////////////////////
 
+    let vueQuery
+
     const MAX_PICTURE_CNT = 11
     const g_userid = gst.auth.getCookie("userid")
     let mounting = true, appType
@@ -215,14 +217,17 @@
                 console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
                 setBasicInfo()
                 if (msgidInChan) { //여기는 Later.vue로부터 호출되기도 하지만 새창에서 열 때 (캐시제거하고) 비동기로 Later보다 HomeBody가 먼저 호출되기도 할 것임
-                    await getList({ msgid: msgidInChan, kind: "atHome" })
+                    //await getList({ msgid: msgidInChan, kind: "atHome" })
+                    vueQuery = setVueQuery(["getMsgList"], getList, { msgid: msgidInChan, kind: "atHome" })
+                    console.log("setVueQuery0011")
                     if (route.fullPath.includes("?newwin=")) { //새창에서 열기
                         if (route.path.startsWith("/main/later/later_body")) {
                             gst.later.procFromBody("set_color", { msgid: msgidInChan })
                         }
                     }
                 } else {
-                    await getMsgList({ lastMsgMstCdt: savLastMsgMstCdt })
+                    vueQuery = setVueQuery(["getMsgList"], getMsgList, { lastMsgMstCdt: savLastMsgMstCdt })
+                    console.log("setVueQuery0011")
                 }
                 try { 
                     inEditor.value.focus() 
@@ -268,6 +273,46 @@
         if (!gst.objSaved[key]) gst.objSaved[key] = {}
         gst.objSaved[key].scrollY = prevScrollY*/
     //})
+
+    const vueQueryPage = {}
+
+    const setVueQuery = (vueQueryKey, vueQueryFn, vueQueryFnArg) => {
+        console.log("setVueQuery00")
+        return useInfiniteQuery({
+            queryKey: vueQueryKey, //useInfiniteQuery에서는 반드시 배열로 해야 함
+            queryFn: ({ pageParam }) => { //getNextPageParam가 반환하는 값이 다음 페이지의 pageParam이 된다
+                debugger
+                if (vueQueryFnArg) { //페이지(pageParam)가 변한다고 해서 vueQueryFnArg가 변하지 않음 queryFn은 setQuery안에서 호출되고 있음
+                    let objInfo = vueQueryPage[vueQueryKey[0]]
+                    if (!objInfo) objInfo = {}
+                    if (pageParam != 0) {
+                        const practicalPageParam = pageParam > 0 ? (pageParam - 1).toString() : (pageParam + 1).toString()
+                        const fnArg = objInfo[practicalPageParam] //practicalPageParam은 여기서만의 고유 로직임. getList에서 pageParam 담으면 여기서 +-1로 찾아야 함
+                        if (fnArg) Object.assign(vueQueryFnArg, fnArg)
+                        vueQueryFn = getMsgList
+                        vueQueryFnArg = { firstMsgMstCdt: savFirstMsgMstCdt }
+                    }
+                    Object.assign(vueQueryFnArg, { pageParam: pageParam }) //바로 위 if보다 아래여야 함
+                    vueQueryFn(vueQueryFnArg)
+                } else {
+                    vueQueryFn(pageParam)
+                }
+            },
+            initialPageParam: 0, //무한스크롤 위아래로 모두 커버하기 위해서는 페이지 양수/음수 모두 지원해야 해서 0으로 출발
+            getNextPageParam: (lastPage, allPages, lastPageParam, allPageParams) => { //=> lastPage.nextCursor는 미파악
+                //1) getNextPageParam가 반환하는 값이 다음 페이지의 pageParam이 됨
+                //2) lastPage : allPages[allPages.length - 1]의 객체가 들어 있음
+                //3) allPages : allPages[0]={code:0,msg:'',data:{totalCnt:1000,totalPage:10},list:[{ERN:xxx,DEAL_CO_NM:하하하}..]}, allPages[1]=블라블라            
+                //const totalPage = lastPage.totalPage!
+                //return (allPages.length < totalPage) ? allPages.length + 1 : undefined //마지막이라는 의미
+                return lastPageParam + 1
+            },
+            getPreviousPageParam: (firstPage, allPages, firstPageParam, allPageParams) => { //=> firstPage.prevCursor는 미파악
+                debugger
+                return firstPageParam -1
+            }
+        })
+    }
 
     function setBasicInfo() {        
         sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
@@ -581,6 +626,7 @@
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt
+            const pageParam = param.pageParam
             const kind = param.kind
             const res = await axios.get("/chanmsg/getMsgList", { params: param })
             const rs = gst.util.chkAxiosCode(res.data)      
@@ -699,8 +745,26 @@
                     } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
                     msglist.value.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 }
-                if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
-                if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+                if (firstMsgMstCdt && row.CDT > savFirstMsgMstCdt) {
+                    savFirstMsgMstCdt = row.CDT
+                    let objInfo = vueQueryPage["getMsgList"]
+                    if (!objInfo) vueQueryPage["getMsgList"] = {}
+                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    if (!objInfo) vueQueryPage["getMsgList"][pageParam.toString()] = {}
+                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    objInfo.firstMsgMstCdt = savFirstMsgMstCdt
+                    //objInfo.pageParam = pageParam
+                }
+                if (lastMsgMstCdt && row.CDT < savLastMsgMstCdt) {
+                    savLastMsgMstCdt = row.CDT
+                    let objInfo = vueQueryPage["getMsgList"]
+                    if (!objInfo) vueQueryPage["getMsgList"] = {}
+                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    if (!objInfo) vueQueryPage["getMsgList"][pageParam.toString()] = {}
+                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    objInfo.lastMsgMstCdt = savLastMsgMstCdt
+                    //objInfo.pageParam = pageParam
+                }
                 msgRow.value[row.MSGID.toString()] = row.MSGID
             }
             imgBlobArr.value = []
@@ -1776,7 +1840,9 @@
     }
 
     async function test(e) {
-        fetchNextPage()
+        debugger
+        //vueQuery.fetchNextPage()
+        vueQuery.fetchPreviousPage()
         //gst.util.setToast("gggggg")
         //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
         //emits('ev-test', obj)
