@@ -100,7 +100,6 @@
     }
 
     const onScrolling = () => {
-        debugger
         if (!afterScrolled.value) afterScrolled.value = true
         const sTop = scrollArea.value.scrollTop     
         saveCurScrollY(sTop) 
@@ -127,9 +126,7 @@
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
-            console.log(lastMsgMstCdt, "==============")
             const res = await axios.post("/menu/qryLater", { kind: gst.kindLater, lastMsgMstCdt: lastMsgMstCdt })
-            debugger
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
                 onGoingGetList = false

@@ -1,6 +1,6 @@
 <script setup>
-    import { ref, onMounted, onActivated, nextTick } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { ref, onMounted, onActivated, onUnmounted, nextTick } from 'vue' 
+    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
     import hush from '/src/stores/Common.js'
@@ -9,12 +9,16 @@
     import MemberPiclist from "/src/components/MemberPiclist.vue"
         
     const router = useRouter()
+    const route = useRoute()
     const gst = GeneralStore()
+
+    let observerBottom = ref(null), observerBottomTarget = ref(null)
+    let afterScrolled = ref(false)
 
     const homebodyRef = ref(null)    
     let scrollArea = ref(null)
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
-    let prevScrollY = 0
+    let onGoingGetList = false //let prevScrollY = 0 //, prevScrollHeight
 
     /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_dmsidewidth ?? '300px')
@@ -38,11 +42,23 @@
     }
     //////////////////////////////////////////////////////////////////////////////////////
 
+    const observerBottomScroll = () => {
+        observerBottom.value = new IntersectionObserver(async (entry) => {
+            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
+                await getList(gst.kindDm)
+            } else {
+                return
+            }
+        })
+        observerBottom.value.observe(observerBottomTarget.value)
+    }
+
     onMounted(async () => {
         try {
             setBasicInfo()
             await getList(localStorage.wiseband_lastsel_dm, true)            
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
+            observerBottomScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -59,6 +75,11 @@
                 //Generalstore의 const later = 에서 처리
             //}
         }
+        observerBottomScroll()
+    })
+
+    onUnmounted(() => {
+        observerBottom.value.disconnect()
     })
 
     function setBasicInfo() {
@@ -66,33 +87,39 @@
         gst.selSideMenu = "mnuDm" //HomeBody.vue에 Blank 방지
     }
 
-    // function saveCurScrollY(posY) {
-    //     if (!gst.objSaved[gst.kindLater]) gst.objSaved[gst.kindLater] = {}
-    //     gst.objSaved[gst.kindLater].scrollY = posY
-    // }
+    function saveCurScrollY(posY) {
+        if (!gst.objSaved[gst.kindDm]) gst.objSaved[gst.kindDm] = {}
+        gst.objSaved[gst.kindDm].scrollY = posY
+    }
 
-    // const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-    //     const sTop = scrollArea.value.scrollTop     
-    //     let which = (sTop <= prevScrollY) ? "up" : "down" //down만 필요하므로 stop,up은 필요없으므로 <=로 체크함
-    //     prevScrollY = sTop
-    //     saveCurScrollY(prevScrollY) 
-    //     const ele = document.getElementById("chan_side_main")
-    //     const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
-    //     if (which == "down" && sTop > bottomEntryPoint) await getList(gst.kindLater)
-    // }
+    const onScrolling = () => {
+        if (!afterScrolled.value) afterScrolled.value = true
+        const sTop = scrollArea.value.scrollTop     
+        saveCurScrollY(sTop) 
+    }
 
     async function getList(kindStr, refresh) {
         try {
-            if (refresh) {//if (refresh || gst.kindLater != kindStr) {
-                //gst.kindLater = kindStr ? kindStr : "later"
-                //localStorage.wiseband_lastsel_dm = gst.kindLater
+            if (onGoingGetList) return
+            onGoingGetList = true
+            if (refresh || gst.kindDm != kindStr) {
+                gst.kindDm = kindStr ? kindStr : "all"
+                localStorage.wiseband_lastsel_dm = gst.kindDm
                 gst.listDm = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
             const res = await axios.post("/menu/qryDm", { kind: gst.kindDm, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
+            if (!rs) {
+                onGoingGetList = false
+                return                
+            }
+            if (rs.list.length == 0) {
+                onGoingGetList = false
+                afterScrolled.value = false
+                return
+            }
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
                 for (let i = 0; i < row.picture.length; i++) {
@@ -105,7 +132,7 @@
                 row.notioffImg = (row.NOTI == "X") ? hush.cons.color_light + "notioff.png" : ""
                 row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
                 gst.listDm.push(row) //gst.listDm.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
-                if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+                if (row.LASTMSGDT < savLastMsgMstCdt) savLastMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
             }
             await nextTick()
             if (lastMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
@@ -113,7 +140,9 @@
             } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
+            onGoingGetList = false
         } catch (ex) {
+            onGoingGetList = false
             gst.util.showEx(ex, true)
         }
     }
@@ -183,21 +212,10 @@
         <div class="chan_side_top">
             <div class="chan_side_top_left">DM</div>
             <div class="chan_side_top_right">
-                <!-- <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('later', true)"
-                    :style="{ borderBottom: (gst.kindLater == 'later') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
-                    진행중<span style="margin-left:3px">{{ gst.cntLater }}</span>
-                </div>
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('stored', true)"
-                    :style="{ borderBottom: (gst.kindLater == 'stored') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
-                    보관됨<span style="margin-left:3px"></span>
-                </div>
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('finished', true)"
-                    :style="{ borderBottom: (gst.kindLater == 'finished') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }" >
-                    완료됨<span style="margin-left:3px"></span>
-                </div> -->
+                
             </div>
         </div>
-        <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scrollend="onScrollEnd">
+        <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in gst.listDm" :key="row.CHANID" :id="row.CHANID" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
                 style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer"                 
                 @click="dmClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
@@ -222,6 +240,7 @@
                     <div style="width:100px;color:white">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
                 </div>
             </div>
+            <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
         </div>
     </div>
     <div class="resizer" id="dragMe" @mousedown="(e) => downHandler(e)"></div>

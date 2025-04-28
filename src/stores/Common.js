@@ -41,7 +41,7 @@ const hush = {
         },
         getDayFromDateStr : function(str) { //str = 2012-08-02 (일자형식 체크해야 하나 일단 표준대로 들어온다는 전체하에 사용하기로 함)
             if (str.length != 10) return null
-            const obj = { "1": "월", "2": "화", "3": "수", "4": "목", "5": "금", "6": "토", "7": "일" }
+            const obj = { "0": "일", "1": "월", "2": "화", "3": "수", "4": "목", "5": "금", "6": "토" }
             const dt = hush.util.getDateTimeStamp(str.substring(0, 10) + " 00:00:00")
             return obj[dt.getDay().toString()]
         },
