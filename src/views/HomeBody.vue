@@ -215,10 +215,12 @@
     }
 
     const observerTopScroll = () => {
-        observerTop.value = new IntersectionObserver((entry) => {
+        observerTop.value = new IntersectionObserver(async (entry) => {
             /**루트 요소와 타겟 요소가 교차하고 있고, 데이터 fetching이 이루어지고 있지 않다면 Fetching*/
             if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                vueQuery.fetchPreviousPage()
+                //vueQuery.fetchPreviousPage()
+                debugger
+                await getMsgList({ lastMsgMstCdt: savLastMsgMstCdt })
             } else {
                 return
             }
@@ -791,22 +793,22 @@
                 }
                 if (firstMsgMstCdt && row.CDT > savFirstMsgMstCdt) {
                     savFirstMsgMstCdt = row.CDT
-                    let objInfo = vueQueryPage["getMsgList"]
-                    if (!objInfo) vueQueryPage["getMsgList"] = {}
-                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
-                    if (!objInfo) vueQueryPage["getMsgList"][pageParam.toString()] = {}
-                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
-                    objInfo.firstMsgMstCdt = savFirstMsgMstCdt
+                    // let objInfo = vueQueryPage["getMsgList"]
+                    // if (!objInfo) vueQueryPage["getMsgList"] = {}
+                    // objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    // if (!objInfo) vueQueryPage["getMsgList"][pageParam.toString()] = {}
+                    // objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    // objInfo.firstMsgMstCdt = savFirstMsgMstCdt
                     //objInfo.pageParam = pageParam
                 }
                 if (lastMsgMstCdt && row.CDT < savLastMsgMstCdt) {
                     savLastMsgMstCdt = row.CDT
-                    let objInfo = vueQueryPage["getMsgList"]
-                    if (!objInfo) vueQueryPage["getMsgList"] = {}
-                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
-                    if (!objInfo) vueQueryPage["getMsgList"][pageParam.toString()] = {}
-                    objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
-                    objInfo.lastMsgMstCdt = savLastMsgMstCdt
+                    // let objInfo = vueQueryPage["getMsgList"]
+                    // if (!objInfo) vueQueryPage["getMsgList"] = {}
+                    // objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    // if (!objInfo) vueQueryPage["getMsgList"][pageParam.toString()] = {}
+                    // objInfo = vueQueryPage["getMsgList"][pageParam.toString()]
+                    // objInfo.lastMsgMstCdt = savLastMsgMstCdt
                     //objInfo.pageParam = pageParam
                 }
                 msgRow.value[row.MSGID.toString()] = row.MSGID
