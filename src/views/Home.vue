@@ -327,6 +327,9 @@
                 <component :is="Component" :key="$route.fullPath" />
             </keep-alive>
         </router-view>
+        <!-- <router-view v-slot="{ Component }">
+            <component :is="Component" :key="$route.fullPath" />
+        </router-view> -->
     </div>    
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>

@@ -202,7 +202,7 @@
     5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 
        router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함 */
 
-    const observeBottomScroll = () => {
+    const observerBottomScroll = () => {
         observerBottom.value = new IntersectionObserver((entry) => {
             /**루트 요소와 타겟 요소가 교차하고 있고, 데이터 fetching이 이루어지고 있지 않다면 Fetching*/
             if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
@@ -214,10 +214,9 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
-    const observeTopScroll = () => {
+    const observerTopScroll = () => {
         observerTop.value = new IntersectionObserver((entry) => {
             /**루트 요소와 타겟 요소가 교차하고 있고, 데이터 fetching이 이루어지고 있지 않다면 Fetching*/
-            debugger
             if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
                 vueQuery.fetchPreviousPage()
             } else {
@@ -252,15 +251,15 @@
                         }
                     }
                 } else {
-                    vueQuery = setVueQuery(["getMsgList"], getMsgList, { lastMsgMstCdt: savLastMsgMstCdt })
+                    vueQuery = setVueQuery([route.fullPath], getMsgList, { lastMsgMstCdt: savLastMsgMstCdt })
                     console.log("setVueQuery0011")
                 }
                 try { 
                     inEditor.value.focus() 
                 } catch {}
             } 
-            observeBottomScroll()
-            observeTopScroll()
+            observerBottomScroll()
+            observerTopScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -286,8 +285,8 @@
                 gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
-        observeBottomScroll()
-        observeTopScroll()
+        observerBottomScroll()
+        observerTopScroll()
     })
 
     //onDeactivated(() => {
@@ -306,7 +305,7 @@
 
     onUnmounted(() => {
         observerBottom.value.disconnect()
-        observeTop.value.disconnect()
+        observerTop.value.disconnect()
     });
 
     const vueQueryPage = {}
@@ -315,7 +314,7 @@
         console.log("setVueQuery00")
         return useInfiniteQuery({
             queryKey: vueQueryKey, //useInfiniteQuery에서는 반드시 배열로 해야 함
-            queryFn: ({ pageParam }) => { //getNextPageParam가 반환하는 값이 다음 페이지의 pageParam이 된다
+            queryFn: async ({ pageParam }) => { //getNextPageParam가 반환하는 값이 다음 페이지의 pageParam이 된다
                 if (vueQueryFnArg) { //페이지(pageParam)가 변한다고 해서 vueQueryFnArg가 변하지 않음 queryFn은 setQuery안에서 호출되고 있음
                     let objInfo = vueQueryPage[vueQueryKey[0]]
                     if (!objInfo) objInfo = {}
@@ -327,9 +326,9 @@
                         vueQueryFnArg = { lastMsgMstCdt: savLastMsgMstCdt } //vueQueryFnArg = { firstMsgMstCdt: savFirstMsgMstCdt }
                     }
                     Object.assign(vueQueryFnArg, { pageParam: pageParam }) //바로 위 if보다 아래여야 함
-                    vueQueryFn(vueQueryFnArg)
+                    await vueQueryFn(vueQueryFnArg)
                 } else {
-                    vueQueryFn(pageParam)
+                    await vueQueryFn(pageParam)
                 }
             },
             initialPageParam: 0, //무한스크롤 위아래로 모두 커버하기 위해서는 페이지 양수/음수 모두 지원해야 해서 0으로 출발
@@ -343,7 +342,10 @@
             },
             getPreviousPageParam: (firstPage, allPages, firstPageParam, allPageParams) => { //=> firstPage.prevCursor는 미파악
                 return firstPageParam -1
-            }
+            },
+            //staleTime: 1000 * 20,
+            //refetchOnMount: true,
+            //refetchOnWindowFocus: true, //잘안됨
         })
     }
 
