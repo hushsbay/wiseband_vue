@@ -140,6 +140,7 @@
 
     let vueQuery 
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
+    let afterScrolled = ref(false)
 
     const MAX_PICTURE_CNT = 11
     const g_userid = gst.auth.getCookie("userid")
@@ -1026,6 +1027,10 @@
 
     function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = false
+    }
+
+    const onScrolling = () => { 
+        afterScrolled.value = true
     }
 
     const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
@@ -2082,8 +2087,8 @@
             </div>
             <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span> 
         </div> 
-        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scrollend="onScrollEnd">
-            <div ref="observerTopTarget" style="background:beige;width:300px;height:300px">
+        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scrollend="onScrollEnd" @scroll="onScrolling">
+            <div v-show="afterScrolled" ref="observerTopTarget" style="background:beige;width:300px;height:300px">
                 {{ "Loading..." }}
             </div>
             <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
@@ -2199,7 +2204,7 @@
                     </span>                    
                 </div>
             </div>
-            <div ref="observerBottomTarget" style="background:beige;width:300px;height:300px">
+            <div v-show="afterScrolled" ref="observerBottomTarget" style="background:beige;width:300px;height:300px">
                 {{ "Loading..." }}
             </div>
         </div>
