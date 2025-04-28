@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onUnmounted } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
     
@@ -204,8 +204,7 @@
     const observerTopScroll = () => {
         observerTop.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                console.log("2222222222222222222222222222")
-                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                await getMsgList({ lastMsgMstCdt: savLastMsgMstCdt })
             } else {
                 return
             }
@@ -216,7 +215,7 @@
     const observerBottomScroll = () => {
         observerBottom.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+                await getMsgList({ firstMsgMstCdt: savFirstMsgMstCdt })
             } else {
                 return
             }
@@ -394,8 +393,8 @@
     //5) msgid + kind(withReply) : 1. 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI 2. 나중에..내활동..에서 기본 클릭시 보여 주는 UI
     //6) kind(notyet or unread) : 1000개만 읽음
     async function getList(addedParam) {
+        if (onGoingGetList) return
         try {
-            if (onGoingGetList) return
             onGoingGetList = true
             let param = { chanid: chanId } //기본 param //grid: grId, 
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
@@ -418,10 +417,10 @@
                 getAlsoWhenDown = ""
             }
             const res = await axios.post("/chanmsg/qry", param)
-            const rs = gst.util.chkAxiosCode(res.data) 
+            const rs = gst.util.chkAxiosCode(res.data)      
             fetchByScrollEnd.value = false
             if (!rs) {
-                onGoingGetList = false                
+                onGoingGetList = false
                 return
             }
             grnm.value = rs.data.chanmst.GR_NM
@@ -447,11 +446,6 @@
             chandtl.value = rs.data.chandtl
             if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
             const msgArr = rs.data.msglist
-            if (msgArr.length == 0) {
-                onGoingGetList = false
-                afterScrolled.value = false
-                return 
-            }
             const msgidParent = rs.data.msgidParent //atHome만 사용함
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
@@ -777,56 +771,46 @@
     }
 
     const onScrolling = () => { 
-        if (!afterScrolled.value) afterScrolled.value = true
-        prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
-        prevScrollHeight = scrollArea.value.scrollHeight
-        if (hasProp()) {
-            //readMsgToBeSeen()
-            return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
-        }        
-        saveCurScrollY(prevScrollY)
-        //readMsgToBeSeen()
+        afterScrolled.value = true
     }
 
     const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-        readMsgToBeSeen()    
-        /*const sTop = scrollArea.value.scrollTop     
+        const sTop = scrollArea.value.scrollTop     
         if (hasProp()) {
             prevScrollY = sTop //자식에서도 prevScrollY는 필요함
             readMsgToBeSeen()
             return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         }
-        // const childbodyAttr = hasProp() ? true : false
-        // const ele = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
-        // const topEntryPoint = 200
-        // const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
-        // let which = "stop"
-        // if (prevScrollY) {
-        //     if (sTop < prevScrollY) {
-        //         which = "up"
-        //     } else if (sTop > prevScrollY) {
-        //         which = "down"
-        //     }
-        // }
+        //const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+        const childbodyAttr = hasProp() ? true : false
+        const ele = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
+        const topEntryPoint = 200
+        const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
+        let which = "stop"
+        if (prevScrollY) {
+            if (sTop < prevScrollY) {
+                which = "up"
+            } else if (sTop > prevScrollY) {
+                which = "down"
+            }
+        }
         prevScrollY = sTop
         saveCurScrollY(prevScrollY) 
         //읽어온 데이터가 없을 땐 getList() 호출하지 않으면 베스트인데 onScrollEnd()와 getList()가 각각 비동기로 처리되므로
         //여기서 예를 들어, if (resultCnt != 0)인 경우만 다시 호출하는 것은 맞지 않음. 나중에 방법을 찾기로 함
-        // if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
-        //     prevScrollHeight = scrollArea.value.scrollHeight
-        //     fetchByScrollEnd.value = true
-        //     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-        // } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
-        //     //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
-        //     //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
-        //     //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
-        //     fetchByScrollEnd.value = true
-        //     await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
-        // } else {
-        //     readMsgToBeSeen()
-        // }
-        prevScrollHeight = scrollArea.value.scrollHeight
-        readMsgToBeSeen()*/
+        if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
+            prevScrollHeight = scrollArea.value.scrollHeight
+            fetchByScrollEnd.value = true
+            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+        } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
+            //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
+            //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
+            //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
+            fetchByScrollEnd.value = true
+            await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+        } else {
+            readMsgToBeSeen()
+        }
     }
 
     async function refreshMsgDtlWithQryAction(msgid) {
@@ -1840,8 +1824,10 @@
             </div>
             <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span> 
         </div> 
-        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollEnd="onScrollEnd">
-            <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scrollend="onScrollEnd" @scroll="onScrolling">
+            <div v-show="afterScrolled" ref="observerTopTarget" style="background:beige;width:100%;height:200px">
+                {{ "Loading..." }}
+            </div>
             <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
                 :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
@@ -1955,7 +1941,9 @@
                     </span>                    
                 </div>
             </div>
-            <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+            <div v-show="afterScrolled" ref="observerBottomTarget" style="background:beige;width:100%;height:300px">
+                {{ "Loading..." }}
+            </div>
         </div>
         <div class="chan_center_footer">
             <div class="editor_header">

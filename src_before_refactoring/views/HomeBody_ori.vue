@@ -1,6 +1,6 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onUnmounted } from 'vue' 
-    import { useRouter, useRoute } from 'vue-router'
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated } from 'vue' 
+    import { useRoute } from 'vue-router'
     import axios from 'axios'
     
     import hush from '/src/stores/Common.js'
@@ -10,12 +10,11 @@
     import PopupCommon from "/src/components/PopupCommon.vue"
     import MemberPiceach from "/src/components/MemberPiceach.vue"
             
-    const router = useRouter()
     const route = useRoute()
     const gst = GeneralStore()
 
     /////////////////////////////////////////////////////////////////////////////////////
-    //여기는 Home.vue, Dm.vue, Later.vue처럼 왼쪽패널에서 HomeBody로 통신할 때 사용하는 부분임
+    //여기는 Home.vue나 Later.vue처럼 왼쪽패널에서 HomeBody로 통신할 때 사용하는 부분임
     //아래 defineExpose()에 정의된 함수를 패널에서 호출 (이 프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js const later = 부분에 정리해 두었음)
     defineExpose({ procFromParent })
 
@@ -33,17 +32,13 @@
         } else if (kind == "refreshMsg") {
             const rs = await getMsg({ msgid: obj.msgid })
             if (rs == null) return
-            // let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
-            // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
-            //     //아래는 3군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-            //     item.BODY = rs.msgmst.BODY
-            //     item.UDT = rs.msgmst.UDT
-            //     item.reply = rs.reply
-            //     item.replyinfo = rs.replyinfo
-            //     item.act_later = rs.act_later
-            //     item.act_fixed = rs.act_fixed
-            // }
-            refreshWithGetMsg(rs, obj.msgid)
+            let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
+            if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
+                item.BODY = rs.msgmst.BODY
+                item.UDT = rs.msgmst.UDT
+                item.act_later = rs.act_later
+                item.act_fixed = rs.act_fixed
+            }
         } else if (kind == "deleteMsg") {
             const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
             if (idx > -1) msglist.value.splice(idx, 1)
@@ -69,15 +64,10 @@
     }
 
     const homebodyRef = ref(null) //HomeBody(부모)가 HomeBody(자식)의 procFromParent()를 호출하기 위함
-    let listMsgSel = ref('all')
     let thread = ref({ msgid: null, msgidChild: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
     function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
-        if (thread.value.msgid) {
-            thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
-            setWidthForThread(null, "close")            
-        }
         thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
         thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
         setWidthForThread()
@@ -90,16 +80,14 @@
         } else if (obj.type == "refreshFromReply") {
             const rs = await getMsg({ msgid: obj.msgid }, true)
             if (rs == null) return
-            // let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
-            // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
-            //     ////아래는 군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-            //     item.reply = rs.reply
-            //     item.replyinfo = rs.replyinfo
-            //     item.act_later = rs.act_later
-            //     item.act_fixed = rs.act_fixed
-            //     item.background = rs.act_later ? hush.cons.color_act_later : ""
-            // }
-            refreshWithGetMsg(rs, obj.msgid)
+            let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
+            if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
+                item.reply = rs.reply
+                item.replyinfo = rs.replyinfo
+                item.act_later = rs.act_later
+                item.act_fixed = rs.act_fixed
+                item.background = rs.act_later ? hush.cons.color_act_later : ""
+            }
         }
     }
 
@@ -118,13 +106,9 @@
     }
 
     function setBasicInfoInProp() {
-        // if (route.params.chanid && route.params.grid) {
-        //     chanId = route.params.chanid
-        //     grId = route.params.grid
-        // }
-        if (route.params.chanid) {
+        if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
-            //grId = route.params.grid
+            grId = route.params.grid
         }
         if (props.data.msgid) { //route가 아님을 유의
             msgidInChan = props.data.msgid //댓글의 msgid일 수도 있음
@@ -137,12 +121,8 @@
     }
     /////////////////////////////////////////////////////////////////////////////////////
 
-    let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
-    let afterScrolled = ref(false)
-
     const MAX_PICTURE_CNT = 11
-    const g_userid = gst.auth.getCookie("userid")
-    let mounting = true, appType
+    let mounting = true
     
     let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //HomeBody가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
     const scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
@@ -151,9 +131,9 @@
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
         
-    let sideMenu, chanId, msgidInChan //grId, 
+    let sideMenu, grId, chanId, msgidInChan
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
-    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
+    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({})
     let msglist = ref([]), fetchByScrollEnd = ref(false)
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
@@ -201,29 +181,6 @@
     5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 
        router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함 */
 
-    const observerTopScroll = () => {
-        observerTop.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                console.log("2222222222222222222222222222")
-                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-            } else {
-                return
-            }
-        })
-        observerTop.value.observe(observerTopTarget.value)
-    }
-
-    const observerBottomScroll = () => {
-        observerBottom.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
-            } else {
-                return
-            }
-        })
-        observerBottom.value.observe(observerBottomTarget.value)
-    }
-    
     onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
         //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
@@ -231,7 +188,6 @@
         //또 다른 현상은 새로고침하면 Home.vue가 먼저 실행되는 것이 아닌 HomeBody.vue의 onMounted가 먼저 실행되어서 Home.vue가 실행되면서 
         //호출하는 HomeBody.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
-            appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan"
             if (hasProp()) {
                 console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
@@ -249,12 +205,8 @@
                 } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
                 }
-                try { 
-                    inEditor.value.focus() 
-                } catch {}
+                try { inEditor.value.focus() } catch {}
             }
-            observerTopScroll()
-            observerBottomScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -273,6 +225,7 @@
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+            debugger
             if (route.path.startsWith("/main/home/home_body")) {
                 //if (gst.objHome[chanId]) 
                 gst.home.procFromBody("recall", { chanid: chanId })
@@ -280,8 +233,6 @@
                 gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
-        observerTopScroll()
-        observerBottomScroll()        
     })
 
     //onDeactivated(() => {
@@ -298,11 +249,6 @@
         gst.objSaved[key].scrollY = prevScrollY*/
     //})
 
-    onUnmounted(() => {
-        observerTop.value.disconnect()
-        observerBottom.value.disconnect()
-    })
-
     function setBasicInfo() {        
         sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
         if (!sideMenu) { //gst.selSideMenu가 빈값으로 넘어 오는 경우가 가끔 있는데 비동기실행이 어딘지 찾기가 어려워 일단 아래 코딩 보완
@@ -310,14 +256,9 @@
             const arr = route.fullPath.split("/")
             sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
         }
-        // if (route.params.chanid && route.params.grid) {
-        //     chanId = route.params.chanid
-        //     grId = route.params.grid
-        //     //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
-        //     //gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
-        // } else 
-        if (route.params.chanid) {
+        if (route.params.chanid && route.params.grid) {
             chanId = route.params.chanid
+            grId = route.params.grid
             //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
             //gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
@@ -365,19 +306,8 @@
         alert("hahaha")
     }
 
-    async function listMsg(kind) {
-        if (kind == 'file') {
-            alert("not yet!!!")
-            return
-        }
-        listMsgSel.value = kind
-        msglist.value = []
-        if (kind == 'all') {
-            savLastMsgMstCdt = hush.cons.cdtAtLast
-            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-        } else {
-            await getList({ kind: kind })
-        }        
+    function chanMsg(kind) {
+        alert("hahaha")
     }
 
     function chkWithinTime(dt1, dt2) {
@@ -386,18 +316,17 @@
         return (minuteDiff <= 1) ? true : false
     }
 
-    //chanid는 기본 param //grid, 
+    //grid, chanid는 기본 param
     //1) lastMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) firstMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
     //3) firstMstMsgCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
     //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
     //5) msgid + kind(withReply) : 1. 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI 2. 나중에..내활동..에서 기본 클릭시 보여 주는 UI
-    //6) kind(notyet or unread) : 1000개만 읽음
     async function getList(addedParam) {
+        if (onGoingGetList) return
         try {
-            if (onGoingGetList) return
             onGoingGetList = true
-            let param = { chanid: chanId } //기본 param //grid: grId, 
+            let param = { grid: grId, chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt
@@ -418,10 +347,10 @@
                 getAlsoWhenDown = ""
             }
             const res = await axios.post("/chanmsg/qry", param)
-            const rs = gst.util.chkAxiosCode(res.data) 
+            const rs = gst.util.chkAxiosCode(res.data)      
             fetchByScrollEnd.value = false
             if (!rs) {
-                onGoingGetList = false                
+                onGoingGetList = false
                 return
             }
             grnm.value = rs.data.chanmst.GR_NM
@@ -429,7 +358,6 @@
             chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             document.title = channm.value + "[채널]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
-            chanmemFullExceptMe.value = []
             for (let i = 0; i < rs.data.chandtl.length; i++) {
                 const row = rs.data.chandtl[i]                
                 if (row.PICTURE == null) {
@@ -442,21 +370,25 @@
                 }
                 chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
                 if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
-                if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
             }
             chandtl.value = rs.data.chandtl
             if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
             const msgArr = rs.data.msglist
-            if (msgArr.length == 0) {
-                onGoingGetList = false
-                afterScrolled.value = false
-                return 
-            }
             const msgidParent = rs.data.msgidParent //atHome만 사용함
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i]
-                //if (row.MSGID == '20250419095152486066082566') debugger
+                // if (kind == "atHome" || kind == "withReply") {
+                //     if (msgidParent) {
+                //         if (row.MSGID == msgidParent) row.background = "lightsteelblue"
+                //     } else {
+                //         if (row.MSGID == msgid) { //댓글의 부모글은 무조건 베이지
+                //             row.background = "beige"
+                //         } else if (props.data && row.MSGID == props.data.msgidChild && route.fullPath.includes("/later_body/")) {
+                //             row.background = "lightsteelblue" //props.data.msgidChild는 스레드에서 '나중에'등으로 표시된 댓글임
+                //         }
+                //     }
+                // }
                 if (kind == "withReply" && i == 0) {
                     row.background = "beige"
                 } else {
@@ -464,13 +396,6 @@
                         row.background = hush.cons.color_act_later
                     }
                 }
-                let tempBody = row.BODY, replaced = false
-                for (let item of row.msgdtlmention) {
-                    let exp = new RegExp("@" + item.USERNM, "g")
-                    tempBody = tempBody.replace(exp, "<span wiseband=true style='font-weight:bold'>@" + item.USERNM + "</span>")
-                    replaced = true
-                }
-                if (replaced) row.BODY = tempBody
                 for (let item of row.msgimg) {
                     if (!item.BUFFER) continue //잘못 insert된 것임
                     const uInt8Array = new Uint8Array(item.BUFFER.data)
@@ -497,8 +422,7 @@
                         item.text = arr[0]
                         item.url = arr[1]
                     }
-                } 
-                //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
+                } //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
                 if (firstMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
@@ -586,7 +510,7 @@
                 if (msgRow.value[props.data.msgidChild]) {
                     msgRow.value[props.data.msgidChild].scrollIntoView()
                 }
-            } else if (lastMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 1000개만 가져옴
+            } else if (lastMsgMstCdt == hush.cons.cdtAtLast) {
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else if (lastMsgMstCdt) {
                 if (msgArr.length > 0) {
@@ -603,7 +527,6 @@
             } else if (firstMsgMstCdt) {
                 //그냥 두면 됨
             }
-            readMsgToBeSeen()
             onGoingGetList = false //console.log(msgArr.length+"=====")
         } catch (ex) {
             onGoingGetList = false
@@ -624,17 +547,6 @@
             return rs.data
         } catch (ex) {
             gst.util.showEx(ex, true)
-        }
-    }
-
-    function refreshWithGetMsg(rs, msgid) {
-        let item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (item) { //필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 것임
-            item.reply = rs.reply
-            item.replyinfo = rs.replyinfo
-            item.act_later = rs.act_later
-            item.act_fixed = rs.act_fixed
-            item.background = rs.act_later ? hush.cons.color_act_later : ""
         }
     }
 
@@ -681,22 +593,6 @@
     }
 
     function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        let textRead, oldKind, newKind
-        const msgdtlRow = row.msgdtl.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
-        if (msgdtlRow) {
-            oldKind = msgdtlRow.KIND
-            if (msgdtlRow.KIND == "read") {
-                textRead = "다시읽지않음으로 처리"
-                newKind = "unread"
-            } else {
-                textRead = "읽음으로 처리"
-                newKind = "read"
-            }
-        } else {
-            oldKind = "notyet"
-            textRead = "읽음으로 처리"
-            newKind = "read"
-        }
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "반응 추가", img: "dimgray_emoti.png", func: function(item, idx) {
@@ -708,8 +604,8 @@
             { nm: "메시지 전달", img: "dimgray_forward.png", func: function(item, idx) {
                 
             }},
-            { nm: textRead, func: function(item, idx) {
-                updateWithNewKind(row.MSGID, oldKind, newKind)
+            { nm: "읽지않음으로 표시", func: function(item, idx) {
+                alert(item.nm+"@@@@"+idx)
             }},
             { nm: "리마인더 받기", child: [
                 { nm: "1시간 후", func: function(item, idx) { 
@@ -776,159 +672,47 @@
         row.hover = false
     }
 
-    const onScrolling = () => { 
-        if (!afterScrolled.value) afterScrolled.value = true
-        prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
-        prevScrollHeight = scrollArea.value.scrollHeight
+    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
+        const sTop = scrollArea.value.scrollTop     
         if (hasProp()) {
-            //readMsgToBeSeen()
+            prevScrollY = sTop //자식에서도 prevScrollY는 필요함    
             return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         }        
-        saveCurScrollY(prevScrollY)
-        //readMsgToBeSeen()
-    }
-
-    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-        readMsgToBeSeen()    
-        /*const sTop = scrollArea.value.scrollTop     
-        if (hasProp()) {
-            prevScrollY = sTop //자식에서도 prevScrollY는 필요함
-            readMsgToBeSeen()
-            return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
+        const ele = document.getElementById("chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+        const topEntryPoint = 200
+        const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
+        let which = "stop"
+        if (prevScrollY) {
+            if (sTop < prevScrollY) {
+                which = "up"
+            } else if (sTop > prevScrollY) {
+                which = "down"
+            }
         }
-        // const childbodyAttr = hasProp() ? true : false
-        // const ele = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
-        // const topEntryPoint = 200
-        // const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
-        // let which = "stop"
-        // if (prevScrollY) {
-        //     if (sTop < prevScrollY) {
-        //         which = "up"
-        //     } else if (sTop > prevScrollY) {
-        //         which = "down"
-        //     }
-        // }
         prevScrollY = sTop
         saveCurScrollY(prevScrollY) 
         //읽어온 데이터가 없을 땐 getList() 호출하지 않으면 베스트인데 onScrollEnd()와 getList()가 각각 비동기로 처리되므로
         //여기서 예를 들어, if (resultCnt != 0)인 경우만 다시 호출하는 것은 맞지 않음. 나중에 방법을 찾기로 함
-        // if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
-        //     prevScrollHeight = scrollArea.value.scrollHeight
-        //     fetchByScrollEnd.value = true
-        //     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-        // } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
-        //     //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
-        //     //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
-        //     //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
-        //     fetchByScrollEnd.value = true
-        //     await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
-        // } else {
-        //     readMsgToBeSeen()
-        // }
-        prevScrollHeight = scrollArea.value.scrollHeight
-        readMsgToBeSeen()*/
-    }
-
-    async function refreshMsgDtlWithQryAction(msgid) {
-        let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
-        if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
-        const item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
-    }
-
-    async function updateWithNewKind(msgid, oldKind, newKind) {
-        try {            
-            const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
-            const res = await axios.post("/chanmsg/updateWithNewKind", rq)
-            let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid)
-            if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
-                evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
-                const rs = await getMsg({ msgid: props.data.msgid })
-                if (rs == null) return
-                refreshWithGetMsg(rs, props.data.msgid)
-            //} else { //굳이 실행하지 않아도 될 듯
-            //    //if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
-            }
-            if (oldKind == "read" || oldKind == "unread") {
-                if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
-                    const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
-                    if (idx > -1) msglist.value.splice(idx, 1)
-                }
-                return //패널 업데이트 필요없음 (notyet은 변동없음)
-            }
-            if (route.fullPath.includes("/home_body/")) {
-                gst.home.procFromBody("updateUnreadCnt", rq)
-            } else if (route.fullPath.includes("/dm_body/")) {
-                gst.dm.procFromBody("updateUnreadCnt", rq)
-            }
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
+        if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
+            prevScrollHeight = scrollArea.value.scrollHeight
+            fetchByScrollEnd.value = true
+            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+        } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
+            //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
+            //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
+            //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
+            fetchByScrollEnd.value = true
+            await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
         }
     }
 
-    async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
-        const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
-        if (!eleTop) {
-            return
-        } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음 =>
-            setTimeout(function() { readMsgToBeSeen() }, 500)
-        } else {
-            const idTop = eleTop.id
-            let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
-            if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
-                const len = msglist.value.length
-                const start = (idx - 10 < 0) ? 0 : idx - 10
-                const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
-                //const eleParent = document.getElementById("chan_center_body")
-                const childbodyAttr = hasProp() ? true : false
-                const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
-                const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
-                const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
-                const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
-                const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + (hasProp() ? 0 : eleNav.offsetHeight)
-                console.log(start+"#####################"+end)
-                for (let i = start; i <= end; i++) {
-                    const msgdtlArr = msglist.value[i].msgdtl
-                    // const msgdtlRow = msgdtlArr.find(item => { //debugger용으로 일단 풀어서 코딩
-                    //     if ((item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid)) {
-                    //         return true
-                    //     } else {
-                    //         return false
-                    //     }
-                    // })
-                    const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
-                    const msgid = msglist.value[i].MSGID
-                    if (msgdtlRow) { //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-                        console.log("@@@@"+msgid) //테스트용                       
-                    } else {
-                        const ele = msgRow.value[msgid]
-                        if (ele) {
-                            const rect = ele.getBoundingClientRect()
-                            let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
-                            if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
-                                bool = true //테스트용
-                                updateWithNewKind(msgid, "notyet", "read")
-                            } else {
-                                bool = false //테스트용
-                            }
-                            console.log(bool+"===="+msgid) //테스트용
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
-        const childbodyAttr = hasProp() ? true : false
-        const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
-        const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
-        let yy = rect.top + 6
-        const ele = document.elementFromPoint(xx, yy)
-        return ele
-    }
+    // const getTopMsgBody = () => { //지우지 말 것. 2) 관련 : 육안으로 보이는 맨 위 MSGID의 div(msgbody 및 procMenu 클래스 보유) 찾기
+    //     const rect = hush.util.getRect("#chan_center_body") //아이디가 2개 중복되지만 자식에서는 위에서 return되므로 문제없을 것임
+    //     const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
+    //     let yy = rect.top + 6
+    //     const ele = document.elementFromPoint(xx, yy)
+    //     return ele
+    // }
 
     async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid
         try { //index는 메시지 배열의 항목 인덱스. idx는 그 항목내 file or image or link array의 인덱스
@@ -1084,18 +868,14 @@
             } else {
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
                 if (rs == null) return
-                // let item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
-                // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
-                //     //아래는 3군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-                //     item.BODY = rs.msgmst.BODY
-                //     item.UDT = rs.msgmst.UDT
-                // }
-                refreshWithGetMsg(rs, editMsgId.value)
+                let item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
+                if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
+                    item.BODY = rs.msgmst.BODY
+                    item.UDT = rs.msgmst.UDT
+                }
             }            
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") gst.later.procFromBody("update", rq)
-            } else if (route.fullPath.includes("/dm_body/")) {
-                gst.dm.procFromBody("update", rq)
             }
             if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
             msgbody.value = ""            
@@ -1137,35 +917,6 @@
         //1) 그래서, 에디터의 focusin/blur event로 하고자 했으나 그 상태값만으로는 체크가 어려움 : 이미지(버튼)을 누르는 순간 blur됨
         //2) blur되어도 클릭하는 순간의 갭이 짧기때문에 그걸 체크해서 disabled/enabled 효과를 내는 것임
         //참고로, let currentNode = window.getSelection().focusNode에서 parent로 올라가면 에디터 노드를 만날 수 있음
-    }
-
-    function mentionEnter(row, row1) {
-        let exp = new RegExp("@" + row1.USERNM, "g")
-        row.BODY = row.BODY.replace(exp, "<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>")
-    }
-
-    function mentionLeave(row, row1) {
-        let exp = new RegExp("<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>", "g")
-        row.BODY = row.BODY.replace(exp, "@" + row1.USERNM)
-    }
-
-    function procMention(e, row) {
-        let imgUrl
-        if (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) {
-            imgUrl = chandtlObj.value[row.USERID].url
-        } else {
-            imgUrl = gst.html.getImageUrl('user.png')
-        }
-        gst.ctx.data.header = "<img src='" + imgUrl + "' style='width:32px;height:32px'><span style='margin-left:5px'>" + row.USERNM + "</span>"
-        gst.ctx.menu = [
-            { nm: "DM으로 이동", func: function() {
-                
-            }},
-            { nm: "VIP 설정", func: function() {
-                
-            }}
-        ]
-        gst.ctx.show(e)            
     }
 
     async function addEmoti() {
@@ -1558,12 +1309,16 @@
     }
 
     async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
-        try {            
+        try {
+            
             const rq = { chanid: chanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid)
+            rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
+            if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
+            const item = msglist.value.find(function(row) { return row.MSGID == msgid })
+            if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1646,8 +1401,8 @@
         gst.ctx.show(e)
     }
 
-    async function test(e) {
-        //gst.util.setToast("gggggg")
+    async function test() {
+        gst.util.setToast("gggggg")
         //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
         //emits('ev-test', obj)
     }
@@ -1789,15 +1544,10 @@
     <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
-                <div v-if="appType=='dm'" style="display:flex;align-items:center">
-                    <span>{{ chanmemFullExceptMe.join(", ") }}</span>
-                </div>
-                <div v-else style="display:flex;align-items:center">
-                    <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
-                    <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
-                </div>
+                <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
+                <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
                 <div v-if="hasProp()" style="margin-right:5px">스레드</div>
-                <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:20px">data by scrolling</span> 
+                <span v-show="fetchByScrollEnd" style="color:red;margin-left:20px">data by scrolling</span> 
             </div>
             <div class="chan_center_header_right">
                 <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
@@ -1817,31 +1567,21 @@
                 </div>
             </div>
         </div>
-        <div v-if="!hasProp()" class="chan_center_nav" id="chan_center_nav">
-            <div class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
+        <div v-if="!hasProp()" class="chan_center_nav">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px 5px 0;border-bottom:3px solid black;border-radius:0" @click="chanMsg('M')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
             </div>
-            <div class="topMenu" :class="listMsgSel == 'notyet' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('notyet')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
-                <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
-            </div>
-            <div class="topMenu" :class="listMsgSel == 'unread' ? 'list_msg_sel' : 'list_msg_unsel'"  @click="listMsg('unread')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
-                <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
-            </div>
-            <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('file')">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="chanMsg('F')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @mousedown.right="(e) => test(e)">
+            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @click="test">
                 <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
                 <span style="margin-left:5px">테스트</span> 
             </div>
-            <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span> 
         </div> 
-        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollEnd="onScrollEnd">
-            <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+        <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
             <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
                 :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
@@ -1854,8 +1594,7 @@
                 </div>
                 <div style="width:100%;display:flex;margin:10px 0">
                     <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
-                        <!-- <span v-show="row.stickToPrev && row.hover">{{ hush.util.displayDt(row.CDT, true) }}</span> -->
-                        <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
+                        <span v-show="row.stickToPrev && row.hover">{{ hush.util.displayDt(row.CDT, true) }}</span>
                         <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
                         <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                     </div>
@@ -1868,12 +1607,6 @@
                         <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                         <span style="margin-left:3px">{{ row1.CNT}}</span>
                     </div>
-                    <!-- 나중에 정리되면 여기 열고 위에 닫기 <div v-for="(row1, idx1) in row.msgdtl">
-                        <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                            <span style="margin-left:3px">{{ row1.CNT}}</span>
-                        </div>
-                    </div> -->
                     <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
                         <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
                     </div>     
@@ -1891,17 +1624,7 @@
                             <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
                             <span style="margin:0 4px;color:dimgray">최근 :</span>
                             <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
-                            <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
                         </div>
-                    </div>
-                    <div style="margin-left:9px;color:red">{{ row.MSGID }}</div>
-                </div>
-                <div class="msg_body_sub"><!-- Mention -->
-                    <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
-                        <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
-                        @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
-                            @{{ row1.USERNM }}
-                        </span>
                     </div>
                 </div>
                 <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
@@ -1955,7 +1678,6 @@
                     </span>                    
                 </div>
             </div>
-            <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
         </div>
         <div class="chan_center_footer">
             <div class="editor_header">
@@ -2056,18 +1778,16 @@
         width:100%;min-height:50px;display:flex;justify-content:space-between;overflow:hidden
     }
     .chan_center_header_left {
-        width:70%;height:100%;display:flex;align-items:center;
+        width:50%;height:100%;display:flex;align-items:center;
         font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
-        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
+        width:50%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .chan_center_nav {
         width:100%;min-height:30px;display:flex;align-items:center;
         border-bottom:1px solid dimgray;overflow:hidden
     }
-    .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
-    .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
@@ -2121,7 +1841,7 @@
     .chan_right {
         height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
-    .topMenu { cursor:pointer }
+    .topMenu { border-radius:5px;cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
     .topMenu:active { background:var(--active-color);font-weight:bold }
     .replyAct { display:flex;align-items:center;cursor:pointer }
@@ -2141,5 +1861,4 @@
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
-    .mynotyet { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:orange;color:white;font-size:12px;padding:4px;margin-left:10px }
 </style>
