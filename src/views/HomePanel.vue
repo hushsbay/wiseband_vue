@@ -12,24 +12,19 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    //1. Home 패널 상태 정의는 아래와 같음
+    //1. HomePanel 상태 정의는 아래와 같음
     //   1) Depth는 1,2 단계만 존재 : 1단계는 사내 그룹 (슬랙의 워크스페이스) 2단계는 채널
-    //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침)
-    //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 함
-    //2. Home에서는 MsgList의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
-    //   예를 들어, 뒤로 가면 라우팅이 MsgList의 채널 심지어는 메시지아이디도 포함되어 있는데 여기에 맞춰 Home도 트리노드, 스크롤 등이 맞춰져야 함
-    //   그런데, 문제는 사이드메뉴 '홈'을 누르면 Home이 먼저 호출되고 MsgList가 나중 호출되는데 뒤로 가기 누르면 MsgList가 먼저 호출되는 경우가 많음
-    //   MsgList가 먼저 호출되면 채널이 정해지므로 Home에게 어느 채널로 가라고 전달되는데 Home이 먼저 호출되면 
-    //3. 상태를 가져오는 경우는 아래와 같음 : localStorage는 save후 1)3)에서 recall함
-    //   1) 페이지 처음 열린 경우 및 새로 고침 : onMounted
-    //   2) 뒤로가기시 MsgList가 A채널에서 B채널로 가는 경우 : 기존 B채널의 데이터가 캐싱되므로 그때 MsgList의 스크롤/선택상태를 가져옴
-    //   3) 사이드메뉴에서 직접 홈을 누를 경우는 MsgList가 아닌 Home이 라우팅되므로 그 홈에서 마지막 열었던 채널을 클릭해주면 됨
+    //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
+    //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
+    //2. HomePanel에서는 MsgList의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
+    //   예1) MsgList url에서 뒤로 가기 눌러 다른 MsgList url로 라우팅되면 MsgList가 먼저 호출되므로 HomePanel의 트리노드 등도 같이 맞춰져야 함
+    //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 역으로 같이 맞춰져야 함
 
-    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
+    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //localStorage 이름 유의
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
 
     function handleFromResizer(chanSideVal, chanMainVal) {

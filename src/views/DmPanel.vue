@@ -17,12 +17,12 @@
     let afterScrolled = ref(false)
 
     const msglistRef = ref(null), notyetChk = ref(false), searchWord = ref('')
-    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
+    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_dmsidewidth ?? '300px')
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_dmsidewidth ?? '300px') //localStorage 이름 유의
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
 
     function handleFromResizer(chanSideVal, chanMainVal) {

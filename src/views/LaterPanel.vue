@@ -16,7 +16,7 @@
     //목록의 순서때문에 Object나 Map을 이용하기 어려워 v-for에서는 주로 Array를 이용해 업뎃을 하는데 크기가 클수록 msigid를 찾는데 시간이 더 걸리는 구조임
     //{ "327846325832467" : 0(항목인덱스) .. } 식으로는 (항목 삭제도 없고 push만 있어야 가능한데 splice도 있으니 index 변함) 어려움
     //1) 마우스오버 및 클릭시 색상 변경 등은 { "327846325832467": { hover: true, sel: false }.. } 으로 가능하므로 최대한 object로 처리하도록 노력
-    //2) 나머지는 육안으로 화면에 보이는 것만 업데이트 등을 고려
+    //2) 나머지는 육안으로 화면에 보이는 것만 업데이트 등을 고려했으나
     //사실, EndlessScroll해봤자 10000개를 넘으면 많은 것일테니 루프에 크게 부담갖지 말고 배열만으로 처리하기로 함
     //최종적으로, msgRow가 msgid를 가지고 있는 element 객체이므로 그 element 속성에 배열 인덱스를 가지고 있으면 찾는데 시간을 대폭 줄일 수 있을 것으로 판단됨
 
@@ -24,12 +24,12 @@
     let afterScrolled = ref(false)
 
     const msglistRef = ref(null)    
-    let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
+    let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px')
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px') //localStorage 이름 유의
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
 
     function handleFromResizer(chanSideVal, chanMainVal) {
