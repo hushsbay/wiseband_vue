@@ -16,14 +16,14 @@
     //   1) Depth는 1,2 단계만 존재 : 1단계는 사내 그룹 (슬랙의 워크스페이스) 2단계는 채널
     //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침)
     //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 함
-    //2. Home에서는 HomeBody의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
-    //   예를 들어, 뒤로 가면 라우팅이 HomeBody의 채널 심지어는 메시지아이디도 포함되어 있는데 여기에 맞춰 Home도 트리노드, 스크롤 등이 맞춰져야 함
-    //   그런데, 문제는 사이드메뉴 '홈'을 누르면 Home이 먼저 호출되고 HomeBody가 나중 호출되는데 뒤로 가기 누르면 HomeBody가 먼저 호출되는 경우가 많음
-    //   HomeBody가 먼저 호출되면 채널이 정해지므로 Home에게 어느 채널로 가라고 전달되는데 Home이 먼저 호출되면 
+    //2. Home에서는 MsgList의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
+    //   예를 들어, 뒤로 가면 라우팅이 MsgList의 채널 심지어는 메시지아이디도 포함되어 있는데 여기에 맞춰 Home도 트리노드, 스크롤 등이 맞춰져야 함
+    //   그런데, 문제는 사이드메뉴 '홈'을 누르면 Home이 먼저 호출되고 MsgList가 나중 호출되는데 뒤로 가기 누르면 MsgList가 먼저 호출되는 경우가 많음
+    //   MsgList가 먼저 호출되면 채널이 정해지므로 Home에게 어느 채널로 가라고 전달되는데 Home이 먼저 호출되면 
     //3. 상태를 가져오는 경우는 아래와 같음 : localStorage는 save후 1)3)에서 recall함
     //   1) 페이지 처음 열린 경우 및 새로 고침 : onMounted
-    //   2) 뒤로가기시 HomeBody가 A채널에서 B채널로 가는 경우 : 기존 B채널의 데이터가 캐싱되므로 그때 HomeBody의 스크롤/선택상태를 가져옴
-    //   3) 사이드메뉴에서 직접 홈을 누를 경우는 HomeBody가 아닌 Home이 라우팅되므로 그 홈에서 마지막 열었던 채널을 클릭해주면 됨
+    //   2) 뒤로가기시 MsgList가 A채널에서 B채널로 가는 경우 : 기존 B채널의 데이터가 캐싱되므로 그때 MsgList의 스크롤/선택상태를 가져옴
+    //   3) 사이드메뉴에서 직접 홈을 누를 경우는 MsgList가 아닌 Home이 라우팅되므로 그 홈에서 마지막 열었던 채널을 클릭해주면 됨
 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true
@@ -57,13 +57,13 @@
             if (route.path == "/main/home") {
                 chanClickOnLoop()
             } else {
-                //HomeBody가 라우팅되는 루틴이며 HomeBody로부터 처리될 것임
+                //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
         }
     })
 
-    watch([() => gst.selChanHome], () => { //HomeBody -> GeneralStore -> watch
-        //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 HomeBody의 라우팅에서 처리
+    watch([() => gst.selChanHome], () => { //MsgList -> GeneralStore -> watch
+        //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 MsgList의 라우팅에서 처리
         chanRow.value[gst.selChanHome].scrollIntoView({ behavior: "smooth", block: "nearest" })
         chanClick(null, null, gst.selChanHome)
     })
@@ -76,7 +76,7 @@
 
     function setBasicInfo() {
         document.title = "WiSEBand 홈"
-        gst.selSideMenu = "mnuHome" //HomeBody.vue에 Blank 방지
+        gst.selSideMenu = "mnuHome" //MsgList.vue에 Blank 방지
     }
 
     async function getList() {
@@ -161,7 +161,7 @@
                         procChanRowImg(item)
                     }
                 })
-                if (chanid) { //Back()경우, HomeBody에 열린 채널의 원래 스크롤값을 watch에서 가져온 후 여기로 와서 채널노드의 색상 선택
+                if (chanid) { //Back()경우, MsgList에 열린 채널의 원래 스크롤값을 watch에서 가져온 후 여기로 와서 채널노드의 색상 선택
                     const row1 = gst.listHome.find((item) => item.CHANID == chanid)
                     if (row1) {
                         row1.sel = true
@@ -172,7 +172,7 @@
                     row.sel = true
                     procChanRowImg(row)
                     localStorage.wiseband_lastsel_chanid = row.CHANID
-                    gst.util.goHomeBody('home_body', { chanid: row.CHANID }, refresh)
+                    gst.util.goMsgList('home_body', { chanid: row.CHANID }, refresh)
                 }
             }
         } catch (ex) {
@@ -192,7 +192,7 @@
         } else {
             gst.ctx.menu = [
                 { nm: "메시지목록 새로고침", func: function(item, idx) {
-                    gst.util.goHomeBody('home_body', { chanid: row.CHANID }, true)
+                    gst.util.goMsgList('home_body', { chanid: row.CHANID }, true)
                 }},
                 { nm: "정보 보기", func: function(item, idx) {
 
@@ -266,7 +266,7 @@
     </div>
     <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용 (HomeBody.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
+        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 HomePanel.vue, LaterPanel.vue 등에서만 :key를 사용 (MsgList.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" />

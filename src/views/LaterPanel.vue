@@ -23,7 +23,7 @@
     let observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
-    const homebodyRef = ref(null)    
+    const msglistRef = ref(null)    
     let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
@@ -69,7 +69,7 @@
             if (route.path == "/main/later") {
                 laterClickOnLoop()
             } else {
-                //HomeBody가 라우팅되는 루틴이며 HomeBody로부터 처리될 것임
+                //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
         }
         observerBottomScroll()
@@ -81,7 +81,7 @@
 
     function setBasicInfo() {
         document.title = "WiSEBand 나중에"
-        gst.selSideMenu = "mnuLater" //HomeBody.vue에 Blank 방지
+        gst.selSideMenu = "mnuLater" //MsgList.vue에 Blank 방지
     }
 
     const onScrolling = () => {
@@ -157,7 +157,7 @@
             })
             row.sel = true
             localStorage.wiseband_lastsel_latermsgid = row.MSGID
-            gst.util.goHomeBody('later_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
+            gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -175,7 +175,7 @@
             gst.later.getCount() //화면에 갯수 업데이트
             if (kind != "delete") return //delete인 경우만 오른쪽 패널 업데이트
             const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 '나중에' 처리되어 있는 경우는 부모 색상도 원위치 필요함
-            homebodyRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
+            msglistRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -185,7 +185,7 @@
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "메시지목록 새로고침", func: function(item, idx) {
-                gst.util.goHomeBody('later_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
+                gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
             }},
             { nm: "새창에서 열기", deli: true, func: function(item, idx) {
                 let url = "/main/later/later_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
@@ -217,7 +217,7 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //HomeBody.vue에서 실행 (to later, dm..)
+    function handleEvFromBody() { //MsgList.vue에서 실행 (to later, dm..)
         laterClickOnLoop()
     }
 </script>
@@ -279,10 +279,10 @@
     </div>
     <resizer nm="later" @ev-from-resizer="handleFromResizer"></resizer>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용 (HomeBody.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
+        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 HomePanel.vue, LaterPanel.vue 등에서만 :key를 사용 (MsgList.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
-                <component :is="Component" :key="$route.fullPath" ref="homebodyRef" @ev-to-panel="handleEvFromBody"/>
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
     </div>

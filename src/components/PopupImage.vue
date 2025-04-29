@@ -6,7 +6,7 @@
 
     const gst = GeneralStore()
     const props = defineProps({ param: Object })
-    //const emits = defineEmits(["ev-click"])
+    
     defineExpose({ open, close })
 
     let show = ref(false), vRotate = ref(0), vScale = ref(10), scalMin = ref(10), scaleMax = ref(20)

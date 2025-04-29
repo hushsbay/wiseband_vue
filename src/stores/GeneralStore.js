@@ -11,37 +11,37 @@ const GeneralStore = defineStore('General', () => {
     const route = useRoute()
     const $cookie = inject('$cookies')
 
-    let objSaved = ref({}) //현재는 HomeBody에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
+    let objSaved = ref({}) //현재는 MsgList에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
 
     let selSideMenu = ref("")
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
 
     /* Vue에서의 컴포넌트간 통신은 여러가지 기법이 있는데 콤포넌트간 통신이 필요한 경우는 아래와 같음 
-       Later.vue 패널을 예로 설명. 여기서는 자식과 손주(스레드댓글)가 동일한 HomeBody임을 유의!!
-       1) Later -> HomeBody : 부모 -> 자식 (라우팅)
-       2) Later -> HomeBody(스레드댓글) : 부모 -> 손자 (라우팅도 컴포넌트호출도 아닌 중간에 자식이 전달받아서 전달해야 함)
-       3) HomeBody -> Later : 자식 -> 부모
-       4) HomeBody(스레드댓글) -> Later : 손자 -> 부모
-       5) HomeBody -> HomeBody(스레드댓글) : 자식 -> 손자 (둘의 입장에서는 부모 -> 자식. 라우팅)
-       6) HomeBody(스레드댓글) -> HomeBody : 손자 -> 자식 (둘의 입장에서는 자식 -> 부모)
-       이 프로젝트에서는 HomeBody.vue가 스레드댓글에서도 다시 사용되므로 생각없이 되는대로 통신하는 것은 향후 코딩(유지보수)에 어려움을 줄 수가 있음
+       Later.vue 패널을 예로 설명. 여기서는 자식과 손주(스레드댓글)가 동일한 MsgList임을 유의!!
+       1) Later -> MsgList : 부모 -> 자식 (라우팅)
+       2) Later -> MsgList(스레드댓글) : 부모 -> 손자 (라우팅도 컴포넌트호출도 아닌 중간에 자식이 전달받아서 전달해야 함)
+       3) MsgList -> Later : 자식 -> 부모
+       4) MsgList(스레드댓글) -> Later : 손자 -> 부모
+       5) MsgList -> MsgList(스레드댓글) : 자식 -> 손자 (둘의 입장에서는 부모 -> 자식. 라우팅)
+       6) MsgList(스레드댓글) -> MsgList : 손자 -> 자식 (둘의 입장에서는 자식 -> 부모)
+       이 프로젝트에서는 MsgList.vue가 스레드댓글에서도 다시 사용되므로 생각없이 되는대로 통신하는 것은 향후 코딩(유지보수)에 어려움을 줄 수가 있음
        따라서, 아래와 같이 규칙을 정해서 적용하려고 함 (사실, 모든 걸 스토어에 두고 관리하거나 props/emits로 처리해도 될 것이나 향후 복잡하게 얽힐 것임)
        1),2) 처럼 부모가 자식에게 전달하고자 할 때 (특히, 1)은 라우팅이므로 props 사용안하고 2)도 5)를 생각해서 혼란줄이기 위해 props 쓰지 말기)
-         - HomeBody에 defineExpose({ procFromPanel })처럼 정의하고, Later에서 homebodyRef.value.procFromPanel(row)와 같이 호출함
+         - MsgList에 defineExpose({ procFromPanel })처럼 정의하고, Later에서 homebodyRef.value.procFromPanel(row)와 같이 호출함
          - 이 때 Later에서는 const homebodyRef = ref(null)로 선언하고 <component :is="Component" :key="$route.fullPath" ref="homebodyRef" />에서처럼 homebodyRef를 추가함
-         - 부모가 손주에게는 이 방식(2)으로 바로 전달되지 않고 부모가 다시 자식에게 동일한 방식으로 전달해야 함 : HomeBody->HomeBody스레드댓글의 경우 아래 5) 참조
+         - 부모가 손주에게는 이 방식(2)으로 바로 전달되지 않고 부모가 다시 자식에게 동일한 방식으로 전달해야 함 : MsgList->MsgList스레드댓글의 경우 아래 5) 참조
        3),4) 처럼 자식이나 손주가 부모에게 전달하려 할 때 
-         - 자식이나 손주에서 const emits = defineEmits(["ev-click"])처럼 사용하면 되겠으나 이미 HomeBody(스레드댓글)->HomeBody의 경우에서 사용하고 있으므로
+         - 자식이나 손주에서 const emits = defineEmits(["ev-click"])처럼 사용하면 되겠으나 이미 MsgList(스레드댓글)->MsgList의 경우에서 사용하고 있으므로
          - Later로 전달할 때도 그리 사용하면 향후엔 너무 혼란스러운 상황이 발생할 것임
          - 그래서, 이 프로젝트에서는 이 경우에 한해 스토어에서 변수 및 함수를 공유하는 것으로 함
          - 다만, 특정 vue끼리만 공유하기 위해 GeneralStore와는 별도로 만들어 사용하려 했으나 배열 루프 돌리는데 엄청 느린 현상이 발생해
            해결할 시간을 투여하지 않고 일단 여기 GeneralStore에서 ref 변수와 객체(예: const later =)를 두어 처리함 (**77)
-         - 그런데, ev-to-panel (Later, Dm..참조)는 element를 다루는 내용 + HomeBody(Parent만의경우)라 스토어에서 처리하기가 더 힘들고 emits로 처리해보니까 더 편리함
+         - 그런데, ev-to-panel (Later, Dm..참조)는 element를 다루는 내용 + MsgList(Parent만의경우)라 스토어에서 처리하기가 더 힘들고 emits로 처리해보니까 더 편리함
          - 따라서, 3),4)의 경우 스토어나 ev-to-panel를 상황에 맞게 쓰는 것으로 할 것임
-       5) 처럼 (HomeBody간의 통신에 한해서) 부모가 자식에게 전달하고자 할 때 : omeBody->HomeBody스레드댓글
+       5) 처럼 (MsgList간의 통신에 한해서) 부모가 자식에게 전달하고자 할 때 : omeBody->MsgList스레드댓글
          - props와 defineExpose 사용하기
-       6) 처럼 (HomeBody간의 통신에 한해서) 자식이 부모에게 전달하고자 할 때 : HomeBody(스레드댓글)->HomeBody
+       6) 처럼 (MsgList간의 통신에 한해서) 자식이 부모에게 전달하고자 할 때 : MsgList(스레드댓글)->MsgList
          - emits 사용하기
     */
 
@@ -134,7 +134,7 @@ const GeneralStore = defineStore('General', () => {
 
     }
     
-    const home = { //맨 위 설명 3),4) 참조. HomeBody.vue에서 호출해 패널 화면 업데이트하는 것임
+    const home = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
         procFromBody : async function(type, obj) {
             if (type == "recall") {
@@ -151,7 +151,7 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const dm = { //맨 위 설명 3),4) 참조. HomeBody.vue에서 호출해 패널 화면 업데이트하는 것임
+    const dm = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
         procFromBody : async function(type, obj) {
             if (type == "update") {
@@ -174,13 +174,13 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const later = { //맨 위 설명 3),4) 참조. HomeBody.vue에서 호출해 패널 화면 업데이트하는 것임
+    const later = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
         procFromBody : async function(type, obj) {
-            if (type == "update") { //HomeBody.vue의 saveMsg() 참조 : rq
+            if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
                 const row = listLater.value.find((item) => item.MSGID == obj.msgid)
                 if (row) row.BODYTEXT = obj.bodytext
-            } else if (type == "work") { //HomeBody.vue의 changeAction() 참조 : { msgid: msgid, work: work }
+            } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
                 if (obj.work == "delete") { 
                     const idx = listLater.value.findIndex((item) => item.MSGID == obj.msgid)
                     if (idx > -1) listLater.value.splice(idx, 1)
@@ -320,11 +320,11 @@ const GeneralStore = defineStore('General', () => {
             util.setSnack(msg, sec)
         },
 
-        goHomeBody : async function(nm, params, refresh) { //refresh=true는 모든 동일한 라우팅 찾아 없애고 새로 열어야 할텐데 고민하기로 함
+        goMsgList : async function(nm, params, refresh) { //refresh=true는 모든 동일한 라우팅 찾아 없애고 새로 열어야 할텐데 고민하기로 함
             let obj = { name : nm, params : params}
             if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
             const ele = document.getElementById("chan_center_header") //chan_center_body
-            if (refresh || !ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+            if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
                 await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
             } else {
                 await router.push(obj)

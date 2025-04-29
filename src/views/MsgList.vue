@@ -14,12 +14,12 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    //ev-click    : 가능하면 스토어에서 함수 만들어 처리하는데 여기는 HoneBody와 HomeBody 사이의 통신이라 구분지어 ev-click로 처리해 보는 것임
-    //ev-to-panel : 원래 HoneBody -> Panel(Later, Dm..)는 스토어에서 처리하여 했는데 element를 다루는 내용 + HomeBody(Parent만의경우)라 처리해보니까 더 편리함
+    //ev-click    : 가능하면 스토어에서 함수 만들어 처리하는데 여기는 MsgList와 MsgList 사이의 통신이라 구분지어 ev-click로 처리해 보는 것임
+    //ev-to-panel : 원래 MsgList -> Panel(Later, Dm..)는 스토어에서 처리하여 했는데 element를 다루는 내용 + MsgList(Parent만의경우)라 처리해보니까 더 편리함
     const emits = defineEmits(["ev-click", "ev-to-panel"])
 
     /////////////////////////////////////////////////////////////////////////////////////
-    //여기는 Home.vue, Dm.vue, Later.vue처럼 왼쪽패널에서 HomeBody로 통신할 때 사용하는 부분임
+    //여기는 HomePanel.vue, DmPanel.vue, LaterPanel.vue처럼 왼쪽패널에서 MsgList로 통신할 때 사용하는 부분임
     //아래 defineExpose()에 정의된 함수를 패널에서 호출 (이 프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js const later = 부분에 정리해 두었음)
     defineExpose({ procFromParent })
 
@@ -32,7 +32,7 @@
                 row.background = ""
             }
             if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함
-                if (homebodyRef.value) homebodyRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
+                if (msglistRef.value) msglistRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
             }
         } else if (kind == "refreshMsg") {
             const rs = await getMsg({ msgid: obj.msgid })
@@ -55,7 +55,7 @@
     }
 
     /////////////////////////////////////////////////////////////////////////////////////
-    //스레드(댓글) 관련 : 부모HomeBody(이하 '부모')와 자식HomeBody(이하 '자식')가 혼용되어 코딩됨
+    //스레드(댓글) 관련 : 부모MsgList(이하 '부모')와 자식MsgList(이하 '자식')가 혼용되어 코딩됨
     //네이밍 규칙을 정해서, thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
     //부모/자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개 : 각각 element id 만들어 hasProp()으로 구분해 사용하면 됨
     
@@ -71,7 +71,7 @@
         return false
     }
 
-    const homebodyRef = ref(null) //HomeBody(부모)가 HomeBody(자식)의 procFromParent()를 호출하기 위함
+    const msglistRef = ref(null) //MsgList(부모)가 MsgList(자식)의 procFromParent()를 호출하기 위함
     let listMsgSel = ref('all')
     let thread = ref({ msgid: null, msgidChild: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
@@ -152,7 +152,7 @@
     const g_userid = gst.auth.getCookie("userid")
     let mounting = true, appType
     
-    let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //HomeBody가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
+    let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //MsgList가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
     const scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
 
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
@@ -180,18 +180,18 @@
     let editorIn = ref(false), editorBlurDt = Date.now()
     let inEditor = useTemplateRef('editorRef') //editor = document.getElementById(editorId) editor 대신 inEditor (템플릿 참조) 사용
 
-    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(HomeBody) 구조임 (스레드(댓글)용으로 손자안에 동일한 손자(HomeBody)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
-    1. Home.vue에서 <router-view />를 사용하면 그 자식인 여기 HomeBody.vue가 한번만 마운트되고 
+    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(MsgList) 구조임 (스레드(댓글)용으로 손자안에 동일한 손자(MsgList)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
+    1. HomePanel.vue에서 <router-view />를 사용하면 그 자식인 여기 MsgList.vue가 한번만 마운트되고 
        그 다음에 router.push해도 다시 마운트(아예 호출도) 안됨 : onMounted가 한번만 호출되고 끝.
     2. 그런데, <router-view :key="$route.fullPath"></router-view>와 같이 :key속성을 사용하면 router.push할 때마다 다시 마운트됨
-    3. 그런데, Main.vue에서도 :key를 사용하면 Home.vue에서 router.push할 때에도 Main.vue의 onMounted가 호출되어 문제가 됨
-    4. 따라서, 현재 구조에서는 여기 손자인 HomeBody.vue를 호출하는 자식인 Home.vue에서만 :key를 적용하면 슬랙과 똑같이 채널노드를 클릭할 때마다 라우팅되도록 할 수 있음
+    3. 그런데, Main.vue에서도 :key를 사용하면 HomePanel.vue에서 router.push할 때에도 Main.vue의 onMounted가 호출되어 문제가 됨
+    4. 따라서, 현재 구조에서는 여기 손자인 MsgList.vue를 호출하는 자식인 HomePanel.vue에서만 :key를 적용하면 슬랙과 똑같이 채널노드를 클릭할 때마다 라우팅되도록 할 수 있음
        - 만일 손자 아래 증손자가 필요하고 그것도 라우팅으로 처리하려면 매우 복잡한 핸들링이 필요하므로
        - 아예 증손자는 만들지 말든지 아니면 만들어도 라우팅 아닌 컴포넌트 호출(또는 비동기로 defineAsyncComponent)하기로 함
     5. keepalive때문에 back()시 이전에 열었던 채널 상태 복원되나, 이전 스크롤위치는 구현 필요 */
 
     /* <keep-alive> 구현시
-    1. App.vue, Home.vue, HomeBody.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
+    1. App.vue, HomePanel.vue, MsgList.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" /> :key속성을 router-view가 아닌 이 행에 Component에 넣어야 잘 동작함
@@ -199,14 +199,14 @@
         </router-view>
     2. 위에서 안되는 부분
        1) login후 /main에서 멈춤 (화면 블랭크) 2) 채널 클릭시 펼쳐진 다른 그룹은 접혀짐 3) back()시 노드 선택 색상이 안움직이는데 변경 필요
-    3. 제일 중요한 부분은 채널 클릭시 HomeBody.vue의 onMounted()가 여러번 누적적으로 증가 실행되어, named view로 해결 글도 있긴 한데 구조적으로 어려워,
-       App.vue, Home.vue는 기존대로 <router-view />로 다시 돌리고, HomeBody.vue만 <keep-alive 위처럼 적용하니 일단 누적/중복호출은 없어져서
+    3. 제일 중요한 부분은 채널 클릭시 MsgList.vue의 onMounted()가 여러번 누적적으로 증가 실행되어, named view로 해결 글도 있긴 한데 구조적으로 어려워,
+       App.vue, HomePanel.vue는 기존대로 <router-view />로 다시 돌리고, MsgList.vue만 <keep-alive 위처럼 적용하니 일단 누적/중복호출은 없어져서
        이 환경을 기본으로 문제들을 해결해 나가기로 함 (데이터 가져오기는 <keep-alive>가 지켜주나 스크롤포지션은 안지켜주는데 그 부분은 코딩으로 해결하면 됨)
        1) back()시 노드 선택 색상이 안움직이는데 변경 필요 - router.beforeEach((to, from)로 해결 완료
-    4. 채널내 라우팅은 해결했으나 홈 >> DM >> Back()시 HomeBody.vue의 상태 복원은 안되고 있음. :key="$route.fullPath" 제거후 누적/중복호출 해결. 상태 복원도 잘 됨
+    4. 채널내 라우팅은 해결했으나 홈 >> DM >> Back()시 MsgList.vue의 상태 복원은 안되고 있음. :key="$route.fullPath" 제거후 누적/중복호출 해결. 상태 복원도 잘 됨
        1) 홈 >> DM >> Back()시 Main.vue의 홈 선택 복원은 안되고 있음 : router.beforeEach((to, from)로 해결 완료
-       2) 홈 클릭시 HomeBody.vue 블랭크 페이지 나옴 해결 필요 (이미 히스토리에 있으므로 안나오는데 슬랙은 그 상태로 다시 보여줌) : gst.selSideMenuTimeTag로 해결 완료
-    5. 결론적으로, App.vue, Main.vue, Home.vue에 있는 <router-view>의 모습이 각각 다르며 
+       2) 홈 클릭시 MsgList.vue 블랭크 페이지 나옴 해결 필요 (이미 히스토리에 있으므로 안나오는데 슬랙은 그 상태로 다시 보여줌) : gst.selSideMenuTimeTag로 해결 완료
+    5. 결론적으로, App.vue, Main.vue, HomePanel.vue에 있는 <router-view>의 모습이 각각 다르며 
        router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함 */
 
     const observerTopScroll = () => {
@@ -231,22 +231,23 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
     
-    onMounted(async () => { //Home.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
+    onMounted(async () => { //HomePanel.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
         //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
-        //HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생함. :key="$route.fullPath"를 사용해도 마찬가지 현상임
-        //또 다른 현상은 새로고침하면 Home.vue가 먼저 실행되는 것이 아닌 HomeBody.vue의 onMounted가 먼저 실행되어서 Home.vue가 실행되면서 
-        //호출하는 HomeBody.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
+        //MsgList에서 keepalive에도 불구하고 onMounted가 2회 발생함. :key="$route.fullPath"를 사용해도 마찬가지 현상임
+        //또 다른 현상은 새로고침하면 HomePanel.vue가 먼저 실행되는 것이 아닌 MsgList.vue의 onMounted가 먼저 실행되어서 HomePanel.vue가 실행되면서 
+        //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
             appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan"
             if (hasProp()) {
+                debugger
                 console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
             } else {
                 console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
                 setBasicInfo()
-                if (msgidInChan) { //여기는 Later.vue로부터 호출되기도 하지만 새창에서 열 때 (캐시제거하고) 비동기로 Later보다 HomeBody가 먼저 호출되기도 할 것임
+                if (msgidInChan) { //여기는 LaterPanel.vue로부터 호출되기도 하지만 새창에서 열 때 (캐시제거하고) 비동기로 Later보다 MsgList가 먼저 호출되기도 할 것임
                     await getList({ msgid: msgidInChan, kind: "atHome" })
                     if (route.fullPath.includes("?newwin=")) { //새창에서 열기
                         if (route.path.startsWith("/main/later/later_body")) {
@@ -292,11 +293,11 @@
     })
 
     //onDeactivated(() => {
-        //HomeBody.vue가 비활성화되는 싯점은 아래 1), 2)에 따라 다름
-        //1) 사이드메뉴에서 '홈->나중에'를 누르는 경우는 HomeBody.vue의 onDeactivated()보다 ListLeft.vue가 먼저 호출되므로 ListLeft.vue에서 이미 gst.selSideMenu는 mnuLater로 변경되어 있음
-        //2) 그러나, 홈에서 Back()을 눌러 나중에도 돌아가는 경우는 HomeBody.vue의 onDeactivated()가 먼저 호출되므로 gst.selSideMenu는 mnuHome으로 남아 있음
-        //캐시된 HomeBody.vue인 경우 Home.vue보다 먼저 올라오면 Home.vue의 gst.selSideMenu 값을 받는 setBasicInfo()보다 여기 setBasicInfo()가 먼저 실행되어 gst.selSideMenu가 빈값일 수 있음
-        //따라서, 아예 onDeactivated hook에서 일관되게 저장된 사이드메뉴값은 별도로 만들어 사용(sideMenu)하고, gst.selSideMenu는 Home.vue, ListLeft.vue등에서만 사용하기로 하며
+        //MsgList.vue가 비활성화되는 싯점은 아래 1), 2)에 따라 다름
+        //1) 사이드메뉴에서 '홈->나중에'를 누르는 경우는 MsgList.vue의 onDeactivated()보다 ListLeft.vue가 먼저 호출되므로 ListLeft.vue에서 이미 gst.selSideMenu는 mnuLater로 변경되어 있음
+        //2) 그러나, 홈에서 Back()을 눌러 나중에도 돌아가는 경우는 MsgList.vue의 onDeactivated()가 먼저 호출되므로 gst.selSideMenu는 mnuHome으로 남아 있음
+        //캐시된 MsgList.vue인 경우 HomePanel.vue보다 먼저 올라오면 HomePanel.vue의 gst.selSideMenu 값을 받는 setBasicInfo()보다 여기 setBasicInfo()가 먼저 실행되어 gst.selSideMenu가 빈값일 수 있음
+        //따라서, 아예 onDeactivated hook에서 일관되게 저장된 사이드메뉴값은 별도로 만들어 사용(sideMenu)하고, gst.selSideMenu는 HomePanel.vue, ListLeft.vue등에서만 사용하기로 하며
         //아래 setBasicInfo()에서도 route.fullPath를 읽어 sideMenu를 무조건 가져오게 함
         /* onScrollEnd에서 처리하는 것으로 변경하고 막음
         if (!sideMenu || !chanId) return
@@ -320,13 +321,13 @@
         // if (route.params.chanid && route.params.grid) {
         //     chanId = route.params.chanid
         //     grId = route.params.grid
-        //     //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
-        //     //gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
+        //     //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 HomePanel.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
+        //     //gst.selGrId = grId //이 2행이 없으면 HomePanel.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         // } else 
         if (route.params.chanid) {
             chanId = route.params.chanid
-            //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 Home.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
-            //gst.selGrId = grId //이 2행이 없으면 Home.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
+            //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 HomePanel.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
+            //gst.selGrId = grId //이 2행이 없으면 HomePanel.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
         if (route.params.msgid) {
             msgidInChan = route.params.msgid //댓글의 msgid일 수도 있음
@@ -762,7 +763,7 @@
                     if (hasProp()) { 
                         evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                     } else {
-                        if (homebodyRef.value) homebodyRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                        if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
                     }
                     if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때
                         gst.later.procFromBody("work", { msgid: row.MSGID, work: "delete" }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
@@ -856,7 +857,7 @@
                 if (rs == null) return
                 refreshWithGetMsg(rs, props.data.msgid)
             //} else { //굳이 실행하지 않아도 될 듯
-            //    //if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
+            //    //if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
@@ -1104,7 +1105,7 @@
             } else if (route.fullPath.includes("/dm_body/")) {
                 gst.dm.procFromBody("update", rq)
             }
-            if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
+            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
             msgbody.value = ""            
             editMsgId.value = null
         } catch (ex) { 
@@ -1598,7 +1599,7 @@
             if (hasProp()) { 
                 evClick({ type: "refreshFromReply", msgid: props.data.msgid })
             } else {
-                if (homebodyRef.value) homebodyRef.value.procFromParent("refreshMsg", { msgid: msgid })
+                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
                 gst.later.procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
@@ -2039,7 +2040,7 @@
         </div>
     </div>
     <div class="chan_right" v-if="thread.msgid":style="{ width: widthChanRight }">
-        <home-body :data="thread" @ev-click="clickFromProp" ref="homebodyRef"></home-body>
+        <msg-list :data="thread" @ev-click="clickFromProp" ref="msglistRef"></msg-list>
     </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-image ref="imgPopupRef" :param="imgParam">
@@ -2126,7 +2127,7 @@
         width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
     }
     .chan_right {
-        height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 HomeBody.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
+        height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
     .topMenu { cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }

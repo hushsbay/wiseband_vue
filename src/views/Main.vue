@@ -147,7 +147,7 @@
     }
 
     async function goRoute(obj, onMounted) { //사이드메뉴 클릭시 맨 처음 로드시 push로 라우팅하면 오른쪽 공백이 생김
-        Object.assign(obj, { query : { ver : Math.random() }}) //obj에 merge : 사이드메뉴 클릭시 (예:Home.vue 호출) 캐시 제거하고 호출해야 HomeBody.vue 안뜨는 상황 방지될 것임
+        Object.assign(obj, { query : { ver : Math.random() }}) //obj에 merge : 사이드메뉴 클릭시 (예:Home.vue 호출) 캐시 제거하고 호출해야 MsgList.vue 안뜨는 상황 방지될 것임
         if (onMounted) {
             await router.replace(obj)
         } else {
@@ -174,7 +174,7 @@
 
 <template>
     <div class="coMain" @click="gst.ctx.hide">
-        <div class="header" id="header"><!-- HomeBody에서 id 사용-->
+        <div class="header" id="header"><!-- MsgList에서 id 사용-->
 
         </div>
         <div class="body">
@@ -204,7 +204,7 @@
             </div>
             <div class="main">
                 <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/home의 'home'을 가져옴 : arr[2]
-                    <component :is="Component" :key="route.fullPath.split('/')[2]" />로 구현시 HomeBody에서 keepalive에도 불구하고 onMounted가 2회 발생
+                    <component :is="Component" :key="route.fullPath.split('/')[2]" />로 구현시 MsgList에서 keepalive에도 불구하고 onMounted가 2회 발생
                     :key="$route.fullPath"를 사용해도 마찬가지 현상임. 결국, 일단 key 사용하지 않고 여기 자리 Component는 공통으로 모듈화하지 않고 각각 만들어서 적용해야 캐싱 문제없을 듯 -->
                     <router-view v-slot="{ Component }">
                         <keep-alive>
