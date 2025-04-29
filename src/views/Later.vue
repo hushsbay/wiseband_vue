@@ -17,6 +17,7 @@
     //1) 마우스오버 및 클릭시 색상 변경 등은 { "327846325832467": { hover: true, sel: false }.. } 으로 가능하므로 최대한 object로 처리하도록 노력
     //2) 나머지는 육안으로 화면에 보이는 것만 업데이트 등을 고려
     //사실, EndlessScroll해봤자 10000개를 넘으면 많은 것일테니 루프에 크게 부담갖지 말고 배열만으로 처리하기로 함
+    //최종적으로, msgRow가 msgid를 가지고 있는 element 객체이므로 그 element 속성에 배열 인덱스를 가지고 있으면 찾는데 시간을 대폭 줄일 수 있을 것으로 판단됨
 
     let observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
@@ -24,7 +25,7 @@
     const homebodyRef = ref(null)    
     let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
-    let onGoingGetList = false //let prevScrollY = 0 //, prevScrollHeight
+    let onGoingGetList = false
 
     /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px')
@@ -50,8 +51,8 @@
 
     const observerBottomScroll = () => {
         observerBottom.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                await getList(gst.kindLater)
+            if (entry[0].isIntersecting) {
+                await getList()
             } else {
                 return
             }
@@ -62,7 +63,8 @@
     onMounted(async () => {
         try {
             setBasicInfo()
-            await getList(localStorage.wiseband_lastsel_later, true)            
+            gst.kindLater = localStorage.wiseband_lastsel_later ? localStorage.wiseband_lastsel_later : "later"
+            await getList(true)            
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
             observerBottomScroll()
             laterClickOnLoop(true)
@@ -76,11 +78,10 @@
             mounting = false
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
-            //if (gst.objSaved[gst.kindLater]) scrollArea.value.scrollTop = gst.objSaved[gst.kindLater].scrollY
             if (route.path == "/main/later") {
                 laterClickOnLoop()
-            } else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
-                //Generalstore의 const later = 에서 처리
+            } else {
+                //HomeBody가 라우팅되는 루틴이며 HomeBody로부터 처리될 것임
             }
         }
         observerBottomScroll()
@@ -95,34 +96,21 @@
         gst.selSideMenu = "mnuLater" //HomeBody.vue에 Blank 방지
     }
 
-    // function saveCurScrollY(posY) {
-    //     if (!gst.objSaved[gst.kindLater]) gst.objSaved[gst.kindLater] = {}
-    //     gst.objSaved[gst.kindLater].scrollY = posY
-    // }
-
     const onScrolling = () => {
         if (!afterScrolled.value) afterScrolled.value = true
-        //const sTop = scrollArea.value.scrollTop     
-        //saveCurScrollY(sTop) 
     }
 
-    // const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-    //     const sTop = scrollArea.value.scrollTop     
-    //     let which = (sTop <= prevScrollY) ? "up" : "down" //down만 필요하므로 stop,up은 필요없으므로 <=로 체크함
-    //     prevScrollY = sTop
-    //     saveCurScrollY(prevScrollY) 
-    //     const ele = document.getElementById("chan_side_main")
-    //     const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
-    //     if (which == "down" && sTop > bottomEntryPoint) await getList(gst.kindLater)
-    // }
+    function procQuery(kind) {
+        gst.kindLater = kind
+        localStorage.wiseband_lastsel_later = gst.kindLater
+        getList(true)
+    }
 
-    async function getList(kindStr, refresh) {
+    async function getList(refresh) {
         try {
             if (onGoingGetList) return
             onGoingGetList = true
-            if (refresh || gst.kindLater != kindStr) {
-                gst.kindLater = kindStr ? kindStr : "later"
-                localStorage.wiseband_lastsel_later = gst.kindLater
+            if (refresh) {
                 gst.listLater = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
@@ -145,7 +133,7 @@
                 } else {
                     row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
-                gst.listLater.push(row) //gst.listLater.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
+                gst.listLater.push(row)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
@@ -188,10 +176,10 @@
     }
 
     async function goHomeBody(row, refresh) { //댓글 클릭시는 댓글 MSGID로 호출됨
-        let obj = { name : 'later_body', params : { chanid: row.CHANID, msgid: row.MSGID }} //grid: row.GR_ID, 
+        let obj = { name : 'later_body', params : { chanid: row.CHANID, msgid: row.MSGID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
         const ele = document.getElementById("chan_center_body")
-        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로 
+        if (refresh || !ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로 
             await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
         } else {
             await router.push(obj)
@@ -219,17 +207,13 @@
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "새로고침(메인화면)", func: function(item, idx) {
-                goHomeBody(row, true)
+            { nm: "메시지목록 새로고침", func: function(item, idx) {
+                goHomeBody(row, true) //모든 동일한 라우팅 찾아 없애고 새로 열어야 정답일 것인데 추후 고민하기로 함
             }},
             { nm: "새창에서 열기", deli: true, func: function(item, idx) {
-                let url = "/main/later/later_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random() //+ row.GR_ID +
+                let url = "/main/later/later_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
                 window.open(url)
-            }},
-            //{ nm: "홈에서 열기", func: function(item, idx) { 
-                //슬랙은 자식에 '나중에' 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 그럴수도 있으나
-                //이 프로젝트는 부모/자식 모두 동일한 UI 제공하므로 여기에서 처리하면 되므로 굳이 '홈에서 열기'는 필요없음
-            //}},
+            }}, //nm: "홈에서 열기" : 슬랙은 자식에게 '나중에'가 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
             { nm: "보관", disable: (gst.kindLater == "stored") ? true : false, func: async function(item, idx) {
                 changeAction('stored', row)
             }},
@@ -266,15 +250,15 @@
         <div class="chan_side_top">
             <div class="chan_side_top_left">나중에</div>
             <div class="chan_side_top_right">
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('later', true)"
+                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="procQuery('later')"
                     :style="{ borderBottom: (gst.kindLater == 'later') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
                     진행중<span style="margin-left:3px">{{ gst.cntLater }}</span>
                 </div>
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('stored', true)"
+                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="procQuery('stored')"
                     :style="{ borderBottom: (gst.kindLater == 'stored') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
                     보관됨<span style="margin-left:3px"></span>
                 </div>
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="getList('finished', true)"
+                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="procQuery('finished')"
                     :style="{ borderBottom: (gst.kindLater == 'finished') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }" >
                     완료됨<span style="margin-left:3px"></span>
                 </div>

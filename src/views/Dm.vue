@@ -15,10 +15,10 @@
     let observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
-    const homebodyRef = ref(null), notyetChk = ref(false)
+    const homebodyRef = ref(null), notyetChk = ref(false), searchWord = ref('')
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
-    let onGoingGetList = false //let prevScrollY = 0 //, prevScrollHeight
+    let onGoingGetList = false
 
     /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
     let chanSideWidth = ref(localStorage.wiseband_lastsel_dmsidewidth ?? '300px')
@@ -44,8 +44,8 @@
 
     const observerBottomScroll = () => {
         observerBottom.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                await getList(gst.kindDm)
+            if (entry[0].isIntersecting) {
+                await getList()
             } else {
                 return
             }
@@ -56,7 +56,8 @@
     onMounted(async () => {
         try {
             setBasicInfo()
-            await getList(localStorage.wiseband_lastsel_dm, true)            
+            notyetChk.value = (localStorage.wiseband_lastsel_dm == "notyet") ? true : false
+            await getList(true)            
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
             observerBottomScroll()
             dmClickOnLoop(true)
@@ -70,11 +71,10 @@
             mounting = false
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
-            //if (gst.objSaved[gst.kindLater]) scrollArea.value.scrollTop = gst.objSaved[gst.kindLater].scrollY
             if (route.path == "/main/dm") {
                 dmClickOnLoop()
-            } else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
-                //Generalstore의 const later = 에서 처리
+            } else {
+                //HomeBody가 라우팅되는 루틴이며 HomeBody로부터 처리될 것임
             }
         }
         observerBottomScroll()
@@ -89,30 +89,35 @@
         gst.selSideMenu = "mnuDm" //HomeBody.vue에 Blank 방지
     }
 
-    // function saveCurScrollY(posY) {
-    //     if (!gst.objSaved[gst.kindDm]) gst.objSaved[gst.kindDm] = {}
-    //     gst.objSaved[gst.kindDm].scrollY = posY
-    // }
-
     const onScrolling = () => {
         if (!afterScrolled.value) afterScrolled.value = true
-        //const sTop = scrollArea.value.scrollTop     
-        //saveCurScrollY(sTop) 
     }
 
-    async function getList(kindStr, refresh) {
+    function procChangedQuery() {
+        localStorage.wiseband_lastsel_dm = (notyetChk.value) ? "notyet" : "all"
+        getList(true)
+    }
+
+    function procClearSearch() {
+        if (searchWord.value == "") getList(true)
+    }
+
+    function procSearchQuery() {
+        getList(true)
+    }
+    
+    async function getList(refresh) {
         try {
-            debugger
             if (onGoingGetList) return
             onGoingGetList = true
-            if (refresh || gst.kindDm != kindStr) {
-                gst.kindDm = kindStr ? kindStr : "all"
-                localStorage.wiseband_lastsel_dm = gst.kindDm
+            gst.kindDm = localStorage.wiseband_lastsel_dm
+            const search = searchWord.value.trim()
+            if (refresh) {
                 gst.listDm = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
-            const res = await axios.post("/menu/qryDm", { kind: gst.kindDm, lastMsgMstCdt: lastMsgMstCdt })
+            const res = await axios.post("/menu/qryDm", { kind: gst.kindDm, search: search, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
                 onGoingGetList = false
@@ -134,7 +139,7 @@
                 }                
                 row.notioffImg = (row.NOTI == "X") ? hush.cons.color_light + "notioff.png" : ""
                 row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
-                gst.listDm.push(row) //gst.listDm.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
+                gst.listDm.push(row)
                 if (row.LASTMSGDT < savLastMsgMstCdt) savLastMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
             }
             await nextTick()
@@ -179,7 +184,7 @@
         let obj = { name : 'dm_body', params : { chanid: row.CHANID }}
         if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
         const ele = document.getElementById("chan_center_body")
-        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로 
+        if (refresh || !ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로 
             await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
         } else {
             await router.push(obj)
@@ -189,13 +194,14 @@
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "새로고침(메인화면)", func: function(item, idx) {
-                goHomeBody(row, true)
+            { nm: "메시지목록 새로고침", func: function(item, idx) {
+                goHomeBody(row, true) //모든 동일한 라우팅 찾아 없애고 새로 열어야 정답일 것인데 추후 고민하기로 함
+
             }},
             { nm: "새창에서 열기", deli: true, func: function(item, idx) {
                 let url = "/main/dm/dm_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
                 window.open(url)
-            }},
+            }}, //nm: "홈에서 열기" : 슬랙은 자식에게 '나중에'가 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
             { nm: "정보 보기", func: function(item, idx) {
 
             }},
@@ -205,8 +211,8 @@
             { nm: "즐겨찾기 설정", func: function(item, idx) {
                 
             }},
-            { nm: "사용자 초대" },
-            { nm: "채널 나가기", color: "red" }
+            { nm: "초대" },
+            { nm: "나가기", color: "red" }
         ]            
         gst.ctx.show(e)
     }
@@ -231,8 +237,9 @@
         <div class="chan_side_top">
             <div class="chan_side_top_left">DM</div>
             <div class="chan_side_top_right">
-                <div style="padding:5px;border-radius:8px;" @click="newMsg">
-                    <input type="checkbox" id="checkbox" v-model="notyetChk" /><label for="checkbox" @change="">아직안읽음</label>
+                <div style="padding:5px;display:flex;align-items:center;border-radius:8px;" @click="newMsg">
+                    <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:80px;margin-right:8px" placeholder="멤버" />
+                    <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새메시지">
                 </div>
             </div>
@@ -286,10 +293,10 @@
         width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:1px solid lightgray;cursor:pointer
     }
     .chan_side_top_left {
-        width:20%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
+        width:10%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
     }
     .chan_side_top_right {
-        width:80%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
+        width:90%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
     }
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto

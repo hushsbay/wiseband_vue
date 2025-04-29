@@ -50,7 +50,7 @@ const GeneralStore = defineStore('General', () => {
     ///////////////////////////////////////////////////////////////////////
     let listDm = ref([]), kindDm = ref('all')
     ///////////////////////////////////////////////////////////////////////
-    let listHome = ref([]), kindHome = ref('my'), selChanHome = ref('') //, objHome = ref({}), scrollyHome = ref(0)
+    let listHome = ref([]), kindHome = ref('my'), selChanHome = ref('')
     ///////////////////////////////////////////////////////////////////////
     
     const auth = {
@@ -134,14 +134,11 @@ const GeneralStore = defineStore('General', () => {
 
     }
     
-    const home = { //아래 const later 설명 참조
+    const home = { //맨 위 설명 3),4) 참조. HomeBody.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
+        procFromBody : async function(type, obj) {
             if (type == "recall") {
-                //if (objHome.value[obj.chanid]) {
-                    selChanHome.value = obj.chanid
-                    //scrollyHome.value = objHome.value[obj.chanid].scrollY
-                //}
+                selChanHome.value = obj.chanid
             } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
                 const row = listHome.value.find((item) => item.CHANID == obj.chanid)
                 if (!row) return
@@ -154,9 +151,9 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const dm = { //아래 const later 설명 참조
+    const dm = { //맨 위 설명 3),4) 참조. HomeBody.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) { //HomeBody.vue에서 호출해 Dm.vue 패널 화면 업데이트하는 것임
+        procFromBody : async function(type, obj) {
             if (type == "update") {
                 const idx = listDm.value.findIndex((item) => item.CHANID == obj.chanid)
                 if (idx == -1) return
@@ -177,11 +174,9 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const later = { //Later.vue와 관련된 화면 업데이트는 아래와 같이 4가지임
-        //1) Later -> HomeBody 2) Later -> HomeBody (Thread가 열린 경우) 3) HomeBody -> Later 4) HomeBody (Thread가 열린 경우) -> Later
-        //이 중, 아래 procFromBody, getCount는 3),4) 경우 사용함. 1),2)는 맨 위 설명 참조
+    const later = { //맨 위 설명 3),4) 참조. HomeBody.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) { //HomeBody.vue에서 데이터 처리하고 Later.vue 패널 화면 업데이트하는 것임
+        procFromBody : async function(type, obj) {
             if (type == "update") { //HomeBody.vue의 saveMsg() 참조 : rq
                 const row = listLater.value.find((item) => item.MSGID == obj.msgid)
                 if (row) row.BODYTEXT = obj.bodytext
@@ -213,13 +208,6 @@ const GeneralStore = defineStore('General', () => {
                     }
                 }
                 later.getCount() //화면에 갯수 업데이트
-            // } else if (type == "set_color") { //새창에서 열기시 패널에 색상 표시
-            //     listLater.value.map((item) => {
-            //         item.sel = false
-            //         item.hover = false
-            //     })
-            //     const row = listLater.value.find((item) => item.MSGID == obj.msgid)
-            //     if (row) row.sel = true
             }
         },
 
