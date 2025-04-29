@@ -169,20 +169,9 @@
             })
             row.sel = true
             localStorage.wiseband_lastsel_latermsgid = row.MSGID
-            await goHomeBody(row, refresh)
+            gst.util.goHomeBody('later_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
-        }
-    }
-
-    async function goHomeBody(row, refresh) { //댓글 클릭시는 댓글 MSGID로 호출됨
-        let obj = { name : 'later_body', params : { chanid: row.CHANID, msgid: row.MSGID }}
-        if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
-        const ele = document.getElementById("chan_center_body")
-        if (refresh || !ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_body이 없다는 것은 빈페이지로 열려 있다는 것이므로
-            await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
-        } else {
-            await router.push(obj)
         }
     }
 
@@ -208,7 +197,7 @@
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "메시지목록 새로고침", func: function(item, idx) {
-                goHomeBody(row, true) //모든 동일한 라우팅 찾아 없애고 새로 열어야 정답일 것인데 추후 고민하기로 함
+                gst.util.goHomeBody('later_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
             }},
             { nm: "새창에서 열기", deli: true, func: function(item, idx) {
                 let url = "/main/later/later_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
@@ -240,7 +229,7 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //HoeBody.vue에서 실행 (to later, dm..)
+    function handleEvFromBody() { //HomeBody.vue에서 실행 (to later, dm..)
         laterClickOnLoop()
     }
 </script>

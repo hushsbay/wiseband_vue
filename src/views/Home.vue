@@ -52,12 +52,10 @@
     onMounted(async () => {
         try {
             setBasicInfo()
-            const lastSelKind = localStorage.wiseband_lastsel_kind
-            if (lastSelKind) gst.kindHome = lastSelKind
-            await getList() //여기서만 호출
-            //recallScrollY()
-            chanClickOnLoop(true)
+            if (localStorage.wiseband_lastsel_kind) gst.kindHome = localStorage.wiseband_lastsel_kind
+            await getList()
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
+            chanClickOnLoop(true)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -66,20 +64,18 @@
     onActivated(async () => {
         if (mounting) {
             mounting = false
-        } else {
+        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
-            if (route.path == "/main/home") { //사이드메뉴 '홈'을 누르면 Home이 먼저 호출되고 HomeBody가 나중 호출됨
-                //recallScrollY()
+            if (route.path == "/main/home") {
                 chanClickOnLoop()
-            } else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
-                //스크롤 recall은 여기가 아닌 아래 watch에서 수행
+            } else {
+                //HomeBody가 라우팅되는 루틴이며 HomeBody로부터 처리될 것임
             }
         }
     })
 
-    watch([() => gst.selChanHome], () => { //HomeBody -> GeneralStore -> 여기 watch로 전달
-        //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 HomeBody의 라우팅에서 처리하는 것이 효율적임
-        //scrollArea.value.scrollTop = gst.scrollyHome   
+    watch([() => gst.selChanHome], () => { //HomeBody -> GeneralStore -> watch
+        //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 HomeBody의 라우팅에서 처리
         chanRow.value[gst.selChanHome].scrollIntoView({ behavior: "smooth", block: "nearest" })
         chanClick(null, null, gst.selChanHome)
     })
@@ -90,52 +86,13 @@
         chanClickOnLoop()
     })
 
-    // watch([() => gst.selChanId, () => gst.selGrId], () => { //onMounted보다 더 먼저 수행되는 경우임 (디버거로 확인)
-    //     displayChanAsSelected(gst.selChanId, gst.selGrId) //채널트리간 Back()시 사용자가 선택한 것으로 표시해야 함
-    // }) //HomeBody.vue의 $$44 참조
-
-    // watch(() => gst.selSideMenuTimeTag, () => { //router index.js에서만 전달받음 (Main.vue에서 홈 등 사이드메뉴 클릭시 캐시 가져오기)
-    //     console.log(gst.selSideMenuTimeTag + " == gst.selSideMenuTimeTag########watch in home.vue")
-    //     loopListChan(gst.selGrId, gst.selChanId)
-    // }) ##87 지우지 말 것 : selSideMenuTimeTag 대신 onActivated() 사용해 해결 - keepalive인 경우임
-
     function setBasicInfo() {
         document.title = "WiSEBand 홈"
         gst.selSideMenu = "mnuHome" //HomeBody.vue에 Blank 방지
     }
 
-    // function recallScrollY() {
-    //     if (localStorage.wiseband_home_scroll) {
-    //         setTimeout(function() { 
-    //             scrollArea.value.scrollTop = parseInt(localStorage.wiseband_home_scroll) 
-    //         }, 1) //비동기로 하지 않으면 값이 0으로 설정됨 (어느 부분에서 0으로 되는지 파악 필요)
-    //     }
-    // }
-
-    const onScrollEnd = () => { //saveScrollY
-        //localStorage.wiseband_home_scroll = scrollArea.value.scrollTop
-    }
-
-    function chanClickOnLoop(refresh) {
-        const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
-        gst.listHome.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
-            if (arr) { //onMounted때만 해당
-                if (arr.indexOf(item.GR_ID) == -1) {
-                    item.exploded = false
-                } else {
-                    item.exploded = true
-                }
-                procChanRowImg(item)
-            }
-            if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
-                chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                chanClick(item, index, null, refresh)
-            }
-        })
-    }
-
     async function getList() {
-        try {  
+        try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
             const res = await axios.post("/menu/qryChan", { kind : gst.kindHome }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -143,6 +100,20 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    }
+
+    function chanClickOnLoop(refresh) {
+        const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
+        gst.listHome.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
+            if (arr) { //onMounted때만 해당
+                item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
+                procChanRowImg(item)
+            }
+            if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
+                chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                chanClick(item, index, null, refresh)
+            }
+        })
     }
 
     function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
@@ -169,6 +140,14 @@
                 if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
                 if (item.otherImg) item.otherImg = color + item.otherImg
             }
+        }
+    }
+
+    function procExpCol(type) { //모두필치기,모두접기
+        const exploded = (type == "E") ? true : false
+        for (let i = 0; i < gst.listHome.length; i++) {
+            gst.listHome[i].exploded = exploded
+            procChanRowImg(gst.listHome[i])
         }
     }
 
@@ -205,25 +184,11 @@
                     row.sel = true
                     procChanRowImg(row)
                     localStorage.wiseband_lastsel_chanid = row.CHANID
-                    //if (!gst.objHome[row.CHANID]) gst.objHome[row.CHANID] = {}
-                    //setTimeout(function() { gst.objHome[row.CHANID].scrollY = scrollArea.value.scrollTop }, 500)
-                    //debugger
-                    await goHomeBody(row, refresh)
+                    gst.util.goHomeBody('home_body', { chanid: row.CHANID }, refresh)
                 }
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
-        }
-    }
-
-    async function goHomeBody(row, refresh) {
-        let obj = { name : 'home_body', params : { chanid: row.CHANID }} //grid: row.GR_ID, 
-        if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
-        const ele = document.getElementById("chan_center_header") //chan_center_body
-        if (!ele || ele.innerHTML == "") { //HomeBody.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
-            await router.replace(obj) //HomeBody.vue가 들어설 자리가 blank로 남아 있는데 실행시는 안보이는데 Back()에서는 보임. 이걸 해결하기 위해 replace 처리함
-        } else {
-            await router.push(obj)
         }
     }
 
@@ -238,21 +203,21 @@
             ]
         } else {
             gst.ctx.menu = [
-                { nm: "채널 새로고침", func: function(item, idx) {
-                    goHomeBody(row, true)
+                { nm: "메시지목록 새로고침", func: function(item, idx) {
+                    gst.util.goHomeBody('home_body', { chanid: row.CHANID }, true)
                 }},
-                { nm: "채널정보 보기", func: function(item, idx) {
+                { nm: "정보 보기", func: function(item, idx) {
 
                 }},
                 { nm: "즐겨찾기" },
-                { nm: "사용자 초대" },
+                { nm: "초대" },
                 { nm: "복사", img: hush.cons.color_dark + "other.png", child: [
                     { nm: "채널 복사", func: function(item, idx) { 
                         
                     }},
                     { nm: "링크 복사" }
                 ]},                
-                { nm: "채널 나가기", color: "red" }
+                { nm: "나가기", color: "red" }
             ]            
         }
         gst.ctx.show(e)
@@ -266,14 +231,6 @@
     function mouseLeave(row) {
         if (row.sel) return
         row.hover = false
-    }
-
-    function procExpCol(type) { //모두필치기,모두접기
-        const exploded = (type == "E") ? true : false
-        for (let i = 0; i < gst.listHome.length; i++) {
-            gst.listHome[i].exploded = exploded
-            procChanRowImg(gst.listHome[i])
-        }
     }
 </script>
 
@@ -299,7 +256,7 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scrollend="onScrollEnd">
+        <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
             <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도 @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 index.html <body>에서 막는 것으로 해결 -->
             <div v-for="(row, idx) in gst.listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
                 :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }"
