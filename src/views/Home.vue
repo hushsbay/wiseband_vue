@@ -56,7 +56,7 @@
             if (lastSelKind) gst.kindHome = lastSelKind
             await getList() //여기서만 호출
             //recallScrollY()
-            chanClickOnLoop()
+            chanClickOnLoop(true)
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -116,7 +116,7 @@
         //localStorage.wiseband_home_scroll = scrollArea.value.scrollTop
     }
 
-    function chanClickOnLoop() {
+    function chanClickOnLoop(refresh) {
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
         gst.listHome.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
@@ -129,7 +129,7 @@
             }
             if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
                 chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                chanClick(item, index)
+                chanClick(item, index, null, refresh)
             }
         })
     }
@@ -172,7 +172,7 @@
         }
     }
 
-    async function chanClick(row, idx, chanid) { //depth 1,2를 미리 filter해서 하지 말기
+    async function chanClick(row, idx, chanid, refresh) { //depth 1,2를 미리 filter해서 하지 말기
         try { //chanid 파라미터는 depth2에만 해당
             if (!chanid && row.DEPTH == "1") { //접기 or 펼치기
                 row.exploded = (row.exploded) ? false : true
@@ -208,7 +208,7 @@
                     //if (!gst.objHome[row.CHANID]) gst.objHome[row.CHANID] = {}
                     //setTimeout(function() { gst.objHome[row.CHANID].scrollY = scrollArea.value.scrollTop }, 500)
                     //debugger
-                    await goHomeBody(row)
+                    await goHomeBody(row, refresh)
                 }
             }
         } catch (ex) {

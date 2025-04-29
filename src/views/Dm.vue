@@ -16,7 +16,7 @@
     let afterScrolled = ref(false)
 
     const homebodyRef = ref(null)    
-    let scrollArea = ref(null)
+    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false //let prevScrollY = 0 //, prevScrollHeight
 
@@ -59,6 +59,7 @@
             await getList(localStorage.wiseband_lastsel_dm, true)            
             gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
             observerBottomScroll()
+            dmClickOnLoop(true)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -70,10 +71,11 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             //if (gst.objSaved[gst.kindLater]) scrollArea.value.scrollTop = gst.objSaved[gst.kindLater].scrollY
-            //if (route.path == "/main/home") { //'나중에' 사이드버튼 누름
-            //} else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
+            if (route.path == "/main/dm") {
+                dmClickOnLoop()
+            } else { //여기가 HomeBody가 라우팅되는 루틴인데 뒤로가기 누르면 열려 있었던 이전 채널이 표시됨
                 //Generalstore의 const later = 에서 처리
-            //}
+            }
         }
         observerBottomScroll()
     })
@@ -87,15 +89,15 @@
         gst.selSideMenu = "mnuDm" //HomeBody.vue에 Blank 방지
     }
 
-    function saveCurScrollY(posY) {
-        if (!gst.objSaved[gst.kindDm]) gst.objSaved[gst.kindDm] = {}
-        gst.objSaved[gst.kindDm].scrollY = posY
-    }
+    // function saveCurScrollY(posY) {
+    //     if (!gst.objSaved[gst.kindDm]) gst.objSaved[gst.kindDm] = {}
+    //     gst.objSaved[gst.kindDm].scrollY = posY
+    // }
 
     const onScrolling = () => {
         if (!afterScrolled.value) afterScrolled.value = true
-        const sTop = scrollArea.value.scrollTop     
-        saveCurScrollY(sTop) 
+        //const sTop = scrollArea.value.scrollTop     
+        //saveCurScrollY(sTop) 
     }
 
     async function getList(kindStr, refresh) {
@@ -146,14 +148,26 @@
             gst.util.showEx(ex, true)
         }
     }
+
+    function dmClickOnLoop(refresh) {
+        const chanid = localStorage.wiseband_lastsel_dmchanid
+        if (!chanid) return
+        gst.listDm.forEach((item, index) => {
+            if (item.CHANID == chanid) {
+                chanRow.value[chanid].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                dmClick(item, index, refresh)
+            }
+        })
+    }
     
-    async function dmClick(row, idx, refresh) { //채널트리와 다르게 여기선 최초 로드시에도 이전 선택한 행을 기억하지 않고
-        try { //오른쪽 공간을 공백으로 두기로 함 (필요하면 localStorage 등을 사용하면 되나 나중에/고정 조회 화면까지 그럴 필요는 없어 보임)
+    async function dmClick(row, idx, refresh) {
+        try {
             gst.listDm.map((item) => {
                item.sel = false
                item.hover = false
             })
             row.sel = true
+            localStorage.wiseband_lastsel_dmchanid = row.CHANID
             await goHomeBody(row, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -216,8 +230,8 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in gst.listDm" :key="row.CHANID" :id="row.CHANID" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
-                style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer"                 
+            <div v-for="(row, idx) in gst.listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }"
+                :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer"                 
                 @click="dmClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
