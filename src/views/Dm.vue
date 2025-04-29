@@ -15,7 +15,7 @@
     let observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
-    const homebodyRef = ref(null)    
+    const homebodyRef = ref(null), notyetChk = ref(false)
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false //let prevScrollY = 0 //, prevScrollHeight
@@ -102,6 +102,7 @@
 
     async function getList(kindStr, refresh) {
         try {
+            debugger
             if (onGoingGetList) return
             onGoingGetList = true
             if (refresh || gst.kindDm != kindStr) {
@@ -230,7 +231,10 @@
         <div class="chan_side_top">
             <div class="chan_side_top_left">DM</div>
             <div class="chan_side_top_right">
-                
+                <div style="padding:5px;border-radius:8px;" @click="newMsg">
+                    <input type="checkbox" id="checkbox" v-model="notyetChk" /><label for="checkbox" @change="">아직안읽음</label>
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새메시지">
+                </div>
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
