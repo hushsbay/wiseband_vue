@@ -14,6 +14,10 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    //ev-click    : 가능하면 스토어에서 함수 만들어 처리하는데 여기는 HoneBody와 HomeBody 사이의 통신이라 구분지어 ev-click로 처리해 보는 것임
+    //ev-to-panel : 원래 HoneBody -> Panel(Later, Dm..)는 스토어에서 처리하여 했는데 element를 다루는 내용 + HomeBody(Parent만의경우)라 처리해보니까 더 편리함
+    const emits = defineEmits(["ev-click", "ev-to-panel"])
+
     /////////////////////////////////////////////////////////////////////////////////////
     //여기는 Home.vue, Dm.vue, Later.vue처럼 왼쪽패널에서 HomeBody로 통신할 때 사용하는 부분임
     //아래 defineExpose()에 정의된 함수를 패널에서 호출 (이 프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js const later = 부분에 정리해 두었음)
@@ -56,7 +60,6 @@
     //부모/자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개 : 각각 element id 만들어 hasProp()으로 구분해 사용하면 됨
     
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
-    const emits = defineEmits(["ev-click"]) //가능하면 스토어에서 함수 만들어 처리하는데 여기는 HoneBody와 HomeBody 사이의 통신이라 구분지어 emits로 처리해 보는 것임
 
     // const hasProp = computed(() => { //바로 아래 함수 참조. 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
     //     if (props.data && props.data.msgid) return true
@@ -135,7 +138,12 @@
     function evClick(obj) { //자식에서만 사용됨
         emits('ev-click', obj)
     }
+
     /////////////////////////////////////////////////////////////////////////////////////
+    
+    function evToPanel() {
+        emits("ev-to-panel")
+    }
 
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
@@ -204,7 +212,6 @@
     const observerTopScroll = () => {
         observerTop.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
-                console.log("2222222222222222222222222222")
                 await getList({ lastMsgMstCdt: savLastMsgMstCdt })
             } else {
                 return
@@ -243,7 +250,7 @@
                     await getList({ msgid: msgidInChan, kind: "atHome" })
                     if (route.fullPath.includes("?newwin=")) { //새창에서 열기
                         if (route.path.startsWith("/main/later/later_body")) {
-                            gst.later.procFromBody("set_color", { msgid: msgidInChan })
+                            evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
                         }
                     }
                 } else {
@@ -276,8 +283,8 @@
             if (route.path.startsWith("/main/home/home_body")) {
                 //if (gst.objHome[chanId]) 
                 gst.home.procFromBody("recall", { chanid: chanId })
-            } else if (route.path.startsWith("/main/later/later_body")) {
-                gst.later.procFromBody("set_color", { msgid: msgidInChan })
+            } else if (route.path.startsWith("/main/later/later_body") || route.path.startsWith("/main/dm/dm_body")) {
+                evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
         observerTopScroll()

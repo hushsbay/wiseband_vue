@@ -255,6 +255,10 @@
         if (row.sel) return
         row.hover = false
     }
+
+    function handleEvFromBody() { //HoeBody.vue에서 실행 (to later, dm..)
+        laterClickOnLoop()
+    }
 </script>
 
 <template>
@@ -317,7 +321,7 @@
         <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용 (HomeBody.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
-                <component :is="Component" :key="$route.fullPath" ref="homebodyRef" />
+                <component :is="Component" :key="$route.fullPath" ref="homebodyRef" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
     </div>

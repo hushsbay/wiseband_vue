@@ -37,6 +37,8 @@ const GeneralStore = defineStore('General', () => {
          - 그래서, 이 프로젝트에서는 이 경우에 한해 스토어에서 변수 및 함수를 공유하는 것으로 함
          - 다만, 특정 vue끼리만 공유하기 위해 GeneralStore와는 별도로 만들어 사용하려 했으나 배열 루프 돌리는데 엄청 느린 현상이 발생해
            해결할 시간을 투여하지 않고 일단 여기 GeneralStore에서 ref 변수와 객체(예: const later =)를 두어 처리함 (**77)
+         - 그런데, ev-to-panel (Later, Dm..참조)는 element를 다루는 내용 + HomeBody(Parent만의경우)라 스토어에서 처리하기가 더 힘들고 emits로 처리해보니까 더 편리함
+         - 따라서, 3),4)의 경우 스토어나 ev-to-panel를 상황에 맞게 쓰는 것으로 할 것임
        5) 처럼 (HomeBody간의 통신에 한해서) 부모가 자식에게 전달하고자 할 때 : omeBody->HomeBody스레드댓글
          - props와 defineExpose 사용하기
        6) 처럼 (HomeBody간의 통신에 한해서) 자식이 부모에게 전달하고자 할 때 : HomeBody(스레드댓글)->HomeBody
@@ -131,6 +133,26 @@ const GeneralStore = defineStore('General', () => {
         }
 
     }
+    
+    const home = { //아래 const later 설명 참조
+
+        procFromBody : async function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
+            if (type == "recall") {
+                //if (objHome.value[obj.chanid]) {
+                    selChanHome.value = obj.chanid
+                    //scrollyHome.value = objHome.value[obj.chanid].scrollY
+                //}
+            } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+                const row = listHome.value.find((item) => item.CHANID == obj.chanid)
+                if (!row) return
+                const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
+                const rs = util.chkAxiosCode(res.data)
+                if (!rs) return
+                row.mynotyetCnt = rs.data.mynotyetCnt
+            }
+        }
+
+    }
 
     const dm = { //아래 const later 설명 참조
 
@@ -145,26 +167,6 @@ const GeneralStore = defineStore('General', () => {
                 listDm.value.unshift(row)
             } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
                 const row = listDm.value.find((item) => item.CHANID == obj.chanid)
-                if (!row) return
-                const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
-                const rs = util.chkAxiosCode(res.data)
-                if (!rs) return
-                row.mynotyetCnt = rs.data.mynotyetCnt
-            }
-        }
-
-    }
-
-    const home = { //아래 const later 설명 참조
-
-        procFromBody : async function(type, obj) { //HomeBody.vue에서 호출해 Home.vue 패널 화면 업데이트하는 것임
-            if (type == "recall") {
-                //if (objHome.value[obj.chanid]) {
-                    selChanHome.value = obj.chanid
-                    //scrollyHome.value = objHome.value[obj.chanid].scrollY
-                //}
-            } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
-                const row = listHome.value.find((item) => item.CHANID == obj.chanid)
                 if (!row) return
                 const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
                 const rs = util.chkAxiosCode(res.data)
@@ -211,13 +213,13 @@ const GeneralStore = defineStore('General', () => {
                     }
                 }
                 later.getCount() //화면에 갯수 업데이트
-            } else if (type == "set_color") { //새창에서 열기시 패널에 색상 표시
-                listLater.value.map((item) => {
-                    item.sel = false
-                    item.hover = false
-                })
-                const row = listLater.value.find((item) => item.MSGID == obj.msgid)
-                if (row) row.sel = true
+            // } else if (type == "set_color") { //새창에서 열기시 패널에 색상 표시
+            //     listLater.value.map((item) => {
+            //         item.sel = false
+            //         item.hover = false
+            //     })
+            //     const row = listLater.value.find((item) => item.MSGID == obj.msgid)
+            //     if (row) row.sel = true
             }
         },
 
