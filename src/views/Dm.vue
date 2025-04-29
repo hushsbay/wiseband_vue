@@ -7,6 +7,7 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import MemberPiclist from "/src/components/MemberPiclist.vue"
+    import Resizer from "/src/components/Resizer.vue"
         
     const router = useRouter()
     const route = useRoute()
@@ -20,25 +21,13 @@
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
-    /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
+    ///////////////////////////////////////////////////////////////////////////패널 리사이징
     let chanSideWidth = ref(localStorage.wiseband_lastsel_dmsidewidth ?? '300px')
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
-    const resizeEle = { mainSide: null, resizer: null, leftSide: null, rightSide: null }
-    const resizeObj = { mainSideWidth: 0, posX: 0, leftWidth: 0 }
 
-    function downHandler(e) {
-        gst.resize.downHandler(e, resizeEle, resizeObj, moveHandler, upHandler)
-    }
-
-    function moveHandler(e) {
-        const dx = gst.resize.moveHandler(e, resizeEle, resizeObj)
-        chanSideWidth.value = `${resizeObj.leftWidth + dx + resizeObj.mainSideWidth}px`
-        chanMainWidth.value = `calc(100% - ${chanSideWidth.value})`
-    }
-
-    function upHandler() {
-        gst.resize.upHandler(resizeEle, moveHandler, upHandler)
-        localStorage.wiseband_lastsel_dmsidewidth = chanSideWidth.value
+    function handleFromResizer(chanSideVal, chanMainVal) {
+        chanSideWidth.value = chanSideVal
+        chanMainWidth.value = chanMainVal
     }
     //////////////////////////////////////////////////////////////////////////////////////
 
@@ -58,7 +47,6 @@
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_lastsel_dm == "notyet") ? true : false
             await getList(true)            
-            gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
             observerBottomScroll()
             dmClickOnLoop(true)
         } catch (ex) {
@@ -260,7 +248,7 @@
             <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
         </div>
     </div>
-    <div class="resizer" id="dragMe" @mousedown="(e) => downHandler(e)"></div>
+    <resizer nm="dm" @ev-from-resizer="handleFromResizer"></resizer>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">
         <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용 (HomeBody.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
@@ -295,9 +283,6 @@
         font-size:15px;color:var(--text-white-color);cursor:pointer
     }
     .nodeHover, .nodeSel { background:var(--second-hover-color) }
-    .resizer {
-        background-color:transparent;cursor:ew-resize;height:100%;width:5px /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
-    }
     .chan_main {
         height:100%;display:flex; /* width:100%;는 resizing처리됨 */
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px

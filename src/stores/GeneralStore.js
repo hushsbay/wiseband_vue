@@ -225,52 +225,6 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const resize = {
-
-        getEle : function(resizeEle, main_side, dragMe, chan_side, chan_main) {
-            resizeEle.mainSide = document.getElementById(main_side) //Main.vue 참조
-            resizeEle.resizer = document.getElementById(dragMe) //vue.js npm 사용해봐도 만족스럽지 못해 자체 구현 소스 참조해 vue 소스로 응용
-            resizeEle.leftSide = document.getElementById(chan_side) //resizer.previousElementSibling
-            resizeEle.rightSide = document.getElementById(chan_main) //resizer.nextElementSibling
-        },
-    
-        downHandler : function(e, resizeEle, resizeObj, moveHandler, upHandler) {
-            resizeObj.posX = e.clientX//마우스 위치 X값
-            resizeObj.leftWidth = resizeEle.leftSide.getBoundingClientRect().width
-            resizeObj.mainSideWidth = resizeEle.mainSide.getBoundingClientRect().width
-            document.addEventListener('mousemove', moveHandler)
-            document.addEventListener('mouseup', upHandler)
-        },
-    
-        moveHandler : function(e, resizeEle, resizeObj) {
-            const dx = e.clientX - resizeObj.posX //마우스가 움직이면 기존 초기 마우스 위치에서 현재 위치값과의 차이를 계산
-            document.body.style.cursor = 'col-resize' //크기 조절중 마우스 커서 변경 (resizer에 적용하면 위치가 변경되면서 커서가 해제되기 때문에 body에 적용)
-            resizeEle.leftSide.style.userSelect = 'none' //이동중 양쪽 영역(왼쪽, 오른쪽)에서 마우스 이벤트와 텍스트 선택을 방지하기 위해 추가 (4행)
-            resizeEle.leftSide.style.pointerEvents = 'none'        
-            resizeEle.rightSide.style.userSelect = 'none'
-            resizeEle.rightSide.style.pointerEvents = 'none'
-            return dx        
-            //resizeRef.chanSideWidth.value = `${resizeObj.leftWidth + dx + resizeObj.mainSideWidth}px` //아래 % 대신에 바로 px 적용
-            //resizeRef.chanMainWidth.value = `calc(100% - ${resizeRef.chanSideWidth.value})`
-            //초기 width 값과 마우스 드래그 거리를 더한 뒤 상위요소(container) 너비 이용해 퍼센티지 구해 left의 width로 적용
-            //const newLeftWidth = ((leftWidth + dx) * 100) / resizer.parentNode.getBoundingClientRect().width
-            //leftSide.style.width = `${newLeftWidth}%`
-        },
-    
-        upHandler : function(resizeEle, moveHandler, upHandler) { //모든 커서 관련 사항은 마우스 이동이 끝나면 제거됨
-            resizeEle.resizer.style.removeProperty('cursor')
-            document.body.style.removeProperty('cursor')
-            resizeEle.leftSide.style.removeProperty('user-select')
-            resizeEle.leftSide.style.removeProperty('pointer-events')
-            resizeEle.rightSide.style.removeProperty('user-select')
-            resizeEle.rightSide.style.removeProperty('pointer-events')
-            document.removeEventListener('mousemove', moveHandler)
-            document.removeEventListener('mouseup', upHandler)
-            //localStorage.wiseband_lastsel_chansidewidth = resizeRef.chanSideWidth.value
-        }
-
-    }
-    
     const util = {
 
         setSnack : function(ex, toastSec, fromConfig) {
@@ -439,7 +393,7 @@ const GeneralStore = defineStore('General', () => {
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, 
-        snackBar, toast, auth, ctx, html, resize, util,
+        snackBar, toast, auth, ctx, html, util,
         later, listLater, cntLater, kindLater,
         home, listHome, kindHome, selChanHome, //, objHome, scrollyHome
         dm, listDm, kindDm

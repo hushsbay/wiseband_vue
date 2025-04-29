@@ -6,6 +6,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
+    import Resizer from "/src/components/Resizer.vue"
         
     const router = useRouter()
     const route = useRoute()
@@ -27,25 +28,13 @@
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
     let mounting = true
 
-    /////////////////////////////패널 리사이징 : 다른 vue에서 필요시 localStorage만 바꾸면 됨
+    ///////////////////////////////////////////////////////////////////////////패널 리사이징
     let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px')
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
-    const resizeEle = { mainSide: null, resizer: null, leftSide: null, rightSide: null }
-    const resizeObj = { mainSideWidth: 0, posX: 0, leftWidth: 0 }
 
-    function downHandler(e) {
-        gst.resize.downHandler(e, resizeEle, resizeObj, moveHandler, upHandler)
-    }
-
-    function moveHandler(e) {
-        const dx = gst.resize.moveHandler(e, resizeEle, resizeObj)
-        chanSideWidth.value = `${resizeObj.leftWidth + dx + resizeObj.mainSideWidth}px`
-        chanMainWidth.value = `calc(100% - ${chanSideWidth.value})`
-    }
-
-    function upHandler() {
-        gst.resize.upHandler(resizeEle, moveHandler, upHandler)
-        localStorage.wiseband_lastsel_chansidewidth = chanSideWidth.value
+    function handleFromResizer(chanSideVal, chanMainVal) {
+        chanSideWidth.value = chanSideVal
+        chanMainWidth.value = chanMainVal
     }
     //////////////////////////////////////////////////////////////////////////////////////
 
@@ -54,7 +43,6 @@
             setBasicInfo()
             if (localStorage.wiseband_lastsel_kind) gst.kindHome = localStorage.wiseband_lastsel_kind
             await getList()
-            gst.resize.getEle(resizeEle, 'main_side', 'dragMe', 'chan_side', 'chan_main') //패널 리사이징
             chanClickOnLoop(true)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -276,7 +264,7 @@
             </div>
         </div>
     </div>
-    <div class="resizer" id="dragMe" @mousedown="(e) => downHandler(e)"></div>
+    <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
     <div class="chan_main" id="chan_main" :style="{ width: chanMainWidth }">
         <!-- App.vue와 Main.vue에서는 :key를 안쓰고 Home.vue, Later.vue 등에서만 :key를 사용 (HomeBody.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
@@ -315,9 +303,6 @@
     .coImg20:active { background:var(--active-color);border-radius:9px }
     .nodeHover { background:var(--second-hover-color); }
     .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
-    .resizer {
-        background-color:transparent;cursor:ew-resize;height:100%;width:5px; /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
-    }
     .chan_main {
         height:100%;display:flex; /* width:100%;는 resizing처리됨 */
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
