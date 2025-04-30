@@ -214,18 +214,17 @@
         //또 다른 현상은 새로고침하면 HomePanel.vue가 먼저 실행되는 것이 아닌 MsgList.vue의 onMounted가 먼저 실행되어서 HomePanel.vue가 실행되면서 
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
-            appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan"
-            if (hasProp()) {
-                console.log("자식 - " + JSON.stringify(props.data))
+            const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
+            appType = arr[2] //home,dm,later.. //appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan" //home->chan
+            if (hasProp()) { //console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
-            } else {
-                console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
+            } else { //console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
                 setBasicInfo()
                 if (msgidInChan) { //여기는 LaterPanel.vue로부터 호출되기도 하지만 새창에서 열 때 (캐시제거하고) 비동기로 Later보다 MsgList가 먼저 호출되기도 할 것임
                     await getList({ msgid: msgidInChan, kind: "atHome" })
                     if (route.fullPath.includes("?newwin=")) { //새창에서 열기
-                        if (route.path.startsWith("/main/later/later_body")) {
+                        if (appType == "later") { //if (route.path.startsWith("/main/later/later_body")) {
                             evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
                         }
                     }
@@ -247,19 +246,16 @@
         if (mounting) {
             mounting = false
         } else {
-            if (hasProp()) {
-                console.log("자식A - " + JSON.stringify(props.data))
+            if (hasProp()) { //console.log("자식A - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
-            } else {
-                console.log("부모A - " + JSON.stringify(props.data))
+            } else { //console.log("부모A - " + JSON.stringify(props.data))
                 setBasicInfo()
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            if (route.path.startsWith("/main/home/home_body")) {
-                //if (gst.objHome[chanId]) 
+            if (appType == "home") { //if (route.path.startsWith("/main/home/home_body")) {
                 gst.home.procFromBody("recall", { chanid: chanId })
-            } else if (route.path.startsWith("/main/later/later_body") || route.path.startsWith("/main/dm/dm_body")) {
+            } else if (appType == "later" || appType == "dm") { //(route.path.startsWith("/main/later/later_body") || route.path.startsWith("/main/dm/dm_body")) {
                 evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
@@ -267,42 +263,21 @@
         observerBottomScroll()        
     })
 
-    //onDeactivated(() => {
-        //MsgList.vue가 비활성화되는 싯점은 아래 1), 2)에 따라 다름
-        //1) 사이드메뉴에서 '홈->나중에'를 누르는 경우는 MsgList.vue의 onDeactivated()보다 ListLeft.vue가 먼저 호출되므로 ListLeft.vue에서 이미 gst.selSideMenu는 mnuLater로 변경되어 있음
-        //2) 그러나, 홈에서 Back()을 눌러 나중에도 돌아가는 경우는 MsgList.vue의 onDeactivated()가 먼저 호출되므로 gst.selSideMenu는 mnuHome으로 남아 있음
-        //캐시된 MsgList.vue인 경우 HomePanel.vue보다 먼저 올라오면 HomePanel.vue의 gst.selSideMenu 값을 받는 setBasicInfo()보다 여기 setBasicInfo()가 먼저 실행되어 gst.selSideMenu가 빈값일 수 있음
-        //따라서, 아예 onDeactivated hook에서 일관되게 저장된 사이드메뉴값은 별도로 만들어 사용(sideMenu)하고, gst.selSideMenu는 HomePanel.vue, ListLeft.vue등에서만 사용하기로 하며
-        //아래 setBasicInfo()에서도 route.fullPath를 읽어 sideMenu를 무조건 가져오게 함
-        /* onScrollEnd에서 처리하는 것으로 변경하고 막음
-        if (!sideMenu || !chanId) return
-        const key = sideMenu + chanId        
-        if (!gst.objSaved[key]) gst.objSaved[key] = {}
-        gst.objSaved[key].scrollY = prevScrollY*/
-    //})
-
     onUnmounted(() => {
         observerTop.value.disconnect()
         observerBottom.value.disconnect()
     })
 
     function setBasicInfo() {        
-        sideMenu = gst.selSideMenu //위 onDeactivated() 설명 참조
+        sideMenu = gst.selSideMenu
         if (!sideMenu) { //gst.selSideMenu가 빈값으로 넘어 오는 경우가 가끔 있는데 비동기실행이 어딘지 찾기가 어려워 일단 아래 코딩 보완
             //예) /main/home/home_body/20250120084532918913033423/20250122084532918913033403 : arr[2] = "home"
-            const arr = route.fullPath.split("/")
-            sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
+            //const arr = route.fullPath.split("/")
+            //sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
+            sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
         }
-        // if (route.params.chanid && route.params.grid) {
-        //     chanId = route.params.chanid
-        //     grId = route.params.grid
-        //     //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 HomePanel.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
-        //     //gst.selGrId = grId //이 2행이 없으면 HomePanel.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
-        // } else 
         if (route.params.chanid) {
             chanId = route.params.chanid
-            //gst.selChanId = chanId //$$44 이 2행은 여기에 쓰이지 않고 HomePanel.vue처럼 상위컴포넌트에서 watch를 통해 채널트리간 Back()시 사용자가 선택한 것으로 표시하도록 함
-            //gst.selGrId = grId //이 2행이 없으면 HomePanel.vue에서 등 Back()의 경우 채널노드가 선택되지 않음. 여기 2개 변수는 Back(), click 등 복잡한 비동기가 있으므로 다른 곳에서 쓰지 않기
         }
         if (route.params.msgid) {
             msgidInChan = route.params.msgid //댓글의 msgid일 수도 있음
@@ -322,13 +297,13 @@
             { nm: "새창에서 열기", func: function(item, idx) {
 
             }},
-            { nm: "채널정보 보기", func: function(item, idx) {
+            { nm: "정보 보기", func: function(item, idx) {
                 
             }},
-            { nm: "채널링크 복사", func: function(item, idx) {
+            { nm: "링크 복사", func: function(item, idx) {
                 
             }},
-            { nm: "채널 설정", func: function(item, idx) {
+            { nm: "설정", func: function(item, idx) {
                 
             }},
             { nm: "알림 변경", func: function(item, idx) {
@@ -337,7 +312,7 @@
             { nm: "즐겨찾기", func: function(item, idx) {
                 
             }},
-            { nm: "채널 나가기", color: 'red', func: function(item, idx) {
+            { nm: "나가기", color: 'red', func: function(item, idx) {
                 
             }}
         ]
@@ -369,36 +344,26 @@
         return (minuteDiff <= 1) ? true : false
     }
 
-    //chanid는 기본 param //grid, 
+    //chanid는 기본 param
     //1) lastMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) firstMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
     //3) firstMstMsgCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
     //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
     //5) msgid + kind(withReply) : 1. 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI 2. 나중에..내활동..에서 기본 클릭시 보여 주는 UI
-    //6) kind(notyet or unread) : 1000개만 읽음
+    //6) kind(notyet or unread)
     async function getList(addedParam) {
         try {
             if (onGoingGetList) return
             onGoingGetList = true
-            let param = { chanid: chanId } //기본 param //grid: grId, 
+            let param = { chanid: chanId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt
             const msgid = param.msgid
             const kind = param.kind
-            //let idTop //$$50 참조 (막았지만 코딩 지우지 말기 - 향후 쓰임새가 있는 내용임)
-            //if (lastMsgMstCdt && lastMsgMstCdt != hush.cons.cdtAtFirst) {
-            //    const eleTop = getTopMsgBody() //1) 케이스임 : 이전 데이터를 가져와 뿌린 후에 이젠에 육안으로 맨위에 보였던 idTop이 이젠 안보일테니 
-            //    idTop = eleTop.id //idTop이 맨위에 보이게 스크롤하기 위해 여기서 기억하고 아래에서 처리함
-            //}
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 savFirstMsgMstCdt = hush.cons.cdtAtFirst
                 savLastMsgMstCdt = hush.cons.cdtAtLast
-            } //if ((firstMsgMstCdt && !kind) || (msgid && kind == "atHome")) { //아래로 대체
-            if (route.fullPath.includes("/later_body/") || (firstMsgMstCdt && !kind)) {
-                getAlsoWhenDown = "down" //up은 기본이고 down 스크롤시에도 데이터 가져와야 한다는 의미임
-            } else {
-                getAlsoWhenDown = ""
             }
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data) 
@@ -438,8 +403,7 @@
             const msgidParent = rs.data.msgidParent //atHome만 사용함
             const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
-                const row = msgArr[i]
-                //if (row.MSGID == '20250419095152486066082566') debugger
+                const row = msgArr[i] //if (row.MSGID == '20250419095152486066082566') debugger
                 if (kind == "withReply" && i == 0) {
                     row.background = "beige"
                 } else {
@@ -572,11 +536,7 @@
             } else if (lastMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 1000개만 가져옴
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
             } else if (lastMsgMstCdt) {
-                if (msgArr.length > 0) {
-                    //const ele = document.getElementById(idTop) //데이터를 더 읽어와 추가했으므로 scrollHeight는 더 커진 상태이므로 이전에 봤던 ele를 기준으로 위치 설정함
-                    //if (ele) scrollArea.value.scrollTo({ top: ele.offsetTop - ele.offsetHeight - 10}) //10은 마진/패딩 등 알파값
-                    //$$50 처음엔 위 2행으로 idTop을 기억해 처리했으나 생각해보니, 굳이 그럴 필요없이.. 
-                    //스크롤이전에 prevScrollY + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop을 구하면 됨
+                if (msgArr.length > 0) { //스크롤이전에 prevScrollY + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop을 구하면 됨
                     scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
                 } else {
                     //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
@@ -587,7 +547,7 @@
                 //그냥 두면 됨
             }
             readMsgToBeSeen()
-            onGoingGetList = false //console.log(msgArr.length+"=====")
+            onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
@@ -763,53 +723,12 @@
         if (!afterScrolled.value) afterScrolled.value = true
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
-        if (hasProp()) {
-            //readMsgToBeSeen()
-            return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
-        }        
+        if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         saveCurScrollY(prevScrollY)
-        //readMsgToBeSeen()
     }
 
-    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
-        readMsgToBeSeen()    
-        /*const sTop = scrollArea.value.scrollTop     
-        if (hasProp()) {
-            prevScrollY = sTop //자식에서도 prevScrollY는 필요함
-            readMsgToBeSeen()
-            return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
-        }
-        // const childbodyAttr = hasProp() ? true : false
-        // const ele = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
-        // const topEntryPoint = 200
-        // const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
-        // let which = "stop"
-        // if (prevScrollY) {
-        //     if (sTop < prevScrollY) {
-        //         which = "up"
-        //     } else if (sTop > prevScrollY) {
-        //         which = "down"
-        //     }
-        // }
-        prevScrollY = sTop
-        saveCurScrollY(prevScrollY) 
-        //읽어온 데이터가 없을 땐 getList() 호출하지 않으면 베스트인데 onScrollEnd()와 getList()가 각각 비동기로 처리되므로
-        //여기서 예를 들어, if (resultCnt != 0)인 경우만 다시 호출하는 것은 맞지 않음. 나중에 방법을 찾기로 함
-        // if (which == "up" && sTop < topEntryPoint) { //스크롤이 위 방향으로 특정 위치(이하)로 오게 되면 실행
-        //     prevScrollHeight = scrollArea.value.scrollHeight
-        //     fetchByScrollEnd.value = true
-        //     await getList({ lastMsgMstCdt: savLastMsgMstCdt })
-        // } else if (getAlsoWhenDown == "down" && which == "down" && sTop > bottomEntryPoint) { 
-        //     //수동스크롤과 자동스크롤 구분이 필요한데 정확히 찾기 어려움
-        //     //getList()시 데이터가 추가되어 스크롤이 내려가면 여기를 만나 또 아래 getList()가 수행될 수 있으므로
-        //     //마지막 getList() 방식이 getAlsoWhenDown(down)일 경우만 아래 처리하도록 하기
-        //     fetchByScrollEnd.value = true
-        //     await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
-        // } else {
-        //     readMsgToBeSeen()
-        // }
-        prevScrollHeight = scrollArea.value.scrollHeight
-        readMsgToBeSeen()*/
+    const onScrollEnd = async (e) => {
+        readMsgToBeSeen()
     }
 
     async function refreshMsgDtlWithQryAction(msgid) {
@@ -864,39 +783,29 @@
                 const len = msglist.value.length
                 const start = (idx - 10 < 0) ? 0 : idx - 10
                 const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
-                //const eleParent = document.getElementById("chan_center_body")
                 const childbodyAttr = hasProp() ? true : false
                 const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
                 const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
                 const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
                 const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
                 const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + (hasProp() ? 0 : eleNav.offsetHeight)
-                console.log(start+"#####################"+end)
-                for (let i = start; i <= end; i++) {
+                for (let i = start; i <= end; i++) { //console.log(start+"#####################"+end)
                     const msgdtlArr = msglist.value[i].msgdtl
-                    // const msgdtlRow = msgdtlArr.find(item => { //debugger용으로 일단 풀어서 코딩
-                    //     if ((item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid)) {
-                    //         return true
-                    //     } else {
-                    //         return false
-                    //     }
-                    // })
                     const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
                     const msgid = msglist.value[i].MSGID
                     if (msgdtlRow) { //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-                        console.log("@@@@"+msgid) //테스트용                       
+                        //console.log("@@@@"+msgid)
                     } else {
                         const ele = msgRow.value[msgid]
                         if (ele) {
                             const rect = ele.getBoundingClientRect()
-                            let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
+                            //let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
                             if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
-                                bool = true //테스트용
+                                //bool = true //테스트용
                                 updateWithNewKind(msgid, "notyet", "read")
                             } else {
-                                bool = false //테스트용
-                            }
-                            console.log(bool+"===="+msgid) //테스트용
+                                //bool = false //테스트용
+                            } //console.log(bool+"===="+msgid) //테스트용
                         }
                     }
                 }
@@ -1067,12 +976,6 @@
             } else {
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
                 if (rs == null) return
-                // let item = msglist.value.find(function(row) { return row.MSGID == editMsgId.value })
-                // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
-                //     //아래는 3군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-                //     item.BODY = rs.msgmst.BODY
-                //     item.UDT = rs.msgmst.UDT
-                // }
                 refreshWithGetMsg(rs, editMsgId.value)
             }            
             if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
