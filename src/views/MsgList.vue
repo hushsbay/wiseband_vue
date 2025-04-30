@@ -718,13 +718,15 @@
         if (!afterScrolled.value) afterScrolled.value = true
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
+        readMsgToBeSeen()
         if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         saveCurScrollY(prevScrollY)
     }
 
-    const onScrollEnd = async (e) => {
-        readMsgToBeSeen()
-    }
+    // const onScrollEnd = () => {  //@scrollEnd="onScrollEnd"
+    //     debugger
+    //     readMsgToBeSeen()
+    // }
 
     async function refreshMsgDtlWithQryAction(msgid) {
         let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
@@ -755,11 +757,28 @@
                 }
                 return //패널 업데이트 필요없음 (notyet은 변동없음)
             }
-            if (route.fullPath.includes("/home_body/")) {
+            if (appType == "home") { //if (route.fullPath.includes("/home_body/")) {
                 gst.home.procFromBody("updateUnreadCnt", rq)
-            } else if (route.fullPath.includes("/dm_body/")) {
+            } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
                 gst.dm.procFromBody("updateUnreadCnt", rq)
             }
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function updateAllWithNewKind(oldKind, newKind) {
+        try {            
+            const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
+            const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
+            let rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return            
+            if (appType == "home") {
+                gst.home.procFromBody("updateUnreadCnt", rq)
+            } else if (appType == "dm") { 
+                gst.dm.procFromBody("updateUnreadCnt", rq)
+            }
+            listMsg('notyet')
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -794,12 +813,12 @@
                         const ele = msgRow.value[msgid]
                         if (ele) {
                             const rect = ele.getBoundingClientRect()
-                            //let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
+                            let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
                             if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
-                                //bool = true //테스트용
+                                bool = true //테스트용
                                 updateWithNewKind(msgid, "notyet", "read")
                             } else {
-                                //bool = false //테스트용
+                                bool = false //테스트용
                             } //console.log(bool+"===="+msgid) //테스트용
                         }
                     }
@@ -1527,11 +1546,11 @@
         gst.ctx.show(e)
     }
 
-    async function test(e) {
+    //async function test(e) {
         //gst.util.setToast("gggggg")
         //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
         //emits('ev-test', obj)
-    }
+    //}
     
     ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임
     //https://velog.io/@msdio/window%EC%9D%98-Selection%EA%B3%BC-range%EC%97%90-%EB%8C%80%ED%95%B4%EC%84%9C-%EC%95%8C%EC%95%84%EB%B3%B4%EC%9E%90
@@ -1715,13 +1734,17 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
-            <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @mousedown.right="(e) => test(e)">
+            <!-- <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @mousedown.right="(e) => test(e)">
                 <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
                 <span style="margin-left:5px">테스트</span> 
-            </div>
-            <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span> 
+            </div> -->
+            <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
+            <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
+                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;cursor:pointer">모두읽음처리</span>
+            <span v-show="listMsgSel == 'unread'" @click="updateAllWithNewKind('unread', 'read')"
+                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;cursor:pointer">모두읽음처리</span>
         </div> 
-        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollEnd="onScrollEnd">
+        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
             <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
             <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
                 :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"

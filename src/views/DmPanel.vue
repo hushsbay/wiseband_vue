@@ -125,8 +125,9 @@
                         row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
                     }
                 }                
-                row.notioffImg = (row.NOTI == "X") ? hush.cons.color_light + "notioff.png" : ""
-                row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
+                //row.notioffImg = (row.NOTI == "X") ? hush.cons.color_light + "notioff.png" : ""
+                //row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
+                procChanRowImg(row)
                 gst.listDm.push(row)
                 if (row.LASTMSGDT < savLastMsgMstCdt) savLastMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
             }
@@ -141,6 +142,11 @@
             onGoingGetList = false
             gst.util.showEx(ex, true)
         }
+    }
+
+    function procChanRowImg(row) {
+        row.notioffImg = (row.NOTI == "X") ? hush.cons.color_light + "notioff.png" : ""
+        row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
     }
 
     function dmClickOnLoop(refresh) {
@@ -174,20 +180,23 @@
             const res = await axios.post("/chanmsg/toggleChanOption", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //const idx = gst.listDm.findIndex((item) => item.CHANID == row.CHANID)
-            //if (idx > -1) {
-                debugger
-                //gst.listDm
-            //}
-
+            const idx = gst.listDm.findIndex((item) => item.CHANID == row.CHANID)
+            if (idx > -1) {
+                if (kind == "noti") {
+                    gst.listDm[idx].NOTI = job
+                } else if (kind == "bookmark") {
+                    gst.listDm[idx].BOOKMARK = job
+                }
+                procChanRowImg(gst.listDm[idx])
+            }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
     }
 
-    async function mouseRight(e, row) {
-        const notiStr = "알림 " + (row.NOTI == "X") ? "해제" : "설정"
-        const bookmarkStr = "즐겨찾기 " + (row.BOOKMARK == "Y") ? "해제" : "설정"
+    async function mouseRight(e, row) {        
+        const notiStr = "알림 " + (row.NOTI == "X" ? "해제" : "설정")
+        const bookmarkStr = "즐겨찾기 " + (row.BOOKMARK == "Y" ? "해제" : "설정")
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "메시지목록 새로고침", func: function(item, idx) {
