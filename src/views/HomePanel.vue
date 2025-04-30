@@ -189,6 +189,17 @@
                 { nm: "메시지목록 새로고침", func: function(item, idx) {
                     gst.util.goMsgList('home_body', { chanid: row.CHANID }, true)
                 }},
+                { nm: "새창에서 열기", deli: true, func: function(item, idx) {
+                    //let url = "/main/home/home_body/" + row.CHANID + "?newwin=" + Math.random()
+                    //위와 같이 home_body로 새창을 열면 router index.js를 보면 from/to url이 여러번 발생하는데 심지어 ?newwin으로 query가 ?ver로 변경되어 최종 전달되어 문제가 복잡함
+                    //따라서, 아래와 같이 HomePanel까지만 라우팅하면 거기서 이미 로컬스토리지로 가지고 있는 chanid를 클릭해서 여는 효과를 내는 것으로 일단 대체함
+                    if (row.CHANID != localStorage.wiseband_lastsel_chanid) {
+                        gst.util.setToast("선택된 채널에서 우클릭해 주시기 바랍니다.")
+                        return
+                    }
+                    let url = "/main/home"
+                    window.open(url)
+                }},
                 { nm: "정보 보기", func: function(item, idx) {
 
                 }},
@@ -214,6 +225,10 @@
     function mouseLeave(row) {
         if (row.sel) return
         row.hover = false
+    }
+
+    function handleEvFromBody() { //MsgList.vue에서 실행 (to later, dm..)
+        chanClickOnLoop()
     }
 </script>
 
@@ -264,7 +279,7 @@
         <!-- App.vue와 Main.vue에서는 :key를 안쓰고 HomePanel.vue, LaterPanel.vue 등에서만 :key를 사용 (MsgList.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>
-                <component :is="Component" :key="$route.fullPath" />
+                <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
     </div>    

@@ -150,13 +150,14 @@
     }
     
     async function laterClick(row, idx, refresh) {
-        try {
+        try {            
             gst.listLater.map((item) => {
                item.sel = false
                item.hover = false
             })
             row.sel = true
             localStorage.wiseband_lastsel_latermsgid = row.MSGID
+            console.log("laterClick")
             gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -166,14 +167,14 @@
     async function changeAction(kind, row) {
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
             const msgid = row.MSGID
-            const rq = { chanid: row.CHANID, msgid: msgid, kind: gst.kindLater, job: kind }
+            const rq = { chanid: row.CHANID, msgid: msgid, kind: gst.kindLater, job: kind } //kind는 현재 상태, job은 바꿀 상태
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return //뭐가 되었던 아래 Later패널에서는 제거해야 함. //const work = rs.data.work은 여기서는 무시하고 무조건 delete
+            if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Later 패널 탭에서는 제거해야 함 //const work = rs.data.work은 여기서는 무시하고 무조건 delete
             const idx = gst.listLater.findIndex((item) => item.MSGID == msgid)
             if (idx > -1) gst.listLater.splice(idx, 1)
             gst.later.getCount() //화면에 갯수 업데이트
-            if (kind != "delete") return //delete인 경우만 오른쪽 패널 업데이트
+            if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
             const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 '나중에' 처리되어 있는 경우는 부모 색상도 원위치 필요함
             msglistRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
         } catch (ex) { 
@@ -188,7 +189,14 @@
                 gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
             }},
             { nm: "새창에서 열기", deli: true, func: function(item, idx) {
-                let url = "/main/later/later_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
+                //let url = "/main/later/later_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
+                //위와 같이 later_body로 새창을 열면 router index.js를 보면 from/to url이 여러번 발생하는데 심지어 ?newwin으로 query가 ?ver로 변경되어 최종 전달되어 문제가 복잡함
+                //따라서, 아래와 같이 LaterPanel까지만 라우팅하면 거기서 이미 로컬스토리지로 가지고 있는 msgid를 클릭해서 여는 효과를 내는 것으로 일단 대체함
+                if (row.MSGID != localStorage.wiseband_lastsel_latermsgid) {
+                    gst.util.setToast("선택된 메시지에서 우클릭해 주시기 바랍니다.")
+                    return
+                }
+                let url = "/main/later"
                 window.open(url)
             }}, //nm: "홈에서 열기" : 슬랙은 자식에게 '나중에'가 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
             { nm: "보관", disable: (gst.kindLater == "stored") ? true : false, func: async function(item, idx) {

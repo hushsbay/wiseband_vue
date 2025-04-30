@@ -26,13 +26,13 @@
 
     async function procFromParent(kind, obj) {
         if (kind == "later" && obj.work == "delete") {
-            const msgid = (obj.msgid == obj.msgidParent) ? obj.msgid : obj.msgidParent
+            const msgid = (obj.msgid == obj.msgidParent) ? obj.msgid : obj.msgidParent //댓글인 경우는 부모 아이디
             const row = msglist.value.find((item) => item.MSGID == msgid)
-            if (row) {
-                row.act_later = null //자식에 '나중에'처리되어 있고 부모는 색상만 리셋하면 되나 여기 어차피 null이니 이 부분도 처리해서 공통화시킴
+            if (row) { //자식에 '나중에'처리되어 있고 부모는 색상만 리셋하면 되나 여기 어차피 null이니 이 부분도 처리해서 공통화시킴
+                row.act_later = null
                 row.background = ""
             }
-            if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함
+            if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함 (MsgList에서 MsgList에게 전달)
                 if (msglistRef.value) msglistRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
             }
         } else if (kind == "refreshMsg") {
@@ -220,16 +220,11 @@
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
             } else { //console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
-                setBasicInfo()
-                if (msgidInChan) { //여기는 LaterPanel.vue로부터 호출되기도 하지만 새창에서 열 때 (캐시제거하고) 비동기로 Later보다 MsgList가 먼저 호출되기도 할 것임
+                setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
+                if (msgidInChan) {
                     await getList({ msgid: msgidInChan, kind: "atHome" })
-                    if (route.fullPath.includes("?newwin=")) { //새창에서 열기
-                        if (appType == "later") { //if (route.path.startsWith("/main/later/later_body")) {
-                            evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
-                        }
-                    }
                 } else {
-                    await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                    await getList({ lastMsgMstCdt: savLastMsgMstCdt })                    
                 }
                 try { 
                     inEditor.value.focus() 
