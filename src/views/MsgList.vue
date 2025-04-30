@@ -14,13 +14,14 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    //ev-click    : 가능하면 스토어에서 함수 만들어 처리하는데 여기는 MsgList와 MsgList 사이의 통신이라 구분지어 ev-click로 처리해 보는 것임
-    //ev-to-panel : 원래 MsgList -> Panel(Later, Dm..)는 스토어에서 처리하여 했는데 element를 다루는 내용 + MsgList(Parent만의경우)라 처리해보니까 더 편리함
+    //ev-click    : MsgList -> MsgList
+    //ev-to-panel : MsgList -> Panel(Later, Dm..) : 가능하면 스토어에서 처리하나 element를 다루는 내용 + MsgList(Parent만) 경우는 ev-to-panel 호출 (처리해보니까 더 편리함)
     const emits = defineEmits(["ev-click", "ev-to-panel"])
 
     /////////////////////////////////////////////////////////////////////////////////////
-    //여기는 HomePanel.vue, DmPanel.vue, LaterPanel.vue처럼 왼쪽패널에서 MsgList로 통신할 때 사용하는 부분임
-    //아래 defineExpose()에 정의된 함수를 패널에서 호출 (이 프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js const later = 부분에 정리해 두었음)
+    //1) 왼쪽 Panel -> MsgList 2) MsgList(부모) -> MsgList(자식)
+    //프로젝트에서의 컴포넌트간의 호출은 GeneralStore.js 상단에 정리해 두었음
+
     defineExpose({ procFromParent })
 
     async function procFromParent(kind, obj) {
@@ -37,16 +38,6 @@
         } else if (kind == "refreshMsg") {
             const rs = await getMsg({ msgid: obj.msgid })
             if (rs == null) return
-            // let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
-            // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
-            //     //아래는 3군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-            //     item.BODY = rs.msgmst.BODY
-            //     item.UDT = rs.msgmst.UDT
-            //     item.reply = rs.reply
-            //     item.replyinfo = rs.replyinfo
-            //     item.act_later = rs.act_later
-            //     item.act_fixed = rs.act_fixed
-            // }
             refreshWithGetMsg(rs, obj.msgid)
         } else if (kind == "deleteMsg") {
             const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
@@ -55,9 +46,9 @@
     }
 
     /////////////////////////////////////////////////////////////////////////////////////
-    //스레드(댓글) 관련 : 부모MsgList(이하 '부모')와 자식MsgList(이하 '자식')가 혼용되어 코딩됨
+    //스레드(댓글) 관련 : 부모 MsgList와 자식 MsgList가 혼용되어 코딩되어 있으므로
     //네이밍 규칙을 정해서, thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
-    //부모/자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개 : 각각 element id 만들어 hasProp()으로 구분해 사용하면 됨
+    //부모,자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개인데 hasProp()으로 구분해 사용
     
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
 
@@ -86,22 +77,13 @@
         setWidthForThread()
     }
 
-    async function clickFromProp(obj) { //부모에서만 사용하나 자식에게서 전달받아 이벤트 처리하는 것임
+    async function clickFromProp(obj) { //부모에서만 사용. 자식에게서 전달받아 이벤트 처리하는 것임
         if (obj.type == "close") {
             thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
             setWidthForThread(null, obj.type)
         } else if (obj.type == "refreshFromReply") {
             const rs = await getMsg({ msgid: obj.msgid }, true)
             if (rs == null) return
-            // let item = msglist.value.find(function(row) { return row.MSGID == obj.msgid })
-            // if (item) { //item과 rs는 구조가 달라 item = rs로 처리못하고 아래처럼 필요한 경우 추가하기로 함
-            //     ////아래는 군데에 유사로직 있음. 결국엔 한번에 붓는 것도 필요해 질 때도 필요해 질 것임
-            //     item.reply = rs.reply
-            //     item.replyinfo = rs.replyinfo
-            //     item.act_later = rs.act_later
-            //     item.act_fixed = rs.act_fixed
-            //     item.background = rs.act_later ? hush.cons.color_act_later : ""
-            // }
             refreshWithGetMsg(rs, obj.msgid)
         }
     }
@@ -121,17 +103,11 @@
     }
 
     function setBasicInfoInProp() {
-        // if (route.params.chanid && route.params.grid) {
-        //     chanId = route.params.chanid
-        //     grId = route.params.grid
-        // }
         if (route.params.chanid) {
             chanId = route.params.chanid
-            //grId = route.params.grid
         }
         if (props.data.msgid) { //route가 아님을 유의
             msgidInChan = props.data.msgid //댓글의 msgid일 수도 있음
-            //props.data.msgidChild도 있는데 별도 변수에 담지 않고 바로 사용하기로 함
         }
     }
 
@@ -153,24 +129,24 @@
     let mounting = true, appType
     
     let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //MsgList가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
-    const scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당받아 ref에 사용하려고 하는 것임
+    const scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당
 
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
         
-    let sideMenu, chanId, msgidInChan //grId, 
+    let sideMenu, chanId, msgidInChan
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
     let msglist = ref([]), fetchByScrollEnd = ref(false)
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
-    let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span> 하하</p>")
+    let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
     let savFirstMsgMstCdt = hush.cons.cdtAtFirst, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 오래된 일시와 최근 일시
-    let onGoingGetList = false, prevScrollY, prevScrollHeight, getAlsoWhenDown = ""
+    let onGoingGetList = false, prevScrollY, prevScrollHeight //, getAlsoWhenDown = ""
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -180,17 +156,17 @@
     let editorIn = ref(false), editorBlurDt = Date.now()
     let inEditor = useTemplateRef('editorRef') //editor = document.getElementById(editorId) editor 대신 inEditor (템플릿 참조) 사용
 
-    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(Home) > 손자(MsgList) 구조임 (스레드(댓글)용으로 손자안에 동일한 손자(MsgList)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
-    1. HomePanel.vue에서 <router-view />를 사용하면 그 자식인 여기 MsgList.vue가 한번만 마운트되고 
-       그 다음에 router.push해도 다시 마운트(아예 호출도) 안됨 : onMounted가 한번만 호출되고 끝.
+    /* 라우팅 관련 정리 : 현재는 부모(Main) > 자식(각종Panel) > 손자(MsgList) 구조임 
+       - 스레드(댓글)용으로 손자안에 동일한 손자(MsgList)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
+    1. HomePanel.vue에서 <router-view />를 사용하면 그 자식인 여기 MsgList.vue가 한번만 마운트되고 그 다음에 router.push해도 다시 마운트(아예 호출도) 안됨 : onMounted가 한번만 호출되고 끝
     2. 그런데, <router-view :key="$route.fullPath"></router-view>와 같이 :key속성을 사용하면 router.push할 때마다 다시 마운트됨
     3. 그런데, Main.vue에서도 :key를 사용하면 HomePanel.vue에서 router.push할 때에도 Main.vue의 onMounted가 호출되어 문제가 됨
     4. 따라서, 현재 구조에서는 여기 손자인 MsgList.vue를 호출하는 자식인 HomePanel.vue에서만 :key를 적용하면 슬랙과 똑같이 채널노드를 클릭할 때마다 라우팅되도록 할 수 있음
        - 만일 손자 아래 증손자가 필요하고 그것도 라우팅으로 처리하려면 매우 복잡한 핸들링이 필요하므로
        - 아예 증손자는 만들지 말든지 아니면 만들어도 라우팅 아닌 컴포넌트 호출(또는 비동기로 defineAsyncComponent)하기로 함
-    5. keepalive때문에 back()시 이전에 열었던 채널 상태 복원되나, 이전 스크롤위치는 구현 필요 */
+    5. keepalive때문에 back()시 이전에 열었던 채널 상태 복원되나, 이전 스크롤위치는 구현 필요
 
-    /* <keep-alive> 구현시
+    <keep-alive> 구현시
     1. App.vue, HomePanel.vue, MsgList.vue 모두 아래와 같이 구현하니 잘되나 안되는 부분도 다음 항목처럼 발생 (해결 필요)
         <router-view v-slot="{ Component }">
             <keep-alive>
@@ -209,9 +185,9 @@
     5. 결론적으로, App.vue, Main.vue, HomePanel.vue에 있는 <router-view>의 모습이 각각 다르며 
        router의 index.js와 각 watch 메소드를 이용해 Back() 또는 기존 URL 클릭시 캐시를 부르거나 상태복원하는 것으로 구현 완료함 */
 
-    const observerTopScroll = () => {
+    const observerTopScroll = () => { //위로 스크롤하는 경우
         observerTop.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
+            if (entry[0].isIntersecting) {
                 await getList({ lastMsgMstCdt: savLastMsgMstCdt })
             } else {
                 return
@@ -220,9 +196,9 @@
         observerTop.value.observe(observerTopTarget.value)
     }
 
-    const observerBottomScroll = () => {
+    const observerBottomScroll = () => { //아래로 스크롤하는 경우
         observerBottom.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) { //if (entry[0].isIntersecting && !props.isFetching) {
+            if (entry[0].isIntersecting) {
                 await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
             } else {
                 return
@@ -240,7 +216,6 @@
         try {
             appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan"
             if (hasProp()) {
-                debugger
                 console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
