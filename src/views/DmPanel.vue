@@ -208,11 +208,11 @@
 
             }},
             { nm: notiStr, func: function(item, idx) {
-                const job = (row.NOTI == "X") : "" : "X"
+                const job = (row.NOTI == "X") ? "" : "X"
                 toggleChanOption("noti", job, row)
             }},
             { nm: bookmarkStr, func: function(item, idx) {
-                const job = (row.BOOKMARK == "Y") : "" : "Y"
+                const job = (row.BOOKMARK == "Y") ? "" : "Y"
                 toggleChanOption("bookmark", job, row)
             }},
             { nm: "초대" },
