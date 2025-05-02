@@ -96,7 +96,8 @@
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {
-                
+                let url = "/body/msglist/" + row.CHANID + "/" + row.MSGID
+                window.open(url)
             }}
         ]
         gst.ctx.show(e)

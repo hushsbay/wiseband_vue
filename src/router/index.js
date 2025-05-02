@@ -23,6 +23,11 @@ const router = createRouter({
             component: Login
         },
         {
+            path: '/body/msglist/:chanid/:msgid',
+            name: 'msglist',
+            component: MsgList
+        },
+        {
             path: '/main',
             name: 'main',
             component: Main,

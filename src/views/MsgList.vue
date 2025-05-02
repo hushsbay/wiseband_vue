@@ -125,11 +125,12 @@
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
-    const MAX_PICTURE_CNT = 11
+    const MAX_PICTURE_CNT = 11, adminShowID = ref(false)
     const g_userid = gst.auth.getCookie("userid")
     let mounting = true, appType
     
-    let widthChanCenter = ref('calc(100% - 20px)'), widthChanRight = ref('0px') //MsgList가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
+    let widthChanCenter = ref('calc(100% - 20px)')
+    let widthChanRight = ref('0px') //MsgList가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
     const scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당
 
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
@@ -217,7 +218,7 @@
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
-            appType = arr[2] //home,dm,later.. //appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan" //home->chan
+            appType = arr[2] //home,dm,later,msglist.. //appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan" //home->chan
             if (hasProp()) { //console.log("자식 - " + JSON.stringify(props.data))
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
@@ -228,12 +229,12 @@
                 } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })                    
                 }
+                observerTopScroll()
+                observerBottomScroll()
                 try { 
                     inEditor.value.focus() 
                 } catch {}
             }
-            observerTopScroll()
-            observerBottomScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -247,6 +248,8 @@
                 setBasicInfoInProp()
             } else { //console.log("부모A - " + JSON.stringify(props.data))
                 setBasicInfo()
+                observerTopScroll()
+                observerBottomScroll()      
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
@@ -256,8 +259,6 @@
                 evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
-        observerTopScroll()
-        observerBottomScroll()        
     })
 
     onUnmounted(() => {
@@ -276,8 +277,9 @@
         if (route.params.chanid) {
             chanId = route.params.chanid
         }
-        if (route.params.msgid) {
-            msgidInChan = route.params.msgid //댓글의 msgid일 수도 있음
+        const tmpMsgid = route.params.msgid
+        if (tmpMsgid && tmpMsgid != "0") {
+            msgidInChan = tmpMsgid //댓글의 msgid일 수도 있음
         }
     }
 
@@ -574,6 +576,8 @@
     function refreshWithGetMsg(rs, msgid) {
         let item = msglist.value.find(function(row) { return row.MSGID == msgid })
         if (item) { //필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 것임
+            item.BODY = rs.msgmst.BODY
+            item.UDT = rs.msgmst.UDT
             item.reply = rs.reply
             item.replyinfo = rs.replyinfo
             item.act_later = rs.act_later
@@ -722,6 +726,7 @@
 
     const onScrolling = () => { 
         if (!afterScrolled.value) afterScrolled.value = true
+        if (!scrollArea.value) return //오류 만났을 때
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
         readMsgToBeSeen()
@@ -806,9 +811,10 @@
                 const childbodyAttr = hasProp() ? true : false
                 const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
                 const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
+                const eleHeaderHeight = eleHeader ? eleHeader.offsetHeight : 0 //Main.vue가 없는 msglist 라우팅의 경우도 있을 수 있음
                 const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
                 const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
-                const topFrom = eleHeader1.offsetHeight + eleHeader.offsetHeight + (hasProp() ? 0 : eleNav.offsetHeight)
+                const topFrom = eleHeader1.offsetHeight + eleHeaderHeight + (hasProp() ? 0 : eleNav.offsetHeight)
                 for (let i = start; i <= end; i++) { //console.log(start+"#####################"+end)
                     const msgdtlArr = msglist.value[i].msgdtl
                     const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
@@ -998,9 +1004,9 @@
                 if (rs == null) return
                 refreshWithGetMsg(rs, editMsgId.value)
             }            
-            if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
+            if (appType == "later") { //if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") gst.later.procFromBody("update", rq)
-            } else if (route.fullPath.includes("/dm_body/")) {
+            } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
                 gst.dm.procFromBody("update", rq)
             }
             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
@@ -1689,9 +1695,14 @@
         showHtml.value = true
         msgbody.value = document.getElementById(editorId).innerHTML
     }
+
+    function adminJob() {
+        adminShowID.value = !adminShowID.value
+    }
 </script>
 
 <template>
+<div class="chan_main">
     <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
@@ -1699,10 +1710,12 @@
                     <span>{{ chanmemFullExceptMe.join(", ") }}</span>
                 </div>
                 <div v-else style="display:flex;align-items:center">
-                    <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
-                    <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">{{ channm }} [{{ grnm }}] {{ chanId }}</div>
+                    <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px" @click="adminJob">
+                    <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">
+                        {{ channm }} {{ grnm ? "[" + grnm+ "]" : "" }} <span v-if="adminShowID">{{ chanId }}</span>
+                    </div>
                 </div>
-                <div v-if="hasProp()" style="margin-right:5px">스레드</div>
+                <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
                 <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:20px">data by scrolling</span> 
             </div>
             <div class="chan_center_header_right">
@@ -1765,6 +1778,7 @@
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)">
                     <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
                     <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
+                    <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                 </div>
                 <div style="width:100%;display:flex;margin:10px 0">
                     <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
@@ -1808,7 +1822,6 @@
                             <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
                         </div>
                     </div>
-                    <div style="margin-left:9px;color:red">{{ row.MSGID }}</div>
                 </div>
                 <div class="msg_body_sub"><!-- Mention -->
                     <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
@@ -1945,9 +1958,10 @@
             </div>
         </div>
     </div>
-    <div class="chan_right" v-if="thread.msgid":style="{ width: widthChanRight }">
+    <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
         <msg-list :data="thread" @ev-click="clickFromProp" ref="msglistRef"></msg-list>
-    </div>   
+    </div>  
+</div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-image ref="imgPopupRef" :param="imgParam">
         <img :src="imgPopupUrl" :style='imgPopupStyle'>
@@ -1962,7 +1976,11 @@
     <media-search ref="mediaPopupRef"></media-search>
 </template>
 
-<style scoped>    
+<style scoped>  
+    .chan_main { /* 원래는 각 패널에 있다가 msglist 라우팅(새창에서열기) 때문에 여기로 이동 - 댓글 관련 */
+        width:100%;height:100%;display:flex;
+        background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
+    }
     .chan_center {
         height:100%;padding: 0 0 0 10px;
         display:flex;flex-direction:column;
