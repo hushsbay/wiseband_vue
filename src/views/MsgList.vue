@@ -336,12 +336,7 @@
     }
 
     function openMediaSearch(tab) {
-        try {
-            //mediaParam.value = { chanid: chanId, tab: tab }
-            mediaPopupRef.value.open(tab, chanId)
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
+        mediaPopupRef.value.open(tab, chanId)
     }
 
     function chkWithinTime(dt1, dt2) {
