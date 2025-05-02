@@ -9,6 +9,7 @@
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
     import MemberPiceach from "/src/components/MemberPiceach.vue"
+    import MediaSearch from "/src/components/MediaSearch.vue"
             
     const router = useRouter()
     const route = useRoute()
@@ -134,6 +135,7 @@
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
+    const mediaPopupRef = ref(null), mediaParam = ref(null)
         
     let sideMenu, chanId, msgidInChan
     let grnm = ref(''), channm = ref(''), chanimg = ref('')
@@ -331,6 +333,15 @@
         } else {
             await getList({ kind: kind })
         }        
+    }
+
+    function openMediaSearch(tab) {
+        try {
+            //mediaParam.value = { chanid: chanId, tab: tab }
+            mediaPopupRef.value.open(tab, chanId)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
     }
 
     function chkWithinTime(dt1, dt2) {
@@ -1730,9 +1741,13 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
             </div>
-            <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('file')">
+            <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openMediaSearch('file')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
+            </div>
+            <div class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openMediaSearch('image')">
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
+                <span style="margin-left:5px">이미지</span> 
             </div>
             <!-- <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @mousedown.right="(e) => test(e)">
                 <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
@@ -1949,6 +1964,7 @@
             <!-- <span style="margin-top:10px;color:dimgray">링크를 한 필드에만 넣어도 됩니다.</span> -->
         </div>
     </popup-common>
+    <media-search ref="mediaPopupRef"></media-search>
 </template>
 
 <style scoped>    
