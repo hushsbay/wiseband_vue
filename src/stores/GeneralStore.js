@@ -219,7 +219,7 @@ const GeneralStore = defineStore('General', () => {
                 if (!rs) return
                 cntLater.value = rs.list[0].CNT
             } catch (ex) {
-                gst.util.showEx(ex, true)
+                util.showEx(ex, true)
             }
         }
 
@@ -320,14 +320,45 @@ const GeneralStore = defineStore('General', () => {
             util.setSnack(msg, sec)
         },
 
-        goMsgList : async function(nm, params, refresh) { //refresh=true는 모든 동일한 라우팅 찾아 없애고 새로 열어야 할텐데 고민하기로 함
-            let obj = { name : nm, params : params}
-            if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
-            const ele = document.getElementById("chan_center_header") //chan_center_body
-            if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
-                await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
+        qryOneMsgNotYet : async function(chanid) {
+            const res = await axios.post("/chanmsg/qryOneMsgNotYet", { chanid : chanid })
+            const rs = util.chkAxiosCode(res.data)
+            if (!rs) return null
+            if (rs.data == null) {
+                return null
             } else {
-                await router.push(obj)
+                return rs.data.MSGID
+            }
+        },
+
+        goMsgList : async function(nm, params, refresh) {
+            try {
+                let msgid = params.msgid
+                if (!msgid) {
+                    // const res = await axios.post("/chanmsg/qryOneMsgNotYet", { chanid : params.chanid })
+                    // const rs = util.chkAxiosCode(res.data)
+                    // if (!rs) return
+                    const strMsgid = await util.qryOneMsgNotYet(params.chanid)
+                    if (strMsgid == null) {
+                        params.msgid = "0"
+                    } else {
+                        params.msgid = strMsgid
+                    }
+                }
+                let obj = { name : nm, params : params}
+                if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
+                if (!msgid && params.msgid.length > 20) { //안읽은 메시지 아이디를 가지고 온 것임 : Panel중에 동일한 로직으로 처리하는 곳이 있음
+                    if (!obj.query) obj.query = {}
+                    obj.query.notyet = true                    
+                }
+                const ele = document.getElementById("chan_center_header") //chan_center_body
+                if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+                    await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
+                } else {
+                    await router.push(obj)
+                }
+            } catch (ex) {
+                util.showEx(ex, true)
             }
         },
 

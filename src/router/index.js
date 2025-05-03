@@ -38,7 +38,7 @@ const router = createRouter({
                     component: HomePanel,
                     children: [
                         {
-                            path: 'home_body/:chanid',
+                            path: 'home_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
                             name: 'home_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
                             component: MsgList,
                         }
@@ -50,7 +50,7 @@ const router = createRouter({
                     component: DmPanel,
                     children: [
                         {
-                            path: 'dm_body/:chanid',
+                            path: 'dm_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
                             name: 'dm_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
                             component: MsgList,
                         }
