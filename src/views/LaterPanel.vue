@@ -13,13 +13,6 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    //목록의 순서때문에 Object나 Map을 이용하기 어려워 v-for에서는 주로 Array를 이용해 업뎃을 하는데 크기가 클수록 msigid를 찾는데 시간이 더 걸리는 구조임
-    //{ "327846325832467" : 0(항목인덱스) .. } 식으로는 (항목 삭제도 없고 push만 있어야 가능한데 splice도 있으니 index 변함) 어려움
-    //1) 마우스오버 및 클릭시 색상 변경 등은 { "327846325832467": { hover: true, sel: false }.. } 으로 가능하므로 최대한 object로 처리하도록 노력
-    //2) 나머지는 육안으로 화면에 보이는 것만 업데이트 등을 고려했으나
-    //사실, EndlessScroll해봤자 10000개를 넘으면 많은 것일테니 루프에 크게 부담갖지 말고 배열만으로 처리하기로 함
-    //최종적으로, msgRow가 msgid를 가지고 있는 element 객체이므로 그 element 속성에 배열 인덱스를 가지고 있으면 찾는데 시간을 대폭 줄일 수 있을 것으로 판단됨
-
     let observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
@@ -157,7 +150,6 @@
             })
             row.sel = true
             localStorage.wiseband_lastsel_latermsgid = row.MSGID
-            console.log("laterClick")
             gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -175,7 +167,7 @@
             if (idx > -1) gst.listLater.splice(idx, 1)
             gst.later.getCount() //화면에 갯수 업데이트
             if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
-            const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 '나중에' 처리되어 있는 경우는 부모 색상도 원위치 필요함
+            const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
             msglistRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -201,7 +193,7 @@
             { nm: "진행", disable: (gst.kindLater == "later") ? true : false, func: function(item, idx) {
                 changeAction('later', row)
             }},
-            { nm: "'나중에'에서 제거", color: "red", func: function(item, idx) {
+            { nm: "제거", color: "red", func: function(item, idx) {
                 changeAction('delete', row)                
             }},
         ]            
@@ -218,7 +210,7 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행 (to later, dm..)
+    function handleEvFromBody() { //MsgList.vue에서 실행
         laterClickOnLoop()
     }
 </script>
@@ -228,17 +220,14 @@
         <div class="chan_side_top">
             <div class="chan_side_top_left">나중에</div>
             <div class="chan_side_top_right">
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="procQuery('later')"
-                    :style="{ borderBottom: (gst.kindLater == 'later') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
+                <div class="procMenu" :class="(gst.kindLater == 'later') ? 'procMenuSel' : ''" @click="procQuery('later')">
                     진행중<span style="margin-left:3px">{{ gst.cntLater }}</span>
                 </div>
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="procQuery('stored')"
-                    :style="{ borderBottom: (gst.kindLater == 'stored') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }">
-                    보관됨<span style="margin-left:3px"></span>
+                <div class="procMenu" :class="(gst.kindLater == 'stored') ? 'procMenuSel' : ''" @click="procQuery('stored')">
+                    보관됨
                 </div>
-                <div style="padding:3px;margin-left:10px;color:whitesmoke" @click="procQuery('finished')"
-                    :style="{ borderBottom: (gst.kindLater == 'finished') ? '3px solid white' : '3px solid rgb(90, 46, 93)' }" >
-                    완료됨<span style="margin-left:3px"></span>
+                <div class="procMenu" :class="(gst.kindLater == 'finished') ? 'procMenuSel' : ''" @click="procQuery('finished')">
+                    완료됨
                 </div>
             </div>
         </div>
@@ -253,7 +242,7 @@
                         </div>
                         <div v-else style="display:flex;align-items:center">
                             <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
-                            {{ row.CHANNM }} {{ row.TYP }}
+                            <span style="margin-left:3px">{{ row.CHANNM }}</span>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
@@ -262,17 +251,15 @@
                 </div>
                 <div class="node">
                     <div style="display:flex;align-items:center">
-                        <!-- <img v-if="row.url" :src="row.url" style='width:32px;height:32px;border-radius:16px'>
-                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:32px;height:32px'> -->
                         <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
-                        <div style="color:whitesmoke;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
+                        <div style="color:white;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
                         {{ hush.util.displayDt(row.CDT, false) }}
                     </div>
                 </div>
                 <div class="coDotDot"> <!-- 원래 coDotDot으로만 해결되어야 하는데 데이터가 있으면 넓이가 예) 1px 늘어나 육안으로 흔들림 -->
-                    <div style="width:100px;color:white">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
+                    <div style="width:100px;color:white;font-weight:bold">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
                 </div>
             </div>
             <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
@@ -280,7 +267,6 @@
     </div>
     <resizer nm="later" @ev-from-resizer="handleFromResizer"></resizer>
     <div :style="{ width: chanMainWidth }">
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 HomePanel.vue, LaterPanel.vue 등에서만 :key를 사용 (MsgList.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
@@ -313,7 +299,7 @@
         font-size:15px;color:var(--text-white-color);cursor:pointer
     }
     .nodeHover, .nodeSel { background:var(--second-hover-color) }
-    .resizer {
-        background-color:transparent;cursor:ew-resize;height:100%;width:5px /* 5px 미만은 커서 너무 민감해짐 #cbd5e0 */
-    }
+    .procMenu { padding:3px;margin-left:10px;color:lightgray;font-weight:bold;border-bottom:3px solid rgb(90, 46, 93) }
+    .procMenu:hover { color:white;font-weight:bold }
+    .procMenuSel { color:white;border-bottom:3px solid white }
 </style>
