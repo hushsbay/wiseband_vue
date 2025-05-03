@@ -180,7 +180,7 @@
             { nm: "메시지목록 새로고침", func: function(item, idx) {
                 gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
             }},
-            { nm: "새창에서 열기", deli: true, func: function(item, idx) {
+            { nm: "새창에서 열기", func: function(item, idx) {
                 let url = "/body/msglist/" + row.CHANID + "/" + row.MSGID
                 window.open(url)
             }}, //nm: "홈에서 열기" : 슬랙은 자식에게 '나중에'가 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
