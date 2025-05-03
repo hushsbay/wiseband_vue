@@ -262,8 +262,8 @@
     })
 
     onUnmounted(() => {
-        observerTop.value.disconnect()
-        observerBottom.value.disconnect()
+        if (observerTop) observerTop.value.disconnect()
+        if (observerBottom) observerBottom.value.disconnect()
     })
 
     function setBasicInfo() {        
@@ -1777,8 +1777,8 @@
                         class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row)">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)">
                     <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
-                    <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
                     <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
+                    <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>                    
                 </div>
                 <div style="width:100%;display:flex;margin:10px 0">
                     <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">

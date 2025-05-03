@@ -203,23 +203,9 @@
                 gst.util.goMsgList('dm_body', { chanid: row.CHANID }, true)
             }},
             { nm: "새창에서 열기", deli: true, func: async function(item, idx) {
-                //let url = "/main/dm/dm_body/" + row.CHANID + "/" + row.MSGID + "?newwin=" + Math.random()
-                //위와 같이 dm_body로 새창을 열면 router index.js를 보면 from/to url이 여러번 발생하는데 심지어 ?newwin으로 query가 ?ver로 변경되어 최종 전달되어 문제가 복잡함
-                //따라서, 아래와 같이 DmPanel까지만 라우팅하면 거기서 이미 로컬스토리지로 가지고 있는 chanid를 클릭해서 여는 효과를 내는 것으로 일단 대체함
-                // if (row.CHANID != localStorage.wiseband_lastsel_dmchanid) {
-                //     gst.util.setToast("선택된 DM방에서 우클릭해 주시기 바랍니다.")
-                //     return
-                // }
-                // let url = "/main/dm"
-                let strMsgid = await gst.util.qryOneMsgNotYet(row.CHANID)
-                if (strMsgid == null) {
-                    strMsgid = "0"
-                } else {
-                    strMsgid += "?notyet=true"
-                }
-                let url = "/body/msglist/" + row.CHANID + "/" + strMsgid
+                let url = gst.util.getUrlForOneMsgNotYet(row.CHANID)
                 window.open(url)
-            }}, //nm: "홈에서 열기" : 슬랙은 자식에게 '나중에'가 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
+            }},
             { nm: "정보 보기", func: function(item, idx) {
 
             }},

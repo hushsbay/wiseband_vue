@@ -323,28 +323,20 @@ const GeneralStore = defineStore('General', () => {
         qryOneMsgNotYet : async function(chanid) {
             const res = await axios.post("/chanmsg/qryOneMsgNotYet", { chanid : chanid })
             const rs = util.chkAxiosCode(res.data)
-            if (!rs) return null
-            if (rs.data == null) {
-                return null
-            } else {
-                return rs.data.MSGID
-            }
+            if (!rs) return null //return (rs.list.length == 0) ? null : rs.data.MSGID
+            return (rs.list.length == 0) ? "0" : rs.list[0].MSGID //라우팅 마지막에 "0"인 경우 고려해 return을 목적에 맞게 처리
+        },
+
+        getUrlForOneMsgNotYet : async function(chanid) { //아래 goMsgList가 아닌 window.open(새창열기)에 사용됨
+            let strMsgid = await util.qryOneMsgNotYet(chanid)
+            if (strMsgid != "0") strMsgid += "?notyet=true"
+            return "/body/msglist/" + chanid + "/" + strMsgid
         },
 
         goMsgList : async function(nm, params, refresh) {
             try {
                 let msgid = params.msgid
-                if (!msgid) {
-                    // const res = await axios.post("/chanmsg/qryOneMsgNotYet", { chanid : params.chanid })
-                    // const rs = util.chkAxiosCode(res.data)
-                    // if (!rs) return
-                    const strMsgid = await util.qryOneMsgNotYet(params.chanid)
-                    if (strMsgid == null) {
-                        params.msgid = "0"
-                    } else {
-                        params.msgid = strMsgid
-                    }
-                }
+                if (!msgid) params.msgid = await util.qryOneMsgNotYet(params.chanid)
                 let obj = { name : nm, params : params}
                 if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
                 if (!msgid && params.msgid.length > 20) { //안읽은 메시지 아이디를 가지고 온 것임 : Panel중에 동일한 로직으로 처리하는 곳이 있음
