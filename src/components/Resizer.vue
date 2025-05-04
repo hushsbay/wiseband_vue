@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted } from 'vue' 
+    import { ref, onMounted, useTemplateRef } from 'vue' 
 
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
@@ -7,6 +7,8 @@
 
     const props = defineProps({ nm: String })
     const emits = defineEmits(["ev-from-resizer"])
+
+    let inDiv = useTemplateRef('divRef') 
 
     const resize = { //패널 리사이징
 
@@ -47,10 +49,11 @@
             resizeEle.resizer.style.removeProperty('cursor')
             document.body.style.removeProperty('cursor')
             resizeEle.resizer.style.background = 'transparent'
-            resizeEle.leftSide.style.removeProperty('user-select')
-            resizeEle.leftSide.style.removeProperty('pointer-events')
-            resizeEle.rightSide.style.removeProperty('user-select')
-            resizeEle.rightSide.style.removeProperty('pointer-events')
+            // resizeEle.leftSide.style.removeProperty('user-select')
+            // resizeEle.leftSide.style.removeProperty('pointer-events')
+            // resizeEle.rightSide.style.removeProperty('user-select')
+            // resizeEle.rightSide.style.removeProperty('pointer-events')
+            inDiv.value.focus() //drop 이후 html이 선택된 상태를 위 메소드로는 해결이 안되서 focus()로 처리함
             document.removeEventListener('mousemove', moveHandler)
             document.removeEventListener('mouseup', upHandler)
             //localStorage.wiseband_lastsel_chansidewidth = resizeRef.chanSideWidth.value
@@ -101,7 +104,7 @@
 </script>
 
 <template>
-    <div class="resizer" id="dragMe" @mouseenter="mouseEnter" @mouseleave="mouseLeave" @mousedown="(e) => downHandler(e)"></div>
+    <div contenteditable ref="divRef" class="resizer" id="dragMe" @mouseenter="mouseEnter" @mouseleave="mouseLeave" @mousedown="(e) => downHandler(e)"></div>
 </template>
 
 <style scoped>

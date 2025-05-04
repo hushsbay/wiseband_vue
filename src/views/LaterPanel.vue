@@ -254,12 +254,12 @@
                         <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
                         <div style="color:white;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
                     </div>
-                    <div style="display:flex;align-items:center;color:lightgray">
+                    <div style="display:flex;align-items:center;color:lightgray;margin-right:3px">
                         {{ hush.util.displayDt(row.CDT, false) }}
                     </div>
                 </div>
-                <div class="coDotDot"> <!-- 원래 coDotDot으로만 해결되어야 하는데 데이터가 있으면 넓이가 예) 1px 늘어나 육안으로 흔들림 -->
-                    <div style="width:100px;color:white;font-weight:bold">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
+                <div style="width:100%">
+                    <div class="coDotDot" style="color:white;font-weight:bold">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
             <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
