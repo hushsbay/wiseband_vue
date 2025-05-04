@@ -26,14 +26,14 @@
     defineExpose({ procFromParent })
 
     async function procFromParent(kind, obj) {
-        if (kind == "later" && obj.work == "delete") {
+        if ((kind == "later" || kind == "fixed") && obj.work == "delete") {
             const msgid = (obj.msgid == obj.msgidParent) ? obj.msgid : obj.msgidParent //댓글인 경우는 부모 아이디
             const row = msglist.value.find((item) => item.MSGID == msgid)
-            if (row) { //자식에 '나중에'처리되어 있고 부모는 색상만 리셋하면 되나 여기 어차피 null이니 이 부분도 처리해서 공통화시킴
-                row.act_later = null
-                //row.background = ""
+            if (row) { //자식에 later, fixed 처리되어 있고 부모는 색상만 리셋하면 되나 여기 어차피 null이니 이 부분도 처리해서 공통화시킴
+                if (kind == "later") row.act_later = null
+                if (kind == "fixed") row.act_fixed = null
             }
-            if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함 (MsgList에서 MsgList에게 전달)
+            if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 later, fixed를 제거해야 함 (MsgList에서 MsgList에게 전달)
                 if (msglistRef.value) msglistRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
             }
         } else if (kind == "refreshMsg") {
@@ -255,7 +255,7 @@
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
             if (appType == "home") { //if (route.path.startsWith("/main/home/home_body")) {
                 gst.home.procFromBody("recall", { chanid: chanId })
-            } else if (appType == "later" || appType == "dm") { //(route.path.startsWith("/main/later/later_body") || route.path.startsWith("/main/dm/dm_body")) {
+            } else if (appType == "dm" || appType == "later" || appType == "fixed") { //(route.path.startsWith("/main/later/later_body") || route.path.startsWith("/main/dm/dm_body")) {
                 evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
             }
         }
@@ -714,8 +714,8 @@
                     } else {
                         if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
                     }
-                    if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때
-                        gst.later.procFromBody("work", { msgid: row.MSGID, work: "delete" }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
+                    if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때
+                        gst[appType].procFromBody("work", { msgid: row.MSGID, work: "delete" })
                     }
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
@@ -851,6 +851,7 @@
     const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
         const childbodyAttr = hasProp() ? true : false
         const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
+        if (!rect) return null
         const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
         let yy = rect.top + 6
         const ele = document.elementFromPoint(xx, yy)
@@ -1013,9 +1014,9 @@
                 if (rs == null) return
                 refreshWithGetMsg(rs, editMsgId.value)
             }            
-            if (appType == "later") { //if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
-                if (crud == "U") gst.later.procFromBody("update", rq)
-            } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
+            if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
+                if (crud == "U") gst[appType].procFromBody("update", rq)
+            } else if (appType == "dm") {
                 gst.dm.procFromBody("update", rq)
             }
             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
@@ -1493,7 +1494,6 @@
     async function changeAction(msgid, kind, newKind) { //changeAction은 보안상 크게 문제없는 액션만 처리하기로 함 : newKind 없으면 서버에서 kind로만 판단해 처리
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
             let jobIfExist = "" //데이터가 있을 경우에 한해 delete면 지우고 delete가 아닌 값이면 그 값으로 update하면 됨
-            debugger
             if (kind == 'later' || kind == 'stored' || kind == 'finished' || kind == 'fixed') {
                 jobIfExist = (!newKind) ? "delete" : newKind
             } //else 체크 필요함
@@ -1507,7 +1507,6 @@
             const obj = msglist.value.find((item) => item.MSGID == msgid)
             if (obj) {
                 obj.act_later = rs.act_later
-                //obj.background = obj.act_later ? hush.cons.color_act_later : ""
                 obj.act_fixed = rs.act_fixed
             }
             if (hasProp()) { 
@@ -1515,8 +1514,8 @@
             } else {
                 if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
-            if (appType == "later") { //if (route.fullPath.includes("/later_body/")) { //패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
-                gst.later.procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
+            if (appType == "later" || appType == "fixed") { //패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
+                gst[appType].procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)

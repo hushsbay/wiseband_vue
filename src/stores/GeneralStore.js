@@ -44,13 +44,12 @@ const GeneralStore = defineStore('General', () => {
        6) 처럼 (MsgList간의 통신에 한해서) 자식이 부모에게 전달하고자 할 때 : MsgList(스레드댓글)->MsgList
          - emits 사용하기
     */
-
-    /////////////////////////////////////////////////아래 const later = 참조 (**77)
-    let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
-    ///////////////////////////////////////////////////////////////////////
-    let listDm = ref([]), kindDm = ref('all')
+    
     ///////////////////////////////////////////////////////////////////////
     let listHome = ref([]), kindHome = ref('my'), selChanHome = ref('')
+    let listDm = ref([]), kindDm = ref('all')
+    let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
+    let listFixed = ref([]), cntFixed = ref('')
     ///////////////////////////////////////////////////////////////////////
     
     const auth = {
@@ -145,7 +144,7 @@ const GeneralStore = defineStore('General', () => {
                 const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
                 const rs = util.chkAxiosCode(res.data)
                 if (!rs) return
-                row.mynotyetCnt = rs.data.mynotyetCnt
+                row.mynotyetCnt = rs.data.kindCnt
             }
         }
 
@@ -186,7 +185,7 @@ const GeneralStore = defineStore('General', () => {
                     if (idx > -1) listLater.value.splice(idx, 1)
                 } else { //create (화면에 없는 걸 보이게 하는 것임)
                     if (kindLater.value == "later") { //'나중에' 패널에서 진행중(later)탭이 아니면 추가된 행 화면업뎃할 일 없음
-                        const res = await axios.post("/menu/qryLater", { msgid: obj.msgid })
+                        const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
                         const rs = util.chkAxiosCode(res.data)
                         if (!rs || rs.list.length == 0) return
                         const row = rs.list[0]
@@ -197,7 +196,7 @@ const GeneralStore = defineStore('General', () => {
                         }
                         let added = false
                         const len = listLater.value.length
-                        for (let i = 0; i < len; i++) { //listLater는 최근일시가 맨 위에 있음
+                        for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
                             if (obj.msgid > listLater.value[i].MSGID) {
                                 listLater.value.splice(i, 0, row)
                                 added = true
@@ -211,13 +210,60 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
-        getCount : async function(kindStr) { //현재는 kindStr없이 사용 (later만 해당)
+        getCount : async function() {
             try {
-                const kind = kindStr ?? "later"
-                const res = await axios.post("/menu/qryLaterCount", { kind: kind })
+                const res = await axios.post("/menu/qryPanelCount", { kind: "later" })
                 const rs = util.chkAxiosCode(res.data)
                 if (!rs) return
                 cntLater.value = rs.list[0].CNT
+            } catch (ex) {
+                util.showEx(ex, true)
+            }
+        }
+
+    }
+
+    const fixed = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+
+        procFromBody : async function(type, obj) {
+            if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
+                const row = listLater.value.find((item) => item.MSGID == obj.msgid)
+                if (row) row.BODYTEXT = obj.bodytext
+            } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
+                if (obj.work == "delete") { 
+                    const idx = listFixed.value.findIndex((item) => item.MSGID == obj.msgid)
+                    if (idx > -1) listFixed.value.splice(idx, 1)
+                } else { //create (화면에 없는 걸 보이게 하는 것임)
+                    const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
+                    const rs = util.chkAxiosCode(res.data)
+                    if (!rs || rs.list.length == 0) return
+                    const row = rs.list[0]
+                    if (row.PICTURE == null) {
+                        row.url = null
+                    } else {
+                        row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
+                    }
+                    let added = false
+                    const len = listFixed.value.length
+                    for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+                        if (obj.msgid > listFixed.value[i].MSGID) {
+                            listFixed.value.splice(i, 0, row)
+                            added = true
+                            break
+                        }
+                    }
+                    if (!added) listFixed.value.push(row)
+                }
+                fixed.getCount() //화면에 갯수 업데이트
+            }
+        },
+
+        getCount : async function() {
+            try {
+                const res = await axios.post("/menu/qryPanelCount", { kind: "fixed" })
+                const rs = util.chkAxiosCode(res.data)
+                if (!rs) return
+                cntFixed.value = rs.list[0].CNT
             } catch (ex) {
                 util.showEx(ex, true)
             }
@@ -417,9 +463,10 @@ const GeneralStore = defineStore('General', () => {
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, 
         snackBar, toast, auth, ctx, html, util,
+        home, listHome, kindHome, selChanHome,
+        dm, listDm, kindDm,
         later, listLater, cntLater, kindLater,
-        home, listHome, kindHome, selChanHome, //, objHome, scrollyHome
-        dm, listDm, kindDm
+        fixed, listFixed, cntFixed,
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

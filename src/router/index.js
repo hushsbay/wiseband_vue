@@ -5,6 +5,7 @@ import Main from '/src/views/Main.vue'
 import HomePanel from '/src/views/HomePanel.vue'
 import DmPanel from '/src/views/DmPanel.vue'
 import LaterPanel from '/src/views/LaterPanel.vue'
+import FixedPanel from '/src/views/FixedPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 
 //import GeneralStore from '/src/stores/GeneralStore.js'
@@ -23,11 +24,11 @@ const router = createRouter({
             component: Login
         },
         {
-            path: '/body/msglist/:chanid/:msgid',
+            path: '/body/msglist/:chanid/:msgid', //새창에서 열기 (사이드 및 패널 없음)
             name: 'msglist',
             component: MsgList
         },
-        {
+        { //path와 param는 같이 사용하지 못함. name 이용해야 함
             path: '/main',
             name: 'main',
             component: Main,
@@ -39,7 +40,7 @@ const router = createRouter({
                     children: [
                         {
                             path: 'home_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
-                            name: 'home_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            name: 'home_body',
                             component: MsgList,
                         }
                     ]
@@ -51,7 +52,7 @@ const router = createRouter({
                     children: [
                         {
                             path: 'dm_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
-                            name: 'dm_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            name: 'dm_body',
                             component: MsgList,
                         }
                     ]                  
@@ -63,7 +64,19 @@ const router = createRouter({
                     children: [
                         {
                             path: 'later_body/:chanid/:msgid',
-                            name: 'later_body', //path와 param는 같이 사용하지 못함. name 이용해야 함
+                            name: 'later_body',
+                            component: MsgList,
+                        }
+                    ]                  
+                },
+                {                    
+                    path: 'fixed',
+                    name: 'fixed',
+                    component: FixedPanel,
+                    children: [
+                        {
+                            path: 'fixed_body/:chanid/:msgid',
+                            name: 'fixed_body',
                             component: MsgList,
                         }
                     ]                  
@@ -87,11 +100,14 @@ router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고�
     if (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) {
         console.log("chk) home_body -> home") //새창에서 열기시 
         return false //MsgList.vue의 $$76 참조
+    } else if (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) {
+        console.log("chk) dm_body -> dm") //새창에서 열기시 
+        return false //MsgList.vue의 $$76 참조
     } else if (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) {
         console.log("chk) later_body -> later") //새창에서 열기시 
         return false //MsgList.vue의 $$76 참조
-    } else if (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) {
-        console.log("chk) dm_body -> dm") //새창에서 열기시 
+    } else if (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) {
+        console.log("chk) fixed_body -> fixed") //새창에서 열기시 
         return false //MsgList.vue의 $$76 참조
     }
     return true
