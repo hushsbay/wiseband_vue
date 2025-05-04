@@ -1493,6 +1493,7 @@
     async function changeAction(msgid, kind, newKind) { //changeAction은 보안상 크게 문제없는 액션만 처리하기로 함 : newKind 없으면 서버에서 kind로만 판단해 처리
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
             let jobIfExist = "" //데이터가 있을 경우에 한해 delete면 지우고 delete가 아닌 값이면 그 값으로 update하면 됨
+            debugger
             if (kind == 'later' || kind == 'stored' || kind == 'finished' || kind == 'fixed') {
                 jobIfExist = (!newKind) ? "delete" : newKind
             } //else 체크 필요함
@@ -1514,7 +1515,7 @@
             } else {
                 if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
-            if (route.fullPath.includes("/later_body/")) { //수정자 기준 : '나중에' 패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
+            if (appType == "later") { //if (route.fullPath.includes("/later_body/")) { //패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
                 gst.later.procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
             }
         } catch (ex) { 
