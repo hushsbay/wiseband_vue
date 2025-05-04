@@ -69,7 +69,7 @@
     })
 
     onUnmounted(() => {
-        observerBottom.value.disconnect()
+        if (observerBottom) observerBottom.value.disconnect()
     })
 
     function setBasicInfo() {
@@ -233,7 +233,7 @@
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in gst.listLater" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
-                :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer"                 
+                class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
                 @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
@@ -249,7 +249,7 @@
                         {{ row.REPLYTO ? '댓글' : '' }}
                     </div>
                 </div>
-                <div class="node">
+                <div class="nodeMiddle">
                     <div style="display:flex;align-items:center">
                         <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
                         <div style="color:white;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
@@ -262,7 +262,7 @@
                     <div class="coDotDot" style="color:white;font-weight:bold">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
-            <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+            <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget"></div>
         </div>
     </div>
     <resizer nm="later" @ev-from-resizer="handleFromResizer"></resizer>
@@ -282,7 +282,7 @@
         display:flex;flex-direction:column;background:var(--second-color);border-top-left-radius:10px;border-bottom-left-radius:10px
     }
     .chan_side_top {
-        width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:1px solid lightgray;cursor:pointer
+        width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:var(--border-lg);cursor:pointer
     }
     .chan_side_top_left {
         width:20%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
@@ -293,12 +293,13 @@
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto
     }
-    .node {
+    .node { padding:10px;display:flex;flex-direction:column;font-size:15px;border-bottom:var(--border-lg);cursor:pointer }
+    .nodeHover, .nodeSel { background:var(--second-hover-color) }
+    .nodeMiddle {
         width:100%;height:45px;
         display:flex;align-items:center;justify-content:space-between;
-        font-size:15px;color:var(--text-white-color);cursor:pointer
+        font-size:15px;color:var(--second-select-color);cursor:pointer
     }
-    .nodeHover, .nodeSel { background:var(--second-hover-color) }
     .procMenu { padding:3px;margin-left:10px;color:lightgray;font-weight:bold;border-bottom:3px solid rgb(90, 46, 93) }
     .procMenu:hover { color:white;font-weight:bold }
     .procMenuSel { color:white;border-bottom:3px solid white }

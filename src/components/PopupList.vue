@@ -80,7 +80,7 @@
     .popupMenu { /*top:0px;bottom:0px;height:380px; 3개는 props.popupPos로 표시 */
         position:fixed;width:320px;left:70px;
         display:flex;flex-direction:column;z-index:9999;
-        background:var(--menu-color);border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px var(--shadow-color)
+        background:white;border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px gray
     }
 
     .popupHeader {
@@ -102,7 +102,7 @@
     .popupFooter {
         width:calc(100% - 12px);height:30px;padding:6px;
         display:flex;justify-content:space-between;align-items:center;
-        border-top:1px solid var(--border-color);background:var(--bottom-color)
+        border-top:1px solid var(--border-color);background:var(--second-select-color)
     }
 
     .popupFooterLeft {

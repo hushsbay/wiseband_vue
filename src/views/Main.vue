@@ -258,7 +258,7 @@
     .menu { 
         width:55px;min-height:55px;margin:8px 0px; 
         display:flex;flex-direction:column;justify-content:center;align-items:center;
-        color:var(--menu-color);cursor:pointer; }
+        color:white;cursor:pointer; }
     .menu32 { width:32px;height:32px; }
     .menu32:hover { width:36px;height:36px; }
 </style>

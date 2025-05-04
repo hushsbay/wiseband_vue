@@ -69,7 +69,7 @@
     })
 
     onUnmounted(() => {
-        observerBottom.value.disconnect()
+        if (observerBottom) observerBottom.value.disconnect()
     })
 
     function setBasicInfo() {
@@ -125,8 +125,6 @@
                         row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
                     }
                 }                
-                //row.notioffImg = (row.NOTI == "X") ? hush.cons.color_light + "notioff.png" : ""
-                //row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
                 procChanRowImg(row)
                 gst.listDm.push(row)
                 if (row.LASTMSGDT < savLastMsgMstCdt) savLastMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
@@ -233,7 +231,7 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행 (to later, dm..)
+    function handleEvFromBody() { //MsgList.vue에서 실행
         dmClickOnLoop()
     }
 </script>
@@ -252,7 +250,7 @@
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in gst.listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }"
-                :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" style="padding:10px;display:flex;flex-direction:column;border-bottom:1px solid dimgray;cursor:pointer"                 
+                class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
                 @click="dmClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
@@ -265,14 +263,14 @@
                         {{ hush.util.displayDt(row.LASTMSGDT, false) }}
                     </div>
                 </div>
-                <div class="node">
+                <div class="nodeMiddle">
                     <div style="display:flex;align-items:center">
                         <member-piclist :row="row"></member-piclist>
                         <div style="color:whitesmoke;font-weight:bold;margin-left:8px">{{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}</div>    
                     </div>
                 </div>
-                <div class="coDotDot"> <!-- 원래 coDotDot으로만 해결되어야 하는데 데이터가 있으면 넓이가 예) 1px 늘어나 육안으로 흔들림 -->
-                    <div style="width:100px;color:white">{{ row.BODYTEXT }}</div> <!-- 이 행은 임시 조치임. 결국 슬랙의 2행 ellipsis를 못해냈는데 나중에 해결해야 함 -->
+                <div style="width:100%">
+                    <div class="coDotDot" style="color:white;font-weight:bold">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
             <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
@@ -280,7 +278,6 @@
     </div>
     <resizer nm="dm" @ev-from-resizer="handleFromResizer"></resizer>
     <div id="chan_body" :style="{ width: chanMainWidth }">
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 HomePanel.vue, LaterPanel.vue 등에서만 :key를 사용 (MsgList.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
@@ -307,10 +304,11 @@
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto
     }
-    .node {
+    .node { padding:10px;display:flex;flex-direction:column;font-size:15px;border-bottom:var(--border-lg);cursor:pointer }
+    .nodeHover, .nodeSel { background:var(--second-hover-color) }
+    .nodeMiddle {
         width:100%;height:45px;
         display:flex;align-items:center;justify-content:space-between;
-        font-size:15px;color:var(--text-white-color);cursor:pointer
+        font-size:15px;color:var(--second-select-color);cursor:pointer
     }
-    .nodeHover, .nodeSel { background:var(--second-hover-color) }
 </style>

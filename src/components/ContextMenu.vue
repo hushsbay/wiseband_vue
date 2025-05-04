@@ -148,8 +148,8 @@
     .popupMenu {
         position:fixed;min-width:100px;max-width:350px;z-index:9999;
         display:flex;flex-direction:column;
-        background:var(--bottom-color);border:1px solid var(--border-color);border-radius:5px;
-        box-shadow:1px 1px 1px var(--shadow-color)
+        background:var(--second-select-color);border:1px solid var(--border-color);border-radius:5px;
+        box-shadow:1px 1px 1px gray
     }
 
     .popupHeader {

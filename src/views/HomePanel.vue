@@ -13,7 +13,7 @@
     const gst = GeneralStore()
 
     //1. HomePanel 상태 정의는 아래와 같음
-    //   1) Depth는 1,2 단계만 존재 : 1단계는 사내 그룹 (슬랙의 워크스페이스) 2단계는 채널
+    //   1) Depth는 1,2 단계만 존재 : 1단계는 사용자그룹 (슬랙의 워크스페이스) 2단계는 채널
     //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
     //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
     //2. HomePanel에서는 MsgList의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
@@ -220,7 +220,7 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행 (to later, dm..)
+    function handleEvFromBody() { //MsgList.vue에서 실행
         chanClickOnLoop()
     }
 </script>
@@ -229,7 +229,7 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
-                <select v-model="gst.kindHome" style="background:var(--second-color);color:var(--text-white-color);border:none">
+                <select v-model="gst.kindHome" style="background:var(--second-color);color:var(--second-select-color);border:none">
                     <option value="my">내 채널</option>
                     <option value="other">다른 채널</option>
                     <option value="all">모든 채널</option>
@@ -248,7 +248,6 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
-            <!-- gst.ctx.on=true처리후에는 @contextmenu.prevent 추가해도 @mousedown.right.stop.prevent로 브라우저 컨텍스트메뉴가 100% 방지가 안되서 index.html <body>에서 막는 것으로 해결 -->
             <div v-for="(row, idx) in gst.listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
                 :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }"
                 @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
@@ -269,7 +268,6 @@
     </div>
     <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
     <div id="chan_body" :style="{ width: chanMainWidth }">
-        <!-- App.vue와 Main.vue에서는 :key를 안쓰고 HomePanel.vue, LaterPanel.vue 등에서만 :key를 사용 (MsgList.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>
@@ -299,11 +297,11 @@
     .node { /* min-height:36px */
         width:calc(100% - 30px);min-height:36px;padding:0 10px;margin:0 5px;
         display:flex;align-items:center;justify-content:space-between;
-        font-size:15px;color:var(--text-white-color);border-radius:5px;cursor:pointer;
+        font-size:15px;color:var(--second-select-color);border-radius:5px;cursor:pointer;
     }
-    .nodeRight { display:flex;align-items:center;justify-content:flex-end; }
+    .nodeRight { display:flex;align-items:center;justify-content:flex-end }
     .coImg20:hover { background:var(--second-hover-color); }
     .coImg20:active { background:var(--active-color);border-radius:9px }
-    .nodeHover { background:var(--second-hover-color); }
-    .nodeSel { background:var(--second-select-color);color:var(--primary-color); }
+    .nodeHover { background:var(--second-hover-color) }
+    .nodeSel { background:var(--second-select-color);color:var(--primary-color) }
 </style>
