@@ -69,7 +69,7 @@
     })
 
     onUnmounted(() => {
-        if (observerBottom) observerBottom.value.disconnect()
+        if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
     })
 
     function setBasicInfo() {

@@ -31,7 +31,7 @@
             const row = msglist.value.find((item) => item.MSGID == msgid)
             if (row) { //자식에 '나중에'처리되어 있고 부모는 색상만 리셋하면 되나 여기 어차피 null이니 이 부분도 처리해서 공통화시킴
                 row.act_later = null
-                row.background = ""
+                //row.background = ""
             }
             if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 '나중에'를 제거해야 함 (MsgList에서 MsgList에게 전달)
                 if (msglistRef.value) msglistRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
@@ -262,8 +262,8 @@
     })
 
     onUnmounted(() => {
-        if (observerTop) observerTop.value.disconnect()
-        if (observerBottom) observerBottom.value.disconnect()
+        if (observerTop && observerTop.value) observerTop.value.disconnect()
+        if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
     })
 
     function setBasicInfo() {        
@@ -377,13 +377,12 @@
             }
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
-            //debugger
-            //chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             if ((rs.data.chanmst.TYP == "WS")) {
                 chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             } else {
                 chanimg.value = "violet_other.png"
             }
+            const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             document.title = channm.value + "[채널]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             chanmemFullExceptMe.value = []
@@ -409,15 +408,19 @@
                 afterScrolled.value = false
                 return 
             }
-            const msgidParent = rs.data.msgidParent //atHome만 사용함
-            const msgidChild = rs.data.msgidChild //atHome만 사용함. msgidParent와 다르면 이건 댓글의 msgid임
+            const msgidParent = rs.data.msgidParent //atHome만 사용함 (댓글인 경우는 부모 아이디)
+            const msgidChild = rs.data.msgidChild //atHome만 사용함 (msgidParent와 다르면 이건 댓글의 msgid임)
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i] //if (row.MSGID == '20250419095152486066082566') debugger
                 if (kind == "withReply" && i == 0) {
                     row.background = "beige"
                 } else {
-                    if (row.act_later || (msgidParent && row.MSGID == msgidParent)) {
-                        row.background = hush.cons.color_act_later
+                    if (msgidParent && row.MSGID == msgidParent) {
+                        if (queryNotYetTrue) { //여기서부터 읽지 않은 메시지라고 안내해야 함
+                            row.firstNotYet = (msgidParent == msgidChild) ? "parent" : "child"
+                        }
+                        //if (row.act_later) row.background = hush.cons.color_act_later
+                        row.background = hush.cons.color_athome
                     }
                 }
                 let tempBody = row.BODY, replaced = false
@@ -588,7 +591,7 @@
             item.replyinfo = rs.replyinfo
             item.act_later = rs.act_later
             item.act_fixed = rs.act_fixed
-            item.background = rs.act_later ? hush.cons.color_act_later : ""
+            //item.background = rs.act_later ? hush.cons.color_act_later : ""
         }
     }
 
@@ -1503,7 +1506,7 @@
             const obj = msglist.value.find((item) => item.MSGID == msgid)
             if (obj) {
                 obj.act_later = rs.act_later
-                obj.background = obj.act_later ? hush.cons.color_act_later : ""
+                //obj.background = obj.act_later ? hush.cons.color_act_later : ""
                 obj.act_fixed = rs.act_fixed
             }
             if (hasProp()) { 
@@ -1790,17 +1793,18 @@
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)">
                     <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
                     <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
-                    <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>                    
+                    <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
+                    <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
+                        아직 안읽은 메시지입니다. {{ row.firstNotYet == "child" ? "(댓글)" : "" }}
+                    </span>
                 </div>
                 <div style="width:100%;display:flex;margin:10px 0">
                     <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
-                        <!-- <span v-show="row.stickToPrev && row.hover">{{ hush.util.displayDt(row.CDT, true) }}</span> -->
                         <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
                         <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
                         <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                     </div>
                     <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
-                    <!-- <div style="color:red">{{ row.act_later }}</div> -->
                 </div>
                 <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                 <div class="msg_body_sub"><!-- 반응, 댓글 -->

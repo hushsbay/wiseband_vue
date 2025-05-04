@@ -18,7 +18,7 @@ const hush = {
         cdtAtLast : "9999-99-99",
         color_light : "whitesmoke_",
         color_dark : "violet_",
-        color_act_later : "lightsteelblue",
+        color_athome : "lightsteelblue", //color_act_later : "lightsteelblue",
         uploadLimitSize : 10 * 1024 * 1024, //10MB
         uploadMaxCount : 10,
         toastSec : 2,
