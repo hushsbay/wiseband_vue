@@ -279,7 +279,7 @@
         </div>
     </div>
     <resizer nm="dm" @ev-from-resizer="handleFromResizer"></resizer>
-    <div :style="{ width: chanMainWidth }">
+    <div id="chan_body" :style="{ width: chanMainWidth }">
         <!-- App.vue와 Main.vue에서는 :key를 안쓰고 HomePanel.vue, LaterPanel.vue 등에서만 :key를 사용 (MsgList.vue에서 설명) / keep-alive로 router 감싸는 것은 사용금지(Deprecated) -->
         <router-view v-slot="{ Component }">
             <keep-alive>                

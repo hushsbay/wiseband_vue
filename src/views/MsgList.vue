@@ -377,7 +377,13 @@
             }
             grnm.value = rs.data.chanmst.GR_NM
             channm.value = rs.data.chanmst.CHANNM
-            chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+            //debugger
+            //chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+            if ((rs.data.chanmst.TYP == "WS")) {
+                chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+            } else {
+                chanimg.value = "violet_other.png"
+            }
             document.title = channm.value + "[채널]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             chanmemFullExceptMe.value = []
@@ -1706,17 +1712,23 @@
     <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
-                <div v-if="appType=='dm'" style="display:flex;align-items:center">
+                <!-- <div v-if="appType=='dm'" style="display:flex;align-items:center">
                     <span>{{ chanmemFullExceptMe.join(", ") }}</span>
                 </div>
                 <div v-else style="display:flex;align-items:center">
-                    <img v-if="!hasProp()" class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px" @click="adminJob">
+                    <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px" @click="adminJob">
                     <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">
                         {{ channm }} {{ grnm ? "[" + grnm+ "]" : "" }} <span v-if="adminShowID">{{ chanId }}</span>
                     </div>
-                </div>
+                </div> -->
+                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px" @click="adminJob">
+                <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
                 <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
-                <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:20px">data by scrolling</span> 
+                <div v-else style="display:flex;align-items:center">                    
+                    <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
+                    <div v-else class="coDotDot">{{ channm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
+                </div>
+                <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span> 
             </div>
             <div class="chan_center_header_right">
                 <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"

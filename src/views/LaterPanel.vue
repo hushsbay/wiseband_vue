@@ -266,7 +266,7 @@
         </div>
     </div>
     <resizer nm="later" @ev-from-resizer="handleFromResizer"></resizer>
-    <div :style="{ width: chanMainWidth }">
+    <div id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>                
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
