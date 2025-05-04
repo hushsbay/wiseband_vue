@@ -49,14 +49,13 @@
             resizeEle.resizer.style.removeProperty('cursor')
             document.body.style.removeProperty('cursor')
             resizeEle.resizer.style.background = 'transparent'
-            // resizeEle.leftSide.style.removeProperty('user-select')
-            // resizeEle.leftSide.style.removeProperty('pointer-events')
-            // resizeEle.rightSide.style.removeProperty('user-select')
-            // resizeEle.rightSide.style.removeProperty('pointer-events')
-            inDiv.value.focus() //drop 이후 html이 선택된 상태를 위 메소드로는 해결이 안되서 focus()로 처리함
+            resizeEle.leftSide.style.removeProperty('user-select')
+            resizeEle.leftSide.style.removeProperty('pointer-events')
+            resizeEle.rightSide.style.removeProperty('user-select')
+            resizeEle.rightSide.style.removeProperty('pointer-events')
+            inDiv.value.focus() //drop 이후 html이 선택된 상태를 removeProperty('user-select')로는 해결이 안되서 focus()로 추가 처리함
             document.removeEventListener('mousemove', moveHandler)
             document.removeEventListener('mouseup', upHandler)
-            //localStorage.wiseband_lastsel_chansidewidth = resizeRef.chanSideWidth.value
         }
 
     }
