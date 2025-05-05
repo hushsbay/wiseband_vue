@@ -413,14 +413,17 @@
             const msgidChild = rs.data.msgidChild //atHome만 사용함 (msgidParent와 다르면 이건 댓글의 msgid임)
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
                 const row = msgArr[i] //if (row.MSGID == '20250419095152486066082566') debugger
-                if (kind == "withReply" && i == 0) {
-                    row.background = "beige"
+                if (kind == "withReply") {
+                    if (i == 0) {
+                        row.background = "beige"
+                    } else if (row.MSGID == props.data.msgidChild) {
+                        row.background = hush.cons.color_athome
+                    }
                 } else {
                     if (msgidParent && row.MSGID == msgidParent) {
                         if (queryNotYetTrue) { //여기서부터 읽지 않은 메시지라고 안내해야 함
                             row.firstNotYet = (msgidParent == msgidChild) ? "parent" : "child"
-                        }
-                        //if (row.act_later) row.background = hush.cons.color_act_later
+                        } //if (row.act_later) row.background = hush.cons.color_act_later
                         row.background = hush.cons.color_athome
                     }
                 }

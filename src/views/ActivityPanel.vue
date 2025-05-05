@@ -16,7 +16,7 @@
     let observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
-    const msglistRef = ref(null)    
+    const msglistRef = ref(null), notyetChk = ref(false)
     let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
@@ -45,6 +45,7 @@
     onMounted(async () => {
         try {
             setBasicInfo()
+            notyetChk.value = (localStorage.wiseband_notyet_activity == "Y") ? true : false
             gst.kindActivity = localStorage.wiseband_lastsel_activity ? localStorage.wiseband_lastsel_activity : "all"
             await getList(true)            
             observerBottomScroll()
@@ -81,6 +82,11 @@
         if (!afterScrolled.value) afterScrolled.value = true
     }
 
+    function procChangedQuery() {
+        localStorage.wiseband_notyet_activity = notyetChk.value ? "Y" : "N"
+        getList(true)
+    }
+
     function procQuery(kind) {
         gst.kindActivity = kind
         localStorage.wiseband_lastsel_activity = gst.kindActivity
@@ -96,7 +102,8 @@
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
-            const res = await axios.post("/menu/qryActivity", { kind: gst.kindActivity, lastMsgMstCdt: lastMsgMstCdt })
+            const yn = notyetChk.value ? "Y" : "N"
+            const res = await axios.post("/menu/qryActivity", { kind: gst.kindActivity, notyet: yn, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
                 onGoingGetList = false
@@ -265,7 +272,12 @@
                 </div>
                 <div class="nodeMiddle">
                     <div style="display:flex;align-items:center">
-                        <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
+                        <div v-if="row.TITLE.endsWith('react')">
+                            <img class="coImg24" :src="gst.html.getImageUrl('emo_' + row.KIND + '.png')" :title="row.KIND">
+                        </div>
+                        <div v-else>
+                            <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
+                        </div>
                         <div style="color:white;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray;margin-right:3px">

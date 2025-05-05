@@ -406,6 +406,7 @@ const GeneralStore = defineStore('General', () => {
         },
 
         qryOneMsgNotYet : async function(chanid) {
+            debugger
             const res = await axios.post("/chanmsg/qryOneMsgNotYet", { chanid : chanid })
             const rs = util.chkAxiosCode(res.data)
             if (!rs) return null //return (rs.list.length == 0) ? null : rs.data.MSGID
