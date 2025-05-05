@@ -139,7 +139,7 @@
     const mediaPopupRef = ref(null), mediaParam = ref(null)
         
     let sideMenu, chanId, msgidInChan
-    let grnm = ref(''), channm = ref(''), chanimg = ref('')
+    let grnm = ref(''), channm = ref(''), chanimg = ref(''), vipStr = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
     let msglist = ref([]), fetchByScrollEnd = ref(false)
 
@@ -375,8 +375,9 @@
                 onGoingGetList = false                
                 return
             }
+            vipStr.value = rs.data.vipStr
             grnm.value = rs.data.chanmst.GR_NM
-            channm.value = rs.data.chanmst.CHANNM
+            channm.value = rs.data.chanmst.CHANNM            
             if ((rs.data.chanmst.TYP == "WS")) {
                 chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             } else {
@@ -1792,6 +1793,8 @@
                         class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row)">
                     <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)">
                     <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
+                    <span v-if="vipStr.includes(row.AUTHORID)" 
+                          style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span>
                     <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                     <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
                     <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
