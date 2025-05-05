@@ -1481,7 +1481,8 @@
     }
 
     async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
-        try {            
+        try {
+            if (kind == "notyet") return //react typ = checked, done, watching
             const rq = { chanid: chanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
