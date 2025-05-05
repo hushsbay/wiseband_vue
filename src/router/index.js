@@ -4,6 +4,7 @@ import Login from '/src/views/Login.vue'
 import Main from '/src/views/Main.vue'
 import HomePanel from '/src/views/HomePanel.vue'
 import DmPanel from '/src/views/DmPanel.vue'
+import ActivityPanel from '/src/views/ActivityPanel.vue'
 import LaterPanel from '/src/views/LaterPanel.vue'
 import FixedPanel from '/src/views/FixedPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
@@ -53,6 +54,18 @@ const router = createRouter({
                         {
                             path: 'dm_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
                             name: 'dm_body',
+                            component: MsgList,
+                        }
+                    ]                  
+                },
+                {                    
+                    path: 'activity',
+                    name: 'activity',
+                    component: ActivityPanel,
+                    children: [
+                        {
+                            path: 'activity_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
+                            name: 'activity_body',
                             component: MsgList,
                         }
                     ]                  

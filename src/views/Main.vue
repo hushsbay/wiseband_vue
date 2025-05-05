@@ -163,6 +163,9 @@
         ["mnuDm"] : async (row, onMounted) => {
             await goRoute({ name: 'dm' }, onMounted)
         },
+        ["mnuActivity"] : async (row, onMounted) => {
+            await goRoute({ name: 'activity' }, onMounted)
+        },
         ["mnuLater"] : async (row, onMounted) => {
             await goRoute({ name: 'later' }, onMounted)
         },

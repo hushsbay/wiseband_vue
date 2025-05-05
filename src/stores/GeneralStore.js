@@ -48,6 +48,7 @@ const GeneralStore = defineStore('General', () => {
     ///////////////////////////////////////////////////////////////////////
     let listHome = ref([]), kindHome = ref('my'), selChanHome = ref('')
     let listDm = ref([]), kindDm = ref('all')
+    let listActivity = ref([]), kindActivity = ref('all') //cntActivity = ref(''), 
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     let listFixed = ref([]), cntFixed = ref('')
     ///////////////////////////////////////////////////////////////////////
@@ -223,11 +224,49 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
+    const activity = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+
+        procFromBody : async function(type, obj) {
+            if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
+                const row = listActivity.value.find((item) => item.MSGID == obj.msgid)
+                if (row) row.BODYTEXT = obj.bodytext
+            } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
+                if (obj.work == "delete") { 
+                    const idx = listActivity.value.findIndex((item) => item.MSGID == obj.msgid)
+                    if (idx > -1) listActivity.value.splice(idx, 1)
+                } else { //create (화면에 없는 걸 보이게 하는 것임)
+                    if (kindActivity.value != "") {
+                        const res = await axios.post("/menu/qryActivity", { msgid: obj.msgid })
+                        const rs = util.chkAxiosCode(res.data)
+                        if (!rs || rs.list.length == 0) return
+                        const row = rs.list[0]
+                        if (row.PICTURE == null) {
+                            row.url = null
+                        } else {
+                            row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
+                        }
+                        let added = false
+                        const len = listActivity.value.length
+                        for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+                            if (obj.msgid > listActivity.value[i].MSGID) {
+                                listActivity.value.splice(i, 0, row)
+                                added = true
+                                break
+                            }
+                        }
+                        if (!added) listActivity.value.push(row)
+                    }
+                }
+            }
+        }
+
+    }
+
     const fixed = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
         procFromBody : async function(type, obj) {
             if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
-                const row = listLater.value.find((item) => item.MSGID == obj.msgid)
+                const row = listFixed.value.find((item) => item.MSGID == obj.msgid)
                 if (row) row.BODYTEXT = obj.bodytext
             } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
                 if (obj.work == "delete") { 
@@ -465,6 +504,7 @@ const GeneralStore = defineStore('General', () => {
         snackBar, toast, auth, ctx, html, util,
         home, listHome, kindHome, selChanHome,
         dm, listDm, kindDm,
+        listActivity, kindActivity, //cntActivity, 
         later, listLater, cntLater, kindLater,
         fixed, listFixed, cntFixed,
     }

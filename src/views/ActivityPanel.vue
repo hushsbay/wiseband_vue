@@ -22,7 +22,7 @@
     let onGoingGetList = false
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px') //localStorage 이름 유의
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_activitysidewidth ?? '320px') //localStorage 이름 유의
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
 
     function handleFromResizer(chanSideVal, chanMainVal) {
@@ -45,10 +45,10 @@
     onMounted(async () => {
         try {
             setBasicInfo()
-            gst.kindLater = localStorage.wiseband_lastsel_later ? localStorage.wiseband_lastsel_later : "later"
+            gst.kindActivity = localStorage.wiseband_lastsel_activity ? localStorage.wiseband_lastsel_activity : "all"
             await getList(true)            
             observerBottomScroll()
-            laterClickOnLoop(true)
+            activityClickOnLoop(true)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -59,8 +59,8 @@
             mounting = false
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
-            if (route.path == "/main/later") {
-                laterClickOnLoop()
+            if (route.path == "/main/activity") {
+                activityClickOnLoop()
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
@@ -74,7 +74,7 @@
 
     function setBasicInfo() {
         document.title = "WiSEBand 나중에"
-        gst.selSideMenu = "mnuLater" //MsgList.vue에 Blank 방지
+        gst.selSideMenu = "mnuActivity" //MsgList.vue에 Blank 방지
     }
 
     const onScrolling = () => {
@@ -82,8 +82,8 @@
     }
 
     function procQuery(kind) {
-        gst.kindLater = kind
-        localStorage.wiseband_lastsel_later = gst.kindLater
+        gst.kindActivity = kind
+        localStorage.wiseband_lastsel_activity = gst.kindActivity
         getList(true)
     }
 
@@ -92,11 +92,11 @@
             if (onGoingGetList) return
             onGoingGetList = true
             if (refresh) {
-                gst.listLater = []
+                gst.listActivity = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
-            const res = await axios.post("/menu/qryPanel", { kind: gst.kindLater, lastMsgMstCdt: lastMsgMstCdt })
+            const res = await axios.post("/menu/qryActivity", { kind: gst.kindActivity, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
                 onGoingGetList = false
@@ -114,7 +114,20 @@
                 } else {
                     row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
-                gst.listLater.push(row)
+                let title
+                if (row.TITLE == "vip") {
+                    title = "VIP"
+                } else if (row.TITLE == "mention") {
+                    title = "@맨션"
+                } else if (row.TITLE == "thread") {
+                    title = "스레드"
+                } else if (row.TITLE == "myreact") {
+                    title = "내반응"
+                } else if (row.TITLE == "otherreact") {
+                    title = "타반응"
+                }
+                row.title = title
+                gst.listActivity.push(row)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
@@ -123,7 +136,7 @@
             } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
-            gst.later.getCount() //진행중인 (나중에) 카운팅
+            //gst.Activity.getCount() //진행중인 (나중에) 카운팅
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -131,26 +144,26 @@
         }
     }
 
-    function laterClickOnLoop(refresh) {
-        const msgid = localStorage.wiseband_lastsel_latermsgid
+    function activityClickOnLoop(refresh) {
+        const msgid = localStorage.wiseband_lastsel_activitymsgid
         if (!msgid) return
-        gst.listLater.forEach((item, index) => {
+        gst.listActivity.forEach((item, index) => {
             if (item.MSGID == msgid) {
                 msgRow.value[msgid].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                laterClick(item, index, refresh)
+                activityClick(item, index, refresh)
             }
         })
     }
     
-    async function laterClick(row, idx, refresh) {
+    async function activityClick(row, idx, refresh) {
         try {            
-            gst.listLater.map((item) => {
+            gst.listActivity.map((item) => {
                item.sel = false
                item.hover = false
             })
             row.sel = true
-            localStorage.wiseband_lastsel_latermsgid = row.MSGID
-            gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
+            localStorage.wiseband_lastsel_activitymsgid = row.MSGID
+            gst.util.goMsgList('activity_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -159,16 +172,16 @@
     async function changeAction(kind, row) {
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
             const msgid = row.MSGID
-            const rq = { chanid: row.CHANID, msgid: msgid, kind: gst.kindLater, job: kind } //kind는 현재 상태, job은 바꿀 상태
+            const rq = { chanid: row.CHANID, msgid: msgid, kind: gst.kindActivity, job: kind } //kind는 현재 상태, job은 바꿀 상태
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Later 패널 탭에서는 제거해야 함 //const work = rs.data.work은 여기서는 무시하고 무조건 delete
-            const idx = gst.listLater.findIndex((item) => item.MSGID == msgid)
-            if (idx > -1) gst.listLater.splice(idx, 1)
-            gst.later.getCount() //화면에 갯수 업데이트
+            if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Activity 패널 탭에서는 제거해야 함
+            const idx = gst.listActivity.findIndex((item) => item.MSGID == msgid)
+            if (idx > -1) gst.listActivity.splice(idx, 1)
+            //gst.activity.getCount() //화면에 갯수 업데이트
             if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
             const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
-            msglistRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
+            msglistRef.value.procFromParent("activity", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -178,24 +191,12 @@
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "메시지목록 새로고침", func: function(item, idx) {
-                gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
+                gst.util.goMsgList('activity_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
             }},
             { nm: "새창에서 열기", func: function(item, idx) {
                 let url = "/body/msglist/" + row.CHANID + "/" + row.MSGID
                 window.open(url)
-            }}, //nm: "홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
-            { nm: "보관", disable: (gst.kindLater == "stored") ? true : false, func: async function(item, idx) {
-                changeAction('stored', row)
-            }},
-            { nm: "완료", disable: (gst.kindLater == "finished") ? true : false, func: function(item, idx) {
-                changeAction('finished', row)
-            }},
-            { nm: "진행", disable: (gst.kindLater == "later") ? true : false, func: function(item, idx) {
-                changeAction('later', row)
-            }},
-            { nm: "제거", color: "red", func: function(item, idx) {
-                changeAction('delete', row)                
-            }},
+            }}
         ]            
         gst.ctx.show(e)
     }
@@ -211,38 +212,51 @@
     }
 
     function handleEvFromBody() { //MsgList.vue에서 실행
-        laterClickOnLoop()
+        activityClickOnLoop()
     }
 </script>
 
 <template>
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
-            <div class="chan_side_top_left">나중에</div>
-            <div class="chan_side_top_right">
-                <div class="procMenu" :class="(gst.kindLater == 'later') ? 'procMenuSel' : ''" @click="procQuery('later')">
-                    진행중<span style="margin-left:3px">{{ gst.cntLater }}</span>
+            <div class="chan_side_top_1">
+                <span style="font-size:18px;font-weight:bold">내활동</span>
+                <div style="margin-right:5px">
+                    <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
                 </div>
-                <div class="procMenu" :class="(gst.kindLater == 'stored') ? 'procMenuSel' : ''" @click="procQuery('stored')">
-                    보관됨
+            </div>
+            <div class="chan_side_top_2">
+                <div class="procMenu" :class="(gst.kindActivity == 'all') ? 'procMenuSel' : ''" @click="procQuery('all')">
+                    전체<span style="margin-left:3px"></span>
                 </div>
-                <div class="procMenu" :class="(gst.kindLater == 'finished') ? 'procMenuSel' : ''" @click="procQuery('finished')">
-                    완료됨
+                <div class="procMenu" :class="(gst.kindActivity == 'vip') ? 'procMenuSel' : ''" @click="procQuery('vip')">
+                    VIP
+                </div>
+                <div class="procMenu" :class="(gst.kindActivity == 'mention') ? 'procMenuSel' : ''" @click="procQuery('mention')">
+                    맨션
+                </div>
+                <div class="procMenu" :class="(gst.kindActivity == 'thread') ? 'procMenuSel' : ''" @click="procQuery('thread')">
+                    스레드
+                </div>
+                <div class="procMenu" :class="(gst.kindActivity == 'myreact') ? 'procMenuSel' : ''" @click="procQuery('myreact')">
+                    내반응
+                </div>
+                <div class="procMenu" :class="(gst.kindActivity == 'otherreact') ? 'procMenuSel' : ''" @click="procQuery('otherreact')">
+                    타반응
                 </div>
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in gst.listLater" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
+            <div v-for="(row, idx) in gst.listActivity" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
-                @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                @click="activityClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
-                        <div v-if="row.TYP=='GS'" style="display:flex;align-items:center">
-                            {{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}
-                        </div>
-                        <div v-else style="display:flex;align-items:center">
+                        <div style="display:flex;align-items:center">
+                            <span style="margin-left:3px">[{{ row.title }}]</span>
+                            <span style="margin:0 3px">{{ row.CNT == 0 ? '' : row.CNT + '개' }}</span>
                             <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
-                            <span style="margin-left:3px">{{ row.CHANNM }}</span>
+                            <span style="margin-left:3px">{{ row.CHANNM }}</span>                            
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
@@ -265,7 +279,7 @@
             <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget"></div>
         </div>
     </div>
-    <resizer nm="later" @ev-from-resizer="handleFromResizer"></resizer>
+    <resizer nm="activity" @ev-from-resizer="handleFromResizer"></resizer>
     <div id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>                
@@ -282,13 +296,13 @@
         display:flex;flex-direction:column;background:var(--second-color);border-top-left-radius:10px;border-bottom-left-radius:10px
     }
     .chan_side_top {
-        width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:var(--border-lg);cursor:pointer
+        width:100%;height:80px;display:flex;flex-direction:column;border-bottom:var(--border-lg);cursor:pointer
     }
-    .chan_side_top_left {
-        width:20%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
+    .chan_side_top_1 {
+        width:100%;height:50px;padding-left:10px;display:flex;align-items:center;justify-content:space-between;color:white
     }
-    .chan_side_top_right {
-        width:80%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
+    .chan_side_top_2 {
+        width:100%;height:20px;padding-right:10px;display:flex;align-items:center
     }
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto
