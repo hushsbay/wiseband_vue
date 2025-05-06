@@ -103,24 +103,19 @@ const router = createRouter({
 
 router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고는 안 먹혀도 여기 beforeEach와 Activeted/Deactivated는 먹힘
     //if (!gst) gst = GeneralStore() //(1)
-    console.log("from.path: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
-    console.log("to.path: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(from.query))
+    //console.log("from.path: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
+    //console.log("to.path: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(from.query))
     if (from.path == "/" && to.path.startsWith("/main/home/home_body/")) {
         console.log("chk) redirect to home")
         return { path: '/main/home', query : { ver : Math.random() }}
-    } 
-    //아래는 from,to가 반대로 호출되고 있어서 여기서 흐름을 막아주면 문제없음 (현재까지 대안 못찾음)
-    if (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) {
-        console.log("chk) home_body -> home") //새창에서 열기시 
-        return false //MsgList.vue의 $$76 참조
-    } else if (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) {
-        console.log("chk) dm_body -> dm") //새창에서 열기시 
-        return false //MsgList.vue의 $$76 참조
-    } else if (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) {
-        console.log("chk) later_body -> later") //새창에서 열기시 
-        return false //MsgList.vue의 $$76 참조
-    } else if (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) {
-        console.log("chk) fixed_body -> fixed") //새창에서 열기시 
+    } else if ( //아래는 from,to가 반대로 호출되고 있어 MsgList에 표시되지 않은 경우가 많은데 여기서 막아주면 문제없음 (현재까지 대안 못찾음)
+        (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) ||
+        (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) ||
+        (from.path.startsWith("/main/activity/activity_body/") && to.path == ("/main/activity")) ||
+        (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) ||
+        (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) 
+    ) {
+        console.log(from.path + " -> " + to.path) //새로고침, 새창에서열기 등 
         return false //MsgList.vue의 $$76 참조
     }
     return true
