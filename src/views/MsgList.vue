@@ -136,10 +136,10 @@
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
-    const mediaPopupRef = ref(null), mediaParam = ref(null)
+    const mediaPopupRef = ref(null) //, mediaParam = ref(null)
         
     let sideMenu, chanId, msgidInChan
-    let grnm = ref(''), channm = ref(''), chanimg = ref(''), vipStr = ref('')
+    let grnm = ref(''), chanNm = ref(''), chanImg = ref(''), vipStr = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
     let msglist = ref([]), fetchByScrollEnd = ref(false)
 
@@ -338,7 +338,7 @@
     }
 
     function openMediaSearch(tab) {
-        mediaPopupRef.value.open(tab, chanId)
+        mediaPopupRef.value.open(tab, chanId, chanNm.value, chanImg.value)
     }
 
     function chkWithinTime(dt1, dt2) {
@@ -377,14 +377,14 @@
             }
             vipStr.value = rs.data.vipStr
             grnm.value = rs.data.chanmst.GR_NM
-            channm.value = rs.data.chanmst.CHANNM            
+            chanNm.value = rs.data.chanmst.CHANNM            
             if ((rs.data.chanmst.TYP == "WS")) {
-                chanimg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+                chanImg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             } else {
-                chanimg.value = "violet_other.png"
+                chanImg.value = "violet_other.png"
             }
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
-            document.title = channm.value + "[채널]"
+            document.title = chanNm.value + "[채널]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             chanmemFullExceptMe.value = []
             for (let i = 0; i < rs.data.chandtl.length; i++) {
@@ -1724,17 +1724,17 @@
                     <span>{{ chanmemFullExceptMe.join(", ") }}</span>
                 </div>
                 <div v-else style="display:flex;align-items:center">
-                    <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px" @click="adminJob">
+                    <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
                     <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">
-                        {{ channm }} {{ grnm ? "[" + grnm+ "]" : "" }} <span v-if="adminShowID">{{ chanId }}</span>
+                        {{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }} <span v-if="adminShowID">{{ chanId }}</span>
                     </div>
                 </div> -->
-                <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px" @click="adminJob">
+                <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
                 <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
                 <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
                 <div v-else style="display:flex;align-items:center">                    
                     <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
-                    <div v-else class="coDotDot">{{ channm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
+                    <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
                 </div>
                 <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span> 
             </div>

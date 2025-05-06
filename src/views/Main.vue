@@ -6,6 +6,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupList from "/src/components/PopupList.vue"
+    import MediaSearch from "/src/components/MediaSearch.vue"
 
     const gst = GeneralStore()
     const router = useRouter()
@@ -20,6 +21,7 @@
     //## 더보기에서는 사용자가 설정하지 않은 메뉴와 화면에서 육안으로 보이지 않는 메뉴가 화면 사이즈가 변함에 따라 실시간으로 보여져야 함
 
     let prevX, prevY
+    let mediaPopupRef = ref(null), searchText = ref('')
 
     //localStorage를 사용하는 곳은 1. Main.vue(1개) 2. Home.vue(3개) 총 4군데임 (save/recall)
     //A) Main.vue = 1) 사이드 메뉴 B) Home.vue = 1) 채널콤보에서 선택한 아이템 2) 채널트리에서 선택한 노드 3) 드래그한 채널트리 넓이
@@ -173,12 +175,28 @@
             await goRoute({ name: 'fixed' }, onMounted)
         },
     }
+
+    function openMediaSearch() {
+        mediaPopupRef.value.open("msg", searchText.value.trim())
+    }
 </script>
 
 <template>
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
-
+            <div style="display:flex;justify-content:center;align-items:center">
+                
+            </div>
+            <div style="display:flex;justify-content:center;align-items:center">
+                <input type="search" v-model="searchText" @keyup.enter="openMediaSearch()" class="search" placeholder="검색"/>
+                <div style="padding:4px;display:flex;align-items:center;border-radius:5px;cursor:pointer" @click="openMediaSearch()">
+                    <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
+                    <span style="margin-left:2px;font-size:14px;color:whitesmoke">상세검색으로이동</span>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;align-items:center">
+                
+            </div>
         </div>
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
@@ -224,13 +242,17 @@
     <popup-list :popupOn="popupMenuOn" :popupPos="popupMenuPos" :list="listPopupMenu" :popupData="popupData"
         @ev-click="clickPopupRow" @ev-leave="popupMenuOn=false">
     </popup-list> 
+    <media-search ref="mediaPopupRef"></media-search>
 </template>
 
 <style scoped>    
     .header {
-        width:100%;min-height:40px;
+        width:100%;min-height:40px;display:flex;justify-content:space-between;align-items:center;
         background:var(--primary-color);
     }
+    .search { width:300px;margin-right:10px;padding-left:5px;background-color:rgb(131, 56, 138);color:white;border:none;border-radius:5px }
+    .search::placeholder { color:white }
+
     .body {
         width:100%;height:100%;display:flex;
         background:var(--primary-color);overflow:hidden; /* hidden이 있어야 sidebar의 아랫공간이 always seen 가능 */

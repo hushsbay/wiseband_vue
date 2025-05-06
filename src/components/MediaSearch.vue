@@ -10,19 +10,26 @@
     
     defineExpose({ open, close })
 
-    let tab = ref(''), show = ref(false), chanid = ''
-    let fileName = ref(''), frYm = ref(''), toYm = ref(''), authorNm = ref(''), bodyText = ref('')
+    let tab = ref(''), show = ref(false), chanid = '', channm = ref(''), chanimg = ref(null)
+    let rdoOpt = ref('all')
+    let fileName = ref(''), fileExt = ref(''), frYm = ref(''), toYm = ref(''), authorNm = ref(''), bodyText = ref('')
     let savLastMsgMstCdt
 
-    const scrollArea = ref(null), filelist = ref([]), imagelist = ref([]) 
+    const scrollArea = ref(null), filelist = ref([]), imagelist = ref([]), msglist = ref([]) 
     let prevScrollY = 0 //Intersection Observer 오류(parameter 1 is not of type 'Element') 해결이 어려워 onScrollEnd에서 처리함
 
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
 
-    function open(strTabid, strChanid) {
+    function open(strTabid, strChanid, strChannm, strChanimg) {
         show.value = true
         tab.value = strTabid
-        chanid = strChanid
+        if (strTabid == "msg") {
+            bodyText.value = strTabid //Main.vue에서 넘어온 검색어 (모든 채널+DM)
+        } else {
+            chanid = strChanid
+            channm.value = strChannm
+            chanimg.value = strChanimg
+        }
         procSearch(true)
     }
 
@@ -35,6 +42,15 @@
         procSearch(true)
     }
 
+    function clearText() {
+        fileName.value = ''
+        fileExt.value = ''
+        frYm.value = ''
+        toYm.value = ''
+        authorNm.value = ''
+        bodyText.value = ''
+    }
+
     async function procSearch(refresh) {
         if (refresh) {
             savLastMsgMstCdt = hush.cons.cdtAtLast
@@ -42,11 +58,13 @@
                 filelist.value = []
             } else if (tab.value == "image") {
                 imagelist.value = []
+            } else {
+                msglist.value = []
             }
         }
         const param = { 
             chanid: chanid, kind: tab.value, lastMsgMstCdt: savLastMsgMstCdt,
-            fileName: fileName.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
+            fileName: fileName.value.trim(), fileExt: fileExt.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
             authorNm: authorNm.value.trim(), bodyText: bodyText.value.trim()
         }
         const res = await axios.post("/chanmsg/searchMedia", param)
@@ -64,6 +82,8 @@
                 imagelist.value.push(row)
             } else if (tab.value == "file") {
                 filelist.value.push(row)
+            } else {
+                msglist.value.push(row)
             }
             if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
         }
@@ -135,7 +155,11 @@
         <div v-if="show">
             <div class="popup">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                    <div style="display:flex">
+                    <div style="display:flex;align-items:center">
+                        <div class="topMenu" :class="tab == 'msg' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('msg')">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                            <span style="margin-left:5px;font-weight:bold">메시지</span> 
+                        </div>
                         <div class="topMenu" :class="tab == 'file' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('file')">
                             <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                             <span style="margin-left:5px;font-weight:bold">파일</span> 
@@ -144,13 +168,26 @@
                             <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                             <span style="margin-left:5px;font-weight:bold">이미지</span> 
                         </div>
+                        <div v-if="chanid != ''" style="margin-left:10px;padding:6px;display:flex;align-items:center;border:1px solid lightgray">
+                            <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
+                            <div class="coDotDot">{{ channm }}</div>
+                        </div>
+                        <div v-else style="margin-left:10px;padding:0 6px 0 3px;display:flex;align-items:center;border:1px solid lightgray">
+                            <input type="radio" id="all" value="all" v-model="rdoOpt" /><label for="all">채널+DM</label>
+                            <input type="radio" id="chan" value="chan" v-model="rdoOpt" style="margin-left:10px"/><label for="chan">채널</label>
+                            <input type="radio" id="dm" value="dm" v-model="rdoOpt" style="margin-left:10px"/><label for="chan">DM</label>
+                        </div>
+                        
                     </div>
-                    <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:10px;" @click="close" title="닫기">
+                    <div style="display:flex;justify-content:flex-end;align-items:center">
+                        <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:10px;" @click="close" title="닫기">
+                    </div>
                 </div>
                 <div v-if="tab=='file'" class="chan_center">
                     <div class="chan_center_header">
                         <div class="chan_center_header_left">
                             <input type="search" v-model="fileName" @keyup.enter="procSearch(true)" style="width:120px" placeholder="파일명" />
+                            <input type="search" v-model="fileExt" @keyup.enter="procSearch(true)" style="width:60px" placeholder="확장자" />
                             <input type="search" v-model="frYm" @keyup.enter="procSearch(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
                             <input type="search" v-model="toYm" @keyup.enter="procSearch(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
                             <input type="search" v-model="authorNm" @keyup.enter="procSearch(true)" style="width:100px" placeholder="전송자" />
@@ -158,6 +195,10 @@
                             <div class="coImgBtn" @click="procSearch(true)">
                                 <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
                                 <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
+                            </div>
+                            <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
+                                <img :src="gst.html.getImageUrl('close.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
+                                <span style="margin-left:2px;font-size:14px;color:dimgray">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
@@ -179,7 +220,7 @@
                         </div>
                     </div>
                 </div>
-                <div v-if="tab=='image'" class="chan_center">
+                <div v-else-if="tab=='image'" class="chan_center">
                     <div class="chan_center_header">
                         <div class="chan_center_header_left">
                             <input type="search" v-model="frYm" @keyup.enter="procSearch(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
@@ -189,6 +230,10 @@
                             <div class="coImgBtn" @click="procSearch(true)">
                                 <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
                                 <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
+                            </div>
+                            <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
+                                <img :src="gst.html.getImageUrl('close.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
+                                <span style="margin-left:2px;font-size:14px;color:dimgray">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
@@ -206,6 +251,41 @@
                                     <div style="height:calc(100% - 60px);overflow:hidden">{{ row.BODYTEXT }}</div>                                    
                                 </div>                                
                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="chan_center">
+                    <div class="chan_center_header">
+                        <div class="chan_center_header_left">
+                            <input type="search" v-model="frYm" @keyup.enter="procSearch(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
+                            <input type="search" v-model="toYm" @keyup.enter="procSearch(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
+                            <input type="search" v-model="authorNm" @keyup.enter="procSearch(true)" style="width:100px" placeholder="전송자" />
+                            <input type="search" v-model="bodyText" @keyup.enter="procSearch(true)" style="width:120px" placeholder="본문" />
+                            <div class="coImgBtn" @click="procSearch(true)">
+                                <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
+                                <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
+                            </div>
+                            <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
+                                <img :src="gst.html.getImageUrl('close.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
+                                <span style="margin-left:2px;font-size:14px;color:dimgray">Clear</span>
+                            </div>
+                        </div>
+                        <div class="chan_center_header_right"></div>
+                    </div>
+                    <div class="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
+                        <div v-for="(row, idx) in msglist" class="file_body" style="border-bottom:1px solid lightgray;cursor:pointer"
+                            @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
+                                <div style="width:100%;display:flex;align-items:center">
+                                    <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ hush.util.displayDt(row.CDT) }}</div>
+                                    <div class="coDotDot" @click="downloadFile(row.MSGID, row)"
+                                         style="width:calc(100% - 170px);height:36px;display:flex;align-items:center;text-decoration:underline;font-weight:bold;color:steelblue">
+                                        {{ row.BODY }}
+                                    </div>
+                                </div>
+                                <div style="width:100%;display:flex;align-items:center">
+                                    <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ row.AUTHORNM }}</div>
+                                    <div class="coDotDot" style="width:calc(100% - 170px);height:36px;display:flex;align-items:center">{{ row.BODYTEXT }}</div>
+                                </div>
                         </div>
                     </div>
                 </div>
@@ -227,7 +307,7 @@
 
     .popup {
         position:fixed;width:90%;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;z-index:1000;background:white;
-        display:flex;flex-direction:column
+        display:flex;flex-direction:column;border-radius:10px
     }
 
     .overlay {
@@ -240,7 +320,7 @@
     .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
     .chan_center {
-        width:100%;height:calc(100% - 40px);padding: 0 0 0 10px;
+        width:100%;height:calc(100% - 40px);
         display:flex;flex-direction:column;border:1px solid dimgray
     }
     .chan_center_header {
