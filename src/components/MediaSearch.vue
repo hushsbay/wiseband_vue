@@ -66,7 +66,7 @@
             }
         }
         const param = { 
-            chanid: chanid, kind: tab.value, lastMsgMstCdt: savLastMsgMstCdt,
+            chanid: chanid, kind: tab.value, lastMsgMstCdt: savLastMsgMstCdt, rdoOpt: rdoOpt.value, 
             fileName: fileName.value.trim(), fileExt: fileExt.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
             authorNm: authorNm.value.trim(), bodyText: bodyText.value.trim()
         }
