@@ -337,8 +337,8 @@
         }        
     }
 
-    function openMediaSearch(tab) {
-        mediaPopupRef.value.open(tab, chanId, chanNm.value, chanImg.value)
+    function openSearchInchan(tab) {
+        mediaPopupRef.value.open(tab, chanId, chanNm.value, chanImg.value, "")
     }
 
     function chkWithinTime(dt1, dt2) {
@@ -1769,18 +1769,18 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                 <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
             </div>
-            <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openMediaSearch('file')">
+            <div class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
+                <span style="margin-left:5px">검색</span> 
+            </div>
+            <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">파일</span> 
             </div>
-            <div class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openMediaSearch('image')">
+            <div class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">이미지</span> 
             </div>
-            <!-- <div class="topMenu" style="display:flex;align-items:center;padding:5px 8px" @mousedown.right="(e) => test(e)">
-                <img class="coImg18" :src="gst.html.getImageUrl('violet_other.png')">
-                <span style="margin-left:5px">테스트</span> 
-            </div> -->
             <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
             <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
                   style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;cursor:pointer">모두읽음처리</span>

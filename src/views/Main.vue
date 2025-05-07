@@ -176,8 +176,8 @@
         },
     }
 
-    function openMediaSearch() {
-        mediaPopupRef.value.open("msg", searchText.value.trim())
+    function openMsgSearch() {
+        mediaPopupRef.value.open("msg", '', '', '', searchText.value.trim())
     }
 </script>
 
@@ -188,8 +188,8 @@
                 
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
-                <input type="search" v-model="searchText" @keyup.enter="openMediaSearch()" class="search" placeholder="검색"/>
-                <div style="padding:4px;display:flex;align-items:center;border-radius:5px;cursor:pointer" @click="openMediaSearch()">
+                <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="검색"/>
+                <div style="padding:4px;display:flex;align-items:center;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
                     <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
                     <span style="margin-left:2px;font-size:14px;color:whitesmoke">상세검색으로이동</span>
                 </div>

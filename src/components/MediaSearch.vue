@@ -20,17 +20,18 @@
 
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
 
-    function open(strTabid, strChanid, strChannm, strChanimg) {
+    function open(strTabid, strChanid, strChannm, strChanimg, strSearchText) {
         show.value = true
         tab.value = strTabid
+        chanid = strChanid
+        channm.value = strChannm
+        chanimg.value = strChanimg
         if (strTabid == "msg") {
-            bodyText.value = strTabid //Main.vue에서 넘어온 검색어 (모든 채널+DM)
+            bodyText.value = strSearchText //Main.vue에서 넘어온 검색어            
+            procSearchMsg(true)
         } else {
-            chanid = strChanid
-            channm.value = strChannm
-            chanimg.value = strChanimg
-        }
-        procSearch(true)
+            procSearchMedia(true)
+        }        
     }
 
     function close() {
@@ -39,7 +40,11 @@
 
     function changeTab(kind) {
         tab.value = kind
-        procSearch(true)
+        if (kind == "msg") {
+            procSearchMsg(true)
+        } else {
+            procSearchMedia(true)
+        }
     }
 
     function clearText() {
@@ -51,15 +56,13 @@
         bodyText.value = ''
     }
 
-    async function procSearch(refresh) {
+    async function procSearchMedia(refresh) {
         if (refresh) {
             savLastMsgMstCdt = hush.cons.cdtAtLast
             if (tab.value == "file") {
                 filelist.value = []
             } else if (tab.value == "image") {
                 imagelist.value = []
-            } else {
-                msglist.value = []
             }
         }
         const param = { 
@@ -82,9 +85,26 @@
                 imagelist.value.push(row)
             } else if (tab.value == "file") {
                 filelist.value.push(row)
-            } else {
-                msglist.value.push(row)
             }
+            if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+        }
+    }
+
+    async function procSearchMsg(refresh) {
+        if (refresh) {
+            savLastMsgMstCdt = hush.cons.cdtAtLast
+            msglist.value = []
+        }
+        const param = { 
+            chanid: chanid, kind: tab.value, lastMsgMstCdt: savLastMsgMstCdt, rdoOpt: rdoOpt.value, 
+            frYm: frYm.value.trim(), toYm: toYm.value.trim(), authorNm: authorNm.value.trim(), searchText: bodyText.value.trim()
+        }
+        const res = await axios.post("/chanmsg/searchMsg", param)
+        const rs = gst.util.chkAxiosCode(res.data) 
+        if (!rs) return
+        for (let i = 0; i < rs.list.length; i++) {
+            const row = rs.list[i]
+            msglist.value.push(row)
             if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
         }
     }
@@ -101,7 +121,13 @@
         saveCurScrollY(prevScrollY) 
         const ele = document.getElementById("chan_center_body")
         const bottomEntryPoint = (scrollArea.value.scrollHeight - ele.offsetHeight) - 200 //max ScrollTop보다 200정도 작게 정함
-        if (which == "down" && sTop > bottomEntryPoint) await procSearch()
+        if (which == "down" && sTop > bottomEntryPoint) {
+            if (tab.value == "msg") {
+                await procSearchMsg()
+            } else {
+                await procSearchMedia()
+            }
+        }
     }
 
     function downloadFile(msgid, row) {
@@ -175,7 +201,7 @@
                         <div v-else style="margin-left:10px;padding:0 6px 0 3px;display:flex;align-items:center;border:1px solid lightgray">
                             <input type="radio" id="all" value="all" v-model="rdoOpt" /><label for="all">채널+DM</label>
                             <input type="radio" id="chan" value="chan" v-model="rdoOpt" style="margin-left:10px"/><label for="chan">채널</label>
-                            <input type="radio" id="dm" value="dm" v-model="rdoOpt" style="margin-left:10px"/><label for="chan">DM</label>
+                            <input type="radio" id="dm" value="dm" v-model="rdoOpt" style="margin-left:10px"/><label for="dm">DM</label>
                         </div>
                         
                     </div>
@@ -183,16 +209,16 @@
                         <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:10px;" @click="close" title="닫기">
                     </div>
                 </div>
-                <div v-if="tab=='file'" class="chan_center">
+                <div v-if="tab=='file'" class="chan_center"><!--파일 검색-->
                     <div class="chan_center_header">
                         <div class="chan_center_header_left">
-                            <input type="search" v-model="fileName" @keyup.enter="procSearch(true)" style="width:120px" placeholder="파일명" />
-                            <input type="search" v-model="fileExt" @keyup.enter="procSearch(true)" style="width:60px" placeholder="확장자" />
-                            <input type="search" v-model="frYm" @keyup.enter="procSearch(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
-                            <input type="search" v-model="toYm" @keyup.enter="procSearch(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
-                            <input type="search" v-model="authorNm" @keyup.enter="procSearch(true)" style="width:100px" placeholder="전송자" />
-                            <input type="search" v-model="bodyText" @keyup.enter="procSearch(true)" style="width:120px" placeholder="본문" />
-                            <div class="coImgBtn" @click="procSearch(true)">
+                            <input type="search" v-model="fileName" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="파일명" />
+                            <input type="search" v-model="fileExt" @keyup.enter="procSearchMedia(true)" style="width:60px" placeholder="확장자" />
+                            <input type="search" v-model="frYm" @keyup.enter="procSearchMedia(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
+                            <input type="search" v-model="toYm" @keyup.enter="procSearchMedia(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
+                            <input type="search" v-model="authorNm" @keyup.enter="procSearchMedia(true)" style="width:100px" placeholder="전송자" />
+                            <input type="search" v-model="bodyText" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="본문" />
+                            <div class="coImgBtn" @click="procSearchMedia(true)">
                                 <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
                                 <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
                             </div>
@@ -220,14 +246,14 @@
                         </div>
                     </div>
                 </div>
-                <div v-else-if="tab=='image'" class="chan_center">
+                <div v-else-if="tab=='image'" class="chan_center"><!--이미지 검색-->
                     <div class="chan_center_header">
                         <div class="chan_center_header_left">
-                            <input type="search" v-model="frYm" @keyup.enter="procSearch(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
-                            <input type="search" v-model="toYm" @keyup.enter="procSearch(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
-                            <input type="search" v-model="authorNm" @keyup.enter="procSearch(true)" style="width:100px" placeholder="전송자" />
-                            <input type="search" v-model="bodyText" @keyup.enter="procSearch(true)" style="width:120px" placeholder="본문" />
-                            <div class="coImgBtn" @click="procSearch(true)">
+                            <input type="search" v-model="frYm" @keyup.enter="procSearchMedia(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
+                            <input type="search" v-model="toYm" @keyup.enter="procSearchMedia(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
+                            <input type="search" v-model="authorNm" @keyup.enter="procSearchMedia(true)" style="width:100px" placeholder="전송자" />
+                            <input type="search" v-model="bodyText" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="본문" />
+                            <div class="coImgBtn" @click="procSearchMedia(true)">
                                 <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
                                 <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
                             </div>
@@ -254,14 +280,14 @@
                         </div>
                     </div>
                 </div>
-                <div v-else class="chan_center">
+                <div v-else class="chan_center"><!--메시지 검색-->
                     <div class="chan_center_header">
                         <div class="chan_center_header_left">
-                            <input type="search" v-model="frYm" @keyup.enter="procSearch(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
-                            <input type="search" v-model="toYm" @keyup.enter="procSearch(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
-                            <input type="search" v-model="authorNm" @keyup.enter="procSearch(true)" style="width:100px" placeholder="전송자" />
-                            <input type="search" v-model="bodyText" @keyup.enter="procSearch(true)" style="width:120px" placeholder="본문" />
-                            <div class="coImgBtn" @click="procSearch(true)">
+                            <input type="search" v-model="frYm" @keyup.enter="procSearchMsg(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
+                            <input type="search" v-model="toYm" @keyup.enter="procSearchMsg(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
+                            <input type="search" v-model="authorNm" @keyup.enter="procSearchMsg(true)" style="width:100px" placeholder="전송자" />
+                            <input type="search" v-model="bodyText" @keyup.enter="procSearchMsg(true)" style="width:120px" placeholder="본문" />
+                            <div class="coImgBtn" @click="procSearchMsg(true)">
                                 <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
                                 <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
                             </div>
