@@ -378,7 +378,7 @@
             vipStr.value = rs.data.vipStr
             grnm.value = rs.data.chanmst.GR_NM
             chanNm.value = rs.data.chanmst.CHANNM            
-            if ((rs.data.chanmst.TYP == "WS")) {
+            if (rs.data.chanmst.TYP == "WS") {
                 chanImg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
             } else {
                 chanImg.value = "violet_other.png"

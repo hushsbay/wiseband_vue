@@ -104,6 +104,38 @@
         if (!rs) return
         for (let i = 0; i < rs.list.length; i++) {
             const row = rs.list[i]
+            if (row.TYP == "WS") {
+                row.chanImg = (row.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+            } else {
+                row.chanImg = "violet_other.png"
+            }
+            for (let item of row.msgimg) {
+                if (!item.BUFFER) continue //잘못 insert된 것임
+                const uInt8Array = new Uint8Array(item.BUFFER.data)
+                const blob = new Blob([uInt8Array], { type: "image/png" })
+                const blobUrl = URL.createObjectURL(blob)
+                item.url = blobUrl
+                item.hover = false
+                item.cdt = item.CDT
+            }
+            for (let item of row.msgfile) {
+                item.hover = false
+                item.name = item.BODY
+                item.size = item.FILESIZE
+                item.cdt = item.CDT
+            }
+            for (let item of row.msglink) {
+                item.hover = false                        
+                item.cdt = item.CDT
+                const arr = item.BODY.split(hush.cons.deli)
+                if (arr.length == 1) {
+                    item.text = item.BODY
+                    item.url = item.BODY
+                } else {
+                    item.text = arr[0]
+                    item.url = arr[1]
+                }
+            }
             msglist.value.push(row)
             if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
         }
@@ -174,6 +206,10 @@
             gst.util.showEx(ex, true)
         }
     }
+
+    function openLink(url) { 
+        window.open(url, "_blank") //popup not worked for 'going back' navigation
+    }
 </script>
 
 <template>
@@ -203,7 +239,6 @@
                             <input type="radio" id="chan" value="chan" v-model="rdoOpt" style="margin-left:10px"/><label for="chan">채널</label>
                             <input type="radio" id="dm" value="dm" v-model="rdoOpt" style="margin-left:10px"/><label for="dm">DM</label>
                         </div>
-                        
                     </div>
                     <div style="display:flex;justify-content:flex-end;align-items:center">
                         <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:10px;" @click="close" title="닫기">
@@ -232,17 +267,17 @@
                     <div class="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
                         <div v-for="(row, idx) in filelist" class="file_body" style="border-bottom:1px solid lightgray;cursor:pointer"
                             @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
-                                <div style="width:100%;display:flex;align-items:center">
-                                    <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ hush.util.displayDt(row.CDT) }}</div>
-                                    <div class="coDotDot" @click="downloadFile(row.MSGID, row)"
-                                         style="width:calc(100% - 170px);height:36px;display:flex;align-items:center;text-decoration:underline;font-weight:bold;color:steelblue">
-                                        {{ row.BODY }}
-                                    </div>
+                            <div style="width:100%;display:flex;align-items:center">
+                                <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ hush.util.displayDt(row.CDT) }}</div>
+                                <div class="coDotDot" @click="downloadFile(row.MSGID, row)"
+                                        style="width:calc(100% - 170px);height:36px;display:flex;align-items:center;text-decoration:underline;font-weight:bold;color:steelblue">
+                                    {{ row.BODY }}
                                 </div>
-                                <div style="width:100%;display:flex;align-items:center">
-                                    <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ row.AUTHORNM }}</div>
-                                    <div class="coDotDot" style="width:calc(100% - 170px);height:36px;display:flex;align-items:center">{{ row.BODYTEXT }}</div>
-                                </div>
+                            </div>
+                            <div style="width:100%;display:flex;align-items:center">
+                                <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ row.AUTHORNM }}</div>
+                                <div class="coDotDot" style="width:calc(100% - 170px);height:36px;display:flex;align-items:center">{{ row.BODYTEXT }}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -301,17 +336,45 @@
                     <div class="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
                         <div v-for="(row, idx) in msglist" class="file_body" style="border-bottom:1px solid lightgray;cursor:pointer"
                             @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
-                                <div style="width:100%;display:flex;align-items:center">
-                                    <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ hush.util.displayDt(row.CDT) }}</div>
-                                    <div class="coDotDot" @click="downloadFile(row.MSGID, row)"
-                                         style="width:calc(100% - 170px);height:36px;display:flex;align-items:center;text-decoration:underline;font-weight:bold;color:steelblue">
-                                        {{ row.BODY }}
+                            <div style="width:100%;display:flex;align-items:center">
+                                <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ hush.util.displayDt(row.CDT) }}</div>
+                                <div v-if="chanid != ''" style="display:flex;align-items:center">
+                                    <img class="coImg18" :src="gst.html.getImageUrl(chanimg)" style="margin-right:5px">
+                                    <div class="coDotDot">{{ channm }}</div>
+                                </div>
+                                <div v-else style="display:flex;align-items:center">
+                                    <img class="coImg18" :src="gst.html.getImageUrl(row.chanImg)" style="margin-right:5px">
+                                    <div class="coDotDot">{{ row.CHANNM }}</div>
+                                </div>
+                            </div>
+                            <div style="width:100%;display:flex;align-items:center">
+                                <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ row.AUTHORNM }}</div>
+                                <div class="coDotDot" style="width:calc(100% - 170px);height:36px;display:flex;align-items:center">{{ row.BODYTEXT }}</div>
+                            </div>
+                            <div style="width:100%;display:flex;justify-content:space-between;align-items:center">
+                                <div></div>
+                                <div v-if="row.msgimg.length > 0 || row.msgfile.length > 0 || row.msglink.length > 0"
+                                    style="width:calc(100% - 170px);margin-bottom:5px;display:flex;align-items:center;flex-wrap:wrap">
+                                    <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
+                                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)"><!--이미지-->
+                                        <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
+                                    </div>                
+                                    <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
+                                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)"><!--파일-->
+                                        <div style="height:100%;display:flex;align-items:center">
+                                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
+                                            <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
+                                        </div>                                    
+                                    </div>
+                                    <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
+                                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)"><!--링크-->
+                                        <div style="height:100%;display:flex;align-items:center">
+                                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
+                                            <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div style="width:100%;display:flex;align-items:center">
-                                    <div style="width:160px;height:36px;margin:0 0 0 10px;display:flex;align-items:center">{{ row.AUTHORNM }}</div>
-                                    <div class="coDotDot" style="width:calc(100% - 170px);height:36px;display:flex;align-items:center">{{ row.BODYTEXT }}</div>
-                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -339,7 +402,6 @@
     .overlay {
         position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index: 999;
     }
-
     .topMenu { cursor:pointer }
     .topMenu:hover { background:var(--active-color);font-weight:bold }
     .topMenu:active { background:var(--active-color);font-weight:bold }
@@ -376,4 +438,13 @@
     }
     .item:hover { background:whitesmoke }
     .item:active { background:lightsteelblue }
+    .msg_body_sub {
+        display:flex;margin-bottom:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
+    }
+    .msg_file_each {
+        position:relative;min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    }
+    .msg_image_each {
+        position:relative;width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    }
 </style>
