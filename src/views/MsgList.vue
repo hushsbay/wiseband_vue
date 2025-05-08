@@ -49,15 +49,12 @@
     /////////////////////////////////////////////////////////////////////////////////////
     //스레드(댓글) 관련 : 부모 MsgList와 자식 MsgList가 혼용되어 코딩되어 있으므로
     //네이밍 규칙을 정해서, thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
-    //부모,자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개인데 hasProp()으로 구분해 사용
+    //부모,자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개인데 hasProp() 맟 childbody로 구분해 사용
     
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
 
-    // const hasProp = computed(() => { //바로 아래 함수 참조. 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
-    //     if (props.data && props.data.msgid) return true
-    //     return false
-    // })
-
+    //const hasProp = computed(() => { if (props.data && props.data.msgid) return true; return false; }) //값이 변할때만 계산하므로 효율적이나
+    //computed대신 바로 아래 함수 사용. computed는 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
     function hasProp() { //props 사용하는 것은 자식이므로 hasProp으로 명명. 위 computed 이용해 처리하고자 했으나 동작 이상 포기 : 캐싱없이 매번 계산하나 이 함수 사용
         if (props.data && props.data.msgid) return true //자식이 열린 상태임을 의미
         return false
@@ -118,7 +115,7 @@
 
     /////////////////////////////////////////////////////////////////////////////////////
     
-    function evToPanel() {
+    function evToPanel() { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
         emits("ev-to-panel")
     }
 
@@ -136,7 +133,7 @@
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
-    const mediaPopupRef = ref(null) //, mediaParam = ref(null)
+    const mediaPopupRef = ref(null)
         
     let sideMenu, chanId, msgidInChan
     let grnm = ref(''), chanNm = ref(''), chanImg = ref(''), vipStr = ref('')
@@ -218,11 +215,11 @@
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
-            appType = arr[2] //home,dm,later,msglist.. //appType = (route.fullPath.startsWith("/main/dm/dm_body")) ? "dm" : "chan" //home->chan
-            if (hasProp()) { //console.log("자식 - " + JSON.stringify(props.data))
+            appType = arr[2] //home,dm,later,msglist..
+            if (hasProp()) {
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
-            } else { //console.log("부모 - " + props.data) //개발완료전에 마운트가 두번 되는지 여기 지우지 말고 끝까지 체크하기
+            } else {
                 setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
                 if (msgidInChan) {
                     await getList({ msgid: msgidInChan, kind: "atHome" })
@@ -244,19 +241,19 @@
         if (mounting) {
             mounting = false
         } else {
-            if (hasProp()) { //console.log("자식A - " + JSON.stringify(props.data))
+            if (hasProp()) {
                 setBasicInfoInProp()
-            } else { //console.log("부모A - " + JSON.stringify(props.data))
+            } else {
                 setBasicInfo()
                 observerTopScroll()
                 observerBottomScroll()      
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            if (appType == "home") { //if (route.path.startsWith("/main/home/home_body")) {
+            if (appType == "home") {
                 gst.home.procFromBody("recall", { chanid: chanId })
-            } else if (appType == "dm" || appType == "later" || appType == "fixed") { //(route.path.startsWith("/main/later/later_body") || route.path.startsWith("/main/dm/dm_body")) {
-                evToPanel() //gst.later.procFromBody("set_color", { msgid: msgidInChan })
+            } else if (appType == "dm" || appType == "later" || appType == "fixed") {
+                evToPanel()
             }
         }
     })
@@ -268,19 +265,10 @@
 
     function setBasicInfo() {        
         sideMenu = gst.selSideMenu
-        if (!sideMenu) { //gst.selSideMenu가 빈값으로 넘어 오는 경우가 가끔 있는데 비동기실행이 어딘지 찾기가 어려워 일단 아래 코딩 보완
-            //예) /main/home/home_body/20250120084532918913033423/20250122084532918913033403 : arr[2] = "home"
-            //const arr = route.fullPath.split("/")
-            //sideMenu = "mnu" + arr[2].substring(0, 1).toUpperCase() + arr[2].substring(1)
-            sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
-        }
-        if (route.params.chanid) {
-            chanId = route.params.chanid
-        }
+        if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
+        if (route.params.chanid) chanId = route.params.chanid
         const tmpMsgid = route.params.msgid
-        if (tmpMsgid && tmpMsgid != "0") {
-            msgidInChan = tmpMsgid //댓글의 msgid일 수도 있음
-        }
+        if (tmpMsgid && tmpMsgid != "0") msgidInChan = tmpMsgid //댓글의 msgid일 수도 있음
     }
 
     function saveCurScrollY(posY) {
@@ -323,10 +311,6 @@
     }
 
     async function listMsg(kind) {
-        if (kind == 'file') {
-            alert("not yet!!!")
-            return
-        }
         listMsgSel.value = kind
         msglist.value = []
         if (kind == 'all') {
@@ -378,11 +362,6 @@
             vipStr.value = rs.data.vipStr
             grnm.value = rs.data.chanmst.GR_NM
             chanNm.value = rs.data.chanmst.CHANNM            
-            // if (rs.data.chanmst.TYP == "WS") {
-            //     chanImg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
-            // } else {
-            //     chanImg.value = "violet_other.png"
-            // }
             chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             document.title = chanNm.value + "[채널]"
@@ -393,9 +372,6 @@
                 if (row.PICTURE == null) {
                     row.url = null
                 } else {
-                    // const uInt8Array = new Uint8Array(row.PICTURE.data)
-                    // const blob = new Blob([uInt8Array], { type: "image/png" })
-                    // const blobUrl = URL.createObjectURL(blob)
                     row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
                 chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
@@ -424,7 +400,7 @@
                     if (msgidParent && row.MSGID == msgidParent) {
                         if (queryNotYetTrue) { //여기서부터 읽지 않은 메시지라고 안내해야 함
                             row.firstNotYet = (msgidParent == msgidChild) ? "parent" : "child"
-                        } //if (row.act_later) row.background = hush.cons.color_act_later
+                        }
                         row.background = hush.cons.color_athome
                     }
                 }
@@ -435,33 +411,6 @@
                     replaced = true
                 }
                 if (replaced) row.BODY = tempBody
-                // for (let item of row.msgimg) {
-                //     if (!item.BUFFER) continue //잘못 insert된 것임
-                //     const uInt8Array = new Uint8Array(item.BUFFER.data)
-                //     const blob = new Blob([uInt8Array], { type: "image/png" })
-                //     const blobUrl = URL.createObjectURL(blob)
-                //     item.url = blobUrl
-                //     item.hover = false
-                //     item.cdt = item.CDT
-                // }
-                // for (let item of row.msgfile) {
-                //     item.hover = false
-                //     item.name = item.BODY
-                //     item.size = item.FILESIZE
-                //     item.cdt = item.CDT
-                // }
-                // for (let item of row.msglink) {
-                //     item.hover = false                        
-                //     item.cdt = item.CDT
-                //     const arr = item.BODY.split(hush.cons.deli)
-                //     if (arr.length == 1) {
-                //         item.text = item.BODY
-                //         item.url = item.BODY
-                //     } else {
-                //         item.text = arr[0]
-                //         item.url = arr[1]
-                //     }
-                // } 
                 gst.util.handleMsgSub(row)
                 //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
@@ -517,9 +466,6 @@
             }
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
-                // const uInt8Array = new Uint8Array(item.BUFFER.data)
-                // const blob = new Blob([uInt8Array], { type: "image/png" })
-                // const blobUrl = URL.createObjectURL(blob)
                 const blobUrl = hush.util.getImageBlobUrl(item.BUFFER.data)
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: item.CDT })
             }
@@ -750,11 +696,6 @@
         saveCurScrollY(prevScrollY)
     }
 
-    // const onScrollEnd = () => {  //@scrollEnd="onScrollEnd"
-    //     debugger
-    //     readMsgToBeSeen()
-    // }
-
     async function refreshMsgDtlWithQryAction(msgid) {
         let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
         if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
@@ -774,8 +715,8 @@
                 const rs = await getMsg({ msgid: props.data.msgid })
                 if (rs == null) return
                 refreshWithGetMsg(rs, props.data.msgid)
-            //} else { //굳이 실행하지 않아도 될 듯
-            //    //if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
+            } else { 
+                //굳이 실행하지 않아도 될 듯
             }
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
@@ -835,19 +776,15 @@
                     const msgdtlArr = msglist.value[i].msgdtl
                     const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
                     const msgid = msglist.value[i].MSGID
-                    if (msgdtlRow) { //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-                        //console.log("@@@@"+msgid)
+                    if (msgdtlRow) { 
+                        //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
                     } else {
                         const ele = msgRow.value[msgid]
                         if (ele) {
                             const rect = ele.getBoundingClientRect()
-                            let bool //console.log((rect.top - topFrom) + "====" + eleParent.offsetHeight)
-                            if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) { //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
-                                bool = true //테스트용
-                                updateWithNewKind(msgid, "notyet", "read")
-                            } else {
-                                bool = false //테스트용
-                            } //console.log(bool+"===="+msgid) //테스트용
+                            if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
+                                updateWithNewKind(msgid, "notyet", "read") //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
+                            }
                         }
                     }
                 }
@@ -1479,7 +1416,7 @@
     }
 
     function downloadFile(msgid, row) { //msgid = temp or real msgid
-        try {
+        try { //cdt는 msgmst가 아닌 msgsub 테이블의 필드값이여야 함
             gst.util.downloadBlob("F", msgid, chanId, row.cdt, row.name)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -1575,12 +1512,10 @@
         gst.ctx.show(e)
     }
 
-    //async function test(e) {
-        //gst.util.setToast("gggggg")
-        //const obj = { type: "update", msgid: "20250320165606923303091754" } //소스 나오는 메시지 //20250219122354508050012461 : jiyjiy 태양 구름 호수 그리고..
-        //emits('ev-test', obj)
-    //}
-    
+    function adminJob() {
+        adminShowID.value = !adminShowID.value
+    }
+
     ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임
     //https://velog.io/@msdio/window%EC%9D%98-Selection%EA%B3%BC-range%EC%97%90-%EB%8C%80%ED%95%B4%EC%84%9C-%EC%95%8C%EC%95%84%EB%B3%B4%EC%9E%90
     //selection 타입 : none, range, caret. range는 유저가 선택한(드래그한) 범위 / caret은 범위가 아닌 특정 위치의 커서
@@ -1712,10 +1647,6 @@
         showHtml.value = true
         msgbody.value = document.getElementById(editorId).innerHTML
     }
-
-    function adminJob() {
-        adminShowID.value = !adminShowID.value
-    }
 </script>
 
 <template>
@@ -1723,15 +1654,6 @@
     <div class="chan_center" :style="{ width: widthChanCenter }">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
-                <!-- <div v-if="appType=='dm'" style="display:flex;align-items:center">
-                    <span>{{ chanmemFullExceptMe.join(", ") }}</span>
-                </div>
-                <div v-else style="display:flex;align-items:center">
-                    <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
-                    <div v-if="!hasProp()" class="coDotDot maintainContextMenu" @click="chanCtxMenu">
-                        {{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }} <span v-if="adminShowID">{{ chanId }}</span>
-                    </div>
-                </div> -->
                 <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
                 <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
                 <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
@@ -1745,8 +1667,6 @@
                 <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
                     @click="chanProperty('member')">
                     <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
-                        <!-- <img v-if="row.url" :src="row.url" style='width:100%;height:100%;border-radius:12px'>
-                        <img v-else :src="gst.html.getImageUrl('user.png')" style='width:100%;height:100%'> -->
                         <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                     </div>
                     <span>{{ chandtl.length }}</span>
