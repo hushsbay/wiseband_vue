@@ -12,7 +12,7 @@
 
     let tab = ref(''), show = ref(false), chanid = '', channm = ref(''), chanimg = ref(null)
     let rdoOpt = ref('all')
-    let fileName = ref(''), fileExt = ref(''), frYm = ref(''), toYm = ref(''), authorNm = ref(''), searchText = ref('')
+    let frYm = ref(''), toYm = ref(''), authorNm = ref(''), searchText = ref(''), fileExt = ref('')
     let savLastMsgMstCdt
 
     const scrollArea = ref(null), filelist = ref([]), imagelist = ref([]), msglist = ref([]) 
@@ -48,7 +48,6 @@
     }
 
     function clearText() {
-        fileName.value = ''
         fileExt.value = ''
         frYm.value = ''
         toYm.value = ''
@@ -68,7 +67,7 @@
         }
         const param = { 
             chanid: chanid, kind: tab.value, lastMsgMstCdt: savLastMsgMstCdt, rdoOpt: rdoOpt.value, 
-            fileName: fileName.value.trim(), fileExt: fileExt.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
+            fileExt: fileExt.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
             authorNm: authorNm.value.trim(), searchText: searchText.value.trim()
         }
         const res = await axios.post("/chanmsg/searchMedia", param)
@@ -76,17 +75,9 @@
         if (!rs) return
         for (let i = 0; i < rs.list.length; i++) {
             const row = rs.list[i]
-            // if (row.TYP == "WS") {
-            //     row.chanImg = (row.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
-            // } else {
-            //     row.chanImg = "violet_other.png"
-            // }
             row.chanImg = gst.util.getChanImg(row.TYP, row.STATE)
             if (tab.value == "image") {
                 if (!row.BUFFER) continue
-                // const uInt8Array = new Uint8Array(row.BUFFER.data)
-                // const blob = new Blob([uInt8Array], { type: "image/png" })
-                // const blobUrl = URL.createObjectURL(blob)
                 row.url = hush.util.getImageBlobUrl(row.BUFFER.data)
                 row.cdt = row.CDT
                 imagelist.value.push(row)
@@ -112,39 +103,7 @@
         if (!rs) return
         for (let i = 0; i < rs.list.length; i++) {
             const row = rs.list[i]
-            // if (row.TYP == "WS") {
-            //     row.chanImg = (row.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
-            // } else {
-            //     row.chanImg = "violet_other.png"
-            // }
             row.chanImg = gst.util.getChanImg(row.TYP, row.STATE)
-            // for (let item of row.msgimg) {
-            //     if (!item.BUFFER) continue //잘못 insert된 것임
-            //     const uInt8Array = new Uint8Array(item.BUFFER.data)
-            //     const blob = new Blob([uInt8Array], { type: "image/png" })
-            //     const blobUrl = URL.createObjectURL(blob)
-            //     item.url = blobUrl
-            //     item.hover = false
-            //     item.cdt = item.CDT
-            // }
-            // for (let item of row.msgfile) {
-            //     item.hover = false
-            //     item.name = item.BODY
-            //     item.size = item.FILESIZE
-            //     item.cdt = item.CDT
-            // }
-            // for (let item of row.msglink) {
-            //     item.hover = false                        
-            //     item.cdt = item.CDT
-            //     const arr = item.BODY.split(hush.cons.deli)
-            //     if (arr.length == 1) {
-            //         item.text = item.BODY
-            //         item.url = item.BODY
-            //     } else {
-            //         item.text = arr[0]
-            //         item.url = arr[1]
-            //     }
-            // }
             gst.util.handleMsgSub(row)
             msglist.value.push(row)
             if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
@@ -181,17 +140,6 @@
         }
     }
 
-    // function rowRight(e, row, index) {
-    //     gst.ctx.data.header = ""
-    //     gst.ctx.menu = [
-    //         { nm: "새창에서 열기", func: function(item, idx) {
-    //             let url = "/body/msglist/" + row.CHANID + "/" + row.MSGID
-    //             window.open(url)
-    //         }}
-    //     ]
-    //     gst.ctx.show(e)
-    // }
-
     function rowEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = true
     }
@@ -219,7 +167,7 @@
     }
 
     function openLink(url) { 
-        window.open(url, "_blank") //popup not worked for 'going back' navigation
+        window.open(url, "_blank")
     }
 
     function openNewWin(chanid, msgid) {
@@ -263,43 +211,41 @@
                 <div v-if="tab=='file'" class="chan_center"><!--파일 검색-->
                     <div class="chan_center_header">
                         <div class="chan_center_header_left">
-                            <!-- <input type="search" v-model="fileName" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="파일명" /> -->                            
                             <input type="search" v-model="frYm" @keyup.enter="procSearchMedia(true)" style="width:90px;margin-right:2px" placeholder="YYYYMM" /> - 
                             <input type="search" v-model="toYm" @keyup.enter="procSearchMedia(true)" style="width:90px;margin-left:2px" placeholder="YYYYMM" />
                             <input type="search" v-model="authorNm" @keyup.enter="procSearchMedia(true)" style="width:100px" placeholder="전송자" />
                             <input type="search" v-model="searchText" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="본문" />
                             <input type="search" v-model="fileExt" @keyup.enter="procSearchMedia(true)" style="width:60px" placeholder="확장자" />
                             <div class="coImgBtn" @click="procSearchMedia(true)">
-                                <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
-                                <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
+                                <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
+                                <span class="btn_spn">검색</span>
                             </div>
                             <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
-                                <img :src="gst.html.getImageUrl('close.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
-                                <span style="margin-left:2px;font-size:14px;color:dimgray">Clear</span>
+                                <img :src="gst.html.getImageUrl('close.png')" class="btn_img">
+                                <span class="btn_spn">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
                     </div>
                     <div class="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
-                        <div v-for="(row, idx) in filelist" class="file_body" style="border-bottom:1px solid lightgray;cursor:pointer" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)">
+                        <div v-for="(row, idx) in filelist" class="file_body" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)">
                             <div style="width:100%;display:flex;align-items:center">
-                                <div style="width:160px;height:36px;padding:0 10px;display:flex;align-items:center">{{ hush.util.displayDt(row.CDT) }}</div>
+                                <div class="div_cdt">{{ hush.util.displayDt(row.CDT) }}</div>
                                 <div style="display:flex;align-items:center">
                                     <img class="coImg18" :src="gst.html.getImageUrl(row.chanImg)" style="margin-right:5px">
                                     <div class="coDotDot">{{ row.CHANNM }}</div>
                                 </div>
                             </div>
                             <div style="width:100%;display:flex;align-items:center">
-                                <div style="width:160px;height:36px;padding:0 10px;display:flex;justify-content:space-between;align-items:center">
+                                <div class="div_authornm">
                                     <div>{{ row.AUTHORNM }}</div>
-                                    <div v-show="row.hover" style="padding:3px;border-radius:5px;background:beige;cursor:pointer" @click="openNewWin(row.CHANID, row.MSGID)">새창</div>
+                                    <div v-show="row.hover" class="div_newwin" @click="openNewWin(row.CHANID, row.MSGID)">새창</div>
                                 </div>
-                                <div class="coDotDot" style="width:calc(100% - 170px);height:36px;display:flex;align-items:center">{{ row.BODYTEXT }}</div>
+                                <div class="div_bodytext coDotDot">{{ row.BODYTEXT }}</div>
                             </div>
                             <div style="width:100%;display:flex;align-items:center">
-                                <div style="width:160px;height:36px;padding:0 10px;display:flex;align-items:center"></div>
-                                <div class="coDotDot" @click="downloadFile(row.MSGID, row.CHANID, row)"
-                                        style="width:calc(100% - 170px);height:36px;display:flex;align-items:center;text-decoration:underline;font-weight:bold;color:steelblue">
+                                <div class="div_cdt"></div>
+                                <div class="div_bodytext coDotDot" @click="downloadFile(row.MSGID, row.CHANID, row)" style="text-decoration:underline;font-weight:bold;color:steelblue">
                                     {{ row.BODY }}
                                 </div>
                             </div>
@@ -314,12 +260,12 @@
                             <input type="search" v-model="authorNm" @keyup.enter="procSearchMedia(true)" style="width:100px" placeholder="전송자" />
                             <input type="search" v-model="searchText" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="본문" />
                             <div class="coImgBtn" @click="procSearchMedia(true)">
-                                <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
-                                <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
+                                <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
+                                <span class="btn_spn">검색</span>
                             </div>
                             <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
-                                <img :src="gst.html.getImageUrl('close.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
-                                <span style="margin-left:2px;font-size:14px;color:dimgray">Clear</span>
+                                <img :src="gst.html.getImageUrl('close.png')" class="btn_img">
+                                <span class="btn_spn">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
@@ -335,7 +281,7 @@
                                         <div style="height:30px">{{ hush.util.displayDt(row.CDT) }}</div>
                                         <div style="height:30px;display:flex;justify-content:space-between;align-items:center">
                                             <div>{{ row.AUTHORNM }}</div>
-                                            <div v-show="row.hover" style="padding:3px;border-radius:5px;background:beige;cursor:pointer" @click="openNewWin(row.CHANID, row.MSGID)">새창</div>
+                                            <div v-show="row.hover" class="div_newwin" @click="openNewWin(row.CHANID, row.MSGID)">새창</div>
                                         </div>
                                         <div style="display:flex;align-items:center">
                                             <img class="coImg18" :src="gst.html.getImageUrl(row.chanImg)" style="margin-right:5px">
@@ -358,31 +304,31 @@
                             <input type="search" v-model="authorNm" @keyup.enter="procSearchMsg(true)" style="width:100px" placeholder="전송자" />
                             <input type="search" v-model="searchText" @keyup.enter="procSearchMsg(true)" style="width:120px" placeholder="본문" />
                             <div class="coImgBtn" @click="procSearchMsg(true)">
-                                <img :src="gst.html.getImageUrl('search.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
-                                <span style="margin-left:2px;font-size:14px;color:dimgray">검색</span>
+                                <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
+                                <span class="btn_spn">검색</span>
                             </div>
                             <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
-                                <img :src="gst.html.getImageUrl('close.png')" style="height:18px;padding:1px;display:flex;align-items:center;justify-content:center" >
-                                <span style="margin-left:2px;font-size:14px;color:dimgray">Clear</span>
+                                <img :src="gst.html.getImageUrl('close.png')" class="btn_img">
+                                <span class="btn_spn">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
                     </div>
                     <div class="chan_center_body" ref="scrollArea" @scrollend="onScrollEnd">
-                        <div v-for="(row, idx) in msglist" class="file_body" style="border-bottom:1px solid lightgray;cursor:pointer" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)">
+                        <div v-for="(row, idx) in msglist" class="file_body" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)">
                             <div style="width:100%;display:flex;align-items:center">
-                                <div style="width:160px;height:36px;padding:0 10px;display:flex;align-items:center">{{ hush.util.displayDt(row.CDT) }}</div>
+                                <div class="div_cdt">{{ hush.util.displayDt(row.CDT) }}</div>
                                 <div style="display:flex;align-items:center">
                                     <img class="coImg18" :src="gst.html.getImageUrl(row.chanImg)" style="margin-right:5px">
                                     <div class="coDotDot">{{ row.CHANNM }}</div>
                                 </div>
                             </div>
                             <div style="width:100%;display:flex;align-items:center">
-                                <div style="width:160px;height:36px;padding:0 10px;display:flex;justify-content:space-between;align-items:center">
+                                <div class="div_authornm">
                                     <div>{{ row.AUTHORNM }}</div>
-                                    <div v-show="row.hover" style="padding:3px;border-radius:5px;background:beige;cursor:pointer" @click="openNewWin(row.CHANID, row.MSGID)">새창</div>
+                                    <div v-show="row.hover" class="div_newwin" @click="openNewWin(row.CHANID, row.MSGID)">새창</div>
                                 </div>
-                                <div class="coDotDot" style="width:calc(100% - 170px);height:36px;display:flex;align-items:center">{{ row.BODYTEXT }}</div>
+                                <div class="div_bodytext coDotDot">{{ row.BODYTEXT }}</div>
                             </div>
                             <div style="width:100%;padding:0 10px;display:flex;justify-content:space-between;align-items:center">
                                 <div></div>
@@ -418,17 +364,13 @@
 </template>
 
 <style scoped>
-
     .v-enter-active, .v-leave-active { transition: opacity 0.5s ease; }
     .v-enter-from, .v-leave-to { opacity: 0; }
-
     input { height:28px;margin-right:8px;border:1px solid dimgray;border-radius:0px }
-
     .popup {
         position:fixed;width:90%;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;z-index:1000;background:white;
         display:flex;flex-direction:column;border-radius:10px
     }
-
     .overlay {
         position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index: 999;
     }
@@ -437,6 +379,8 @@
     .topMenu:active { background:var(--active-color);font-weight:bold }
     .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
+    .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }
+    .btn_spn { margin-left:2px;font-size:14px;color:dimgray }
     .chan_center {
         width:100%;height:calc(100% - 40px);
         display:flex;flex-direction:column;border:1px solid dimgray
@@ -455,7 +399,7 @@
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .file_body {
-        display:flex;flex-direction:column
+        display:flex;flex-direction:column;border-bottom:1px solid lightgray;cursor:pointer
     }
     .file_body:hover { background:whitesmoke }
     .file_body:active { background:lightsteelblue }
@@ -477,4 +421,8 @@
     .msg_image_each {
         position:relative;width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
+    .div_cdt { width:160px;height:36px;padding:0 10px;display:flex;align-items:center }
+    .div_authornm { width:160px;height:36px;padding:0 10px;display:flex;justify-content:space-between;align-items:center }
+    .div_newwin { padding:3px;border-radius:5px;background:beige;cursor:pointer }
+    .div_bodytext { width:calc(100% - 170px);height:36px;display:flex;align-items:center }
 </style>

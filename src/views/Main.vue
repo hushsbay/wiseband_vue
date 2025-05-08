@@ -184,9 +184,7 @@
 <template>
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
-            <div style="display:flex;justify-content:center;align-items:center">
-                
-            </div>
+            <div style="display:flex;justify-content:center;align-items:center"></div>
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="검색"/>
                 <div style="padding:4px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
@@ -196,9 +194,7 @@
                     <span style="margin-left:2px;font-size:14px;color:whitesmoke">상세검색으로이동</span>
                 </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;align-items:center">
-                
-            </div>
+            <div style="display:flex;justify-content:flex-end;align-items:center"></div>
         </div>
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
