@@ -1704,11 +1704,11 @@
                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
                 <span style="margin-left:5px">이미지</span> 
             </div>
-            <span style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
+            <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
             <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
-                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;cursor:pointer">모두읽음처리</span>
+                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span>
             <span v-show="listMsgSel == 'unread'" @click="updateAllWithNewKind('unread', 'read')"
-                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;cursor:pointer">모두읽음처리</span>
+                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span>
         </div> 
         <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
             <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
