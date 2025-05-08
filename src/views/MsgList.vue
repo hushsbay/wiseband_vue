@@ -378,11 +378,12 @@
             vipStr.value = rs.data.vipStr
             grnm.value = rs.data.chanmst.GR_NM
             chanNm.value = rs.data.chanmst.CHANNM            
-            if (rs.data.chanmst.TYP == "WS") {
-                chanImg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
-            } else {
-                chanImg.value = "violet_other.png"
-            }
+            // if (rs.data.chanmst.TYP == "WS") {
+            //     chanImg.value = (rs.data.chanmst.STATE == "P") ? "violet_lock.png" : "violet_channel.png"
+            // } else {
+            //     chanImg.value = "violet_other.png"
+            // }
+            chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             document.title = chanNm.value + "[채널]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
@@ -392,10 +393,10 @@
                 if (row.PICTURE == null) {
                     row.url = null
                 } else {
-                    const uInt8Array = new Uint8Array(row.PICTURE.data)
-                    const blob = new Blob([uInt8Array], { type: "image/png" })
-                    const blobUrl = URL.createObjectURL(blob)
-                    row.url = blobUrl
+                    // const uInt8Array = new Uint8Array(row.PICTURE.data)
+                    // const blob = new Blob([uInt8Array], { type: "image/png" })
+                    // const blobUrl = URL.createObjectURL(blob)
+                    row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
                 }
                 chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
                 if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
@@ -434,33 +435,34 @@
                     replaced = true
                 }
                 if (replaced) row.BODY = tempBody
-                for (let item of row.msgimg) {
-                    if (!item.BUFFER) continue //잘못 insert된 것임
-                    const uInt8Array = new Uint8Array(item.BUFFER.data)
-                    const blob = new Blob([uInt8Array], { type: "image/png" })
-                    const blobUrl = URL.createObjectURL(blob)
-                    item.url = blobUrl
-                    item.hover = false
-                    item.cdt = item.CDT
-                }
-                for (let item of row.msgfile) {
-                    item.hover = false
-                    item.name = item.BODY
-                    item.size = item.FILESIZE
-                    item.cdt = item.CDT
-                }
-                for (let item of row.msglink) {
-                    item.hover = false                        
-                    item.cdt = item.CDT
-                    const arr = item.BODY.split(hush.cons.deli)
-                    if (arr.length == 1) {
-                        item.text = item.BODY
-                        item.url = item.BODY
-                    } else {
-                        item.text = arr[0]
-                        item.url = arr[1]
-                    }
-                } 
+                // for (let item of row.msgimg) {
+                //     if (!item.BUFFER) continue //잘못 insert된 것임
+                //     const uInt8Array = new Uint8Array(item.BUFFER.data)
+                //     const blob = new Blob([uInt8Array], { type: "image/png" })
+                //     const blobUrl = URL.createObjectURL(blob)
+                //     item.url = blobUrl
+                //     item.hover = false
+                //     item.cdt = item.CDT
+                // }
+                // for (let item of row.msgfile) {
+                //     item.hover = false
+                //     item.name = item.BODY
+                //     item.size = item.FILESIZE
+                //     item.cdt = item.CDT
+                // }
+                // for (let item of row.msglink) {
+                //     item.hover = false                        
+                //     item.cdt = item.CDT
+                //     const arr = item.BODY.split(hush.cons.deli)
+                //     if (arr.length == 1) {
+                //         item.text = item.BODY
+                //         item.url = item.BODY
+                //     } else {
+                //         item.text = arr[0]
+                //         item.url = arr[1]
+                //     }
+                // } 
+                gst.util.handleMsgSub(row)
                 //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
@@ -515,9 +517,10 @@
             }
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
-                const uInt8Array = new Uint8Array(item.BUFFER.data)
-                const blob = new Blob([uInt8Array], { type: "image/png" })
-                const blobUrl = URL.createObjectURL(blob)
+                // const uInt8Array = new Uint8Array(item.BUFFER.data)
+                // const blob = new Blob([uInt8Array], { type: "image/png" })
+                // const blobUrl = URL.createObjectURL(blob)
+                const blobUrl = hush.util.getImageBlobUrl(item.BUFFER.data)
                 imgBlobArr.value.push({ hover: false, url: blobUrl, cdt: item.CDT })
             }
             fileBlobArr.value = []

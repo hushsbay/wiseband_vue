@@ -418,6 +418,44 @@ const GeneralStore = defineStore('General', () => {
             return "/body/msglist/" + chanid + "/" + strMsgid
         },
 
+        getChanImg : function(typ, state) {
+            if (typ == "WS") {
+                return (state == "P") ? "violet_lock.png" : "violet_channel.png"
+            } else {
+                return "violet_other.png"
+            }
+        },
+
+        handleMsgSub : function(row) {
+            for (let item of row.msgimg) {
+                if (!item.BUFFER) continue //잘못 insert된 것임
+                // const uInt8Array = new Uint8Array(item.BUFFER.data)
+                // const blob = new Blob([uInt8Array], { type: "image/png" })
+                // const blobUrl = URL.createObjectURL(blob)
+                item.url = hush.util.getImageBlobUrl(item.BUFFER.data)
+                item.hover = false
+                item.cdt = item.CDT
+            }
+            for (let item of row.msgfile) {
+                item.hover = false
+                item.name = item.BODY
+                item.size = item.FILESIZE
+                item.cdt = item.CDT
+            }
+            for (let item of row.msglink) {
+                item.hover = false                        
+                item.cdt = item.CDT
+                const arr = item.BODY.split(hush.cons.deli)
+                if (arr.length == 1) {
+                    item.text = item.BODY
+                    item.url = item.BODY
+                } else {
+                    item.text = arr[0]
+                    item.url = arr[1]
+                }
+            }
+        },
+
         goMsgList : async function(nm, params, refresh) {
             try {
                 let msgid = params.msgid
@@ -440,6 +478,7 @@ const GeneralStore = defineStore('General', () => {
         },
 
         downloadBlob : function(kind, msgid, chanid, cdt, name) {
+            debugger
             const query = "?msgid=" + msgid + "&chanid=" + chanid + "&kind=" + kind + "&cdt=" + cdt //+ "&name=" + row.name
             axios.get("/chanmsg/readBlob" + query, { 
                 responseType: "blob"
