@@ -1685,24 +1685,24 @@
                 <span style="margin-left:5px;font-weight:bold">메시지</span> 
             </div>
             <div class="topMenu" :class="listMsgSel == 'notyet' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('notyet')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_notyet.png')">
                 <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
             </div>
             <div class="topMenu" :class="listMsgSel == 'unread' ? 'list_msg_sel' : 'list_msg_unsel'"  @click="listMsg('unread')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_unread.png')">
                 <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
             </div>
             <div class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
-                <span style="margin-left:5px">검색</span> 
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_msg.png')">
+                <span style="margin-left:5px;font-weight:bold">검색</span> 
             </div>
             <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
-                <span style="margin-left:5px">파일</span> 
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_file.png')">
+                <span style="margin-left:5px;font-weight:bold">파일</span> 
             </div>
             <div class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_file.png')">
-                <span style="margin-left:5px">이미지</span> 
+                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
+                <span style="margin-left:5px;font-weight:bold">이미지</span> 
             </div>
             <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
             <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"

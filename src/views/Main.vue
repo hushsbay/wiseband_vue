@@ -186,12 +186,12 @@
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;justify-content:center;align-items:center"></div>
             <div style="display:flex;justify-content:center;align-items:center">
-                <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="검색"/>
+                <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>
                 <div style="padding:4px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:16;height:16px;padding:1px;display:flex;align-items:center;justify-content:center" >
                 </div>
                 <div style="margin-left:5px;padding:4px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
-                    <span style="margin-left:2px;font-size:14px;color:whitesmoke">상세검색으로이동</span>
+                    <span style="margin-left:2px;font-size:14px;color:whitesmoke">통합검색으로이동</span>
                 </div>
             </div>
             <div style="display:flex;justify-content:flex-end;align-items:center"></div>

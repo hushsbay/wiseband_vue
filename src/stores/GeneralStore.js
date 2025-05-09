@@ -422,7 +422,7 @@ const GeneralStore = defineStore('General', () => {
             if (typ == "WS") {
                 return (state == "P") ? "violet_lock.png" : "violet_channel.png"
             } else {
-                return "violet_other.png"
+                return "violet_dm.png"
             }
         },
 
