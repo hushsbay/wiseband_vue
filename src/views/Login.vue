@@ -82,7 +82,7 @@
     .item:nth-child(1) { grid-column: 1/3; }
 
     .item:nth-child(3) { /* 로그인 버튼 부모 */
-        width: 100%; height: 100%; padding: 6px;
+        width: 100%; height: 100%;
         grid-column: 2;	grid-row: 2/4;
         display: flex; justify-content: center; align-items: center;
     }
