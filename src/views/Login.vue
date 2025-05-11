@@ -56,7 +56,7 @@
                 <input type=password v-model="pwd" @keyup.enter="goLogin" ref="pwd1" placeholder="비번" spellcheck=false autocomplete=off style="width: 100%"/>
             </div>
             <div class="item">
-                <input type=checkbox v-model="saveId" style="margin-left: 5px"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor: pointer">아이디저장</label>
+                <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor: pointer">아이디저장</label>
             </div>
             <div class="item">
                 <span id="btn_join">간편등록</span>
