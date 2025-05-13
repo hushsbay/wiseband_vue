@@ -48,9 +48,10 @@ const GeneralStore = defineStore('General', () => {
     ///////////////////////////////////////////////////////////////////////
     let listHome = ref([]), kindHome = ref('my'), selChanHome = ref('')
     let listDm = ref([]), kindDm = ref('all')
-    let listActivity = ref([]), kindActivity = ref('all') //cntActivity = ref(''), 
+    let listActivity = ref([]), kindActivity = ref('all')
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     let listFixed = ref([]), cntFixed = ref('')
+    let listGroup = ref([]), kindGroup = ref('my'), selGroup = ref('')
     ///////////////////////////////////////////////////////////////////////
     
     const auth = {
@@ -310,6 +311,23 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
+    const group = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+
+        procFromBody : async function(type, obj) {
+            if (type == "recall") {
+                selGroup.value = obj.grid
+            } else if (type == "update00000000000000UnreadCnt") {
+                const row = listGroup.value.find((item) => item.GR_ID == obj.grid)
+                if (!row) return
+                const res = await axios.post("/menu/qryKindCnt", { grid: obj.grid, kind: "000000000000000000" })
+                const rs = util.chkAxiosCode(res.data)
+                if (!rs) return
+                //row.mynotyetCnt = rs.data.kindCnt
+            }
+        }
+
+    }
+
     const util = {
 
         setSnack : function(ex, toastSec, fromConfig) {
@@ -546,6 +564,7 @@ const GeneralStore = defineStore('General', () => {
         listActivity, kindActivity, //cntActivity, 
         later, listLater, cntLater, kindLater,
         fixed, listFixed, cntFixed,
+        group, listGroup, kindGroup, selGroup,
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

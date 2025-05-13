@@ -7,6 +7,7 @@ import DmPanel from '/src/views/DmPanel.vue'
 import ActivityPanel from '/src/views/ActivityPanel.vue'
 import LaterPanel from '/src/views/LaterPanel.vue'
 import FixedPanel from '/src/views/FixedPanel.vue'
+import GroupPanel from '/src/views/GroupPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 
 //import GeneralStore from '/src/stores/GeneralStore.js'
@@ -93,6 +94,18 @@ const router = createRouter({
                             component: MsgList,
                         }
                     ]                  
+                },
+                {                    
+                    path: 'group',
+                    name: 'group',
+                    component: GroupPanel,
+                    // children: [
+                    //     {
+                    //         path: 'fixed_body/:chanid/:msgid',
+                    //         name: 'fixed_body',
+                    //         component: MsgList,
+                    //     }
+                    // ]                  
                 }
             ]
         }        
