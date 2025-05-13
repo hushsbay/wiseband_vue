@@ -364,7 +364,7 @@
             chanNm.value = rs.data.chanmst.CHANNM            
             chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
-            document.title = chanNm.value + "[채널]"
+            document.title = chanNm.value + " [채널]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             chanmemFullExceptMe.value = []
             for (let i = 0; i < rs.data.chandtl.length; i++) {

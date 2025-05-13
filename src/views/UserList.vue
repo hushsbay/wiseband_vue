@@ -28,7 +28,8 @@
     let onGoingGetList = false
         
     let sideMenu = "mnuGroup", grId
-    let grnm = ref(''), userlist = ref([])
+    let grnm = ref(''), masternm = ref('')
+    let userlist = ref([])
 
     onMounted(async () => {
         try {
@@ -106,10 +107,20 @@
                 return
             }
             grnm.value = rs.data.grmst.GR_NM
-            document.title = grnm.value + "[그룹]"
-            
+            masternm.value = rs.data.grmst.MASTERNM
+            document.title = grnm.value + " [그룹]"
+            const grdtl = rs.data.grdtl
+            const len = grdtl.length
+            for (let i = 0; i < len; i++) {
+                const row = grdtl[i]                
+                //if (row.PICTURE == null) {
+                //    row.url = null
+                //} else {
+                //    row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
+                //}
+                userlist.value.push(row)
+            }
             await nextTick()
-            
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -285,13 +296,11 @@
     }
 
     const onScrolling = () => { 
-        if (!afterScrolled.value) afterScrolled.value = true
-        if (!scrollArea.value) return //오류 만났을 때
-        prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
-        prevScrollHeight = scrollArea.value.scrollHeight
-        readMsgToBeSeen()
-        if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
-        saveCurScrollY(prevScrollY)
+        // if (!scrollArea.value) return //오류 만났을 때
+        // prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
+        // prevScrollHeight = scrollArea.value.scrollHeight
+        // readMsgToBeSeen()
+        // saveCurScrollY(prevScrollY)
     }
 
     async function refreshMsgDtlWithQryAction(msgid) {
@@ -366,19 +375,57 @@
             </div>
         </div>
         <div class="chan_center_nav" id="chan_center_nav">
-            
+            <span style="margin-right:10px">그룹명</span><input type="text" v-model="grnm" style="width:300px"/>
+            <span style="margin:0 10px">생성자</span><span>{{ masternm }}</span>
+            그룹신규 그룹저장 그룹삭제
         </div> 
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in userlist" :id="row.USERID" :ref="(ele) => { groupRow[row.USERID] = ele }" class="msg_body procMenu"  
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
-                <div style="display:flex;align-items:center;cursor:pointer">
-                    
-                </div>
-                
+                <table>
+                    <tr>
+                        <td rowspan="4" style="width:20px"><input type="checkbox" id="checkbox" /></td>
+                        <td class="tdLabel">이름</td>
+                        <td>{{ row.USERNM }}</td>
+                        <td style="width:150px">임직원/멤버</td>
+                    </tr>
+                    <tr>
+                        <td class="tdLabel">소속</td>
+                        <td>회사 부서</td>
+                        <td style="width:150px">메일</td>
+                    </tr>
+                    <tr>
+                        <td class="tdLabel">비고</td>
+                        <td>{{ row.TYP }}</td>
+                        <td style="width:150px">전화</td>
+                    </tr>
+                </table>
             </div>
         </div>
         <div class="chan_center_footer">
-            
+            <div style="display:flex;align-items:center;cursor:pointer">
+                행신규 행저장 행삭제 hide/show
+            </div>
+            <div style="display:flex;align-items:center;cursor:pointer">
+                <table>
+                    <tr>
+                        <td rowspan="4" style="width:20px"></td>
+                        <td class="tdLabel">이름</td>
+                        <td>name</td>
+                        <td style="width:150px">임직원/멤버</td>
+                    </tr>
+                    <tr>
+                        <td class="tdLabel">소속</td>
+                        <td>회사 부서</td>
+                        <td style="width:150px">메일</td>
+                    </tr>
+                    <tr>
+                        <td class="tdLabel">비고</td>
+                        <td>라라라</td>
+                        <td style="width:150px">전화</td>
+                    </tr>
+                </table>
+            </div>  
         </div>
     </div>
     <div class="chan_right" style="width:600px">
@@ -398,7 +445,7 @@
         display:flex;flex-direction:column;
     }
     .chan_center_header {
-        width:100%;min-height:50px;display:flex;justify-content:space-between;overflow:hidden
+        width:100%;min-height:50px;display:flex;justify-content:space-between;border-bottom:1px solid dimgray;overflow:hidden
     }
     .chan_center_header_left {
         width:70%;height:100%;display:flex;align-items:center;
@@ -408,7 +455,7 @@
         width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .chan_center_nav {
-        width:100%;min-height:30px;display:flex;align-items:center;
+        width:100%;min-height:60px;display:flex;align-items:center;
         border-bottom:1px solid dimgray;overflow:hidden
     }
     .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
@@ -417,51 +464,12 @@
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
-        position:relative;display:flex;flex-direction:column;margin:5px 0 0 0;
-    }
-    .msg_body_sub {
-        display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
-    }
-    .msg_body_sub1 {
-        margin-right:10px;padding:4px 8px;display:flex;align-items:center;background:#e6e7eb;border:1px solid #e6e7eb;border-radius:12px
-    }
-    .msg_body_sub1:hover {
-        background:whitesmoke;border:1px solid dimgray
-    }
-    .msg_body_sub1:active {
-        background:lightsteelblue;border:1px solid lightsteelblue
-    }
-    .msg_body_blob {
-        margin-bottom:5px;padding-left:8px;display:flex;flex-wrap:wrap;justify-content:flex-start
-    }
-    .msg_file_each {
-        position:relative;min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
-    }
-    .msg_file_each:active { background:lightsteelblue }
-    .msg_file_seemore {
-        position:absolute;top:0;right:0;padding:0 3px;height:30px;display:flex;align-items:center;background:whitesmoke;border-radius:0px
-    }
-    .msg_file_del {
-        position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;background:beige
-    }
-    .msg_image_each {
-        position:relative;width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
-    }
-    .msg_proc {
-        position:absolute;height:20px;right:3px;top:1px;padding:5px 0 5px 10px;z-index:8888;
-        display:flex;align-items:center;
-        background:white;border:1px solid lightgray;border-radius:5px
+        display:flex;align-items:center;cursor:pointer
     }
     .chan_center_footer {
-        width:100%;margin:auto 0 10px 0;
+        width:100%;height:200px;margin:auto 0 10px 0;
         display:flex;flex-direction:column;
         border:1px solid lightgray;border-radius:5px;
-    }
-    .editor_header {
-        width:100%;height:40px;display:flex;align-items:center;overflow-x:hidden;background:whitesmoke;
-    }
-    .editor_body {
-        width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
     }
     .chan_right {
         height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
@@ -472,7 +480,7 @@
     .replyAct { display:flex;align-items:center;cursor:pointer }
     .replyAct:hover { background:#e6e7eb;border-radius:12px }
     .replyAct:active { background:var(--active-color) }
-    .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:text }
+    .procMenu { padding:3px 3px 0px 3px }
     .procMenu:hover { background:whitesmoke }
     .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
     .procAct:hover { background:lightgray }
@@ -486,5 +494,7 @@
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
-    .mynotyet { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:orange;color:white;font-size:12px;padding:4px;margin-left:10px }
+    table { width:100%;border-collapse:collapse }
+    td { padding:3px;border:1px solid lightgray }
+    .tdLabel { width:50px;text-align:center;color:dimgray }
 </style>
