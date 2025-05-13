@@ -9,6 +9,7 @@ import LaterPanel from '/src/views/LaterPanel.vue'
 import FixedPanel from '/src/views/FixedPanel.vue'
 import GroupPanel from '/src/views/GroupPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
+import UserList from '/src/views/UserList.vue'
 
 //import GeneralStore from '/src/stores/GeneralStore.js'
 //let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
@@ -99,13 +100,13 @@ const router = createRouter({
                     path: 'group',
                     name: 'group',
                     component: GroupPanel,
-                    // children: [
-                    //     {
-                    //         path: 'fixed_body/:chanid/:msgid',
-                    //         name: 'fixed_body',
-                    //         component: MsgList,
-                    //     }
-                    // ]                  
+                    children: [
+                        {
+                            path: 'group_body/:grid',
+                            name: 'group_body',
+                            component: UserList,
+                        }
+                    ]                  
                 }
             ]
         }        
@@ -126,7 +127,8 @@ router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고�
         (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) ||
         (from.path.startsWith("/main/activity/activity_body/") && to.path == ("/main/activity")) ||
         (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) ||
-        (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) 
+        (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) ||
+        (from.path.startsWith("/main/group/group_body/") && to.path == ("/main/group")) 
     ) {
         console.log(from.path + " -> " + to.path) //새로고침, 새창에서열기 등 
         return false //MsgList.vue의 $$76 참조

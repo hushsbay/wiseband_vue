@@ -107,7 +107,7 @@
                 row1.sel = true
                 procgroupRowImg(row1)
                 localStorage.wiseband_lastsel_grid = gridReal
-                //gst.util.goMsgList('group_body', { grid: row.GR_ID }, refresh)
+                gst.util.goBodyList('group_body', { grid: row1.GR_ID }, refresh)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
