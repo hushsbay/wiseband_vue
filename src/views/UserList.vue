@@ -6,6 +6,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
+    import OrgTree from "/src/components/OrgTree.vue"
             
     const router = useRouter()
     const route = useRoute()
@@ -429,7 +430,7 @@
         </div>
     </div>
     <div class="chan_right" style="width:600px">
-        <!-- <msg-list :data="thread" @ev-click="clickFromProp" ref="msglistRef"></msg-list> -->
+        <org-tree></org-tree>
     </div>  
 </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
