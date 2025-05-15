@@ -115,12 +115,8 @@
                 return
             }
             for (let i = 0; i < rs.list.length; i++) {
-                const row = rs.list[i]                
-                if (row.PICTURE == null) {
-                    row.url = null
-                } else {
-                    row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
-                }
+                const row = rs.list[i]
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 let title
                 if (row.TITLE == "vip") {
                     title = "VIP"

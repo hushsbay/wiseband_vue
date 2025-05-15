@@ -368,12 +368,8 @@
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             chanmemFullExceptMe.value = []
             for (let i = 0; i < rs.data.chandtl.length; i++) {
-                const row = rs.data.chandtl[i]                
-                if (row.PICTURE == null) {
-                    row.url = null
-                } else {
-                    row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
-                }
+                const row = rs.data.chandtl[i]    
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
                 if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)

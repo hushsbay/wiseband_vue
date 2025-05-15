@@ -191,11 +191,7 @@ const GeneralStore = defineStore('General', () => {
                         const rs = util.chkAxiosCode(res.data)
                         if (!rs || rs.list.length == 0) return
                         const row = rs.list[0]
-                        if (row.PICTURE == null) {
-                            row.url = null
-                        } else {
-                            row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
-                        }
+                        row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                         let added = false
                         const len = listLater.value.length
                         for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
@@ -241,11 +237,7 @@ const GeneralStore = defineStore('General', () => {
                         const rs = util.chkAxiosCode(res.data)
                         if (!rs || rs.list.length == 0) return
                         const row = rs.list[0]
-                        if (row.PICTURE == null) {
-                            row.url = null
-                        } else {
-                            row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
-                        }
+                        row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                         let added = false
                         const len = listActivity.value.length
                         for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
@@ -278,11 +270,7 @@ const GeneralStore = defineStore('General', () => {
                     const rs = util.chkAxiosCode(res.data)
                     if (!rs || rs.list.length == 0) return
                     const row = rs.list[0]
-                    if (row.PICTURE == null) {
-                        row.url = null
-                    } else {
-                        row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
-                    }
+                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                     let added = false
                     const len = listFixed.value.length
                     for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
