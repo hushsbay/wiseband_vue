@@ -42,6 +42,8 @@
         const rs = gst.util.chkAxiosCode(res.data) 
         if (!rs) return
         maxLevel = rs.data.maxLevel
+        let vips = rs.data.vipList[0].VIPS //xxx,yyy..(없으면 null)
+        if (vips != null) vips = "," + vips + ","
         for (let i = 0; i < rs.list.length; i++) {
             const row = rs.list[i]
             orglist.value.push(row)
@@ -51,7 +53,7 @@
                 for (let j = 0; j < userlist.length; j++) {
                     const item = userlist[j]
                     orglist.value.push(item)
-                    procNode(item, null, 'user')
+                    procNode(item, null, 'user', vips)
                 }
             } else {
                 if (i == rs.list.length - 1) {
@@ -63,16 +65,16 @@
         }
     }
 
-    function procNode(node, rowNext, kind) {
+    function procNode(node, rowNext, kind, vips) {
         const row = node
         const seq = row.SEQ //org 및 user에 모두 존재
         const lvl = parseInt(row.LVL) //org 및 user에 모두 존재
         const org_cd = row.ORG_CD //org 및 user에 모두 존재
         const org_nm = row.ORG_NM //org 및 user에 모두 존재
-        const top_org_cd = row.TOP_ORG_CD //user only
-        const top_org_nm = row.TOP_ORG_NM //user only
+        //const top_org_cd = row.TOP_ORG_CD //user only
+        //const top_org_nm = row.TOP_ORG_NM //user only
         const user_id = row.USER_ID //user only
-        const user_nm = row.USER_NM //user only
+        //const user_nm = row.USER_NM //user only
         const nodekind = (lvl == 0) ? "C" : (user_id ? "U" : "D") //회사(C),사용자(U),부서(D)
         let hasChild
         if (nodekind == "U" || rowNext == null) { //사용자면 false, 다음행이 없는 마지막이면 false
@@ -85,7 +87,7 @@
         let parentidx = -1, _code
         let disp = (lvl <= depthToShow.value) ? "flex" : "none"
         let expanded = (lvl < depthToShow.value) ? true : false
-        const paddingLeft = lvl * 20 + 3
+        const paddingLeft = lvl * 25 + 6
         row.nodekind = nodekind
         row.dispstate = disp
         row.haschild = hasChild
@@ -93,6 +95,8 @@
         row.paddingleft = paddingLeft + "px"
         if (nodekind == "U") {
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+            row.isVip = (vips != null && vips.includes("," + user_id + ",")) ? true : false
+            //if (user_id == 'cklee') debugger
         } else {
             row.url = (row.LVL == 0 ? "violet_people3" : "violet_people2") + ".png"
         }
@@ -201,13 +205,17 @@
         <div class="chan_center">
             <div class="chan_center_header">
                 <div class="chan_center_header_left">
-                    <input type="search" v-model="searchText" @keyup.enter="procSearchMedia(true)" style="width:120px" />
+                    <input type="search" v-model="searchText" @keyup.enter="procSearchMedia(true)" style="width:100px" />
                     <div class="coImgBtn" @click="procSearchMedia(true)"><img :src="gst.html.getImageUrl('search.png')" class="btn_img"></div>
                     <div class="coImgBtn" @click="clearText()" style="margin-left:5px"><img :src="gst.html.getImageUrl('close.png')" class="btn_img"></div>
                     <span class="depth">{{ depthToShow }}</span>
                     <div class="coImgBtn" @click="changeDepth(false)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_minus.png')" class="btn_img12"></div>
                     <div class="coImgBtn" @click="changeDepth(true)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_plus.png')" class="btn_img12"></div>
-                    <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label>
+                    <!-- <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label> -->
+                    <span style="margin-left:5px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span>
+                    <span style="margin-left:5px;padding:1px;font-size:12px;background:lightgray;color:black;border-radius:5px">추가</span>
+                    <span style="margin-left:5px;padding:1px;font-size:12px;background:lightgray;color:black;border-radius:5px">해제</span>
+                    <span style="margin-left:5px;padding:1px;font-size:12px;background:lightgray;color:black;border-radius:5px">조회</span>
                 </div>
                 <div class="chan_center_header_right">
                     <span style="margin-right:5px">선택 :</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
@@ -227,6 +235,7 @@
                         <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                         <div style="margin-left:5px;font-weight:bold">{{ row.USER_NM }}</div>
                         <div style="margin-left:5px">{{ row.JOB }}</div>
+                        <span v-if="row.isVip" style="margin-left:5px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span>
                         <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
                         <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
                     </div>
