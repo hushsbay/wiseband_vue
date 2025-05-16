@@ -7,6 +7,8 @@
     import MemberPiceach from "/src/components/MemberPiceach.vue"
 
     const gst = GeneralStore()
+    const props = defineProps({ mode: String })
+    const emits = defineEmits(["ev-click"])
     
     defineExpose({ open, close })
 
@@ -18,6 +20,7 @@
 
     onMounted(async () => {
         try {
+            mode.value = props.mode
             await procQuery(mode.value)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -33,11 +36,8 @@
     }
 
     function changeTab(strMode) {
-        if (strMode == "tree" || strMode == "mygroup") {
-            procQuery(strMode)
-        } else { //vip
-            procSearch(strMode)
-        }
+        clearAllChk()
+        procQuery(strMode)
     }
 
     function selectOne() {
@@ -138,8 +138,6 @@
             procQuery("tree")
         } else if (strMode == "mygroup") {
             procQuery(strMode)
-        } else { //vip
-            procSearch(strMode)
         }
     }
 
@@ -277,101 +275,111 @@
         let msg = (bool ? "설정 완료" : "해제 완료") + " (" + rs.data.retCnt + "명)"
         gst.util.setSnack(msg)
     }
+
+    function applyToBody() {
+        if (chkCnt.value == 0) {
+            gst.util.setToast("먼저 사용자를 선택하시기 바랍니다.")
+            return
+        }
+        const arr = getCheckedUser()
+        emits("ev-click", arr)
+    }
 </script>
 
 <template>
-    <div v-if="show" style="width:100%;height:100%">
-        <div style="width:100%;height:40px;padding-left:10px;display:flex;justify-content:space-between;align-items:center">
-            <div style="display:flex;align-items:center">
-                <div class="topMenu" :class="mode == 'tree' || mode == 'search' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('tree')">
-                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people3.png')">
-                    <span style="margin-left:5px;font-weight:bold">조직도</span> 
-                </div>
-                <div class="topMenu" :class="mode == 'mygroup' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('mygroup')">
-                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people2.png')">
-                    <span style="margin-left:5px;font-weight:bold">내그룹</span> 
-                </div>
-                <div class="topMenu" :class="mode == 'vip' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('vip')">
-                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_person.png')">
-                    <span style="margin-left:5px;font-weight:bold">VIP</span> 
-                </div>
-            </div>
-            <div style="padding-right:20px;display:flex;align-items:center">
-                <span class="vipMark">VIP</span>
-                <span class="vipBtn" @click="setVip(true)">설정</span>
-                <span class="vipBtn" @click="setVip(false)">해제</span>
-            </div>
+    <div style="width:100%;height:100%;display:flex">
+        <div class="applyToBody" @click="applyToBody()"
+            style="width:50px;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <img :src="gst.html.getImageUrl('violet_left_arrow.png')" style="width:32px;height:32px">
         </div>
-        <div class="chan_center">
-            <div class="chan_center_header">
-                <div class="chan_center_header_left">
-                    <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch('search')" style="width:100px" />
-                    <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
-                        <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
+        <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column;border:1px solid lightgray">        
+            <div style="width:100%;height:40px;padding-left:10px;display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;align-items:center">
+                    <div class="topMenu" :class="mode == 'tree' || mode == 'search' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('tree')">
+                        <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people3.png')">
+                        <span style="margin-left:5px;font-weight:bold">조직도</span> 
                     </div>
-                    <div class="coImgBtn" @click="reset(mode)" style="margin-left:5px">
-                        <img :src="gst.html.getImageUrl('dimgray_reset.png')" class="btn_img">
+                    <div class="topMenu" :class="mode == 'mygroup' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('mygroup')">
+                        <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people2.png')">
+                        <span style="margin-left:5px;font-weight:bold">내그룹</span> 
                     </div>
-                    <span v-show="mode == 'tree'" class="depth">{{ depthToShow }}</span>
-                    <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(false)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_minus.png')" class="btn_img12"></div>
-                    <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(true)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_plus.png')" class="btn_img12"></div>
-                    <!-- <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label> -->
                 </div>
-                <!-- <div v-show="mode == 'mygroup' | mode == 'vip'" class="chan_center_header_left"></div> -->
-                <div class="chan_center_header_right">
-                    <span style="margin-right:5px">선택 :</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
-                    <span class="vipBtn" style="margin-left:10px" @click="clearAllChk()">해제</span>
+                <div style="padding-right:20px;display:flex;align-items:center">
+                    <span class="vipMark">VIP</span>
+                    <span class="vipBtn" @click="setVip(true)">설정</span>
+                    <span class="vipBtn" @click="setVip(false)">해제</span>
                 </div>
             </div>
-            <div v-show="mode == 'tree' || mode == 'mygroup'" class="chan_center_body" ref="scrollArea">
-                <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
-                    class="org_body" @click="(e) => clickNode(e, row, idx)" 
-                    :style="{display: row.dispstate}" style="border-bottom:1px solid lightgray">
-                    <div v-if="!row.userid" :style="{ paddingLeft: row.paddingleft }"
-                        style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
-                        <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" 
-                            :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
-                        <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
-                        <div style="margin-left:5px">{{ row.orgnm }}</div>
-                        <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
+            <div class="chan_center">
+                <div class="chan_center_header">
+                    <div class="chan_center_header_left">
+                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch('search')" style="width:100px" />
+                        <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
+                            <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
+                        </div>
+                        <div class="coImgBtn" @click="reset(mode)" style="margin-left:5px">
+                            <img :src="gst.html.getImageUrl('dimgray_reset.png')" class="btn_img">
+                        </div>
+                        <span v-show="mode == 'tree'" class="depth">{{ depthToShow }}</span>
+                        <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(false)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_minus.png')" class="btn_img12"></div>
+                        <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(true)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_plus.png')" class="btn_img12"></div>
+                        <!-- <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label> -->
                     </div>
-                    <div v-else class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
-                        :style="{ paddingLeft: row.paddingleft }"
-                        style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
-                        <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
-                        <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                        <div style="margin-left:5px;font-weight:bold">{{ row.usernm }}</div>
-                        <div style="margin-left:5px">{{ row.JOB }}</div>
-                        <span v-if="row.isVip" class="vipMark">VIP</span>
-                        <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
-                        <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
-                    </div>
-                    <div v-if="mode == 'mygroup' || row.userid || mode == 'vip'" 
-                        style="width:50px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center;color:darkred">
-                        <span v-if="row.KIND == 'admin' || row.KIND == 'guest'" :title="row.KIND"
-                            style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
-                            {{ row.KIND.substring(0, 1).toUpperCase() }}
-                        </span>
-                        <span v-if="(mode == 'mygroup' || mode == 'vip') && row.userid && row.IS_SYNC != 'Y'" title="manual"
-                            style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
-                            M</span>
+                    <div class="chan_center_header_right">
+                        <span style="margin-right:5px">선택 :</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
+                        <span class="vipBtn" style="margin-left:10px" @click="clearAllChk()">해제</span>
                     </div>
                 </div>
-            </div>
-            <div v-show="mode == 'search'" class="chan_center_body" ref="scrollArea">
-                <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
-                    class="org_body" @click="(e) => clickNode(e, row, idx)">
-                    <div class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
-                        style="width:100%;height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">
-                        <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
-                        <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                        <div style="margin-left:5px;font-weight:bold">{{ row.USER_NM }}</div>
-                        <div style="margin-left:5px;color:darkblue">{{ row.TOP_ORG_NM }}</div>
-                        <div style="margin-left:5px;color:darkblue">{{ row.ORG_NM }}</div>
-                        <div style="margin-left:5px">{{ row.JOB }}</div>
-                        <span v-if="row.isVip" class="vipMark">VIP</span>
-                        <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
-                        <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
+                <div v-show="mode == 'tree' || mode == 'mygroup'" class="chan_center_body" ref="scrollArea">
+                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
+                        class="org_body" @click="(e) => clickNode(e, row, idx)" 
+                        :style="{display: row.dispstate}" style="border-bottom:1px solid lightgray">
+                        <div v-if="!row.userid" :style="{ paddingLeft: row.paddingleft }"
+                            style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
+                            <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" 
+                                :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
+                            <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
+                            <div style="margin-left:5px">{{ row.orgnm }}</div>
+                            <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
+                        </div>
+                        <div v-else class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
+                            :style="{ paddingLeft: row.paddingleft }"
+                            style="width:calc(100% - 45px);height:40px;display:flex;align-items:center">
+                            <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
+                            <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                            <div style="margin-left:5px;font-weight:bold">{{ row.usernm }}</div>
+                            <div style="margin-left:5px">{{ row.JOB }}</div>
+                            <span v-if="row.isVip" class="vipMark">VIP</span>
+                            <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
+                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
+                        </div>
+                        <div v-if="mode == 'mygroup' || row.userid" 
+                            style="width:45px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center;color:darkred">
+                            <span v-if="row.KIND == 'admin' || row.KIND == 'guest'" :title="row.KIND"
+                                style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
+                                {{ row.KIND.substring(0, 1).toUpperCase() }}
+                            </span>
+                            <span v-if="mode == 'mygroup' && row.userid && row.IS_SYNC != 'Y'" title="manual"
+                                style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
+                                M</span>
+                        </div>
+                    </div>
+                </div>
+                <div v-show="mode == 'search'" class="chan_center_body" ref="scrollArea">
+                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
+                        class="org_body" @click="(e) => clickNode(e, row, idx)">
+                        <div class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
+                            style="width:100%;height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                            <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
+                            <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                            <div style="margin-left:5px;font-weight:bold">{{ row.USER_NM }}</div>
+                            <div style="margin-left:5px;color:darkblue">{{ row.TOP_ORG_NM }}</div>
+                            <div style="margin-left:5px;color:darkblue">{{ row.ORG_NM }}</div>
+                            <div style="margin-left:5px">{{ row.JOB }}</div>
+                            <span v-if="row.isVip" class="vipMark">VIP</span>
+                            <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
+                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -381,7 +389,7 @@
 
 <style scoped>
     input { height:28px;margin-right:8px;border:1px solid dimgray;border-radius:0px }
-    input[type="checkbox"] { width:16px;height:16px; }
+    input[type="checkbox"] { min-width:16px;min-height:16px }
     .topMenu { cursor:pointer }
     .topMenu:hover { background:var(--active-color);font-weight:bold }
     .topMenu:active { background:var(--active-color);font-weight:bold }
@@ -390,11 +398,12 @@
     .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }
     .btn_img12 { width:12px;height:12px;padding:1px;display:flex;align-items:center;justify-content:center }
     .btn_spn { margin-left:2px;font-size:14px;color:dimgray }
+    .applyToBody:hover { background:beige }
     .chan_center {
         width:100%;height:calc(100% - 40px);display:flex;flex-direction:column
     }
     .chan_center_header {
-        width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid dimgray;overflow:hidden
+        width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid lightgray;overflow:hidden
     }
     .chan_center_header_left {
         width:80%;height:100%;padding:0 10px;display:flex;align-items:center;

@@ -359,6 +359,10 @@
             gst.util.showEx(ex, true)
         }
     }
+
+    function applyToBody(arr) {
+        alert(JSON.stringify(arr))
+    }
 </script>
 
 <template>
@@ -430,7 +434,7 @@
         </div>
     </div>
     <div class="chan_right" style="width:600px">
-        <org-tree></org-tree>
+        <org-tree mode="tree" @ev-click="applyToBody"></org-tree>
     </div>  
 </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
