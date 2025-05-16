@@ -88,7 +88,7 @@
     }
 
     function procgroupRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
-        item.otherImg = (item.OTHER == "other") ? "other.png" : ""
+        item.otherImg = (item.OTHER == "other") ? "person.png" : ""
         const color = item.sel ? hush.cons.color_dark : hush.cons.color_light
         item.nodeImg = color + "collapsed.png"
         if (item.otherImg) item.otherImg = color + item.otherImg
@@ -135,7 +135,7 @@
                 }},
                 { nm: "즐겨찾기" },
                 { nm: "초대" },
-                { nm: "복사", img: hush.cons.color_dark + "other.png", child: [
+                { nm: "복사", img: hush.cons.color_dark + "person.png", child: [
                     { nm: "채널 복사", func: function(item, idx) { 
                         
                     }},

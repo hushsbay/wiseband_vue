@@ -135,6 +135,7 @@ const GeneralStore = defineStore('General', () => {
 
     }
     
+    ///////////////////////////////////////////////////////////////////////////////////
     const home = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
         procFromBody : async function(type, obj) {
@@ -315,6 +316,7 @@ const GeneralStore = defineStore('General', () => {
         }
 
     }
+    ///////////////////////////////////////////////////////////////////////////////////
 
     const util = {
 
@@ -409,6 +411,14 @@ const GeneralStore = defineStore('General', () => {
             }
             util.setToast("")
             util.setSnack(msg, sec)
+        },
+
+        getKeyIndex : function(refRow, key) {
+            const ele = refRow.value[key]
+            if (!ele) return -1
+            const idx = parseInt(ele.getAttribute("keyIndex"))
+            if (!idx) return -1
+            return idx
         },
 
         qryOneMsgNotYet : async function(chanid) {
