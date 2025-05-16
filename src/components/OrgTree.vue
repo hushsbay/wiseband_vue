@@ -10,16 +10,15 @@
     
     defineExpose({ open, close })
 
-    let tab = ref(''), show = ref(true), searchText = ref('')
-    let depthToShow = ref(1), chkCnt = ref(0)
+    let mode = ref('tree'), show = ref(true), searchText = ref('')
+    let depthToShow = ref(1), chkCnt = ref(0) //mygroup을 고려해서 depthToShow는 기본적으로는 반드시 1로 해야 함
     let maxLevel = 1
 
     const scrollArea = ref(null), orglist = ref([]), orgRow = ref({}) //orgRow는 element를 동적으로 할당
 
     onMounted(async () => {
         try {
-            depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
-            await procQuery()                    
+            await procQuery(mode.value)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -33,18 +32,32 @@
         show.value = false
     }
 
-    async function procQuery() {
-        orglist.value = []
-        const param = { 
-
+    function changeTab(strMode) {
+        if (strMode == "tree" || strMode == "mygroup") {
+            procQuery(strMode)
+        } else { //vip
+            procSearch(strMode)
         }
-        const res = await axios.post("/user/orgTree", param)
+    }
+
+    function selectOne() {
+        if (searchText.value.trim() == "") {
+            procQuery("tree")
+        } else {
+            procSearch("search")
+        }
+    }
+
+    async function procQuery(strMode) {
+        mode.value = strMode
+        if (strMode == "tree") depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
+        const controller = (strMode == "tree") ? "orgTree" : "qryMyGroup"
+        const res = await axios.post("/user/" + controller)
         const rs = gst.util.chkAxiosCode(res.data) 
-        debugger
         if (!rs) return
+        orglist.value = []
         maxLevel = rs.data.maxLevel
-        let vips = rs.data.vipList[0].VIPS //xxx,yyy..(없으면 null)
-        if (vips != null) vips = "," + vips + ","
+        const vips = getVips(rs)
         for (let i = 0; i < rs.list.length; i++) {
             const row = rs.list[i]
             orglist.value.push(row)
@@ -66,14 +79,11 @@
         }
     }
 
-    function procNode(node, rowNext, kind, vips) {
-        const row = node
-        const seq = row.SEQ //org 및 user에 모두 존재
-        const lvl = parseInt(row.LVL) //org 및 user에 모두 존재
-        const org_cd = row.ORG_CD //org 및 user에 모두 존재
-        const org_nm = row.ORG_NM //org 및 user에 모두 존재
-        const user_id = row.USER_ID //user only
-        const nodekind = (lvl == 0) ? "C" : (user_id ? "U" : "D") //회사(C),사용자(U),부서(D)
+    function procNode(row, rowNext, kind, vips) {
+        const lvl = parseInt(row.LVL) //org,user,mygroup에 모두 존재
+        const org_cd = row.ORG_CD ? row.ORG_CD : row.GR_ID //1) tree에는 ORG_CD가 org 및 user에 모두 존재 2) mygroup에서는 GR_ID
+        const user_id = row.USER_ID ? row.USER_ID : row.USERID //user에는 USER_ID mygroup에서는 USERID
+        const nodekind = user_id ? "U" : "G" //사용자(U),그룹(G=회사or부서or내그룹)
         let hasChild
         if (nodekind == "U" || rowNext == null) { //사용자면 false, 다음행이 없는 마지막이면 false
             hasChild = false
@@ -82,18 +92,20 @@
         } else {
             hasChild = true
         }
-        let parentidx = -1, _code
         let disp = (lvl <= depthToShow.value) ? "flex" : "none"
         let expanded = (lvl < depthToShow.value) ? true : false
         const paddingLeft = lvl * 25 + 6
         row.nodekind = nodekind
+        row.userid = user_id
+        row.usernm = row.USER_NM ? row.USER_NM : row.USERNM
+        row.orgnm = row.ORG_NM ? row.ORG_NM : row.GR_NM
         row.dispstate = disp
         row.haschild = hasChild
         row.expanded = expanded
         row.paddingleft = paddingLeft + "px"
         if (nodekind == "U") {
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-            row.isVip = (vips != null && vips.includes("," + user_id + ",")) ? true : false
+            row.isVip = chkVips(vips, user_id)
             row.key = user_id
         } else {
             row.url = (row.LVL == 0 ? "violet_people3" : "violet_people2") + ".png"
@@ -101,12 +113,44 @@
         }
     }
 
-    function rowEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
-        row.hover = true
+    async function procSearch(strMode) {
+        mode.value = strMode
+        const param = (strMode == "search") ? { searchText: searchText.value.trim() } : null
+        const controller = (strMode == "search") ? "procOrgSearch" : "qryVip"
+        const res = await axios.post("/user/" + controller, param)
+        const rs = gst.util.chkAxiosCode(res.data) 
+        if (!rs) return
+        orglist.value = []
+        const vips = getVips(rs)
+        for (let i = 0; i < rs.list.length; i++) {
+            const row = rs.list[i]
+            row.nodekind = "U"
+            row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+            row.key = row.USER_ID
+            row.isVip = chkVips(vips, row.USER_ID)
+            orglist.value.push(row)
+        }
     }
 
-    function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
-        row.hover = false
+    function reset(strMode) {
+        if (strMode == "tree" || strMode == "search") {
+            searchText.value = ""
+            procQuery("tree")
+        } else if (strMode == "mygroup") {
+            procQuery(strMode)
+        } else { //vip
+            procSearch(strMode)
+        }
+    }
+
+    function getVips(rs) {
+        let vips = rs.data.vipList[0].VIPS //xxx,yyy..(없으면 null)
+        if (vips != null) vips = "," + vips + ","
+        return vips
+    }
+
+    function chkVips(vips, userid) {
+        return (vips != null && vips.includes("," + userid + ",")) ? true : false
     }
 
     function clickNode(e, row, idx) {
@@ -169,21 +213,23 @@
     }
 
     function changeChk(row, idx) {
-        if (row.nodekind == "U") {
-            //하위 노드가 없으므로 넘어감
-        } else {
-            const bool = row.chk
-            const lvl = parseInt(row.LVL)
-            const len = orglist.value.length
-            for (let i = idx + 1; i < len; i++) {
-                const rowCur = orglist.value[i]
-                const lvlCur = parseInt(rowCur.LVL)
-                if (lvlCur <= lvl) break
-                rowCur.chk = bool
+        if (mode.value == "tree" || mode.value == "mygroup") {
+            if (row.nodekind == "U") {
+                //하위 노드가 없으므로 넘어감
+            } else {
+                const bool = row.chk
+                const lvl = parseInt(row.LVL)
+                const len = orglist.value.length
+                for (let i = idx + 1; i < len; i++) {
+                    const rowCur = orglist.value[i]
+                    const lvlCur = parseInt(rowCur.LVL)
+                    if (lvlCur <= lvl) break
+                    rowCur.chk = bool
+                }
             }
+            const arr = getCheckedUser()
+            chkCnt.value = arr.length
         }
-        const arr = getCheckedUser()
-        chkCnt.value = arr.length
     }
 
     function changeDepth(val) {
@@ -203,7 +249,7 @@
             }
         }
         localStorage.wiseband_orgtree_depthToShow = depthToShow.value
-        procQuery()
+        procQuery("tree")
     }
 
     function clearAllChk() {
@@ -218,14 +264,14 @@
             gst.util.setToast("먼저 사용자를 선택하시기 바랍니다.")
             return
         }
-        const list = getCheckedUser(["USER_ID", "USER_NM"])
+        const list = getCheckedUser(["userid", "usernm"])
         const res = await axios.post("/user/setVip", { 
             list: list, bool: bool
         })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return
         list.forEach(item => {
-            const idx = gst.util.getKeyIndex(orgRow, item.USER_ID)
+            const idx = gst.util.getKeyIndex(orgRow, item.userid)
             orglist.value[idx].isVip = bool
         })
         let msg = (bool ? "설정 완료" : "해제 완료") + " (" + rs.data.retCnt + "명)"
@@ -233,19 +279,19 @@
     }
 </script>
 
-<template>    
+<template>
     <div v-if="show" style="width:100%;height:100%">
         <div style="width:100%;height:40px;padding-left:10px;display:flex;justify-content:space-between;align-items:center">
             <div style="display:flex;align-items:center">
-                <div class="topMenu" :class="tab != 'msg' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('msg')">
+                <div class="topMenu" :class="mode == 'tree' || mode == 'search' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('tree')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people3.png')">
                     <span style="margin-left:5px;font-weight:bold">조직도</span> 
                 </div>
-                <div class="topMenu" :class="tab == 'msg' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('msg')">
+                <div class="topMenu" :class="mode == 'mygroup' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('mygroup')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people2.png')">
                     <span style="margin-left:5px;font-weight:bold">내그룹</span> 
                 </div>
-                <div class="topMenu" :class="tab == 'msg' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('msg')">
+                <div class="topMenu" :class="mode == 'vip' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('vip')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_person.png')">
                     <span style="margin-left:5px;font-weight:bold">VIP</span> 
                 </div>
@@ -259,33 +305,69 @@
         <div class="chan_center">
             <div class="chan_center_header">
                 <div class="chan_center_header_left">
-                    <input type="search" v-model="searchText" @keyup.enter="procSearchMedia(true)" style="width:100px" />
-                    <div class="coImgBtn" @click="procSearchMedia(true)"><img :src="gst.html.getImageUrl('search.png')" class="btn_img"></div>
-                    <div class="coImgBtn" @click="clearText()" style="margin-left:5px"><img :src="gst.html.getImageUrl('close.png')" class="btn_img"></div>
-                    <span class="depth">{{ depthToShow }}</span>
-                    <div class="coImgBtn" @click="changeDepth(false)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_minus.png')" class="btn_img12"></div>
-                    <div class="coImgBtn" @click="changeDepth(true)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_plus.png')" class="btn_img12"></div>
-                    <!-- <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label> -->
+                    <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch('search')" style="width:100px" />
+                    <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
+                        <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
                     </div>
+                    <div class="coImgBtn" @click="reset(mode)" style="margin-left:5px">
+                        <img :src="gst.html.getImageUrl('dimgray_reset.png')" class="btn_img">
+                    </div>
+                    <span v-show="mode == 'tree'" class="depth">{{ depthToShow }}</span>
+                    <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(false)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_minus.png')" class="btn_img12"></div>
+                    <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(true)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_plus.png')" class="btn_img12"></div>
+                    <!-- <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label> -->
+                </div>
+                <!-- <div v-show="mode == 'mygroup' | mode == 'vip'" class="chan_center_header_left"></div> -->
                 <div class="chan_center_header_right">
                     <span style="margin-right:5px">선택 :</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
                     <span class="vipBtn" style="margin-left:10px" @click="clearAllChk()">해제</span>
                 </div>
             </div>
-            <div class="chan_center_body" ref="scrollArea">
+            <div v-show="mode == 'tree' || mode == 'mygroup'" class="chan_center_body" ref="scrollArea">
+                <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
+                    class="org_body" @click="(e) => clickNode(e, row, idx)" 
+                    :style="{display: row.dispstate}" style="border-bottom:1px solid lightgray">
+                    <div v-if="!row.userid" :style="{ paddingLeft: row.paddingleft }"
+                        style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
+                        <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" 
+                            :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
+                        <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
+                        <div style="margin-left:5px">{{ row.orgnm }}</div>
+                        <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
+                    </div>
+                    <div v-else class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
+                        :style="{ paddingLeft: row.paddingleft }"
+                        style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
+                        <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
+                        <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                        <div style="margin-left:5px;font-weight:bold">{{ row.usernm }}</div>
+                        <div style="margin-left:5px">{{ row.JOB }}</div>
+                        <span v-if="row.isVip" class="vipMark">VIP</span>
+                        <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
+                        <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
+                    </div>
+                    <div v-if="mode == 'mygroup' || row.userid || mode == 'vip'" 
+                        style="width:50px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center;color:darkred">
+                        <span v-if="row.KIND == 'admin' || row.KIND == 'guest'" :title="row.KIND"
+                            style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
+                            {{ row.KIND.substring(0, 1).toUpperCase() }}
+                        </span>
+                        <span v-if="(mode == 'mygroup' || mode == 'vip') && row.userid && row.IS_SYNC != 'Y'" title="manual"
+                            style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
+                            M</span>
+                    </div>
+                </div>
+            </div>
+            <div v-show="mode == 'search'" class="chan_center_body" ref="scrollArea">
                 <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
                     class="org_body" @click="(e) => clickNode(e, row, idx)">
-                    <div v-if="!row.USER_ID" :style="{ paddingLeft: row.paddingleft, display: row.dispstate }"
-                        style="width:100%;height:40px;align-items:center;border-bottom:1px solid lightgray;">
-                        <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" style="opacity:0.5"/>
-                        <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
-                        <div style="margin-left:5px">{{ row.ORG_NM }}</div>
-                    </div>
-                    <div v-else :style="{ paddingLeft: row.paddingleft, display: row.dispstate }"
-                        style="width:100%;height:40px;align-items:center;border-bottom:1px solid lightgray;">
+                    <div class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
+                        style="width:100%;height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">
                         <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                         <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                         <div style="margin-left:5px;font-weight:bold">{{ row.USER_NM }}</div>
+                        <div style="margin-left:5px;color:darkblue">{{ row.TOP_ORG_NM }}</div>
+                        <div style="margin-left:5px;color:darkblue">{{ row.ORG_NM }}</div>
                         <div style="margin-left:5px">{{ row.JOB }}</div>
                         <span v-if="row.isVip" class="vipMark">VIP</span>
                         <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
@@ -323,17 +405,14 @@
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto
     }
-    .org_body {
-        width:100%;display:flex;cursor:pointer
+    .org_body { /* 접기,펼치기 로직때문에 display:flex가 들어가면 안됨 */
+        width:100%;justify-content:space-between;cursor:pointer
     }
     /* .item {  				
         padding:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1px solid lightgray
     } */
     .org_body:hover { background:whitesmoke }
-    /* .org_body:active { background:lightsteelblue } */
     .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
-    .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
-    .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
     .vipBtn { margin-left:5px;padding:1px;font-size:12px;background:lightgray;color:black;border-radius:5px;cursor:pointer }
-    .vipMark { margin-left:5px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px }
+    .vipMark { margin-left:5px;padding:1px;font-size:10px;background:black;color:white;border-radius:5px }
 </style>
