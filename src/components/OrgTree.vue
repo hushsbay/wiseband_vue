@@ -40,6 +40,7 @@
         }
         const res = await axios.post("/user/orgTree", param)
         const rs = gst.util.chkAxiosCode(res.data) 
+        debugger
         if (!rs) return
         maxLevel = rs.data.maxLevel
         let vips = rs.data.vipList[0].VIPS //xxx,yyy..(없으면 null)
