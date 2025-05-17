@@ -367,7 +367,7 @@
 
 <template>
 <div class="chan_main">
-    <div class="chan_center" style="width:calc(100% - 620px)">
+    <div class="chan_center" style="width:calc(100% - 620px);padding-right:10px;">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
                 <!-- <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob"> -->
@@ -379,11 +379,22 @@
 
             </div>
         </div>
-        <div class="chan_center_nav" id="chan_center_nav">
-            <span style="margin-right:10px">그룹명</span><input type="text" v-model="grnm" style="width:300px"/>
-            <span style="margin:0 10px">생성자</span><span>{{ masternm }}</span>
-            그룹신규 그룹저장 그룹삭제
-        </div> 
+        <div style="width:100%;height:40px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-bottom:0px solid lightgray">
+            <div style="width:70%;height:100%;display:flex;align-items:center">
+                <span style="margin-right:10px;color:dimgray">그룹명 : </span><input type="text" v-model="grnm" style="width:300px"/>
+                <span style="margin:0 10px;color:dimgray">생성자 : </span><span>{{ masternm }}</span>
+            </div>
+            <div style="width:30%;height:100%;padding-right:10px;display:flex;align-items:center;justify-content:flex-end">
+                <div class="coImgBtn" @click="selectOne()">
+                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
+                    <span style="margin:0 5px;color:dimgray">저장</span>
+                </div>
+                <div class="coImgBtn" @click="reset(mode)" style="margin-left:5px">
+                    <img :src="gst.html.getImageUrl('dimgray_reset.png')" style="width:24px;height:24px">
+                    <span style="margin:0 5px;color:dimgray">삭제</span>
+                </div>
+            </div>
+        </div>         
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in userlist" :id="row.USERID" :ref="(ele) => { groupRow[row.USERID] = ele }" class="msg_body procMenu"  
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
@@ -408,8 +419,20 @@
             </div>
         </div>
         <div class="chan_center_footer">
-            <div style="display:flex;align-items:center;cursor:pointer">
-                행신규 행저장 행삭제 hide/show
+            <div style="padding:10px 0;display:flex;align-items:center;cursor:pointer">
+                <div class="coImgBtn" @click="selectOne()" style="margin-right:6px">
+                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
+                    <span style="margin:0 5px;color:dimgray">신규멤버</span>
+                </div>
+                <div class="coImgBtn" @click="selectOne()" style="margin-right:6px">
+                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
+                    <span style="margin:0 5px;color:dimgray">멤버저장</span>
+                </div>
+                <div class="coImgBtn" @click="selectOne()" style="margin-right:6px">
+                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
+                    <span style="margin:0 5px;color:dimgray">멤버삭제</span>
+                </div>
+                <span style="color:darkblue">조직도에 없는 멤버만 신규멤버 버튼으로 추가합니다.</span>
             </div>
             <div style="display:flex;align-items:center;cursor:pointer">
                 <table>
@@ -450,7 +473,7 @@
         display:flex;flex-direction:column;
     }
     .chan_center_header {
-        width:100%;min-height:50px;display:flex;justify-content:space-between;border-bottom:1px solid dimgray;overflow:hidden
+        width:100%;min-height:45px;display:flex;justify-content:space-between;align-items:center;;overflow:hidden
     }
     .chan_center_header_left {
         width:70%;height:100%;display:flex;align-items:center;
@@ -459,25 +482,21 @@
     .chan_center_header_right {
         width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
-    .chan_center_nav {
-        width:100%;min-height:60px;display:flex;align-items:center;
-        border-bottom:1px solid dimgray;overflow:hidden
-    }
     .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
     .chan_center_body {
-        width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
+        width:100%;height:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
         display:flex;align-items:center;cursor:pointer
     }
     .chan_center_footer {
-        width:100%;height:200px;margin:auto 0 10px 0;
+        width:100%;margin:auto 0 10px 0;
         display:flex;flex-direction:column;
-        border:1px solid lightgray;border-radius:5px;
+        border-top:2px solid lightgray;border-radius:5px;
     }
     .chan_right {
-        height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
+        height:100%;border-left:1px solid lightgray; /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
     .topMenu { cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
