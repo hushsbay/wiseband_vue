@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted } from 'vue'
+    import { ref, onMounted, nextTick } from 'vue'
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -8,24 +8,40 @@
     const router = useRouter()
     const gst = GeneralStore()    
     
-    let uid = ref(''), pwd = ref(''), saveId = ref(true)
-    let uid1 = ref(null), pwd1 = ref(null) //for focusing
+    let uid = ref(''), pwd = ref(''), saveId = ref(true), nextOk = ref(false)
+    let uidRef = ref(null), pwdRef = ref(null) //for focusing
 
     onMounted(() => {
         const userid = gst.auth.getCookie("userid")
 		if (userid) {
             saveId.value = true
             uid.value = userid
-            pwd1.value.focus()
-        } else {
-            uid1.value.focus()
         }
+        uidRef.value.focus()
     })
 
     async function goLogin() {
-        try {
-            const res = await axios.post("/auth/login", { uid : uid.value, pwd : pwd.value })
+        if (uid.value.includes("@")) { //이메일 OTP 인증 진행 (해당 이메일로 6자리 숫자 발송)
+            const res = await axios.post("/auth/setOtp", { uid : uid.value })
             const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+        } else {
+            //아이디,비번 인증 진행
+        }
+        nextOk.value = true
+        await nextTick()
+        pwdRef.value.focus()
+    }
+
+    async function goLoginNext() {
+        try {
+            let res, rs
+            if (uid.value.includes("@")) { //이메일 OTP 인증 진행 (해당 이메일로 발송된 6자리 숫자 인증)
+                res = await axios.post("/auth/verifyOtp", { uid : uid.value, pwd : pwd.value })
+            } else { //아이디,비번 인증 진행
+                res = await axios.post("/auth/login", { uid : uid.value, pwd : pwd.value })
+            }
+            rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.auth.setCookieForUser(rs.data, saveId.value)
             await router.replace({ name : 'main' })
@@ -41,25 +57,31 @@
 
 <template>
     <div class="container coLogin">
-        <div id="gridMain">
-            <div class="item">
+        <div class="center_body">
+            <div class="center_row">
                 <img class="coImg32" src="/src/assets/images/hushsbay.png"/>
-                <div style="font-size: 18px; font-weight: bold">Hushsbay</div>
+                <div style="font-size: 18px; font-weight: bold">WiSEBand</div>
             </div>
-            <div class="item">
-                <input type="text" v-model="uid" @keyup.enter="goLogin" ref="uid1" placeholder="아이디" spellcheck=false autocomplete=off style="width: 100%"/>
+            <div class="center_row">
+                <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="이메일" spellcheck=false autocomplete=off style="width:150px;margin-right:10px"/> 
+                <div class="center_btn" @click="goLogin">확인</div>
             </div>
-            <div class="item">
-                <div @click="goLogin" id="btn_login">로그인</div>					
-            </div>
-            <div class="item">
-                <input type=password v-model="pwd" @keyup.enter="goLogin" ref="pwd1" placeholder="비번" spellcheck=false autocomplete=off style="width: 100%"/>
-            </div>
-            <div class="item">
-                <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor: pointer">아이디저장</label>
-            </div>
-            <div class="item">
-                <span id="btn_join">간편등록</span>
+            <div class="center_body" style="height:400px;border:0px solid red">
+                <div v-if="nextOk" class="center_row">
+                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:150px;margin-right:10px"/>
+                    <div class="center_btn" @click="goLoginNext">인증</div>
+                </div>
+                <div v-if="!nextOk" class="center_row" style="flex-direction:column">
+                    <div>주소를 넣고 확인을 누르면 해당 이메일로</div>
+                    <div>6자리 인증번호가 전송되고 계속 진행됩니다.</div>
+                </div>
+                <div v-if="nextOk" class="center_row" style="flex-direction:column">
+                    <div style="display:flex;margin-bottom:10px">
+                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor: pointer">이메일저장</label>
+                    </div>
+                    <div>이메일을 열고 6자리 인증번호 입력후</div>
+                    <div>인증 버튼을 눌러 주시기 바랍니다.</div>
+                </div>
             </div>
         </div>
     </div>
@@ -75,21 +97,8 @@
         background-position: center; background-size: cover;
     }
 
-    #gridMain {	padding: 5px;display: grid; grid-template-columns: 150px 100px; grid-auto-rows: 40px; gap: 5px; }
+    .center_body { width:300px;display:flex;flex-direction:column }
+    .center_row { margin-top:10px;display:flex;justify-content:center;align-items:center }
+    .center_btn { width:28px;height:28px;padding:0 4px;display:flex;justify-content:center;align-items:center;border-radius:4px;background-color:#0082AD;color:white;cursor:pointer }
 
-    .item { display: flex; justify-content: center; align-items: center; cursor: pointer; }
-
-    .item:nth-child(1) { grid-column: 1/3; }
-
-    .item:nth-child(3) { /* 로그인 버튼 부모 */
-        width: 100%; height: 100%;
-        grid-column: 2;	grid-row: 2/4;
-        display: flex; justify-content: center; align-items: center;
-    }
-
-    #btn_login { /* 로그인 버튼 */
-        width: 100%; height: 100%;
-        display: flex; justify-content: center; align-items: center;
-        border-radius: 4px; background-color: #0082AD; color: white;
-    }
 </style>	
