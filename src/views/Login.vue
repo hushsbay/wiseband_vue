@@ -37,7 +37,7 @@
         try {
             let res, rs
             if (uid.value.includes("@")) { //이메일 OTP 인증 진행 (해당 이메일로 발송된 6자리 숫자 인증)
-                res = await axios.post("/auth/verifyOtp", { uid : uid.value, pwd : pwd.value })
+                res = await axios.post("/auth/verifyOtp", { uid : uid.value, otpNum : pwd.value })
             } else { //아이디,비번 인증 진행
                 res = await axios.post("/auth/login", { uid : uid.value, pwd : pwd.value })
             }
