@@ -29,8 +29,10 @@
     let onGoingGetList = false
         
     let sideMenu = "mnuGroup", grId
-    let grnm = ref(''), masternm = ref('')
+    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleEditMode = ref(true)
     let userlist = ref([])
+
+    let rowUsernm = ref(''), rowOrgnm = ref(''), rowRmks = ref(''), rowMemkind = ref(''), rowEmail = ref(''), rowTelno = ref('')
 
     onMounted(async () => {
         try {
@@ -100,20 +102,19 @@
             let param = { grid: grId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const kind = param.kind
-            const res = await axios.post("/user/qryGroupDetail", param)
+            const res = await axios.post("/user/qryInvolvedGroup", param)
             const rs = gst.util.chkAxiosCode(res.data) 
-            //debugger
             if (!rs) {
                 onGoingGetList = false                
                 return
             }
-            grnm.value = rs.data.grmst.GR_NM
-            masternm.value = rs.data.grmst.MASTERNM
+            grnm.value = rs.list[0].GR_NM //rs.data.grmst.GR_NM
+            masternm.value = rs.list[0].MASTERNM //rs.data.grmst.MASTERNM
             document.title = grnm.value + " [그룹]"
-            const grdtl = rs.data.grdtl
+            const grdtl = rs.list[0].userlist //rs.data.grdtl
             const len = grdtl.length
             for (let i = 0; i < len; i++) {
-                const row = grdtl[i]                
+                const row = grdtl[i]
                 //if (row.PICTURE == null) {
                 //    row.url = null
                 //} else {
@@ -363,6 +364,90 @@
     function applyToBody(arr) {
         alert(JSON.stringify(arr))
     }
+
+    function changeChk(row, idx) {
+        chkEditRow()
+    }
+
+    function rowClick(e, row, idx) {
+        if (e.target.nodeName == "INPUT") return //e.currentTarget.nodeName은 DIV로 나옴
+        userlist.value.forEach(item => { item.chk = false })
+        row.chk = true
+        chkEditRow()
+    }
+
+    function chkEditRow() {
+        const arr = userlist.value.filter(item => item.chk)
+        if (arr.length == 1) {
+            singleEditMode.value = true
+            rowUsernm.value = arr[0].USERNM
+            rowOrgnm.value = arr[0].TOP_ORG_NM + "/" + arr[0].ORG_NM
+            rowRmks.value = arr[0].RMKS
+            rowMemkind.value = arr[0].KIND
+            rowEmail.value = arr[0].EMAIL
+            rowTelno.value = arr[0].TELNO
+        } else {
+            singleEditMode.value = (arr.length == 0) ? true : false
+            rowUsernm.value = ''
+            rowOrgnm.value = ''
+            rowRmks.value = ''
+            rowMemkind.value = ''
+            rowEmail.value = ''
+            rowTelno.value = ''
+        }
+    }
+
+    function changeChkAll() {
+        const bool = chkAll.value
+        userlist.value.forEach(item => { item.chk = bool })
+        chkEditRow()
+    }
+
+    function newMember() {
+        userlist.value.forEach(item => { item.chk = false })
+        chkEditRow()
+    }
+
+    async function saveMember() {
+        const arr = userlist.value.filter(item => item.chk)
+        if (arr.length > 1) {
+            alert("한 행 이상 선택되었습니다.")
+            return
+        }
+        if (arr.length == 0) { //신규멤버
+            const rq = { mode: "C", GR_ID: row.GR_ID, IS_SYNC: "W" }
+            rq.USERNM = rowUsernm.value
+            rq.EMAIL = rowEmail.value
+            rq.TELNO = rowTelno.value
+            rq.RMKS = rowRmks.value
+            rq.KIND = rowMemkind.value
+            const res = await axios.post("/user/saveMember", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return //서버 호출 저장 진행후 아래 처리 (가나다순으로 찾아서 해당 위치에 넣고 스크롤링 + 패널에도 반영)
+
+        } else {
+            const row = arr[0]
+            const rq = { mode: "U", GR_ID: row.GR_ID, IS_SYNC: row.IS_SYNC }
+            if (row.IS_SYNC == "W") {
+                rq.USERNM = rowUsernm.value
+                rq.EMAIL = rowEmail.value
+                rq.TELNO = rowTelno.value
+            }
+            rq.RMKS = rowRmks.value
+            rq.KIND = rowMemkind.value
+            const res = await axios.post("/user/saveMember", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
+            const idxSel = userlist.value.findIndex(item => item.chk)
+            if (row.IS_SYNC == "W") {
+                userlist.value[idxSel].USERNM = rowUsernm.value
+                userlist.value[idxSel].EMAIL = rowEmail.value
+                userlist.value[idxSel].TELNO = rowTelno.value            
+            }
+            userlist.value[idxSel].RMKS = rowRmks.value
+            userlist.value[idxSel].KIND = rowMemkind.value
+        }
+    }
 </script>
 
 <template>
@@ -379,8 +464,9 @@
 
             </div>
         </div>
-        <div style="width:100%;height:40px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;border-bottom:0px solid lightgray">
+        <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid lightgray">
             <div style="width:70%;height:100%;display:flex;align-items:center">
+                <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="margin-right:12px" />
                 <span style="margin-right:10px;color:dimgray">그룹명 : </span><input type="text" v-model="grnm" style="width:300px"/>
                 <span style="margin:0 10px;color:dimgray">생성자 : </span><span>{{ masternm }}</span>
             </div>
@@ -394,41 +480,44 @@
                     <span style="margin:0 5px;color:dimgray">삭제</span>
                 </div>
             </div>
-        </div>         
+        </div>
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in userlist" :id="row.USERID" :ref="(ele) => { groupRow[row.USERID] = ele }" class="msg_body procMenu"  
-                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
-                <table>
-                    <tr>
-                        <td rowspan="4" style="width:20px"><input type="checkbox" id="checkbox" /></td>
-                        <td class="tdLabel">이름</td>
-                        <td>{{ row.USERNM }}</td>
-                        <td style="width:150px">임직원/멤버</td>
-                    </tr>
-                    <tr>
-                        <td class="tdLabel">소속</td>
-                        <td>회사 부서</td>
-                        <td style="width:150px">메일</td>
-                    </tr>
-                    <tr>
-                        <td class="tdLabel">비고</td>
-                        <td>{{ row.TYP }}</td>
-                        <td style="width:150px">전화</td>
-                    </tr>
-                </table>
+                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="(e) => rowClick(e, row, idx)">
+                <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
+                    <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
+                </div>
+                <div style="width:calc(100% - 30px);display:flex;flex-direction:column">
+                    <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
+                        <div style="display:flex;align-items:center;font-weight:bold;color:darkblue">{{ row.USERNM }}</div>
+                        <div style="width:150px;display:flex;justify-content:flex-end;color:darkred">{{ (row.KIND == "member") ? "" : row.KIND }}</div>
+                    </div>
+                    <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
+                        <div style="width:calc(100% - 150px);display:flex;align-items:center">
+                            <div class="coDotDot" style="width:100%">{{ row.TOP_ORG_NM + "/" + row.ORG_NM }}</div>
+                        </div>
+                        <div style="width:150px;display:flex;justify-content:flex-end">{{ row.EMAIL }}</div>                           
+                    </div>
+                    <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
+                        <div style="width:calc(100% - 150px);display:flex;align-items:center">
+                            <div class="coDotDot" style="width:100%">{{ row.RMKS }}</div>
+                        </div>
+                        <div style="width:150px;display:flex;justify-content:flex-end">{{ row.TELNO }}</div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="chan_center_footer">
-            <div style="padding:10px 0;display:flex;align-items:center;cursor:pointer">
-                <div class="coImgBtn" @click="selectOne()" style="margin-right:6px">
+            <div style="padding-top:10px;display:flex;align-items:center;cursor:pointer">
+                <div v-if="singleEditMode" class="coImgBtn" @click="newMember()" style="margin-right:6px">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                     <span style="margin:0 5px;color:dimgray">신규멤버</span>
                 </div>
-                <div class="coImgBtn" @click="selectOne()" style="margin-right:6px">
+                <div v-if="singleEditMode" class="coImgBtn" @click="saveMember()" style="margin-right:6px">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                     <span style="margin:0 5px;color:dimgray">멤버저장</span>
                 </div>
-                <div class="coImgBtn" @click="selectOne()" style="margin-right:6px">
+                <div class="coImgBtn" @click="deleteMember()" style="margin-right:6px">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                     <span style="margin:0 5px;color:dimgray">멤버삭제</span>
                 </div>
@@ -437,20 +526,31 @@
             <div style="display:flex;align-items:center;cursor:pointer">
                 <table>
                     <tr>
-                        <td rowspan="4" style="width:20px"></td>
+                        <td style="width:50px;border:none"></td>
+                        <td style="width:calc(100% - 250px);border:none"></td>
+                        <td style="width:50px;border:none"></td>
+                        <td style="width:150px;border:none"></td>
+                    </tr>
+                    <tr>
                         <td class="tdLabel">이름</td>
-                        <td>name</td>
-                        <td style="width:150px">임직원/멤버</td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowUsernm" :disabled="rowMemkind != 'guest'"/></td>
+                        <td class="tdValue" colspan="2">
+                            <input type="radio" id="member" value="member" v-model="rowMemkind"><label for="member" style="margin-right:8px">멤버</label>
+                            <input type="radio" id="admin" value="admin" v-model="rowMemkind"><label for="admin" style="margin-right:8px">Admin</label>
+                            <input type="radio" id="guest" value="guest" v-model="rowMemkind"><label for="guest">게스트</label>
+                        </td>
                     </tr>
                     <tr>
                         <td class="tdLabel">소속</td>
-                        <td>회사 부서</td>
-                        <td style="width:150px">메일</td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrgnm" :disabled="rowMemkind != 'guest'"/></td>
+                        <td class="tdLabel">이메일</td>                        
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowMemkind != 'guest'"/></td>
                     </tr>
                     <tr>
                         <td class="tdLabel">비고</td>
-                        <td>라라라</td>
-                        <td style="width:150px">전화</td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowRmks"/></td>
+                        <td class="tdLabel">전화</td>                        
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowTelno" :disabled="rowMemkind != 'guest'"/></td>
                     </tr>
                 </table>
             </div>  
@@ -463,7 +563,8 @@
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 
-<style scoped>  
+<style scoped>
+    input[type="checkbox"] { min-width:16px;min-height:16px }  
     .chan_main { /* 원래는 각 패널에 있다가 msglist 라우팅(새창에서열기) 때문에 여기로 이동 - 댓글 관련 */
         width:100%;height:100%;display:flex;
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
@@ -488,7 +589,7 @@
         width:100%;height:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
-        display:flex;align-items:center;cursor:pointer
+        width:calc(100% - 8px);display:flex;align-items:center;cursor:pointer;border-bottom:1px solid lightgray
     }
     .chan_center_footer {
         width:100%;margin:auto 0 10px 0;
@@ -520,5 +621,7 @@
     .btn:active { background:var(--active-color)}
     table { width:100%;border-collapse:collapse }
     td { padding:3px;border:1px solid lightgray }
-    .tdLabel { width:50px;text-align:center;color:dimgray }
+    .tdLabel { color:dimgray;border:none }
+    .tdInput { width:calc(100% - 10px) }
+    .tdValue { border:none }
 </style>

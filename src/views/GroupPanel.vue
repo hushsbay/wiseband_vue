@@ -170,7 +170,7 @@
                     <option value="my">내 그룹</option>
                     <option value="other">다른 그룹</option>
                     <option value="all">모든 그룹</option>
-                </select>
+                </select>                
             </div>
             <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px;" @click="newMsg">

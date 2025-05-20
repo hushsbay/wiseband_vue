@@ -51,7 +51,7 @@
     async function procQuery(strMode) {
         mode.value = strMode
         if (strMode == "tree") depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
-        const controller = (strMode == "tree") ? "orgTree" : "qryMyGroup"
+        const controller = (strMode == "tree") ? "orgTree" : "qryInvolvedGroup"
         const res = await axios.post("/user/" + controller)
         const rs = gst.util.chkAxiosCode(res.data) 
         if (!rs) return
@@ -336,15 +336,13 @@
                         :style="{display: row.dispstate}" style="border-bottom:1px solid lightgray">
                         <div v-if="!row.userid" :style="{ paddingLeft: row.paddingleft }"
                             style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
-                            <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" 
-                                :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
+                            <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
                             <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
                             <div style="margin-left:5px">{{ row.orgnm }}</div>
                             <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
                         </div>
                         <div v-else class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
-                            :style="{ paddingLeft: row.paddingleft }"
-                            style="width:calc(100% - 45px);height:40px;display:flex;align-items:center">
+                            :style="{ paddingLeft: row.paddingleft }" style="width:calc(100% - 45px);height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                             <div style="margin-left:5px;font-weight:bold">{{ row.usernm }}</div>
@@ -388,7 +386,7 @@
 </template>
 
 <style scoped>
-    input { height:28px;margin-right:8px;border:1px solid dimgray;border-radius:0px }
+    input { height:28px;margin-right:8px;border:1px solid dimgray }
     input[type="checkbox"] { min-width:16px;min-height:16px }
     .topMenu { cursor:pointer }
     .topMenu:hover { background:var(--active-color);font-weight:bold }
