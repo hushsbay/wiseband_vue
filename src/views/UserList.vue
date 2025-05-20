@@ -32,7 +32,7 @@
     let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleEditMode = ref(true)
     let userlist = ref([])
 
-    let rowUsernm = ref(''), rowOrgnm = ref(''), rowRmks = ref(''), rowMemkind = ref(''), rowEmail = ref(''), rowTelno = ref('')
+    let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowOrgnm = ref(''), rowRmks = ref(''), rowMemkind = ref(''), rowEmail = ref(''), rowTelno = ref('')
 
     onMounted(async () => {
         try {
@@ -377,9 +377,12 @@
     }
 
     function chkEditRow() {
+        debugger
         const arr = userlist.value.filter(item => item.chk)
         if (arr.length == 1) {
             singleEditMode.value = true
+            rowIssync.value = arr[0].IS_SYNC
+            rowUserid.value = arr[0].USERID
             rowUsernm.value = arr[0].USERNM
             rowOrgnm.value = arr[0].TOP_ORG_NM + "/" + arr[0].ORG_NM
             rowRmks.value = arr[0].RMKS
@@ -388,6 +391,8 @@
             rowTelno.value = arr[0].TELNO
         } else {
             singleEditMode.value = (arr.length == 0) ? true : false
+            rowIssync.value = ''
+            rowUserid.value = ''
             rowUsernm.value = ''
             rowOrgnm.value = ''
             rowRmks.value = ''
@@ -409,43 +414,45 @@
     }
 
     async function saveMember() {
-        const arr = userlist.value.filter(item => item.chk)
-        if (arr.length > 1) {
-            alert("한 행 이상 선택되었습니다.")
-            return
-        }
-        if (arr.length == 0) { //신규멤버
-            const rq = { crud: "C", GR_ID: row.GR_ID, IS_SYNC: "W" }
-            rq.USERNM = rowUsernm.value
-            rq.EMAIL = rowEmail.value
-            rq.TELNO = rowTelno.value
-            rq.RMKS = rowRmks.value
-            rq.KIND = rowMemkind.value
-            const res = await axios.post("/user/saveMember", rq)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return //서버 호출 저장 진행후 아래 처리 (가나다순으로 찾아서 해당 위치에 넣고 스크롤링 + 패널에도 반영)
+        try {
+            const arr = userlist.value.filter(item => item.chk)
+            if (arr.length > 1) {
+                alert("한 행 이상 선택되었습니다.")
+                return
+            }
+            if (arr.length == 0) { //신규멤버
+                const rq = { 
+                    crud: "C", GR_ID: grId, USERID: rowUserid.value, USERNM: rowUsernm.value,
+                    EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value, KIND: rowMemkind.value
+                }            
+                const res = await axios.post("/user/saveMember", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return //서버 호출 저장 진행후 아래 처리 (가나다순으로 찾아서 해당 위치에 넣고 스크롤링 + 패널에도 반영)
 
-        } else {
-            const row = arr[0]
-            const rq = { crud: "U", GR_ID: row.GR_ID, IS_SYNC: row.IS_SYNC }
-            if (row.IS_SYNC == "W") {
-                rq.USERNM = rowUsernm.value
-                rq.EMAIL = rowEmail.value
-                rq.TELNO = rowTelno.value
+            } else {
+                const row = arr[0] //row.USERID is one of key
+                const rq = { crud: "U", GR_ID: grId, USERID: row.USERID }
+                if (row.IS_SYNC == "W") {                
+                    rq.USERNM = rowUsernm.value
+                    rq.EMAIL = rowEmail.value
+                    rq.TELNO = rowTelno.value
+                }
+                rq.RMKS = rowRmks.value
+                rq.KIND = rowMemkind.value
+                const res = await axios.post("/user/saveMember", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
+                const idxSel = userlist.value.findIndex(item => item.chk && item.USERID == row.USERID)
+                if (row.IS_SYNC == "W") {
+                    userlist.value[idxSel].USERNM = rowUsernm.value
+                    userlist.value[idxSel].EMAIL = rowEmail.value
+                    userlist.value[idxSel].TELNO = rowTelno.value            
+                }
+                userlist.value[idxSel].RMKS = rowRmks.value
+                userlist.value[idxSel].KIND = rowMemkind.value
             }
-            rq.RMKS = rowRmks.value
-            rq.KIND = rowMemkind.value
-            const res = await axios.post("/user/saveMember", rq)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
-            const idxSel = userlist.value.findIndex(item => item.chk)
-            if (row.IS_SYNC == "W") {
-                userlist.value[idxSel].USERNM = rowUsernm.value
-                userlist.value[idxSel].EMAIL = rowEmail.value
-                userlist.value[idxSel].TELNO = rowTelno.value            
-            }
-            userlist.value[idxSel].RMKS = rowRmks.value
-            userlist.value[idxSel].KIND = rowMemkind.value
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
         }
     }
 </script>
@@ -533,7 +540,7 @@
                     </tr>
                     <tr>
                         <td class="tdLabel">이름</td>
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowUsernm" :disabled="rowMemkind != 'guest'"/></td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/></td>
                         <td class="tdValue" colspan="2">
                             <input type="radio" id="member" value="member" v-model="rowMemkind"><label for="member" style="margin-right:8px">멤버</label>
                             <input type="radio" id="admin" value="admin" v-model="rowMemkind"><label for="admin" style="margin-right:8px">Admin</label>
@@ -542,15 +549,15 @@
                     </tr>
                     <tr>
                         <td class="tdLabel">소속</td>
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrgnm" :disabled="rowMemkind != 'guest'"/></td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrgnm" :disabled="rowIssync == 'Y'"/></td>
                         <td class="tdLabel">이메일</td>                        
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowMemkind != 'guest'"/></td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowIssync == 'Y'"/></td>
                     </tr>
                     <tr>
                         <td class="tdLabel">비고</td>
                         <td class="tdValue"><input type="text" class="tdInput" v-model="rowRmks"/></td>
                         <td class="tdLabel">전화</td>                        
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowTelno" :disabled="rowMemkind != 'guest'"/></td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowTelno" :disabled="rowIssync == 'Y'"/></td>
                     </tr>
                 </table>
             </div>  
