@@ -415,7 +415,7 @@
             return
         }
         if (arr.length == 0) { //신규멤버
-            const rq = { mode: "C", GR_ID: row.GR_ID, IS_SYNC: "W" }
+            const rq = { crud: "C", GR_ID: row.GR_ID, IS_SYNC: "W" }
             rq.USERNM = rowUsernm.value
             rq.EMAIL = rowEmail.value
             rq.TELNO = rowTelno.value
@@ -427,7 +427,7 @@
 
         } else {
             const row = arr[0]
-            const rq = { mode: "U", GR_ID: row.GR_ID, IS_SYNC: row.IS_SYNC }
+            const rq = { crud: "U", GR_ID: row.GR_ID, IS_SYNC: row.IS_SYNC }
             if (row.IS_SYNC == "W") {
                 rq.USERNM = rowUsernm.value
                 rq.EMAIL = rowEmail.value
