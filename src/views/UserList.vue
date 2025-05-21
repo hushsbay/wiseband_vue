@@ -417,7 +417,7 @@
             }
             if (arr.length == 0) { //신규멤버
                 const rq = { 
-                    crud: "C", GR_ID: grId, USERID: rowUserid.value, USERNM: rowUsernm.value, KIND: rowKind.value,
+                    crud: "C", GR_ID: grId, USERNM: rowUsernm.value, KIND: rowKind.value,
                     ORG: rowOrg.value, JOB: rowJob.value, EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value
                 }            
                 const res = await axios.post("/user/saveMember", rq)
