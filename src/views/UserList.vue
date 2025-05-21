@@ -25,14 +25,15 @@
     const g_userid = gst.auth.getCookie("userid")
     let mounting = true
     
-    const scrollArea = ref(null), groupRow = ref({}) //groupRow는 element를 동적으로 할당
+    const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
     let onGoingGetList = false
         
     let sideMenu = "mnuGroup", grId
-    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleEditMode = ref(true)
+    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C')
     let userlist = ref([])
 
-    let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowOrgnm = ref(''), rowRmks = ref(''), rowMemkind = ref(''), rowEmail = ref(''), rowTelno = ref('')
+    let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
+    let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref('')
 
     onMounted(async () => {
         try {
@@ -60,40 +61,40 @@
         if (route.params.grid) grId = route.params.grid
     }
 
-    function saveCurScrollY(posY) {
-        if (!grId) return
-        const key = grId
-        if (!gst.objSaved[key]) gst.objSaved[key] = {}
-        gst.objSaved[key].scrollY = posY
-    }
+    // function saveCurScrollY(posY) {
+    //     if (!grId) return
+    //     const key = grId
+    //     if (!gst.objSaved[key]) gst.objSaved[key] = {}
+    //     gst.objSaved[key].scrollY = posY
+    // }
 
-    function chanCtxMenu(e) {
-        gst.ctx.data.header = ""
-        gst.ctx.menu = [
-            { nm: "새창에서 열기", func: function(item, idx) {
+    // function chanCtxMenu(e) {
+    //     gst.ctx.data.header = ""
+    //     gst.ctx.menu = [
+    //         { nm: "새창에서 열기", func: function(item, idx) {
 
-            }},
-            { nm: "정보 보기", func: function(item, idx) {
+    //         }},
+    //         { nm: "정보 보기", func: function(item, idx) {
                 
-            }},
-            { nm: "링크 복사", func: function(item, idx) {
+    //         }},
+    //         { nm: "링크 복사", func: function(item, idx) {
                 
-            }},
-            { nm: "설정", func: function(item, idx) {
+    //         }},
+    //         { nm: "설정", func: function(item, idx) {
                 
-            }},
-            { nm: "알림 변경", func: function(item, idx) {
+    //         }},
+    //         { nm: "알림 변경", func: function(item, idx) {
                 
-            }},
-            { nm: "즐겨찾기", func: function(item, idx) {
+    //         }},
+    //         { nm: "즐겨찾기", func: function(item, idx) {
                 
-            }},
-            { nm: "나가기", color: 'red', func: function(item, idx) {
+    //         }},
+    //         { nm: "나가기", color: 'red', func: function(item, idx) {
                 
-            }}
-        ]
-        gst.ctx.show(e)
-    }
+    //         }}
+    //     ]
+    //     gst.ctx.show(e)
+    // }
 
     async function getList(addedParam) {
         try {
@@ -108,6 +109,7 @@
                 onGoingGetList = false                
                 return
             }
+            userlist.value = []
             grnm.value = rs.list[0].GR_NM //rs.data.grmst.GR_NM
             masternm.value = rs.list[0].MASTERNM //rs.data.grmst.MASTERNM
             document.title = grnm.value + " [그룹]"
@@ -115,14 +117,8 @@
             const len = grdtl.length
             for (let i = 0; i < len; i++) {
                 const row = grdtl[i]
-                //if (row.PICTURE == null) {
-                //    row.url = null
-                //} else {
-                //    row.url = hush.util.getImageBlobUrl(row.PICTURE.data)
-                //}
                 userlist.value.push(row)
             }
-            await nextTick()
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -130,164 +126,164 @@
         }
     }
 
-    async function getMsg(addedParam, verbose) {
-        try {
-            let param = { chanid: chanId } //기본 param
-            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            const res = await axios.post("/chanmsg/qryMsg", param)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) {
-                if (verbose) gst.util.setToast(rs.msg)
-                return null
-            }
-            return rs.data
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function getMsg(addedParam, verbose) {
+    //     try {
+    //         let param = { chanid: chanId } //기본 param
+    //         if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+    //         const res = await axios.post("/chanmsg/qryMsg", param)
+    //         const rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) {
+    //             if (verbose) gst.util.setToast(rs.msg)
+    //             return null
+    //         }
+    //         return rs.data
+    //     } catch (ex) {
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
-    function refreshWithGetMsg(rs, msgid) {
-        let item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (item) { //필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 것임
-            item.BODY = rs.msgmst.BODY
-            item.UDT = rs.msgmst.UDT
-            item.reply = rs.reply
-            item.replyinfo = rs.replyinfo
-            item.act_later = rs.act_later
-            item.act_fixed = rs.act_fixed
-            //item.background = rs.act_later ? hush.cons.color_act_later : ""
-        }
-    }
+    // function refreshWithGetMsg(rs, msgid) {
+    //     let item = msglist.value.find(function(row) { return row.MSGID == msgid })
+    //     if (item) { //필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 것임
+    //         item.BODY = rs.msgmst.BODY
+    //         item.UDT = rs.msgmst.UDT
+    //         item.reply = rs.reply
+    //         item.replyinfo = rs.replyinfo
+    //         item.act_later = rs.act_later
+    //         item.act_fixed = rs.act_fixed
+    //         //item.background = rs.act_later ? hush.cons.color_act_later : ""
+    //     }
+    // }
 
-    async function qryAction(addedParam) {
-        try {
-            let param = { chanid: chanId } //기본 param
-            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            const res = await axios.post("/chanmsg/qryAction", param)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return null
-            return rs.data
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function qryAction(addedParam) {
+    //     try {
+    //         let param = { chanid: chanId } //기본 param
+    //         if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+    //         const res = await axios.post("/chanmsg/qryAction", param)
+    //         const rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return null
+    //         return rs.data
+    //     } catch (ex) {
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
-    async function qryActionForUser(addedParam) {
-        try {
-            let param = { chanid: chanId } //기본 param
-            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            const res = await axios.post("/chanmsg/qryActionForUser", param)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return null
-            return rs.data
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function qryActionForUser(addedParam) {
+    //     try {
+    //         let param = { chanid: chanId } //기본 param
+    //         if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+    //         const res = await axios.post("/chanmsg/qryActionForUser", param)
+    //         const rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return null
+    //         return rs.data
+    //     } catch (ex) {
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
-    function memProfile(e, row) {
-        gst.ctx.data.header = row.AUTHORNM
-        gst.ctx.menu = [
-            { nm: "메시지 보내기", func: function(item, idx) {
+    // function memProfile(e, row) {
+    //     gst.ctx.data.header = row.AUTHORNM
+    //     gst.ctx.menu = [
+    //         { nm: "메시지 보내기", func: function(item, idx) {
                 
-            }},
-            { nm: "VIP로 설정", func: function(item, idx) {
+    //         }},
+    //         { nm: "VIP로 설정", func: function(item, idx) {
                 
-            }},
-            { nm: "퇴장 시키기", color: 'red', func: function(item, idx) {
+    //         }},
+    //         { nm: "퇴장 시키기", color: 'red', func: function(item, idx) {
                 
-            }}
-        ]
-        gst.ctx.show(e)
-    }
+    //         }}
+    //     ]
+    //     gst.ctx.show(e)
+    // }
 
-    function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        let textRead, oldKind, newKind
-        const msgdtlRow = row.msgdtl.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
-        if (msgdtlRow) {
-            oldKind = msgdtlRow.KIND
-            if (msgdtlRow.KIND == "read") {
-                textRead = "다시읽지않음으로 처리"
-                newKind = "unread"
-            } else {
-                textRead = "읽음으로 처리"
-                newKind = "read"
-            }
-        } else {
-            oldKind = "notyet"
-            textRead = "읽음으로 처리"
-            newKind = "read"
-        }
-        gst.ctx.data.header = ""
-        gst.ctx.menu = [
-            { nm: "반응 추가", img: "dimgray_emoti.png", func: function(item, idx) {
-                alert(JSON.stringify(row))
-            }},
-            { nm: "스레드(댓글)", img: "dimgray_thread.png", func: function(item, idx) {
+    // function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
+    //     let textRead, oldKind, newKind
+    //     const msgdtlRow = row.msgdtl.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+    //     if (msgdtlRow) {
+    //         oldKind = msgdtlRow.KIND
+    //         if (msgdtlRow.KIND == "read") {
+    //             textRead = "다시읽지않음으로 처리"
+    //             newKind = "unread"
+    //         } else {
+    //             textRead = "읽음으로 처리"
+    //             newKind = "read"
+    //         }
+    //     } else {
+    //         oldKind = "notyet"
+    //         textRead = "읽음으로 처리"
+    //         newKind = "read"
+    //     }
+    //     gst.ctx.data.header = ""
+    //     gst.ctx.menu = [
+    //         { nm: "반응 추가", img: "dimgray_emoti.png", func: function(item, idx) {
+    //             alert(JSON.stringify(row))
+    //         }},
+    //         { nm: "스레드(댓글)", img: "dimgray_thread.png", func: function(item, idx) {
                 
-            }},
-            { nm: "메시지 전달", img: "dimgray_forward.png", func: function(item, idx) {
+    //         }},
+    //         { nm: "메시지 전달", img: "dimgray_forward.png", func: function(item, idx) {
                 
-            }},
-            { nm: textRead, func: function(item, idx) {
-                updateWithNewKind(row.MSGID, oldKind, newKind)
-            }},
-            { nm: "리마인더 받기", child: [
-                { nm: "1시간 후", func: function(item, idx) { 
-                    alert(item.nm+"@@@@"+idx)
-                }},
-                { nm: "내일", func: function(item, idx) { 
+    //         }},
+    //         { nm: textRead, func: function(item, idx) {
+    //             updateWithNewKind(row.MSGID, oldKind, newKind)
+    //         }},
+    //         { nm: "리마인더 받기", child: [
+    //             { nm: "1시간 후", func: function(item, idx) { 
+    //                 alert(item.nm+"@@@@"+idx)
+    //             }},
+    //             { nm: "내일", func: function(item, idx) { 
                     
-                }},
-                { nm: "다음 주", func: function(item, idx) { 
+    //             }},
+    //             { nm: "다음 주", func: function(item, idx) { 
                     
-                }},
-                { nm: "사용자 지정", func: function(item, idx) { 
+    //             }},
+    //             { nm: "사용자 지정", func: function(item, idx) { 
                     
-                }}                
-            ]},
-            { nm: "새 댓글시 알림 받기", func: function(item, idx) {
+    //             }}                
+    //         ]},
+    //         { nm: "새 댓글시 알림 받기", func: function(item, idx) {
                 
-            }},
-            { nm: "채널에 고정", func: function(item, idx) {
+    //         }},
+    //         { nm: "채널에 고정", func: function(item, idx) {
                 
-            }},
-            { nm: "링크로 복사", func: function(item, idx) {
+    //         }},
+    //         { nm: "링크로 복사", func: function(item, idx) {
                 
-            }},
-            { nm: "메시지 편집", func: function(item, idx) {
-                editMsgId.value = row.MSGID
-                prevEditData = document.getElementById(editorId).innerHTML
-                if (prevEditData.trim() != "") {
-                    //gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
-                    //return
-                }
-                msgbody.value = row.BODY
-            }},
-            { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
-                try {
-                    //if (!window.confirm("삭제후엔 복구가 불가능합니다. 진행할까요?")) return
-                    const res = await axios.post("/chanmsg/delMsg", { 
-                        msgid: row.MSGID, chanid: chanId
-                    })
-                    const rs = gst.util.chkAxiosCode(res.data)
-                    if (!rs) return
-                    msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
-                    if (hasProp()) { 
-                        evClick({ type: "refreshFromReply", msgid: props.data.msgid })
-                    } else {
-                        if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
-                    }
-                    if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때
-                        gst[appType].procFromBody("work", { msgid: row.MSGID, work: "delete" })
-                    }
-                } catch (ex) { 
-                    gst.util.showEx(ex, true)
-                }
-            }}
-        ]
-        gst.ctx.show(e)
-    }
+    //         }},
+    //         { nm: "메시지 편집", func: function(item, idx) {
+    //             editMsgId.value = row.MSGID
+    //             prevEditData = document.getElementById(editorId).innerHTML
+    //             if (prevEditData.trim() != "") {
+    //                 //gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
+    //                 //return
+    //             }
+    //             msgbody.value = row.BODY
+    //         }},
+    //         { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
+    //             try {
+    //                 //if (!window.confirm("삭제후엔 복구가 불가능합니다. 진행할까요?")) return
+    //                 const res = await axios.post("/chanmsg/delMsg", { 
+    //                     msgid: row.MSGID, chanid: chanId
+    //                 })
+    //                 const rs = gst.util.chkAxiosCode(res.data)
+    //                 if (!rs) return
+    //                 msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
+    //                 if (hasProp()) { 
+    //                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+    //                 } else {
+    //                     if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+    //                 }
+    //                 if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때
+    //                     gst[appType].procFromBody("work", { msgid: row.MSGID, work: "delete" })
+    //                 }
+    //             } catch (ex) { 
+    //                 gst.util.showEx(ex, true)
+    //             }
+    //         }}
+    //     ]
+    //     gst.ctx.show(e)
+    // }
 
     function rowEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = true
@@ -297,69 +293,69 @@
         row.hover = false
     }
 
-    const onScrolling = () => { 
-        // if (!scrollArea.value) return //오류 만났을 때
-        // prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
-        // prevScrollHeight = scrollArea.value.scrollHeight
-        // readMsgToBeSeen()
-        // saveCurScrollY(prevScrollY)
-    }
+    // const onScrolling = () => { 
+    //     // if (!scrollArea.value) return //오류 만났을 때
+    //     // prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
+    //     // prevScrollHeight = scrollArea.value.scrollHeight
+    //     // readMsgToBeSeen()
+    //     // saveCurScrollY(prevScrollY)
+    // }
 
-    async function refreshMsgDtlWithQryAction(msgid) {
-        let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
-        if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
-        const item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
-    }
+    // async function refreshMsgDtlWithQryAction(msgid) {
+    //     let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
+    //     if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
+    //     const item = msglist.value.find(function(row) { return row.MSGID == msgid })
+    //     if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
+    // }
 
-    async function updateWithNewKind(msgid, oldKind, newKind) {
-        try {            
-            const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
-            const res = await axios.post("/chanmsg/updateWithNewKind", rq)
-            let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid)
-            if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
-                evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
-                const rs = await getMsg({ msgid: props.data.msgid })
-                if (rs == null) return
-                refreshWithGetMsg(rs, props.data.msgid)
-            } else { 
-                //굳이 실행하지 않아도 될 듯
-            }
-            if (oldKind == "read" || oldKind == "unread") {
-                if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
-                    const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
-                    if (idx > -1) msglist.value.splice(idx, 1)
-                }
-                return //패널 업데이트 필요없음 (notyet은 변동없음)
-            }
-            if (appType == "home") { //if (route.fullPath.includes("/home_body/")) {
-                gst.home.procFromBody("updateUnreadCnt", rq)
-            } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
-                gst.dm.procFromBody("updateUnreadCnt", rq)
-            }
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function updateWithNewKind(msgid, oldKind, newKind) {
+    //     try {            
+    //         const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
+    //         const res = await axios.post("/chanmsg/updateWithNewKind", rq)
+    //         let rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return
+    //         await refreshMsgDtlWithQryAction(msgid)
+    //         if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
+    //             evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
+    //             const rs = await getMsg({ msgid: props.data.msgid })
+    //             if (rs == null) return
+    //             refreshWithGetMsg(rs, props.data.msgid)
+    //         } else { 
+    //             //굳이 실행하지 않아도 될 듯
+    //         }
+    //         if (oldKind == "read" || oldKind == "unread") {
+    //             if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
+    //                 const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
+    //                 if (idx > -1) msglist.value.splice(idx, 1)
+    //             }
+    //             return //패널 업데이트 필요없음 (notyet은 변동없음)
+    //         }
+    //         if (appType == "home") { //if (route.fullPath.includes("/home_body/")) {
+    //             gst.home.procFromBody("updateUnreadCnt", rq)
+    //         } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
+    //             gst.dm.procFromBody("updateUnreadCnt", rq)
+    //         }
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
-    async function updateAllWithNewKind(oldKind, newKind) {
-        try {            
-            const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
-            const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
-            let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return            
-            if (appType == "home") {
-                gst.home.procFromBody("updateUnreadCnt", rq)
-            } else if (appType == "dm") { 
-                gst.dm.procFromBody("updateUnreadCnt", rq)
-            }
-            listMsg('notyet')
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function updateAllWithNewKind(oldKind, newKind) {
+    //     try {            
+    //         const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
+    //         const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
+    //         let rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return            
+    //         if (appType == "home") {
+    //             gst.home.procFromBody("updateUnreadCnt", rq)
+    //         } else if (appType == "dm") { 
+    //             gst.dm.procFromBody("updateUnreadCnt", rq)
+    //         }
+    //         listMsg('notyet')
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     function applyToBody(arr) {
         alert(JSON.stringify(arr))
@@ -377,26 +373,27 @@
     }
 
     function chkEditRow() {
-        debugger
         const arr = userlist.value.filter(item => item.chk)
         if (arr.length == 1) {
-            singleEditMode.value = true
+            singleMode.value = 'E' //편집모드
             rowIssync.value = arr[0].IS_SYNC
             rowUserid.value = arr[0].USERID
             rowUsernm.value = arr[0].USERNM
-            rowOrgnm.value = arr[0].TOP_ORG_NM + "/" + arr[0].ORG_NM
+            rowOrg.value = arr[0].ORG
+            rowJob.value = arr[0].JOB
             rowRmks.value = arr[0].RMKS
-            rowMemkind.value = arr[0].KIND
+            rowKind.value = arr[0].KIND
             rowEmail.value = arr[0].EMAIL
             rowTelno.value = arr[0].TELNO
         } else {
-            singleEditMode.value = (arr.length == 0) ? true : false
+            singleMode.value = (arr.length == 0) ? 'C' : ''
             rowIssync.value = ''
             rowUserid.value = ''
             rowUsernm.value = ''
-            rowOrgnm.value = ''
+            rowOrg.value = ''
+            rowJob.value = ''
             rowRmks.value = ''
-            rowMemkind.value = ''
+            rowKind.value = ''
             rowEmail.value = ''
             rowTelno.value = ''
         }
@@ -417,40 +414,66 @@
         try {
             const arr = userlist.value.filter(item => item.chk)
             if (arr.length > 1) {
-                alert("한 행 이상 선택되었습니다.")
+                gst.util.setSnack("한 행 이상 선택되었습니다.")
                 return
             }
             if (arr.length == 0) { //신규멤버
                 const rq = { 
-                    crud: "C", GR_ID: grId, USERID: rowUserid.value, USERNM: rowUsernm.value,
-                    EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value, KIND: rowMemkind.value
+                    crud: "C", GR_ID: grId, USERID: rowUserid.value, USERNM: rowUsernm.value, KIND: rowKind.value,
+                    ORG: rowOrg.value, JOB: rowJob.value, EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value
                 }            
                 const res = await axios.post("/user/saveMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return //서버 호출 저장 진행후 아래 처리 (가나다순으로 찾아서 해당 위치에 넣고 스크롤링 + 패널에도 반영)
-
+                await getList()
+                await nextTick()
+                const idx = gst.util.getKeyIndex(userRow, rowEmail.value)
+                userlist.value[idx].chk = true
+                gst.util.scrollIntoView(userRow, rowEmail)
             } else {
                 const row = arr[0] //row.USERID is one of key
                 const rq = { crud: "U", GR_ID: grId, USERID: row.USERID }
-                if (row.IS_SYNC == "W") {                
+                if (row.IS_SYNC != "Y") {                
                     rq.USERNM = rowUsernm.value
-                    rq.EMAIL = rowEmail.value
+                    rq.ORG = rowOrg.value
+                    rq.JOB = rowJob.value
                     rq.TELNO = rowTelno.value
                 }
-                rq.RMKS = rowRmks.value
-                rq.KIND = rowMemkind.value
+                rq.KIND = rowKind.value
+                rq.RMKS = rowRmks.value                
                 const res = await axios.post("/user/saveMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
                 const idxSel = userlist.value.findIndex(item => item.chk && item.USERID == row.USERID)
-                if (row.IS_SYNC == "W") {
+                if (row.IS_SYNC != "Y") {
                     userlist.value[idxSel].USERNM = rowUsernm.value
-                    userlist.value[idxSel].EMAIL = rowEmail.value
+                    userlist.value[idxSel].ORG = rowOrg.value
+                    userlist.value[idxSel].JOB = rowJob.value
                     userlist.value[idxSel].TELNO = rowTelno.value            
                 }
-                userlist.value[idxSel].RMKS = rowRmks.value
-                userlist.value[idxSel].KIND = rowMemkind.value
+                userlist.value[idxSel].KIND = rowKind.value
+                userlist.value[idxSel].RMKS = rowRmks.value                
             }
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function deleteMember() {
+        try {
+            const arr = userlist.value.filter(item => item.chk)
+            const len = arr.length
+            if (len == 0) {
+                gst.util.setSnack("선택한 행이 없습니다.")
+                return
+            }
+            for (let i = 0; i < len; i++) {
+                const rq = { GR_ID: grId, USERID: arr[i].USERID }
+                const res = await axios.post("/user/deleteMember", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) break
+            }
+            await getList()
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -489,25 +512,33 @@
             </div>
         </div>
         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in userlist" :id="row.USERID" :ref="(ele) => { groupRow[row.USERID] = ele }" class="msg_body procMenu"  
+            <div v-for="(row, idx) in userlist" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyIndex="idx" class="msg_body procMenu"  
                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="(e) => rowClick(e, row, idx)">
                 <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
                     <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                 </div>
                 <div style="width:calc(100% - 30px);display:flex;flex-direction:column">
                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                        <div style="display:flex;align-items:center;font-weight:bold;color:darkblue">{{ row.USERNM }}</div>
-                        <div style="width:150px;display:flex;justify-content:flex-end;color:darkred">{{ (row.KIND == "member") ? "" : row.KIND }}</div>
+                        <div style="display:flex;align-items:center">
+                            <span style="margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
+                            <span>{{ row.JOB }}</span>
+                        </div>
+                        <div style="width:45px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" :title="row.KIND" style="margin-left:5px;padding:2px;font-size:10px;background:steelblue;color:white;border-radius:5px">
+                                {{ row.KIND.substring(0, 1).toUpperCase() }}
+                            </span>
+                            <span v-if="row.IS_SYNC != 'Y'" title="수동입력" style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">M</span>
+                        </div>
                     </div>
                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
                         <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                            <div class="coDotDot" style="width:100%">{{ row.TOP_ORG_NM + "/" + row.ORG_NM }}</div>
+                            <div class="coDotDot" style="width:100%">{{ row.ORG }}</div>
                         </div>
                         <div style="width:150px;display:flex;justify-content:flex-end">{{ row.EMAIL }}</div>                           
                     </div>
                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
                         <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                            <div class="coDotDot" style="width:100%">{{ row.RMKS }}</div>
+                            <div class="coDotDot" style="width:100%;color:dimgray">{{ row.RMKS }}</div>
                         </div>
                         <div style="width:150px;display:flex;justify-content:flex-end">{{ row.TELNO }}</div>
                     </div>
@@ -516,11 +547,11 @@
         </div>
         <div class="chan_center_footer">
             <div style="padding-top:10px;display:flex;align-items:center;cursor:pointer">
-                <div v-if="singleEditMode" class="coImgBtn" @click="newMember()" style="margin-right:6px">
+                <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()" style="margin-right:6px">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                     <span style="margin:0 5px;color:dimgray">신규멤버</span>
                 </div>
-                <div v-if="singleEditMode" class="coImgBtn" @click="saveMember()" style="margin-right:6px">
+                <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()" style="margin-right:6px">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                     <span style="margin:0 5px;color:dimgray">멤버저장</span>
                 </div>
@@ -540,18 +571,22 @@
                     </tr>
                     <tr>
                         <td class="tdLabel">이름</td>
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/></td>
+                        <td class="tdValue">
+                            <input type="text" style="width:150px" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/>
+                            <span style="margin-left:10px;color:dimgray">직책/업무</span>
+                            <input type="text" style="width:200px;margin-left:10px" v-model="rowJob" :disabled="rowIssync == 'Y'"/>
+                        </td>
                         <td class="tdValue" colspan="2">
-                            <input type="radio" id="member" value="member" v-model="rowMemkind"><label for="member" style="margin-right:8px">멤버</label>
-                            <input type="radio" id="admin" value="admin" v-model="rowMemkind"><label for="admin" style="margin-right:8px">Admin</label>
-                            <input type="radio" id="guest" value="guest" v-model="rowMemkind"><label for="guest">게스트</label>
+                            <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
+                            <input type="radio" id="admin" value="admin" v-model="rowKind"><label for="admin">Admin</label>
+                            <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label>
                         </td>
                     </tr>
                     <tr>
                         <td class="tdLabel">소속</td>
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrgnm" :disabled="rowIssync == 'Y'"/></td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrg" :disabled="rowIssync == 'Y'"/></td>
                         <td class="tdLabel">이메일</td>                        
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowIssync == 'Y'"/></td>
+                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowIssync == 'Y' || singleMode != 'C'"/></td>
                     </tr>
                     <tr>
                         <td class="tdLabel">비고</td>

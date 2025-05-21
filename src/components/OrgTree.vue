@@ -346,15 +346,15 @@
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                             <div style="margin-left:5px;font-weight:bold">{{ row.usernm }}</div>
+                            <div style="margin-left:5px">{{ row.ORG }}</div>
                             <div style="margin-left:5px">{{ row.JOB }}</div>
                             <span v-if="row.isVip" class="vipMark">VIP</span>
                             <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
-                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
                         </div>
                         <div v-if="mode == 'mygroup' || row.userid" 
-                            style="width:45px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center;color:darkred">
+                            style="width:45px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
                             <span v-if="row.KIND == 'admin' || row.KIND == 'guest'" :title="row.KIND"
-                                style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
+                                style="margin-left:5px;padding:2px;font-size:10px;background:steelblue;color:white;border-radius:5px">
                                 {{ row.KIND.substring(0, 1).toUpperCase() }}
                             </span>
                             <span v-if="mode == 'mygroup' && row.userid && row.IS_SYNC != 'Y'" title="manual"

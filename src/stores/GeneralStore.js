@@ -421,6 +421,10 @@ const GeneralStore = defineStore('General', () => {
             return idx
         },
 
+        scrollIntoView : function(rowRef, row, opt) {
+            rowRef.value[row.value].scrollIntoView(opt)
+        },
+
         qryOneMsgNotYet : async function(chanid) {
             const res = await axios.post("/chanmsg/qryOneMsgNotYet", { chanid : chanid })
             const rs = util.chkAxiosCode(res.data)
