@@ -12,15 +12,13 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    //ev-click    : OrgTree -> UserList
-    //ev-to-panel : UserList -> GroupPanel
-    const emits = defineEmits(["ev-click", "ev-to-panel"])
-
-    //1) GroupPanel -> UserList 2) UserList -> OrgTree의 경우는 없으므로 여기에 해당하는 defineExpose({ procFromParent }) 등은 MsgList.vue와는 달리 모두 제거함
-
+    const emits = defineEmits(["ev-click", "ev-to-panel"]) //1) ev-click : OrgTree -> UserList 2) ev-to-panel : UserList -> GroupPanel
+    
     function evToPanel() { //말 그대로 패널에게 호출하는 것임
         emits("ev-to-panel")
     }
+
+    const orgRef = ref(null) //UserList(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
 
     const g_userid = gst.auth.getCookie("userid")
     let mounting = true
@@ -454,6 +452,7 @@
                 userlist.value[idxSel].KIND = rowKind.value
                 userlist.value[idxSel].RMKS = rowRmks.value                
             }
+            orgRef.value.procFromParent("refresh")
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -473,7 +472,9 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) break
             }
+            newMember()
             await getList()
+            orgRef.value.procFromParent("refresh")
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -599,7 +600,7 @@
         </div>
     </div>
     <div class="chan_right" style="width:600px">
-        <org-tree mode="tree" @ev-click="applyToBody"></org-tree>
+        <org-tree mode="tree" ref="orgRef" @ev-click="applyToBody"></org-tree>
     </div>  
 </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>

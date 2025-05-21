@@ -10,7 +10,7 @@
     const props = defineProps({ mode: String })
     const emits = defineEmits(["ev-click"])
     
-    defineExpose({ open, close })
+    defineExpose({ open, close, procFromParent })
 
     let mode = ref('tree'), show = ref(true), searchText = ref('')
     let depthToShow = ref(1), chkCnt = ref(0) //mygroup을 고려해서 depthToShow는 기본적으로는 반드시 1로 해야 함
@@ -33,6 +33,12 @@
 
     function close() {
         show.value = false
+    }
+
+    async function procFromParent(kind) {
+        if (kind == "refresh") {
+            if (mode.value == "mygroup") reset(mode.value)
+        }
     }
 
     function changeTab(strMode) {
