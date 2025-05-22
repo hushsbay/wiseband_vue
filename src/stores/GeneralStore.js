@@ -421,9 +421,9 @@ const GeneralStore = defineStore('General', () => {
             return idx
         },
 
-        scrollIntoView : function(rowRef, row, opt) {
+        scrollIntoView : function(rowRef, rowValue, opt) {
             let optReal = opt ? opt : { block: "nearest" }
-            rowRef.value[row.value].scrollIntoView(optReal)
+            rowRef.value[rowValue].scrollIntoView(optReal)
         },
 
         qryOneMsgNotYet : async function(chanid) {

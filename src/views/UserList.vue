@@ -366,8 +366,50 @@
     //     }
     // }
 
-    function applyToBody(arr) {
-        alert(JSON.stringify(arr))
+    async function applyToBody(arr, mode) { //alert(JSON.stringify(arr))
+        if (!grId) return
+        for (let i = 0; i < arr.length; i++) {
+            const row = arr[i]
+            const rq = { crud: "C", GR_ID: grId }
+            if (mode == "tree") { //수동입력이 아닌 조직도에서 넘기는 것임 (IS_SYNC=Y)
+                rq.USERID = row.USER_ID
+                rq.USERNM = row.USER_NM
+                rq.IS_SYNC = "Y"
+                rq.KIND = "member"
+            } else { //mygroup (인사연동+수동입력 혼재)
+                if (row.IS_SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
+                    rq.USERID = row.USERID
+                    rq.USERNM = row.USERNM
+                    rq.IS_SYNC = "Y"
+                    rq.KIND = "member"
+                } else {
+                    rq.USERID = row.USERID
+                    rq.USERNM = row.USERNM
+                    rq.IS_SYNC = ""
+                    rq.KIND = "guest"
+                    rq.ORG = row.ORG
+                    rq.JOB = row.JOB
+                    rq.EMAIL = row.EMAIL
+                    rq.TELNO = row.TELNO
+                }
+            }
+            const res = await axios.post("/user/saveMember", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) break
+        }        
+        await getList()
+        await nextTick()
+        for (let i = 0; i < arr.length; i++) {
+            const row = arr[i]
+            const userid = row.USER_ID ? row.USER_ID : row.USERID
+            const idx = gst.util.getKeyIndex(userRow, userid)
+            userlist.value[idx].chk = true
+        }
+        if (arr.length == 1) {
+            const userid = arr[0].USER_ID ? arr[0].USER_ID : arr[0].USERID
+            gst.util.scrollIntoView(userRow, userid)
+        }
+        orgRef.value.procFromParent("refresh")
     }
 
     function changeChk(row, idx) {
@@ -428,7 +470,7 @@
             }
             if (arr.length == 0) { //신규멤버
                 const rq = { 
-                    crud: "C", GR_ID: grId, USERNM: rowUsernm.value, KIND: rowKind.value,
+                    crud: "C", GR_ID: grId, USERNM: rowUsernm.value, IS_SYNC: "", KIND: rowKind.value,
                     ORG: rowOrg.value, JOB: rowJob.value, EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value
                 }            
                 const res = await axios.post("/user/saveMember", rq)
@@ -438,7 +480,7 @@
                 await nextTick()
                 const idx = gst.util.getKeyIndex(userRow, rowEmail.value)
                 userlist.value[idx].chk = true
-                gst.util.scrollIntoView(userRow, rowEmail)
+                gst.util.scrollIntoView(userRow, rowEmail.value)
             } else {
                 const row = arr[0] //row.USERID is one of key
                 const rq = { crud: "U", GR_ID: grId, USERID: row.USERID }

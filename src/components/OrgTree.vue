@@ -288,7 +288,7 @@
             return
         }
         const arr = getCheckedUser()
-        emits("ev-click", arr)
+        emits("ev-click", arr, mode.value)
     }
 </script>
 
