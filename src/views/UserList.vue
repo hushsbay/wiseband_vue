@@ -13,6 +13,13 @@
     const gst = GeneralStore()
 
     const emits = defineEmits(["ev-click", "ev-to-panel"]) //1) ev-click : OrgTree -> UserList 2) ev-to-panel : UserList -> GroupPanel
+    //defineExpose({ procFromParent }) //부모(예:GroupPanel) => UserList의 procFromParent()를 호출하기 위함 : procFromParent는 바로 아래 OrgTree(자식)의 procFromParent()를 호출하기도 함
+
+    //async function procFromParent(kind) {
+    //    if (kind == "newGroup") {
+    //        alert(kind)
+    //    }
+    //}
     
     function evToPanel() { //말 그대로 패널에게 호출하는 것임
         emits("ev-to-panel")
@@ -36,7 +43,11 @@
     onMounted(async () => {
         try {
             setBasicInfo()
-            await getList()                    
+            if (grId == "new") {
+                //gst.util.setSnack("먼저 그룹명을 입력후 그룹명저장을 누르시기 바랍니다.", true)
+            } else {
+                await getList()                    
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -479,6 +490,35 @@
             gst.util.showEx(ex, true)
         }
     }
+
+    async function saveGroupMaster() {
+        try {
+            const rq = { GR_ID: grId, GR_NM: grnm.value } //grId=new일 경우는 신규그룹 생성
+            const res = await axios.post("/user/saveGroupMaster", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            if (grId == "new") {
+                grId = rs.data.grid
+                await getList()
+            }
+            orgRef.value.procFromParent("refresh")
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function deleteGroup() {
+        try {
+            const rq = { GR_ID: grId }
+            const res = await axios.post("/user/deleteGroup", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            orgRef.value.procFromParent("refresh")
+            await router.replace({ name : 'group_body', params : { grid: "new" }})
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
 </script>
 
 <template>
@@ -502,13 +542,13 @@
                 <span style="margin:0 10px;color:dimgray">생성자 : </span><span>{{ masternm }}</span>
             </div>
             <div style="width:30%;height:100%;padding-right:10px;display:flex;align-items:center;justify-content:flex-end">
-                <div class="coImgBtn" @click="selectOne()">
+                <div class="coImgBtn" @click="saveGroupMaster()">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                    <span style="margin:0 5px;color:dimgray">저장</span>
+                    <span style="margin:0 5px;color:dimgray">그룹명저장</span>
                 </div>
-                <div class="coImgBtn" @click="reset(mode)" style="margin-left:5px">
+                <div class="coImgBtn" @click="deleteGroup" style="margin-left:5px">
                     <img :src="gst.html.getImageUrl('dimgray_reset.png')" style="width:24px;height:24px">
-                    <span style="margin:0 5px;color:dimgray">삭제</span>
+                    <span style="margin:0 5px;color:dimgray">그룹삭제</span>
                 </div>
             </div>
         </div>

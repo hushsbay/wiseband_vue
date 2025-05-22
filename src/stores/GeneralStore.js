@@ -422,7 +422,8 @@ const GeneralStore = defineStore('General', () => {
         },
 
         scrollIntoView : function(rowRef, row, opt) {
-            rowRef.value[row.value].scrollIntoView(opt)
+            let optReal = opt ? opt : { block: "nearest" }
+            rowRef.value[row.value].scrollIntoView(optReal)
         },
 
         qryOneMsgNotYet : async function(chanid) {
@@ -513,7 +514,6 @@ const GeneralStore = defineStore('General', () => {
         },
 
         downloadBlob : function(kind, msgid, chanid, cdt, name) {
-            debugger
             const query = "?msgid=" + msgid + "&chanid=" + chanid + "&kind=" + kind + "&cdt=" + cdt //+ "&name=" + row.name
             axios.get("/chanmsg/readBlob" + query, { 
                 responseType: "blob"

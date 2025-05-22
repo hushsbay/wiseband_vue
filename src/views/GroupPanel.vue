@@ -157,8 +157,12 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행
+    function handleEvFromBody() { //UserList.vue에서 실행
         groupClickOnLoop()
+    }
+
+    function newGroup() {
+        gst.util.goBodyList('group_body', { grid: "new" }, true)
     }
 </script>
 
@@ -173,7 +177,7 @@
                 </select>                
             </div>
             <div class="chan_side_top_right">
-                <div style="padding:5px;border-radius:8px;" @click="newMsg">
+                <div style="padding:5px;border-radius:8px;" @click="newGroup">
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새그룹">
                 </div>
             </div>
