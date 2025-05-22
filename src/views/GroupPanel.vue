@@ -157,8 +157,10 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //UserList.vue에서 실행
+    async function handleEvFromBody(grid) { //UserList.vue에서 실행
+        await getList()
         groupClickOnLoop()
+        if (!grid) newGroup() //그룹삭제
     }
 
     function newGroup() {

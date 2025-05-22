@@ -21,8 +21,8 @@
     //    }
     //}
     
-    function evToPanel() { //말 그대로 패널에게 호출하는 것임
-        emits("ev-to-panel")
+    function evToPanel(grid) { //말 그대로 패널에게 호출하는 것임
+        emits("ev-to-panel", grid)
     }
 
     const orgRef = ref(null) //UserList(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
@@ -501,6 +501,8 @@
                 grId = rs.data.grid
                 await getList()
             }
+            localStorage.wiseband_lastsel_grid = grId
+            evToPanel(grId)
             orgRef.value.procFromParent("refresh")
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -513,6 +515,7 @@
             const res = await axios.post("/user/deleteGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            evToPanel()
             orgRef.value.procFromParent("refresh")
             await router.replace({ name : 'group_body', params : { grid: "new" }})
         } catch (ex) { 
