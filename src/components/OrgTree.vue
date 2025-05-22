@@ -288,6 +288,7 @@
             return
         }
         const arr = getCheckedUser()
+        debugger
         emits("ev-click", arr, mode.value)
     }
 </script>
@@ -355,7 +356,8 @@
                             <div style="margin-left:5px">{{ row.ORG }}</div>
                             <div style="margin-left:5px">{{ row.JOB }}</div>
                             <span v-if="row.isVip" class="vipMark">VIP</span>
-                            <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
+                            <!-- <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div> -->
+                             <div style="margin-left:5px;color:dimgray">{{ row.GR_ID }}</div>
                         </div>
                         <div v-if="mode == 'mygroup' || row.userid" 
                             style="width:45px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">

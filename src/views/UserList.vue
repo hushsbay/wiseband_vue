@@ -5,6 +5,7 @@
     
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
+    import MemberPiceach from "/src/components/MemberPiceach.vue"
     import ContextMenu from "/src/components/ContextMenu.vue"
     import OrgTree from "/src/components/OrgTree.vue"
             
@@ -126,6 +127,7 @@
             const len = grdtl.length
             for (let i = 0; i < len; i++) {
                 const row = grdtl[i]
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 userlist.value.push(row)
             }
             onGoingGetList = false
@@ -571,7 +573,7 @@
     <div class="chan_center" style="width:calc(100% - 620px);padding-right:10px;">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
-                <!-- <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob"> -->
+                 <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
                 <div style="display:flex;align-items:center">                    
                     <div class="coDotDot">{{ grnm }}</div>
                 </div>
@@ -603,7 +605,10 @@
                 <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
                     <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                 </div>
-                <div style="width:calc(100% - 30px);display:flex;flex-direction:column">
+                <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
+                    <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                </div>
+                <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
                         <div style="display:flex;align-items:center">
                             <span style="margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
