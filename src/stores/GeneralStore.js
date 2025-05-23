@@ -73,8 +73,8 @@ const GeneralStore = defineStore('General', () => {
 
         setCookieForUser : function(rs, persist) { //persist=true일 경우 아이디 저장
             auth.setCookie("token", rs.token)
-            auth.setCookie("userid", rs.USER_ID, persist)
-            auth.setCookie("usernm", rs.USER_NM)
+            auth.setCookie("userid", rs.USERID, persist)
+            auth.setCookie("usernm", rs.USERNM)
             auth.setCookie("orgcd", rs.ORG_CD)
             auth.setCookie("orgnm", rs.ORG_NM)
             auth.setCookie("toporgcd", rs.TOP_ORG_CD)
