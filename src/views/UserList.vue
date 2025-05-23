@@ -654,37 +654,39 @@
             </div>
             <div style="display:flex;align-items:center;cursor:pointer">
                 <table>
-                    <tr>
-                        <td style="width:50px;border:none"></td>
-                        <td style="width:calc(100% - 250px);border:none"></td>
-                        <td style="width:50px;border:none"></td>
-                        <td style="width:150px;border:none"></td>
-                    </tr>
-                    <tr>
-                        <td class="tdLabel">이름</td>
-                        <td class="tdValue">
-                            <input type="text" style="width:150px" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/>
-                            <span style="margin-left:10px;color:dimgray">직책/업무</span>
-                            <input type="text" style="width:200px;margin-left:10px" v-model="rowJob" :disabled="rowIssync == 'Y'"/>
-                        </td>
-                        <td class="tdValue" colspan="2">
-                            <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
-                            <input type="radio" id="admin" value="admin" v-model="rowKind"><label for="admin">Admin</label>
-                            <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="tdLabel">소속</td>
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrg" :disabled="rowIssync == 'Y'"/></td>
-                        <td class="tdLabel">이메일</td>                        
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowIssync == 'Y' || singleMode != 'C'"/></td>
-                    </tr>
-                    <tr>
-                        <td class="tdLabel">비고</td>
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowRmks"/></td>
-                        <td class="tdLabel">전화</td>                        
-                        <td class="tdValue"><input type="text" class="tdInput" v-model="rowTelno" :disabled="rowIssync == 'Y'"/></td>
-                    </tr>
+                    <tbody>
+                        <tr>
+                            <td style="width:50px;border:none"></td>
+                            <td style="width:calc(100% - 250px);border:none"></td>
+                            <td style="width:50px;border:none"></td>
+                            <td style="width:150px;border:none"></td>
+                        </tr>
+                        <tr>
+                            <td class="tdLabel">이름</td>
+                            <td class="tdValue">
+                                <input type="text" style="width:150px" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/>
+                                <span style="margin-left:10px;color:dimgray">직책/업무</span>
+                                <input type="text" style="width:200px;margin-left:10px" v-model="rowJob" :disabled="rowIssync == 'Y'"/>
+                            </td>
+                            <td class="tdValue" colspan="2">
+                                <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
+                                <input type="radio" id="admin" value="admin" v-model="rowKind"><label for="admin">Admin</label>
+                                <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="tdLabel">소속</td>
+                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrg" :disabled="rowIssync == 'Y'"/></td>
+                            <td class="tdLabel">이메일</td>                        
+                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowIssync == 'Y' || singleMode != 'C'"/></td>
+                        </tr>
+                        <tr>
+                            <td class="tdLabel">비고</td>
+                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowRmks"/></td>
+                            <td class="tdLabel">전화</td>                        
+                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowTelno" :disabled="rowIssync == 'Y'"/></td>   
+                        </tr>
+                    </tbody>
                 </table>
             </div>  
         </div>

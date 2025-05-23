@@ -112,7 +112,7 @@
         if (nodekind == "U") {
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, user_id)
-            row.key = user_id
+            row.key = user_id + (row.GR_ID ? row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 user_id가 들어 있을 것이므로 grid로 추가 구분함
         } else {
             row.url = (row.LVL == 0 ? "violet_people3" : "violet_people2") + ".png"
             row.key = org_cd
