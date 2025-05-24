@@ -32,8 +32,8 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return   
             listAll.value = rs.list
-            listSel.value = rs.list.filter(x => x.USER_ID != null)
-            listUnSel.value = rs.list.filter(x => x.USER_ID == null)
+            listSel.value = rs.list.filter(x => x.USERID != null)
+            listUnSel.value = rs.list.filter(x => x.USERID == null)
             window.addEventListener('resize', () => { decideSeeMore() })
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()

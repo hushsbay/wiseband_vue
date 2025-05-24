@@ -373,21 +373,21 @@
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
             const rq = { crud: "C", GR_ID: grId }
-            if (mode == "tree") { //수동입력이 아닌 조직도에서 넘기는 것임 (IS_SYNC=Y)
-                rq.USERID = row.USER_ID
-                rq.USERNM = row.USER_NM
-                rq.IS_SYNC = "Y"
+            if (mode == "tree") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
+                rq.USERID = row.USERID
+                rq.USERNM = row.USERNM
+                rq.SYNC = "Y"
                 rq.KIND = "member"
             } else { //mygroup (인사연동+수동입력 혼재)
-                if (row.IS_SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
+                if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
                     rq.USERID = row.USERID
                     rq.USERNM = row.USERNM
-                    rq.IS_SYNC = "Y"
+                    rq.SYNC = "Y"
                     rq.KIND = "member"
                 } else {
                     rq.USERID = row.USERID
                     rq.USERNM = row.USERNM
-                    rq.IS_SYNC = ""
+                    rq.SYNC = ""
                     rq.KIND = "guest"
                     rq.ORG = row.ORG
                     rq.JOB = row.JOB
@@ -429,7 +429,7 @@
         const arr = userlist.value.filter(item => item.chk)
         if (arr.length == 1) {
             singleMode.value = 'E' //편집모드
-            rowIssync.value = arr[0].IS_SYNC
+            rowIssync.value = arr[0].SYNC
             rowUserid.value = arr[0].USERID
             rowUsernm.value = arr[0].USERNM
             rowOrg.value = arr[0].ORG
@@ -472,7 +472,7 @@
             }
             if (arr.length == 0) { //신규멤버
                 const rq = { 
-                    crud: "C", GR_ID: grId, USERNM: rowUsernm.value, IS_SYNC: "", KIND: rowKind.value,
+                    crud: "C", GR_ID: grId, USERNM: rowUsernm.value, SYNC: "", KIND: rowKind.value,
                     ORG: rowOrg.value, JOB: rowJob.value, EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value
                 }            
                 const res = await axios.post("/user/saveMember", rq)
@@ -486,7 +486,7 @@
             } else {
                 const row = arr[0] //row.USERID is one of key
                 const rq = { crud: "U", GR_ID: grId, USERID: row.USERID }
-                if (row.IS_SYNC != "Y") {                
+                if (row.SYNC != "Y") {                
                     rq.USERNM = rowUsernm.value
                     rq.ORG = rowOrg.value
                     rq.JOB = rowJob.value
@@ -498,7 +498,7 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
                 const idxSel = userlist.value.findIndex(item => item.chk && item.USERID == row.USERID)
-                if (row.IS_SYNC != "Y") {
+                if (row.SYNC != "Y") {
                     userlist.value[idxSel].USERNM = rowUsernm.value
                     userlist.value[idxSel].ORG = rowOrg.value
                     userlist.value[idxSel].JOB = rowJob.value
@@ -618,7 +618,7 @@
                             <span v-if="row.KIND=='guest' || row.KIND=='admin'" :title="row.KIND" style="margin-left:5px;padding:2px;font-size:10px;background:steelblue;color:white;border-radius:5px">
                                 {{ row.KIND.substring(0, 1).toUpperCase() }}
                             </span>
-                            <span v-if="row.IS_SYNC != 'Y'" title="수동입력" style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">M</span>
+                            <span v-if="row.SYNC != 'Y'" title="수동입력" style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">M</span>
                         </div>
                     </div>
                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
