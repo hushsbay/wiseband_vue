@@ -69,7 +69,7 @@
     async function getList() {
         try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
             const res = await axios.post("/menu/qryGroup", { kind : gst.kindGroup }) //my,other,all
-            const rs = gst.util.chkAxiosCode(res.data)
+            const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             if (!rs) return
             gst.listGroup = rs.list
         } catch (ex) {
@@ -96,19 +96,36 @@
 
     async function groupClick(row, idx, grid, refresh) {
         try {
+            // const gridReal = grid ? grid : row.GR_ID
+            // gst.listGroup.forEach((item) => {
+            //     item.sel = false
+            //     item.hover = false
+            //     procgroupRowImg(item)
+            // })
+            // const row1 = gst.listGroup.find((item) => item.GR_ID == gridReal)
+            // if (row1) {
+            //     row1.sel = true
+            //     procgroupRowImg(row1)
+            //     localStorage.wiseband_lastsel_grid = gridReal
+            //     gst.util.goBodyList('group_body', { grid: row1.GR_ID }, refresh)
+            // }
             const gridReal = grid ? grid : row.GR_ID
-            gst.listGroup.forEach((item) => {
-                item.sel = false
-                item.hover = false
-                procgroupRowImg(item)
+            gst.listGroup.forEach((item) => { //const row1 = gst.listGroup.find((item) => item.GR_ID == gridReal)
+                //item.sel = false
+                //item.hover = false
+                //procgroupRowImg(item)
+                if (item.GR_ID == gridReal) {
+                    item.sel = true
+                    localStorage.wiseband_lastsel_grid = gridReal
+                    gst.util.goBodyList('group_body', { grid: item.GR_ID }, refresh)
+                } else {
+                    if (item.sel) {
+                        item.sel = false
+                        procgroupRowImg(item)
+                    }
+                    if (item.hover) item.hover = false
+                }
             })
-            const row1 = gst.listGroup.find((item) => item.GR_ID == gridReal)
-            if (row1) {
-                row1.sel = true
-                procgroupRowImg(row1)
-                localStorage.wiseband_lastsel_grid = gridReal
-                gst.util.goBodyList('group_body', { grid: row1.GR_ID }, refresh)
-            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -164,6 +181,7 @@
     }
 
     function newGroup() {
+        
         gst.util.goBodyList('group_body', { grid: "new" }, true)
     }
 </script>

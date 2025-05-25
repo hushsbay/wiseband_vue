@@ -113,17 +113,17 @@
             let param = { grid: grId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const kind = param.kind
-            const res = await axios.post("/user/qryInvolvedGroup", param)
+            const res = await axios.post("/user/qryGroupWithUserList", param)
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
                 onGoingGetList = false                
                 return
             }
             userlist.value = []
-            grnm.value = rs.list[0].GR_NM //rs.data.grmst.GR_NM
-            masternm.value = rs.list[0].MASTERNM //rs.data.grmst.MASTERNM
+            grnm.value = rs.list[0].GR_NM
+            masternm.value = rs.list[0].MASTERNM
             document.title = grnm.value + " [그룹]"
-            const grdtl = rs.list[0].userlist //rs.data.grdtl
+            const grdtl = rs.list[0].userlist
             const len = grdtl.length
             for (let i = 0; i < len; i++) {
                 const row = grdtl[i]
@@ -368,8 +368,11 @@
     //     }
     // }
 
-    async function applyToBody(arr, mode) { //alert(JSON.stringify(arr))
-        if (!grId) return
+    async function applyToBody(arr, mode) {
+        if (grId == "new" || singleMode.value != "C") {
+            gst.util.setSnack("조직도/내그룹에서 선택추가시는 그룹이 먼저 저장되고 행선택이 없어야 합니다.")
+            return
+        }
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
             const rq = { crud: "C", GR_ID: grId }
@@ -470,18 +473,18 @@
                 gst.util.setSnack("한 행 이상 선택되었습니다.")
                 return
             }
-            if (arr.length == 0) { //신규멤버
+            if (arr.length == 0) { //신규멤버 (여기서는 W입력만 해당됨)
                 const rq = { 
                     crud: "C", GR_ID: grId, USERNM: rowUsernm.value, SYNC: "", KIND: rowKind.value,
                     ORG: rowOrg.value, JOB: rowJob.value, EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value
-                }            
+                }
                 const res = await axios.post("/user/saveMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return //서버 호출 저장 진행후 아래 처리 (가나다순으로 찾아서 해당 위치에 넣고 스크롤링 + 패널에도 반영)
                 await getList()
                 await nextTick()
                 const idx = gst.util.getKeyIndex(userRow, rowEmail.value)
-                userlist.value[idx].chk = true
+                if (idx > -1) userlist.value[idx].chk = true
                 gst.util.scrollIntoView(userRow, rowEmail.value)
             } else {
                 const row = arr[0] //row.USERID is one of key
@@ -490,6 +493,7 @@
                     rq.USERNM = rowUsernm.value
                     rq.ORG = rowOrg.value
                     rq.JOB = rowJob.value
+                    rq.EMAIL = rowJob.value
                     rq.TELNO = rowTelno.value
                 }
                 rq.KIND = rowKind.value

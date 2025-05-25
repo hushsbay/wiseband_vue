@@ -34,6 +34,9 @@ const hush = {
             if (typeof obj == "undefined" || obj == null || obj == "undefined") return true
             return false
         },
+        isObject : function(value) {
+            return typeof value === 'object' && value !== null && !Array.isArray(value)
+        },
         getDateTimeStamp : (str) => { //str = 2012-08-02 14:12:04 (일자형식 체크해야 하나 일단 표준대로 들어온다는 전체하에 사용하기로 함)
             if (str.length != 19) return null
             const d = str.match(/\d+/g) //extract date parts

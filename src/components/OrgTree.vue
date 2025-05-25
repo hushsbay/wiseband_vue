@@ -50,16 +50,17 @@
         if (searchText.value.trim() == "") {
             procQuery("tree")
         } else {
-            procSearch("search")
+            procSearch()
         }
     }
 
     async function procQuery(strMode) {
         mode.value = strMode
         if (strMode == "tree") depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
-        const controller = (strMode == "tree") ? "orgTree" : "qryInvolvedGroup"
+        const controller = (strMode == "tree") ? "orgTree" : "qryGroupWithUserList"
+        const notShowMsgIfNoData = (strMode == "tree") ? false : true
         const res = await axios.post("/user/" + controller)
-        const rs = gst.util.chkAxiosCode(res.data) 
+        const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
         if (!rs) return
         orglist.value = []
         maxLevel = rs.data.maxLevel
@@ -119,11 +120,10 @@
         }
     }
 
-    async function procSearch(strMode) {
-        mode.value = strMode
-        const param = (strMode == "search") ? { searchText: searchText.value.trim() } : null
-        const controller = (strMode == "search") ? "procOrgSearch" : "qryVip"
-        const res = await axios.post("/user/" + controller, param)
+    async function procSearch() {
+        mode.value = "search"
+        const param = { searchText: searchText.value.trim() }
+        const res = await axios.post("/user/procOrgSearch", param)
         const rs = gst.util.chkAxiosCode(res.data) 
         if (!rs) return
         orglist.value = []
@@ -288,7 +288,6 @@
             return
         }
         const arr = getCheckedUser()
-        debugger
         emits("ev-click", arr, mode.value)
     }
 </script>
@@ -320,7 +319,7 @@
             <div class="chan_center">
                 <div class="chan_center_header">
                     <div class="chan_center_header_left">
-                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch('search')" style="width:100px" />
+                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" style="width:100px" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
                             <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
                         </div>
