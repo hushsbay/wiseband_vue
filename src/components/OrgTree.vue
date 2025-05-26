@@ -89,8 +89,7 @@
     function procNode(row, rowNext, kind, vips) {
         const lvl = parseInt(row.LVL) //org,user,mygroup에 모두 존재
         const org_cd = row.ORG_CD ? row.ORG_CD : row.GR_ID //1) tree에는 ORG_CD가 org 및 user에 모두 존재 2) mygroup에서는 GR_ID
-        const user_id = row.USER_ID ? row.USER_ID : row.USERID //user에는 USER_ID mygroup에서는 USERID
-        const nodekind = user_id ? "U" : "G" //사용자(U),그룹(G=회사or부서or내그룹)
+        const nodekind = row.USERID ? "U" : "G" //사용자(U),그룹(G=회사or부서or내그룹)
         let hasChild
         if (nodekind == "U" || rowNext == null) { //사용자면 false, 다음행이 없는 마지막이면 false
             hasChild = false
@@ -103,8 +102,6 @@
         let expanded = (lvl < depthToShow.value) ? true : false
         const paddingLeft = lvl * 25 + 6
         row.nodekind = nodekind
-        row.userid = user_id
-        row.usernm = row.USER_NM ? row.USER_NM : row.USERNM
         row.orgnm = row.ORG_NM ? row.ORG_NM : row.GR_NM
         row.dispstate = disp
         row.haschild = hasChild
@@ -112,8 +109,8 @@
         row.paddingleft = paddingLeft + "px"
         if (nodekind == "U") {
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-            row.isVip = chkVips(vips, user_id)
-            row.key = user_id + (row.GR_ID ? row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 user_id가 들어 있을 것이므로 grid로 추가 구분함
+            row.isVip = chkVips(vips, row.USERID)
+            row.key = row.USERID + (row.GR_ID ? row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 userid가 들어 있을 것이므로 grid로 추가 구분함
         } else {
             row.url = (row.LVL == 0 ? "violet_people3" : "violet_people2") + ".png"
             row.key = org_cd
@@ -132,8 +129,8 @@
             const row = rs.list[i]
             row.nodekind = "U"
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-            row.key = row.USER_ID
-            row.isVip = chkVips(vips, row.USER_ID)
+            row.key = row.USERID
+            row.isVip = chkVips(vips, row.USERID)
             orglist.value.push(row)
         }
     }
@@ -199,7 +196,7 @@
     function getCheckedUser(keyArr) { //keyArr : key중에 PICTURE도 있으므로 전부 전송시 부하가 되므로 제거하기 위해 특정 Key만 설정하는 것임
         const list = orglist.value
         let arr = []
-        if (keyArr) { //예) ['USER_ID', 'USER_NM']
+        if (keyArr) { //예) ['USERID', 'USERNM']
             list.forEach(item => {
                 if (item.nodekind == "U" && item.chk) {
                     const obj = {}
@@ -337,10 +334,10 @@
                     </div>
                 </div>
                 <div v-show="mode == 'tree' || mode == 'mygroup'" class="chan_center_body" ref="scrollArea">
-                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
+                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyidx="idx" 
                         class="org_body" @click="(e) => clickNode(e, row, idx)" 
                         :style="{display: row.dispstate}" style="border-bottom:1px solid lightgray">
-                        <div v-if="!row.userid" :style="{ paddingLeft: row.paddingleft }"
+                        <div v-if="!row.USERID" :style="{ paddingLeft: row.paddingleft }"
                             style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
                             <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
@@ -351,33 +348,32 @@
                             :style="{ paddingLeft: row.paddingleft }" style="width:calc(100% - 45px);height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                            <div style="margin-left:5px;font-weight:bold">{{ row.usernm }}</div>
+                            <div style="margin-left:5px;font-weight:bold">{{ row.USERNM }}</div>
                             <div style="margin-left:5px">{{ row.ORG }}</div>
                             <div style="margin-left:5px">{{ row.JOB }}</div>
                             <span v-if="row.isVip" class="vipMark">VIP</span>
-                            <!-- <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div> -->
-                             <div style="margin-left:5px;color:dimgray">{{ row.GR_ID }}</div>
+                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
                         </div>
-                        <div v-if="mode == 'mygroup' || row.userid" 
+                        <div v-if="mode == 'mygroup' || row.USERID" 
                             style="width:45px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
                             <span v-if="row.KIND == 'admin' || row.KIND == 'guest'" :title="row.KIND"
                                 style="margin-left:5px;padding:2px;font-size:10px;background:steelblue;color:white;border-radius:5px">
                                 {{ row.KIND.substring(0, 1).toUpperCase() }}
                             </span>
-                            <span v-if="mode == 'mygroup' && row.userid && row.IS_SYNC != 'Y'" title="manual"
+                            <span v-if="mode == 'mygroup' && row.USERID && row.IS_SYNC != 'Y'" title="manual"
                                 style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
                                 M</span>
                         </div>
                     </div>
                 </div>
                 <div v-show="mode == 'search'" class="chan_center_body" ref="scrollArea">
-                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyIndex="idx" 
+                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyidx="idx" 
                         class="org_body" @click="(e) => clickNode(e, row, idx)">
                         <div class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
                             style="width:100%;height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                            <div style="margin-left:5px;font-weight:bold">{{ row.USER_NM }}</div>
+                            <div style="margin-left:5px;font-weight:bold">{{ row.USERNM }}</div>
                             <div style="margin-left:5px;color:darkblue">{{ row.TOP_ORG_NM }}</div>
                             <div style="margin-left:5px;color:darkblue">{{ row.ORG_NM }}</div>
                             <div style="margin-left:5px">{{ row.JOB }}</div>

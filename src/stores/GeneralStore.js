@@ -417,7 +417,7 @@ const GeneralStore = defineStore('General', () => {
         getKeyIndex : function(refRow, key) {
             const ele = refRow.value[key]
             if (!ele) return -1
-            const idx = parseInt(ele.getAttribute("keyIndex"))
+            const idx = parseInt(ele.getAttribute("keyidx")) //해당 루프에서 keyIndex로 해도 keyindex로 렌더링되어 편의상 keyidx로 변경함
             if (!idx) return -1
             return idx
         },

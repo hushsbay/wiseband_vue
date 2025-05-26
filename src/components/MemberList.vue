@@ -321,7 +321,7 @@
                             </div>
                         </div>
                         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
-                            <div v-for="(row, idx) in memberlist" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyIndex="idx" class="msg_body procMenu"  
+                            <div v-for="(row, idx) in memberlist" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyidx="idx" class="msg_body procMenu"  
                                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="(e) => rowClick(e, row, idx)">
                                 <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
                                     <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
@@ -415,7 +415,7 @@
                         </div>
                     </div>
                     <div class="chan_right" style="width:600px">
-                        <org-tree mode="tree" ref="orgRef" @ev-click="applyToBody"></org-tree>
+                        <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
                     </div>  
                 </div>
             </div>
