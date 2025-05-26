@@ -23,10 +23,22 @@
     function open(strKind, strChanid, strChannm, strChanimg) {
         show.value = true
         appType = strKind //chan or dm
-        chanId = strChanid
-        chanNm.value = strChannm //chan만 있음
-        chanImg.value = strChanimg //chan만 있음
-        getList()
+        chanId = strChanid //채널 이아디 또는 new
+        if (appType == "chan") {
+            if (strChanid == "new") {
+                grId = strChannm //그룹 아이디
+            } else {
+                chanNm.value = strChannm //chan만 있음. new일 경우는 GR_ID가 넘어옴
+                chanImg.value = strChanimg //chan만 있음
+                getList()
+            }
+        } else {
+            if (strChanid == "new") {
+                //skip
+            } else {
+                getList()
+            }
+        }
     }
 
     function close() {
@@ -38,7 +50,7 @@
     const g_userid = gst.auth.getCookie("userid")
     let mounting = true
     
-    let kind = ref(''), show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null)
+    let kind = ref(''), show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null), state = ref(false)
     const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
     let onGoingGetList = false
         
@@ -47,7 +59,7 @@
     let memberlist = ref([]), chanmemFullExceptMe = ref([]), appType
 
     let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
-    let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref('')
+    let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref(''), rowState = ref('')
     
     async function getList() {
         try {
@@ -61,6 +73,7 @@
                 return
             }
             chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
+            state.value = (rs.data.chanmst.STATE == "P") ? true : false
             chanmemFullExceptMe.value = []
             memberlist.value = []
             grnm.value = rs.data.chanmst.GR_NM
@@ -89,36 +102,33 @@
     }
 
     async function applyToBody(arr, mode) {
-        if (grId == "new" || singleMode.value != "C") {
+        if (chanId == "new" || singleMode.value != "C") {
             gst.util.setSnack("조직도/내그룹에서 선택추가시는 그룹이 먼저 저장되고 행선택이 없어야 합니다.")
             return
         }
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
-            const rq = { crud: "C", GR_ID: grId }
-            if (mode == "tree") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
-                rq.USERID = row.USERID
-                rq.USERNM = row.USERNM
-                rq.SYNC = "Y"
-                rq.KIND = "member"
-            } else { //mygroup (인사연동+수동입력 혼재)
-                if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
-                    rq.USERID = row.USERID
-                    rq.USERNM = row.USERNM
-                    rq.SYNC = "Y"
-                    rq.KIND = "member"
-                } else {
-                    rq.USERID = row.USERID
-                    rq.USERNM = row.USERNM
-                    rq.SYNC = ""
-                    rq.KIND = "guest"
-                    rq.ORG = row.ORG
-                    rq.JOB = row.JOB
-                    rq.EMAIL = row.EMAIL
-                    rq.TELNO = row.TELNO
-                }
-            }
-            const res = await axios.post("/user/saveMember", rq)
+            const rq = { crud: "C", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member", SYNC: row.SYNC }
+            // if (mode == "tree") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
+            //     rq.USERID = row.USERID
+            //     rq.USERNM = row.USERNM
+            //     rq.KIND = "member"
+            // } else { //mygroup (인사연동+수동입력 혼재)
+            //     if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
+            //         rq.USERID = row.USERID
+            //         rq.USERNM = row.USERNM
+            //         rq.KIND = "member"
+            //     } else {
+            //         rq.USERID = row.USERID
+            //         rq.USERNM = row.USERNM
+            //         rq.KIND = "member"
+            //         rq.ORG = row.ORG
+            //         rq.JOB = row.JOB
+            //         rq.EMAIL = row.EMAIL
+            //         rq.TELNO = row.TELNO
+            //     }
+            // }
+            const res = await axios.post("/chanmsg/saveChanMember", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) break
         }        
@@ -126,15 +136,13 @@
         await nextTick()
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
-            const userid = row.USER_ID ? row.USER_ID : row.USERID
-            const idx = gst.util.getKeyIndex(userRow, userid)
-            memberlist.value[idx].chk = true
+            const idx = gst.util.getKeyIndex(userRow, row.USERID)
+            if (idx > -1) memberlist.value[idx].chk = true
         }
         if (arr.length == 1) {
-            const userid = arr[0].USER_ID ? arr[0].USER_ID : arr[0].USERID
-            gst.util.scrollIntoView(userRow, userid)
+            gst.util.scrollIntoView(userRow, arr[0].USERID)
         }
-        orgRef.value.procFromParent("refresh")
+        //orgRef.value.procFromParent("refresh")
     }
 
     function changeChk(row, idx) {
@@ -196,42 +204,23 @@
                 return
             }
             if (arr.length == 0) { //신규멤버 (여기서는 W입력만 해당됨)
-                const rq = { 
-                    crud: "C", GR_ID: grId, USERNM: rowUsernm.value, SYNC: "", KIND: rowKind.value,
-                    ORG: rowOrg.value, JOB: rowJob.value, EMAIL: rowEmail.value, TELNO: rowTelno.value, RMKS: rowRmks.value
-                }
-                const res = await axios.post("/user/saveMember", rq)
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return //서버 호출 저장 진행후 아래 처리 (가나다순으로 찾아서 해당 위치에 넣고 스크롤링 + 패널에도 반영)
-                await getList()
-                await nextTick()
-                const idx = gst.util.getKeyIndex(userRow, rowEmail.value)
-                if (idx > -1) memberlist.value[idx].chk = true
-                gst.util.scrollIntoView(userRow, rowEmail.value)
+                gst.util.setSnack("먼저 행을 선택하시기 바랍니다.")
+                return
             } else {
                 const row = arr[0] //row.USERID is one of key
-                const rq = { crud: "U", GR_ID: grId, USERID: row.USERID }
-                if (row.SYNC != "Y") {                
-                    rq.USERNM = rowUsernm.value
-                    rq.ORG = rowOrg.value
-                    rq.JOB = rowJob.value
-                    rq.EMAIL = rowJob.value
-                    rq.TELNO = rowTelno.value
-                }
-                rq.KIND = rowKind.value
-                rq.RMKS = rowRmks.value                
-                const res = await axios.post("/user/saveMember", rq)
+                const rq = { crud: "U", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: rowKind.value }
+                const res = await axios.post("/chanmsg/saveChanMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
-                const idxSel = memberlist.value.findIndex(item => item.chk && item.USERID == row.USERID)
-                if (row.SYNC != "Y") {
-                    memberlist.value[idxSel].USERNM = rowUsernm.value
-                    memberlist.value[idxSel].ORG = rowOrg.value
-                    memberlist.value[idxSel].JOB = rowJob.value
-                    memberlist.value[idxSel].TELNO = rowTelno.value            
-                }
-                memberlist.value[idxSel].KIND = rowKind.value
-                memberlist.value[idxSel].RMKS = rowRmks.value                
+                // const idxSel = memberlist.value.findIndex(item => item.chk && item.USERID == row.USERID)
+                // if (row.SYNC != "Y") {
+                //     memberlist.value[idxSel].USERNM = rowUsernm.value
+                //     memberlist.value[idxSel].ORG = rowOrg.value
+                //     memberlist.value[idxSel].JOB = rowJob.value
+                //     memberlist.value[idxSel].TELNO = rowTelno.value            
+                // }
+                // memberlist.value[idxSel].KIND = rowKind.value
+                // memberlist.value[idxSel].RMKS = rowRmks.value                
             }
             orgRef.value.procFromParent("refresh")
         } catch (ex) { 
@@ -263,7 +252,7 @@
 
     async function saveChanMaster() {
         try {
-            const rq = { CHANID: chanId, CHANNM: chanNm.value, STATE: state.value ? "P" : "" } //chanId=new일 경우는 신규 채널 생성
+            const rq = { GR_ID: grId, CHANID: chanId, CHANNM: chanNm.value, STATE: state.value ? "P" : "" } //chanId=new일 경우는 신규 채널 생성
             const res = await axios.post("/chanmsg/saveChanMaster", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return

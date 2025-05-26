@@ -391,7 +391,7 @@
                     rq.USERID = row.USERID
                     rq.USERNM = row.USERNM
                     rq.SYNC = ""
-                    rq.KIND = "guest"
+                    rq.KIND = "member"
                     rq.ORG = row.ORG
                     rq.JOB = row.JOB
                     rq.EMAIL = row.EMAIL
@@ -406,13 +406,11 @@
         await nextTick()
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
-            const userid = row.USER_ID ? row.USER_ID : row.USERID
-            const idx = gst.util.getKeyIndex(userRow, userid)
+            const idx = gst.util.getKeyIndex(userRow, row.USERID)
             userlist.value[idx].chk = true
         }
         if (arr.length == 1) {
-            const userid = arr[0].USER_ID ? arr[0].USER_ID : arr[0].USERID
-            gst.util.scrollIntoView(userRow, userid)
+            gst.util.scrollIntoView(userRow, arr[0].USERID)
         }
         orgRef.value.procFromParent("refresh")
     }

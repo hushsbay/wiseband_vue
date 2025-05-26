@@ -186,7 +186,9 @@
         gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
         if (!row.CHANID) {            
             gst.ctx.menu = [
-                { nm: "채널 생성" },
+                { nm: "채널 생성", func: function(item, idx) {
+                    memberlistRef.value.open("chan", "new", row.GR_ID)
+                }},
                 { nm: "환경 설정" }
             ]
         } else {
