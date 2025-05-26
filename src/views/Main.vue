@@ -174,9 +174,12 @@
         ["mnuFixed"] : async (row, onMounted) => {
             await goRoute({ name: 'fixed' }, onMounted)
         },
+        ["mnuChanDm"] : async (row, onMounted) => {
+            await goRoute({ name: 'chandm' }, onMounted)
+        },
         ["mnuGroup"] : async (row, onMounted) => {
             await goRoute({ name: 'group' }, onMounted)
-        },
+        }
     }
 
     function openMsgSearch() {

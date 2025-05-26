@@ -6,27 +6,17 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
-    import MemberList from '/src/components/MemberList.vue'
     import Resizer from "/src/components/Resizer.vue"
-            
+        
     const router = useRouter()
     const route = useRoute()
     const gst = GeneralStore()
 
-    //1. HomePanel 상태 정의는 아래와 같음
-    //   1) Depth는 1,2 단계만 존재 : 1단계는 사용자그룹 (슬랙의 워크스페이스) 2단계는 채널
-    //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
-    //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
-    //2. HomePanel에서는 MsgList의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
-    //   예1) MsgList url에서 뒤로 가기 눌러 다른 MsgList url로 라우팅되면 MsgList가 먼저 호출되므로 HomePanel의 트리노드 등도 같이 맞춰져야 함
-    //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 역으로 같이 맞춰져야 함
-
-    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null)
+    let scrollArea = ref(null), chanRow = ref({}), dmRow = ref({}) //chanRow,dmRow는 element를 동적으로 할당
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
-    let chanSideWidth = ref(localStorage.wiseband_lastsel_chansidewidth ?? '300px') //localStorage 이름 유의
+    let chanSideWidth = ref(localStorage.wiseband_lastsel_chandmsidewidth ?? '300px') //localStorage 이름 유의
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
 
     function handleFromResizer(chanSideVal, chanMainVal) {
@@ -38,7 +28,7 @@
     onMounted(async () => {
         try {
             setBasicInfo()
-            if (localStorage.wiseband_lastsel_kind) gst.kindHome = localStorage.wiseband_lastsel_kind
+            if (localStorage.wiseband_lastsel_chandm) gst.kindChanDm = localStorage.wiseband_lastsel_chandm
             await getList()
             chanClickOnLoop(true)
         } catch (ex) {
@@ -51,38 +41,38 @@
             mounting = false
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
-            if (route.path == "/main/home") {
+            if (route.path == "/main/chandm") {
                 chanClickOnLoop()
             } else {
-                //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
+                //MemberList가 라우팅되는 루틴
             }
         }
     })
 
-    watch([() => gst.selChanHome], () => { //MsgList -> GeneralStore -> watch
+    watch([() => gst.selChanDm], () => { //MsgList -> GeneralStore -> watch
         //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 MsgList의 라우팅에서 처리
-        if (!gst.selChanHome) return
-        chanRow.value[gst.selChanHome].scrollIntoView({ behavior: "smooth", block: "nearest" })
-        chanClick(null, null, gst.selChanHome)
+        if (!gst.selChanDm) return
+        chanRow.value[gst.selChanDm].scrollIntoView({ behavior: "smooth", block: "nearest" })
+        chanClick(null, null, gst.selChanDm)
     })
 
-    watch(() => gst.kindHome, async () => {
-        localStorage.wiseband_lastsel_kind = gst.kindHome
+    watch(() => gst.kindChanDm, async () => {
+        localStorage.wiseband_lastsel_chandm = gst.kindChanDm
         await getList() 
         chanClickOnLoop()
     })
 
     function setBasicInfo() {
-        document.title = "WiSEBand 홈"
-        gst.selSideMenu = "mnuHome" //MsgList.vue에 Blank 방지
+        document.title = "WiSEBand 멤버"
+        gst.selSideMenu = "mnuChanDm" //MemberList.vue에 Blank 방지
     }
 
     async function getList() {
         try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
-            const res = await axios.post("/menu/qryChan", { kind : gst.kindHome }) //my,other,all
+            const res = await axios.post("/menu/qryChan", { kind : "all" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.listHome = rs.list
+            gst.chanItems = rs.list
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -90,7 +80,7 @@
 
     function chanClickOnLoop(refresh) {
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
-        gst.listHome.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
+        gst.chanItems.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
                 item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
                 procChanRowImg(item)
@@ -132,9 +122,9 @@
 
     function procExpCol(type) { //모두필치기,모두접기
         const exploded = (type == "E") ? true : false
-        for (let i = 0; i < gst.listHome.length; i++) {
-            gst.listHome[i].exploded = exploded
-            procChanRowImg(gst.listHome[i])
+        for (let i = 0; i < gst.chanItems.length; i++) {
+            gst.chanItems[i].exploded = exploded
+            procChanRowImg(gst.chanItems[i])
         }
     }
 
@@ -144,17 +134,17 @@
             if (!chanid && row.DEPTH == "1") { //접기 or 펼치기
                 row.exploded = (row.exploded) ? false : true
                 procChanRowImg(row)
-                for (let i = idx + 1; i < gst.listHome.length; i++) {
-                    if (gst.listHome[i].DEPTH == "1") break
-                    gst.listHome[i].exploded = row.exploded
+                for (let i = idx + 1; i < gst.chanItems.length; i++) {
+                    if (gst.chanItems[i].DEPTH == "1") break
+                    gst.chanItems[i].exploded = row.exploded
                 }                
                 const arr = [] //브라우저 재실행해도 접기/펼치기 상태 기억해서 그대로 표시하기
-                gst.listHome.forEach((item) => {
+                gst.chanItems.forEach((item) => {
                     if (item.DEPTH == "1" && item.exploded) arr.push(item.GR_ID)
                 })
                 localStorage.wiseband_exploded_grid = arr.length == 0 ? "" : arr.join(',')                
             } else {
-                gst.listHome.forEach((item) => {
+                gst.chanItems.forEach((item) => {
                     if (item.DEPTH == "2") {
                         item.sel = false
                         item.hover = false
@@ -162,7 +152,7 @@
                     }
                 })
                 if (chanid) { //Back()경우, MsgList에 열린 채널의 원래 스크롤값을 watch에서 가져온 후 여기로 와서 채널노드의 색상 선택
-                    const row1 = gst.listHome.find((item) => item.CHANID == chanid)
+                    const row1 = gst.chanItems.find((item) => item.CHANID == chanid)
                     if (row1) {
                         row1.sel = true
                         procChanRowImg(row1)
@@ -172,7 +162,7 @@
                     row.sel = true
                     procChanRowImg(row)
                     localStorage.wiseband_lastsel_chanid = row.CHANID
-                    gst.util.goMsgList('home_body', { chanid: row.CHANID }, refresh)
+                    //gst.util.goMsgList('chandm_body', { chanid: row.CHANID }, refresh)
                 }
             }
         } catch (ex) {
@@ -199,7 +189,7 @@
                     window.open(url)
                 }},
                 { nm: "정보 보기", func: function(item, idx) {
-                    memberlistRef.value.open("chan", row.CHANID, row.CHANNM, row.nodeImg)
+
                 }},
                 { nm: "즐겨찾기" },
                 { nm: "초대" },
@@ -234,10 +224,9 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
-                <select v-model="gst.kindHome" style="background:var(--second-color);color:var(--second-select-color);border:none">
-                    <option value="my">내 채널</option>
-                    <option value="other">다른 채널</option>
-                    <option value="all">모든 채널</option>
+                <select v-model="gst.kindChanDm" style="background:var(--second-color);color:var(--second-select-color);border:none">
+                    <option value="chan">채널</option>
+                    <option value="dm">DM</option>
                 </select>
             </div>
             <div class="chan_side_top_right">
@@ -253,7 +242,7 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
-            <div v-for="(row, idx) in gst.listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
+            <div v-for="(row, idx) in gst.chanItems" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
                 :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }"
                 @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']">
@@ -278,8 +267,7 @@
                 <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
-    </div>
-    <member-list ref="memberlistRef"></member-list>
+    </div>    
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 

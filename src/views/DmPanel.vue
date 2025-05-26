@@ -6,6 +6,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
+    import MemberList from '/src/components/MemberList.vue'
     import MemberPiclist from "/src/components/MemberPiclist.vue"
     import Resizer from "/src/components/Resizer.vue"
         
@@ -18,6 +19,7 @@
 
     const msglistRef = ref(null), notyetChk = ref(false), searchWord = ref('')
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
+    let memberlistRef = ref(null)
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
@@ -205,7 +207,7 @@
                 window.open(url)
             }},
             { nm: "정보 보기", func: function(item, idx) {
-
+                memberlistRef.value.open("dm", row.CHANID)
             }},
             { nm: notiStr, func: function(item, idx) {
                 const job = (row.NOTI == "X") ? "" : "X"
@@ -284,6 +286,7 @@
             </keep-alive>
         </router-view>
     </div>
+    <member-list ref="memberlistRef"></member-list>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    
 </template>
 

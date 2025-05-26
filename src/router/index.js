@@ -8,8 +8,10 @@ import ActivityPanel from '/src/views/ActivityPanel.vue'
 import LaterPanel from '/src/views/LaterPanel.vue'
 import FixedPanel from '/src/views/FixedPanel.vue'
 import GroupPanel from '/src/views/GroupPanel.vue'
+import ChanDmPanel from '/src/views/ChanDmPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 import UserList from '/src/views/UserList.vue'
+import MemberList from '/src/views/MemberList.vue'
 
 //import GeneralStore from '/src/stores/GeneralStore.js'
 //let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
@@ -105,6 +107,18 @@ const router = createRouter({
                             path: 'group_body/:grid',
                             name: 'group_body',
                             component: UserList,
+                        }
+                    ]                  
+                },
+                {                    
+                    path: 'chandm',
+                    name: 'chandm',
+                    component: ChanDmPanel,
+                    children: [
+                        {
+                            path: 'chandm_body/:chanid',
+                            name: 'chandm_body',
+                            component: MemberList,
                         }
                     ]                  
                 }

@@ -51,6 +51,7 @@ const GeneralStore = defineStore('General', () => {
     let listActivity = ref([]), kindActivity = ref('all')
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     let listFixed = ref([]), cntFixed = ref('')
+    let chanItems = ref([]), dmItems = ref([]), kindChanDm = ref('chan'), selChanDm = ref('')
     let listGroup = ref([]), kindGroup = ref('my'), selGroup = ref('')
     ///////////////////////////////////////////////////////////////////////
     
