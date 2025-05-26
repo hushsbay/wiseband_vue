@@ -59,6 +59,7 @@
 
     watch([() => gst.selChanHome], () => { //MsgList -> GeneralStore -> watch
         //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 MsgList의 라우팅에서 처리
+        if (!gst.selChanHome) return
         chanRow.value[gst.selChanHome].scrollIntoView({ behavior: "smooth", block: "nearest" })
         chanClick(null, null, gst.selChanHome)
     })
@@ -93,7 +94,8 @@
                 procChanRowImg(item)
             }
             if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
-                chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                if (item.CHANID) chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                console.log(JSON.stringify(item)+"########")
                 chanClick(item, index, null, refresh)
             }
         })
@@ -136,6 +138,7 @@
 
     async function chanClick(row, idx, chanid, refresh) { //depth 1,2를 미리 filter해서 하지 말기
         try { //chanid 파라미터는 depth2에만 해당
+            console.log(JSON.stringify(row)+"==="+chanid)
             if (!chanid && row.DEPTH == "1") { //접기 or 펼치기
                 row.exploded = (row.exploded) ? false : true
                 procChanRowImg(row)

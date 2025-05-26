@@ -51,7 +51,7 @@
 
     watch([() => gst.selGroup], () => { //UserList -> GeneralStore -> watch
         //패널에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 UserList의 라우팅에서 처리
-        groupRow.value[gst.selGroup].scrollIntoView({ behavior: "smooth", block: "nearest" })
+        if (gst.selGroup) groupRow.value[gst.selGroup].scrollIntoView({ behavior: "smooth", block: "nearest" })
         groupClick(null, null, gst.selGroup)
     })
 
