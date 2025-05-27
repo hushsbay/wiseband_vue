@@ -382,6 +382,10 @@ const GeneralStore = defineStore('General', () => {
 
         chkAxiosCode : function(data, notShowMsgIfNoData) { //data는 axios의 rs.data
             setTimeout(function() { util.setToast("") }, 1) //setting은 main.js axios에 있음
+            if (data == "") {
+                util.setSnack('서버에 알 수 없는 문제가 발생했습니다.', true)
+                return null
+            }
             if (data.code != hush.cons.OK) {
                 if (notShowMsgIfNoData && data.code == hush.cons.NOT_FOUND) {
                     //데이터 없을 경우에 메시지없이 넘어가야 할 때가 있음

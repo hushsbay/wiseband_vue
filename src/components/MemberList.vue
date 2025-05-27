@@ -252,6 +252,28 @@
             gst.util.showEx(ex, true)
         }
     }
+
+    async function inviteToMember() {
+        try {
+            const arr = memberlist.value.filter(item => item.chk)
+            const len = arr.length
+            if (len == 0) {
+                gst.util.setSnack("선택한 행이 없습니다.")
+                return
+            }
+            if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다. 계속할까요?")) return
+            for (let i = 0; i < len; i++) {
+                debugger
+                const rq = { CHANID: chanId, USERID: arr[i].USERID }
+                const res = await axios.post("/chanmsg/inviteToMember", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+            }
+            gst.util.setSnack("메일 발송 완료")
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
 </script>
 
 <template>
@@ -339,7 +361,7 @@
                                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                                     <span style="margin:0 5px;color:dimgray">멤버삭제</span>
                                 </div>
-                                <div class="coImgBtn" @click="invite()" style="margin-right:6px">
+                                <div class="coImgBtn" @click="inviteToMember()" style="margin-right:6px">
                                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                                     <span style="margin:0 5px;color:dimgray">초대</span>
                                 </div>
