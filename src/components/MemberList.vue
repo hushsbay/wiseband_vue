@@ -51,7 +51,7 @@
     let mounting = true
     
     let kind = ref(''), show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null), state = ref(false)
-    const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
+    const scrollArea = ref(null), memberRow = ref({}) //memberRow는 element를 동적으로 할당
     let onGoingGetList = false
         
     let grId
@@ -103,46 +103,29 @@
 
     async function applyToBody(arr, mode) {
         if (chanId == "new" || singleMode.value != "C") {
-            gst.util.setSnack("조직도/내그룹에서 선택추가시는 그룹이 먼저 저장되고 행선택이 없어야 합니다.")
+            gst.util.setSnack("먼저 채널이 저장되어야 하고 행선택도 없어야 합니다.")
             return
         }
+        const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
             const rq = { crud: "C", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member", SYNC: row.SYNC }
-            // if (mode == "tree") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
-            //     rq.USERID = row.USERID
-            //     rq.USERNM = row.USERNM
-            //     rq.KIND = "member"
-            // } else { //mygroup (인사연동+수동입력 혼재)
-            //     if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
-            //         rq.USERID = row.USERID
-            //         rq.USERNM = row.USERNM
-            //         rq.KIND = "member"
-            //     } else {
-            //         rq.USERID = row.USERID
-            //         rq.USERNM = row.USERNM
-            //         rq.KIND = "member"
-            //         rq.ORG = row.ORG
-            //         rq.JOB = row.JOB
-            //         rq.EMAIL = row.EMAIL
-            //         rq.TELNO = row.TELNO
-            //     }
-            // }
             const res = await axios.post("/chanmsg/saveChanMember", rq)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) break
+            const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
+            if (rs) brr.push(row) //if (!rs) return //loop내 오류메시지 표시하려면 break가 아닌 return을 사용해야 하나 오류 표시하지 않고 추가 성공한 항목만 담아서 표시함
         }        
         await getList()
         await nextTick()
-        for (let i = 0; i < arr.length; i++) {
-            const row = arr[i]
-            const idx = gst.util.getKeyIndex(userRow, row.USERID)
+        for (let i = 0; i < brr.length; i++) {
+            const row = brr[i]
+            const idx = gst.util.getKeyIndex(memberRow, row.USERID)
             if (idx > -1) memberlist.value[idx].chk = true
         }
-        if (arr.length == 1) {
-            gst.util.scrollIntoView(userRow, arr[0].USERID)
+        if (brr.length == 1) {
+            gst.util.scrollIntoView(memberRow, brr[0].USERID)
         }
         //orgRef.value.procFromParent("refresh")
+        if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
     }
 
     function changeChk(row, idx) {
@@ -191,7 +174,7 @@
         chkEditRow()
     }
 
-    function newMember() {
+    function newMember() { //버튼에서 말고 로직에서 호출하므로 편의상 그대로 두기
         memberlist.value.forEach(item => { item.chk = false })
         chkEditRow()
     }
@@ -222,7 +205,7 @@
                 // memberlist.value[idxSel].KIND = rowKind.value
                 // memberlist.value[idxSel].RMKS = rowRmks.value                
             }
-            orgRef.value.procFromParent("refresh")
+            //orgRef.value.procFromParent("refresh")
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -236,15 +219,17 @@
                 gst.util.setSnack("선택한 행이 없습니다.")
                 return
             }
+            const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
             for (let i = 0; i < len; i++) {
-                const rq = { GR_ID: grId, USERID: arr[i].USERID }
-                const res = await axios.post("/user/deleteMember", rq)
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) break
+                const rq = { CHANID: chanId, USERID: arr[i].USERID }
+                const res = await axios.post("/chanmsg/deleteChanMember", rq)
+                const rs = gst.util.chkAxiosCode(res.data, true)
+                if (rs) brr.push(row) //if (!rs) return //loop내 오류메시지 표시하려면 break가 아닌 return을 사용해야 하나 오류 표시하지 않고 추가 성공한 항목만 담아서 표시함
             }
             newMember()
             await getList()
-            orgRef.value.procFromParent("refresh")
+            //orgRef.value.procFromParent("refresh")
+            if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -268,13 +253,13 @@
         }
     }
 
-    async function deleteGroup() {
+    async function deleteChan() {
         try {
             const rq = { CHANID: chanId }
-            const res = await axios.post("/user/deleteGroup", rq)
+            const res = await axios.post("/chanmsg/deleteChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            evToPanel()
+            //evToPanel()
             //orgRef.value.procFromParent("refresh")
             //await router.replace({ name : 'group_body', params : { grid: "new" }})
         } catch (ex) { 
@@ -291,8 +276,9 @@
                     <div class="chan_center" style="width:calc(100% - 620px);padding-right:10px;">
                         <div class="chan_center_header" id="chan_center_header">
                             <div class="chan_center_header_left">
-                                <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
-                                <div style="display:flex;align-items:center">                    
+                                <img v-if="chanId != 'new'" class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
+                                <div style="display:flex;align-items:center">
+                                    <div v-if="chanId == 'new'" class="coDotDot">새로 만들기 ({{ appType=='dm' ? "DM" : "채널" }})</div>
                                     <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
                                     <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
                                 </div>
@@ -314,14 +300,14 @@
                                     <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
                                     <span style="margin:0 5px;color:dimgray">채널저장</span>
                                 </div>
-                                <div class="coImgBtn" @click="deleteGroup" style="margin-left:5px">
+                                <div class="coImgBtn" @click="deleteChan" style="margin-left:5px">
                                     <img :src="gst.html.getImageUrl('dimgray_reset.png')" style="width:24px;height:24px">
                                     <span style="margin:0 5px;color:dimgray">{{ (appType == "dm" ? "DM" : "채널") + "삭제" }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
-                            <div v-for="(row, idx) in memberlist" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyidx="idx" class="msg_body procMenu"  
+                            <div v-for="(row, idx) in memberlist" :key="row.USERID" :ref="(ele) => { memberRow[row.USERID] = ele }" :keyidx="idx" class="msg_body procMenu"  
                                 @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="(e) => rowClick(e, row, idx)">
                                 <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
                                     <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />

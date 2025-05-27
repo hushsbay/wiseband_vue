@@ -112,7 +112,7 @@
 
     async function applyToBody(arr, mode) {
         if (grId == "new" || singleMode.value != "C") {
-            gst.util.setSnack("조직도/내그룹에서부터 선택해 추가시 그룹이 먼저 저장되고 행선택이 없어야 합니다.")
+            gst.util.setSnack("먼저 그룹이 저장되어야 하고 행선택도 없어야 합니다.")
             return
         }
         const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
@@ -259,15 +259,17 @@
                 gst.util.setSnack("선택한 행이 없습니다.")
                 return
             }
+            const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
             for (let i = 0; i < len; i++) {
                 const rq = { GR_ID: grId, USERID: arr[i].USERID }
                 const res = await axios.post("/user/deleteMember", rq)
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) break
+                const rs = gst.util.chkAxiosCode(res.data, true)
+                if (rs) brr.push(row) //if (!rs) return //loop내 오류메시지 표시하려면 break가 아닌 return을 사용해야 하나 오류 표시하지 않고 추가 성공한 항목만 담아서 표시함
             }
             newMember()
             await getList()
             orgRef.value.procFromParent("refresh")
+            if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
