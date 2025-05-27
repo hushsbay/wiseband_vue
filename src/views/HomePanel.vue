@@ -230,6 +230,10 @@
     function handleEvFromBody() { //MsgList.vue에서 실행
         chanClickOnLoop()
     }
+
+    function handleEvFromMemberList(chanid) { //MemberList에서 실행
+        getList() //qryDm으로 하나의 행만 업데이트하기 (신규일 때는 맨 위에 추가하기)
+    }
 </script>
 
 <template>
@@ -249,9 +253,9 @@
                 <div style="padding:5px;border-radius:8px;" @click="procExpCol('E')">
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'expandall.png')" title="모두펼치기">
                 </div>
-                <div style="padding:5px;border-radius:8px;" @click="newMsg">
+                <!-- <div style="padding:5px;border-radius:8px;" @click="newMsg">
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새메시지">
-                </div>
+                </div> -->
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
@@ -281,7 +285,7 @@
             </keep-alive>
         </router-view>
     </div>
-    <member-list ref="memberlistRef"></member-list>
+    <member-list ref="memberlistRef" @ev-from-member="handleEvFromMemberList"></member-list>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 

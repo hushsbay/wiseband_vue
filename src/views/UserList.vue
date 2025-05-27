@@ -13,7 +13,7 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    const emits = defineEmits(["ev-click", "ev-to-panel"]) //1) ev-click : OrgTree -> UserList 2) ev-to-panel : UserList -> GroupPanel
+    const emits = defineEmits(["ev-to-panel"]) //1) ev-click : OrgTree -> UserList 2) ev-to-panel : UserList -> GroupPanel
     //defineExpose({ procFromParent }) //부모(예:GroupPanel) => UserList의 procFromParent()를 호출하기 위함 : procFromParent는 바로 아래 OrgTree(자식)의 procFromParent()를 호출하기도 함
 
     //async function procFromParent(kind) {
@@ -259,17 +259,16 @@
                 gst.util.setSnack("선택한 행이 없습니다.")
                 return
             }
-            const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
+            if (!confirm("선택한 행(" + arr.length + "건)을 삭제할까요?")) return
             for (let i = 0; i < len; i++) {
                 const rq = { GR_ID: grId, USERID: arr[i].USERID }
                 const res = await axios.post("/user/deleteMember", rq)
-                const rs = gst.util.chkAxiosCode(res.data, true)
-                if (rs) brr.push(row) //if (!rs) return //loop내 오류메시지 표시하려면 break가 아닌 return을 사용해야 하나 오류 표시하지 않고 추가 성공한 항목만 담아서 표시함
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
             }
             newMember()
             await getList()
             orgRef.value.procFromParent("refresh")
-            if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -295,6 +294,7 @@
 
     async function deleteGroup() {
         try {
+            if (!confirm("[" + grnm.value + "]그룹에 대해 전체 삭제를 진행합니다. 계속할까요?")) return
             const rq = { GR_ID: grId }
             const res = await axios.post("/user/deleteGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)

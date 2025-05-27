@@ -13,31 +13,27 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    const emits = defineEmits(["ev-click", "ev-to-panel"]) //1) ev-click : OrgTree -> memberlist 2) ev-to-panel : memberlist -> GroupPanel
+    const emits = defineEmits(["ev-from-member"]) //memberlist -> HomePanel or DmPanel
     defineExpose({ open, close }) //부모(예:HomePanel,DmPanel) => MemberList의 open(), close() 호출
     
     function evToPanel() { //말 그대로 패널에게 호출하는 것임
-        emits("ev-to-panel", chanId)
+        emits("ev-from-member", chanId)
     }
 
     function open(strKind, strChanid, strChannm, strChanimg) {
         show.value = true
         appType = strKind //chan or dm
-        chanId = strChanid //채널 이아디 또는 new
+        chanId = strChanid //채널아이디 또는 new
         if (appType == "chan") {
-            if (strChanid == "new") {
+            if (chanId == "new") {
                 grId = strChannm //그룹 아이디
             } else {
-                chanNm.value = strChannm //chan만 있음. new일 경우는 GR_ID가 넘어옴
+                chanNm.value = strChannm //chan만 있음
                 chanImg.value = strChanimg //chan만 있음
                 getList()
             }
         } else {
-            if (strChanid == "new") {
-                //skip
-            } else {
-                getList()
-            }
+            if (chanId != "new") getList()
         }
     }
 
@@ -102,9 +98,12 @@
     }
 
     async function applyToBody(arr, mode) {
-        if (chanId == "new" || singleMode.value != "C") {
+        if (appType == "chan" && (chanId == "new" || singleMode.value != "C")) {
             gst.util.setSnack("먼저 채널이 저장되어야 하고 행선택도 없어야 합니다.")
             return
+        } else if (appType == "dm" && chanId == "new") {
+            const ret = await saveChanMaster()
+            if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
         }
         const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
         for (let i = 0; i < arr.length; i++) {
@@ -124,7 +123,7 @@
         if (brr.length == 1) {
             gst.util.scrollIntoView(memberRow, brr[0].USERID)
         }
-        //orgRef.value.procFromParent("refresh")
+        if (appType == "dm") evToPanel()
         if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
     }
 
@@ -195,17 +194,7 @@
                 const res = await axios.post("/chanmsg/saveChanMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
-                // const idxSel = memberlist.value.findIndex(item => item.chk && item.USERID == row.USERID)
-                // if (row.SYNC != "Y") {
-                //     memberlist.value[idxSel].USERNM = rowUsernm.value
-                //     memberlist.value[idxSel].ORG = rowOrg.value
-                //     memberlist.value[idxSel].JOB = rowJob.value
-                //     memberlist.value[idxSel].TELNO = rowTelno.value            
-                // }
-                // memberlist.value[idxSel].KIND = rowKind.value
-                // memberlist.value[idxSel].RMKS = rowRmks.value                
             }
-            //orgRef.value.procFromParent("refresh")
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -219,17 +208,16 @@
                 gst.util.setSnack("선택한 행이 없습니다.")
                 return
             }
-            const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
+            if (!confirm("선택한 행(" + arr.length + "건)을 삭제할까요?")) return
             for (let i = 0; i < len; i++) {
                 const rq = { CHANID: chanId, USERID: arr[i].USERID }
                 const res = await axios.post("/chanmsg/deleteChanMember", rq)
-                const rs = gst.util.chkAxiosCode(res.data, true)
-                if (rs) brr.push(row) //if (!rs) return //loop내 오류메시지 표시하려면 break가 아닌 return을 사용해야 하나 오류 표시하지 않고 추가 성공한 항목만 담아서 표시함
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
             }
             newMember()
             await getList()
-            //orgRef.value.procFromParent("refresh")
-            if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
+            if (appType == "dm") evToPanel()
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -240,14 +228,13 @@
             const rq = { GR_ID: grId, CHANID: chanId, CHANNM: chanNm.value, STATE: state.value ? "P" : "" } //chanId=new일 경우는 신규 채널 생성
             const res = await axios.post("/chanmsg/saveChanMaster", rq)
             const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
+            if (!rs) return false //dm은 행저장시 new일 때는 여기 마스터를 먼저 저장함
             if (chanId == "new") {
                 chanId = rs.data.chanid
-                await getList()
+                if (appType == "chan") await getList() //dm new일 땐 사용자가 아닌 자동 마스터 저장
             }
-            //localStorage.wiseband_lastsel_grid = grId
-            //evToPanel()
-            //orgRef.value.procFromParent("refresh")
+            evToPanel()
+            return true
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -255,13 +242,12 @@
 
     async function deleteChan() {
         try {
+            if (!confirm("[" + chanNm.value + "]채널에 대해 전체 삭제를 진행합니다. 계속할까요?")) return
             const rq = { CHANID: chanId }
             const res = await axios.post("/chanmsg/deleteChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //evToPanel()
-            //orgRef.value.procFromParent("refresh")
-            //await router.replace({ name : 'group_body', params : { grid: "new" }})
+            evToPanel()
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -288,12 +274,12 @@
                             </div>
                         </div>
                         <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid lightgray">
-                            <div style="width:70%;height:100%;display:flex;align-items:center">
+                            <div v-if="chanId" style="width:70%;height:100%;display:flex;align-items:center">
                                 <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="margin-right:12px" />
                                 <span v-if="appType=='chan'" style="margin-right:10px;color:dimgray">채널명 : </span>
                                 <input v-if="appType=='chan'" type="text" v-model="chanNm" style="width:300px"/>
                                 <span style="margin:0 10px;color:dimgray">생성자 : </span><span>{{ masternm }}</span>
-                                <input type="checkbox" id="checkbox" v-model="state" style="margin-left:20px"/><label for="checkbox">비공개</label>
+                                <input v-if="appType!='dm'" type="checkbox" id="checkbox" v-model="state" style="margin-left:20px"/><label v-if="appType!='dm'" for="checkbox">비공개</label>
                             </div>
                             <div style="width:30%;height:100%;padding-right:10px;display:flex;align-items:center;justify-content:flex-end">
                                 <div v-if="appType=='chan'" class="coImgBtn" @click="saveChanMaster()">
@@ -401,7 +387,7 @@
                         </div>
                     </div>
                     <div class="chan_right" style="width:600px">
-                        <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
+                        <org-tree mode="mygroup" :kind="appType" ref="orgRef" @ev-click="applyToBody"></org-tree>
                     </div>  
                 </div>
             </div>

@@ -7,7 +7,7 @@
     import MemberPiceach from "/src/components/MemberPiceach.vue"
 
     const gst = GeneralStore()
-    const props = defineProps({ mode: String })
+    const props = defineProps({ mode: String, kind: String }) //kind=chan/dm
     const emits = defineEmits(["ev-click"])
     
     defineExpose({ open, close, procFromParent })
@@ -298,7 +298,7 @@
         <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column;border:1px solid lightgray">        
             <div style="width:100%;height:40px;padding-left:10px;display:flex;justify-content:space-between;align-items:center">
                 <div style="display:flex;align-items:center">
-                    <div class="topMenu" :class="mode == 'tree' || mode == 'search' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('tree')">
+                    <div v-if="props.kind!='chan'" class="topMenu" :class="mode == 'tree' || mode == 'search' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('tree')">
                         <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people3.png')">
                         <span style="margin-left:5px;font-weight:bold">조직도</span> 
                     </div>

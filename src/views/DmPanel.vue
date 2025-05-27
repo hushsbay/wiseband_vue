@@ -236,6 +236,14 @@
     function handleEvFromBody() { //MsgList.vue에서 실행
         dmClickOnLoop()
     }
+
+    function handleEvFromMemberList(chanid) { //MemberList에서 실행
+        getList(true) //qryDm으로 하나의 행만 업데이트하기 (신규일 때는 맨 위에 추가하기)
+    }
+
+    function newDm() {
+        memberlistRef.value.open("dm", "new")
+    }
 </script>
 
 <template>
@@ -246,7 +254,7 @@
                 <div style="padding:5px;display:flex;align-items:center;border-radius:8px;" @click="newMsg">
                     <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:80px;margin-right:8px" placeholder="멤버" />
                     <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
-                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새메시지">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새DM" @click="newDm()">
                 </div>
             </div>
         </div>
@@ -282,11 +290,11 @@
     <div id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>                
-                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody" />
             </keep-alive>
         </router-view>
     </div>
-    <member-list ref="memberlistRef"></member-list>
+    <member-list ref="memberlistRef" @ev-from-member="handleEvFromMemberList"></member-list>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    
 </template>
 
