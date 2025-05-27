@@ -383,7 +383,7 @@ const GeneralStore = defineStore('General', () => {
         chkAxiosCode : function(data, notShowMsgIfNoData) { //data는 axios의 rs.data
             setTimeout(function() { util.setToast("") }, 1) //setting은 main.js axios에 있음
             if (data == "") {
-                util.setSnack('서버에 알 수 없는 문제가 발생했습니다.', true)
+                util.setSnack('서버 Response data가 없습니다.', true)
                 return null
             }
             if (data.code != hush.cons.OK) {

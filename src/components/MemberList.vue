@@ -263,7 +263,6 @@
             }
             if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다. 계속할까요?")) return
             for (let i = 0; i < len; i++) {
-                debugger
                 const rq = { CHANID: chanId, USERID: arr[i].USERID }
                 const res = await axios.post("/chanmsg/inviteToMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
