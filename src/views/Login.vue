@@ -11,22 +11,24 @@
     let uid = ref(''), pwd = ref(''), saveId = ref(true), nextOk = ref(false)
     let uidRef = ref(null), pwdRef = ref(null) //for focusing
 
-    onMounted(() => {
+    onMounted(async () => {
         const userid = gst.auth.getCookie("userid")
 		if (userid) {
             saveId.value = true
             uid.value = userid
         }
+        await nextTick()
         uidRef.value.focus()
     })
 
     async function goLogin() {
+        if (uid.value == "") return
         if (uid.value.includes("@")) { //이메일 OTP 인증 진행 (해당 이메일로 6자리 숫자 발송)
             const res = await axios.post("/auth/setOtp", { uid : uid.value })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
         } else {
-            //아이디,비번 인증 진행
+            //goLoginNext() 호출
         }
         nextOk.value = true
         await nextTick()
@@ -56,31 +58,35 @@
 </script>
 
 <template>
-    <div class="container coLogin">
+    <div class="container">
         <div class="center_body">
             <div class="center_row">
-                <img class="coImg32" src="/src/assets/images/hushsbay.png"/>
-                <div style="font-size: 18px; font-weight: bold">WiSEBand</div>
+                <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
+                <div style="margin-left:5px;font-size:22px;font-weight:bold;cursor:pointer">WiSEBand</div>
             </div>
             <div class="center_row">
-                <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="이메일" spellcheck=false autocomplete=off style="width:150px;margin-right:10px"/> 
-                <div class="center_btn" @click="goLogin">확인</div>
+                <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="이메일" spellcheck=false autocomplete=off style="width:190px"/> 
+                <div class="btn_basic" @click="goLogin">확인</div>
             </div>
-            <div class="center_body" style="height:400px;border:0px solid red">
+            <div class="center_body" style="height:400px">
                 <div v-if="nextOk" class="center_row">
-                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:150px;margin-right:10px"/>
-                    <div class="center_btn" @click="goLoginNext">인증</div>
+                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:190px"/>
+                    <div class="btn_basic" @click="goLoginNext">인증</div>
                 </div>
                 <div v-if="!nextOk" class="center_row" style="flex-direction:column">
-                    <div>주소를 넣고 확인을 누르면 해당 이메일로</div>
-                    <div>6자리 인증번호가 전송되고 계속 진행됩니다.</div>
+                    <div style="width:250px">
+                        <div>이메일 주소를 넣고 확인을 누르면</div>
+                        <div>인증번호가 전송되고 계속 진행됩니다.</div>
+                    </div>
                 </div>
                 <div v-if="nextOk" class="center_row" style="flex-direction:column">
-                    <div style="display:flex;margin-bottom:10px">
-                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor: pointer">이메일저장</label>
+                    <div class="center_row">
+                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">이메일 저장</label>
                     </div>
-                    <div>이메일을 열고 6자리 인증번호 입력후</div>
-                    <div>인증 버튼을 눌러 주시기 바랍니다.</div>
+                    <div style="width:250px">
+                        <div>이메일에서 확인한 6자리 인증번호를</div>
+                        <div>입력후 인증 버튼을 누르십시오.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -88,17 +94,29 @@
 </template>
 
 <style scoped>
-    body { background: black; }
+
+    input { width:190px;height:28px;border:1px solid dimgray;border-radius:4px }
+    input[type=text]:focus { outline:2px solid lightgreen }
+    input[type=password]:focus { outline:2px solid lightgreen }
+    input[type=checkbox] { width:18px;height:18px }
 
     .container { 
-        max-width: 900px; width: 100%; height: 100%; margin: 0 auto; 
-        display: flex; flex-direction: column; justify-content: center; align-items: center; 
-        background-image: url('https://images.unsplash.com/photo-1505144808419-1957a94ca61e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHx0b3BpYy1mZWVkfDIyNHxibzhqUUtUYUUwWXx8ZW58MHx8fHx8');
-        background-position: center; background-size: cover;
+        width: 100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center 
     }
 
-    .center_body { width:300px;display:flex;flex-direction:column }
-    .center_row { margin-top:10px;display:flex;justify-content:center;align-items:center }
-    .center_btn { width:28px;height:28px;padding:0 4px;display:flex;justify-content:center;align-items:center;border-radius:4px;background-color:#0082AD;color:white;cursor:pointer }
+    .center_body { 
+        width:300px;display:flex;flex-direction:column;align-items:center
+    }
+
+    .center_row { 
+        margin-bottom:30px;display:flex;justify-content:center;align-items:center 
+    }
+
+    .btn_basic { 
+        width:28px;height:28px;margin-left:10px;padding:3px 8px;display:flex;justify-content:center;align-items:center;
+        border-radius:4px;background-color:var(--primary-color);color:white;cursor:pointer 
+    }
+    .btn_basic:hover { background:var(--second-hover-color) }
+    .btn_basic:active { background:var(--active-btn) }
 
 </style>	

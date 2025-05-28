@@ -7,6 +7,7 @@
   --border-color:lightgray; /*#696969 => dimgray icon */
   --border-lg:1px solid lightgray;
   --active-color:lightsteelblue;
+  --active-btn:darkblue;
 }
 
 html, body { 
@@ -190,9 +191,9 @@ text-align:center;vertical-align:middle;z-index:9998; /*스크롤중에 투명�
   border:1px solid var(--main-color);border-radius:50px;cursor:pointer;
 }
 
-@media screen and (max-device-width: 500px) { 
-  .coLogin { padding-top: 50px; display: flex; flex-direction: column; justify-content: flex-start; } /* login.html : 모바일인 경우 키보드 올라오는 경우 대비해 상단 배치 */
+/* @media screen and (max-device-width: 500px) { 
+  .coLogin { padding-top: 50px; display: flex; flex-direction: column; justify-content: flex-start; } / login.html : 모바일인 경우 키보드 올라오는 경우 대비해 상단 배치 /
 }
-@media screen and (min-device-width: 501px) { /* 일단 위와 동일하나 향후 변경사항 있을 것이므로 그대로 두기 */
-  .coLogin { padding-top: 50px; display: flex; flex-direction: column; justify-content: flex-start; } /* login.html : 모바일인 경우 키보드 올라오는 경우 대비해 상단 배치 */
-}
+@media screen and (min-device-width: 501px) { / 일단 위와 동일하나 향후 변경사항 있을 것이므로 그대로 두기 /
+  .coLogin { padding-top: 50px; display: flex; flex-direction: column; justify-content: flex-start; } / login.html : 모바일인 경우 키보드 올라오는 경우 대비해 상단 배치 /
+} */

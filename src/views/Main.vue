@@ -185,22 +185,36 @@
     function openMsgSearch() {
         mediaPopupRef.value.open("msg", '', '', '', searchText.value.trim())
     }
+
+    async function logout() {
+        gst.auth.logout()
+        await goRoute({ name: 'login' }, true)
+    }
 </script>
 
 <template>
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
-            <div style="display:flex;justify-content:center;align-items:center"></div>
+            <div style="padding-left:20px;display:flex;align-items:center">
+                <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
+                <div style="margin-left:5px;font-size:22px;color:whitesmoke;font-weight:bold;cursor:pointer">WiSEBand</div>
+            </div>
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>
-                <div style="padding:4px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
+                <!-- <div style="padding:4px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
                     <img :src="gst.html.getImageUrl('search.png')" style="width:16;height:16px;padding:1px;display:flex;align-items:center;justify-content:center" >
-                </div>
-                <div style="margin-left:5px;padding:4px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
+                </div> -->
+                <!-- <div style="margin-left:5px;padding:4px;display:flex;align-items:center;border:1px solid dimgray;border-radius:5px;cursor:pointer" @click="openMsgSearch()">
                     <span style="margin-left:2px;font-size:14px;color:whitesmoke">통합검색으로이동</span>
+                </div> -->
+                <div class="btn_basic" @click="openMsgSearch()">
+                    <img :src="gst.html.getImageUrl('search.png')" style="width:16;height:16px" >
+                </div>
+                <div class="btn_basic" @click="openMsgSearch()">
+                    <span>통합검색으로이동</span>
                 </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;align-items:center"></div>
+            <div style="margin-right:18px;display:flex;justify-content:flex-end;align-items:center;color:whitesmoke;font-weight:bold;cursor:pointer" @click="logout">Logout</div>
         </div>
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
@@ -250,13 +264,22 @@
 </template>
 
 <style scoped>    
+    input[type=search]:focus { outline:2px solid lightgreen }
+
     .header {
         width:100%;min-height:40px;display:flex;justify-content:space-between;align-items:center;
         background:var(--primary-color);
     }
-    .search { width:300px;margin-right:10px;padding-left:5px;background-color:rgb(131, 56, 138);color:white;border:none;border-radius:5px }
-    .search::placeholder { color:white }
+    .search { width:240px;margin-right:10px;padding-left:5px;background-color:var(--second-color);color:var(--second-select-color);border:none;border-radius:4px }
+    .search::placeholder { color:var(--second-select-color) }
 
+    .btn_basic { 
+        height:28px;margin-left:10px;padding:0 8px;display:flex;justify-content:center;align-items:center;
+        border:1px solid dimgray;border-radius:4px;background-color:var(--primary-color);color:var(--second-select-color);cursor:pointer 
+    }
+    .btn_basic:hover { background:var(--second-hover-color) }
+    .btn_basic:active { background:var(--active-btn) }
+        
     .body {
         width:100%;height:100%;display:flex;
         background:var(--primary-color);overflow:hidden; /* hidden이 있어야 sidebar의 아랫공간이 always seen 가능 */

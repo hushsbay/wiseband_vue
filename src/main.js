@@ -16,6 +16,9 @@ let hostnameStr = "", domainStr = ""
 if (location.href.startsWith("http://localhost")) {
     hostnameStr = "localhost"
     domainStr = location.protocol + "//" + hostnameStr + ":3000" //nest port
+//} else if (location.href.startsWith("http://10.10.221.214")) {
+//    hostnameStr = "http://10.10.221.214"
+//    domainStr = location.protocol + "//" + hostnameStr + ":3000" //nest port
 } else {
     hostnameStr = "hushsbay.com"
     domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
