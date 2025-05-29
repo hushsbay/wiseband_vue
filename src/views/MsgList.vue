@@ -214,7 +214,7 @@
         //또 다른 현상은 새로고침하면 HomePanel.vue가 먼저 실행되는 것이 아닌 MsgList.vue의 onMounted가 먼저 실행되어서 HomePanel.vue가 실행되면서 
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
-            console.log("onMounted......")
+            console.log("Mounted...................................")
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
             if (hasProp()) {
@@ -252,7 +252,7 @@
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
             if (appType == "home") {
-                gst.home.procFromBody("recall", { chanid: chanId })
+                //gst.home.procFromBody("recall", { chanid: chanId })
             } else if (appType == "dm" || appType == "later" || appType == "fixed") {
                 evToPanel()
             }

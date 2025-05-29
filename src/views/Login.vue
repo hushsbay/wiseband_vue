@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick } from 'vue'
+    import { ref, onMounted, onActivated, nextTick } from 'vue'
     import { useRouter } from 'vue-router'
     import axios from 'axios'
 
@@ -12,6 +12,7 @@
     let uidRef = ref(null), pwdRef = ref(null) //for focusing
 
     onMounted(async () => {
+        console.log("2222222222222")
         const userid = gst.auth.getCookie("userid")
 		if (userid) {
             saveId.value = true
@@ -19,6 +20,10 @@
         }
         await nextTick()
         uidRef.value.focus()
+    })
+
+    onActivated(async () => {
+        console.log("11111111111111111111111111111111")
     })
 
     async function goLogin() {

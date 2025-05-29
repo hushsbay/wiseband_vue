@@ -52,6 +52,7 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/home") {
+                debugger
                 chanClickOnLoop()
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
@@ -61,16 +62,17 @@
 
     watch([() => gst.selChanHome], () => { //MsgList -> GeneralStore -> watch
         //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 MsgList의 라우팅에서 처리
+        debugger
         if (!gst.selChanHome) return
         chanRow.value[gst.selChanHome].scrollIntoView({ behavior: "smooth", block: "nearest" })
         chanClick(null, null, gst.selChanHome)
     })
 
-    // watch(() => gst.kindHome, async () => {
-    //     localStorage.wiseband_lastsel_kind = gst.kindHome
-    //     await getList() 
-    //     chanClickOnLoop()
-    // }) onMounted()에서 MsgList를 한번 더 호출하므로 다른 방안 찾아봐야 함
+    watch(() => gst.kindHome, async () => {
+        localStorage.wiseband_lastsel_kind = gst.kindHome
+        await getList() 
+        chanClickOnLoop()
+    }) //onMounted()에서 MsgList를 한번 더 호출하므로 다른 방안 찾아봐야 함
 
     function setBasicInfo() {
         document.title = "WiSEBand 홈"
