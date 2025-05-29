@@ -214,7 +214,9 @@
                     <span>통합검색으로이동</span>
                 </div>
             </div>
-            <div style="margin-right:18px;display:flex;justify-content:flex-end;align-items:center;color:whitesmoke;font-weight:bold;cursor:pointer" @click="logout">Logout</div>
+            <div style="margin-right:18px;display:flex;justify-content:flex-end;align-items:center;cursor:pointer">
+                <span style="margin-right:10px;color:whitesmoke">{{ gst.auth.getCookie("usernm") }}</span><span style="color:whitesmoke;font-weight:bold" @click="logout">Logout</span>
+            </div>
         </div>
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->

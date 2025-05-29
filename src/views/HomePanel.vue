@@ -66,11 +66,11 @@
         chanClick(null, null, gst.selChanHome)
     })
 
-    watch(() => gst.kindHome, async () => {
-        localStorage.wiseband_lastsel_kind = gst.kindHome
-        await getList() 
-        chanClickOnLoop()
-    })
+    // watch(() => gst.kindHome, async () => {
+    //     localStorage.wiseband_lastsel_kind = gst.kindHome
+    //     await getList() 
+    //     chanClickOnLoop()
+    // }) onMounted()에서 MsgList를 한번 더 호출하므로 다른 방안 찾아봐야 함
 
     function setBasicInfo() {
         document.title = "WiSEBand 홈"
@@ -97,7 +97,6 @@
             }
             if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
                 if (item.CHANID) chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                console.log(JSON.stringify(item)+"########")
                 chanClick(item, index, null, refresh)
             }
         })
@@ -140,7 +139,6 @@
 
     async function chanClick(row, idx, chanid, refresh) { //depth 1,2를 미리 filter해서 하지 말기
         try { //chanid 파라미터는 depth2에만 해당
-            console.log(JSON.stringify(row)+"==="+chanid)
             if (!chanid && row.DEPTH == "1") { //접기 or 펼치기
                 row.exploded = (row.exploded) ? false : true
                 procChanRowImg(row)

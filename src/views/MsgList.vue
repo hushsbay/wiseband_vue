@@ -192,8 +192,8 @@
             } else {
                 return
             }
-        })
-        observerTop.value.observe(observerTopTarget.value)
+        }) //아래 observerTopTarget이 null로 나와서 오류 발생하는 것은 ##34처럼 vipStr에 데이터 담을 때 오류가 발생해 멈췄기 때문에 
+        observerTop.value.observe(observerTopTarget.value) //observerTopTarget 랜더링까지 실행이 되지 않아 발생하는 것일 수 있음
     }
 
     const observerBottomScroll = () => { //아래로 스크롤하는 경우
@@ -214,6 +214,7 @@
         //또 다른 현상은 새로고침하면 HomePanel.vue가 먼저 실행되는 것이 아닌 MsgList.vue의 onMounted가 먼저 실행되어서 HomePanel.vue가 실행되면서 
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
+            console.log("onMounted......")
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
             if (hasProp()) {
@@ -359,7 +360,7 @@
                 onGoingGetList = false                
                 return
             }
-            vipStr.value = rs.data.vipStr
+            vipStr.value = rs.data.vipStr ?? "none" //데이터 없어서 null일 수도 있음 ##34
             grnm.value = rs.data.chanmst.GR_NM
             chanNm.value = rs.data.chanmst.CHANNM            
             chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)

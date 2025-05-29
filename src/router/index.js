@@ -110,18 +110,18 @@ const router = createRouter({
                         }
                     ]                  
                 },
-                {                    
-                    path: 'chandm',
-                    name: 'chandm',
-                    component: ChanDmPanel,
-                    children: [
-                        {
-                            path: 'chandm_body/:chanid',
-                            name: 'chandm_body',
-                            component: MemberList,
-                        }
-                    ]                  
-                }
+                // {                    
+                //     path: 'chandm',
+                //     name: 'chandm',
+                //     component: ChanDmPanel,
+                //     children: [
+                //         {
+                //             path: 'chandm_body/:chanid',
+                //             name: 'chandm_body',
+                //             component: MemberList,
+                //         }
+                //     ]                  
+                // }
             ]
         }        
     ],
@@ -131,23 +131,26 @@ const router = createRouter({
 
 router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고는 안 먹혀도 여기 beforeEach와 Activeted/Deactivated는 먹힘
     //if (!gst) gst = GeneralStore() //(1)
-    //console.log("from.path: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
-    //console.log("to.path: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(from.query))
+    console.log("from.path: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
+    console.log("to.path: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(from.query))
     if (from.path == "/" && to.path.startsWith("/main/home/home_body/")) {
-        console.log("chk) redirect to home")
-        return { path: '/main/home', query : { ver : Math.random() }}
-    } else if ( //아래는 from,to가 반대로 호출되고 있어 MsgList에 표시되지 않은 경우가 많은데 여기서 막아주면 문제없음 (현재까지 대안 못찾음)
-        (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) ||
-        (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) ||
-        (from.path.startsWith("/main/activity/activity_body/") && to.path == ("/main/activity")) ||
-        (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) ||
-        (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) ||
-        (from.path.startsWith("/main/group/group_body/") && to.path == ("/main/group")) 
-    ) {
-        console.log(from.path + " -> " + to.path) //새로고침, 새창에서열기 등 
+       console.log("chk) home_body redirects to home") //이 부분을 막으면 새로고침시 blank page 나타남
+       return { path: '/main/home' } //return { path: '/main/home', query : { ver : Math.random() }}
+    } else if (from.path == "/" && to.path.includes("_body/")) {
+        console.log('return false (root -> body) : ' + from.path + " -> " + to.path) //패널은 건너뛰면 안됨
+        return false
+    //} else if //아래는 (새로고침 등의 사유로..) from,to가 반대로 호출되고 있어 MsgList에 표시되지 않은 경우가 많은데 여기서 막아주면 문제없음 (현재까지 다른 좋은 대안 못찾음)
+        // (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) ||
+        // (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) ||
+        // (from.path.startsWith("/main/activity/activity_body/") && to.path == ("/main/activity")) ||
+        // (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) ||
+        // (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) ||
+        // (from.path.startsWith("/main/group/group_body/") && to.path == ("/main/group")) 
+    } else if (from.path.includes("_body/") && (to.path == ("/main/home") || to.path == ("/main/dm") || to.path == ("/main/activity") || to.path == ("/main/later") || to.path == ("/main/fixed") || to.path == ("/main/group"))) {
+        console.log('return false (body -> panel) : ' + from.path + " -> " + to.path) //새로고침, 새창에서열기 등 
         return false //MsgList.vue의 $$76 참조
     }
-    return true
+    return true //onMounted() 두번 이상 실행되는 건 return true로 두번 들어와서 그러한데 결국 from/to에서 필요없는 것은 false로 처리하기 (현재까지 다른 좋은 대안 못찾음)
 })
 
 export default router
