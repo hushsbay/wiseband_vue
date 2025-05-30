@@ -8,10 +8,8 @@ import ActivityPanel from '/src/views/ActivityPanel.vue'
 import LaterPanel from '/src/views/LaterPanel.vue'
 import FixedPanel from '/src/views/FixedPanel.vue'
 import GroupPanel from '/src/views/GroupPanel.vue'
-import ChanDmPanel from '/src/views/ChanDmPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 import UserList from '/src/views/UserList.vue'
-import MemberList from '/src/views/MemberList.vue'
 
 //import GeneralStore from '/src/stores/GeneralStore.js'
 //let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
@@ -129,29 +127,34 @@ const router = createRouter({
     //대신 keepalive + onscrollend + onActivated hook에서 더 자유도 높게 해결함
 })
 
-router.beforeEach((to, from) => { //keepalive시 Mounted hook은 처음 말고는 안 먹혀도 여기 beforeEach와 Activeted/Deactivated는 먹힘
-    //if (!gst) gst = GeneralStore() //(1)
-    console.log("from.path: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
-    console.log("to.path: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(from.query))
-    if (from.path == "/" && to.path.startsWith("/main/home/home_body/")) {
-       console.log("chk) home_body redirects to home") //이 부분을 막으면 새로고침시 blank page 나타남
-       return { path: '/main/home' } //return { path: '/main/home', query : { ver : Math.random() }}
+router.beforeEach((to, from) => {
+    //if (!gst) gst = GeneralStore() //참조 (1)
+    console.log("## from.path: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
+    console.log("## to.path: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(from.query))
+    //아래 return false를 안막으면 두번 이상 실행되는데 원인을 모르는 것이 많음
+    //keepalive시 Mounted hook은 처음 말고는 안 먹혀도 여기 beforeEach와 Activeted/Deactivated는 먹힘을 유의 (그래서 onMounted()가 2회 수행되는 수도 있을 것임)
+    //각 vue의 gst.util.chkOnMountedTwice() 참조 - onMounted가 2회 이상 실행되어 막음 (Hot Deploy가 원인일 수도 있어 운영에서 체크 필요)
+    if (from.path.includes("_body/")) {
+        if (from.path == to.path) {
+            //예1) 새로고침시 1) MsgList->MsgList 2) /->MsgList가 기본적으로 라우팅되는데 그걸 1)은 막고 2)는 /->Panel로 라우팅되게 함
+            //예2) DmPanel에서 각 Dm방 클릭시 onMounted() 두번 호출됨 - Hot Deploy + v-for + ref인 경우 2번 호출된다고는 하는데 운영에서 체크해봐야 함
+            console.log('body -> body (새로고침 등으로 같은 body : 안막으면 onMounted 두번 호출됨)')
+            return false
+        } else {
+            const arr = from.path.split("/")
+            const fromPath2 = "/" + arr[1] + "/" + arr[2]
+            if (to.path == fromPath2) {
+                console.log('body -> panel (새로고침 등으로 body에서 panel을 호출하는 것은 막음)')
+                return false
+            }
+        }
     } else if (from.path == "/" && to.path.includes("_body/")) {
-        console.log('return false (root -> body) : ' + from.path + " -> " + to.path) //패널은 건너뛰면 안됨
-        return false
-    } else if ( //아래는 (새로고침 등의 사유로..) from,to가 반대로 호출되고 있어 MsgList에 표시되지 않은 경우가 많은데 여기서 막아주면 문제없음 (현재까지 다른 좋은 대안 못찾음)
-        (from.path.startsWith("/main/home/home_body/") && to.path == ("/main/home")) ||
-        (from.path.startsWith("/main/dm/dm_body/") && to.path == ("/main/dm")) ||
-        (from.path.startsWith("/main/activity/activity_body/") && to.path == ("/main/activity")) ||
-        (from.path.startsWith("/main/later/later_body/") && to.path == ("/main/later")) ||
-        (from.path.startsWith("/main/fixed/fixed_body/") && to.path == ("/main/fixed")) ||
-        (from.path.startsWith("/main/group/group_body/") && to.path == ("/main/group")) 
-    ) { //바로 위를 바로 아래처럼 하면 사이드 메뉴에서 메뉴 이동이 안됨
-    //} else if (from.path.includes("_body/") && (to.path == ("/main/home") || to.path == ("/main/dm") || to.path == ("/main/activity") || to.path == ("/main/later") || to.path == ("/main/fixed") || to.path == ("/main/group"))) {
-    //    console.log('return false (body -> panel) : ' + from.path + " -> " + to.path) //새로고침, 새창에서열기 등 
-    //    return false //MsgList.vue의 $$76 참조
+        const arr = to.path.split("/")
+        const realTo = "/" + arr[1] + "/" + arr[2]
+        console.log('root -> body 라우팅을 root -> ' + realTo + '(패널)로 변경 : 변경안하면 멈춤')
+        return { path: realTo }
     }
-    return true //onMounted() 두번 이상 실행되는 건 return true로 두번 들어와서 그러한데 결국 from/to에서 필요없는 것은 false로 처리하기 (현재까지 다른 좋은 대안 못찾음)
+    return true
 })
 
 export default router

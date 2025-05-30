@@ -149,7 +149,7 @@
     }
 
     async function goRoute(obj, onMounted) { //사이드메뉴 클릭시 맨 처음 로드시 push로 라우팅하면 오른쪽 공백이 생김
-        Object.assign(obj, { query : { ver : Math.random() }}) //obj에 merge : 사이드메뉴 클릭시 (예:Home.vue 호출) 캐시 제거하고 호출해야 MsgList.vue 안뜨는 상황 방지될 것임
+        //Object.assign(obj, { query : { ver : Math.random() }}) //obj에 merge : 사이드메뉴 클릭시 (예:Home.vue 호출) 캐시 제거하고 호출해야 MsgList.vue 안뜨는 상황 방지될 것임
         if (onMounted) {
             await router.replace(obj)
         } else {
@@ -244,8 +244,8 @@
                 </div>
             </div>
             <div class="main">
-                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/home의 'home'을 가져옴
-                    <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList에서 keepalive에도 불구하고 onMounted가 2회 발생 -->
+                <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/dm과 같이 DmPanel을 가져옴
+                    <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList에서 keepalive에도 불구하고 onMounted가 2회 이상 계속 발생 or 무한루프(예:홈 메뉴)-->
                     <router-view v-slot="{ Component }">
                         <keep-alive>
                             <component :is="Component" />

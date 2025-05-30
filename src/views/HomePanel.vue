@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, onActivated, watch } from 'vue' 
+    import { ref, onMounted, onActivated } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
@@ -22,7 +22,7 @@
     //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 역으로 같이 맞춰져야 함
 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null)
+    let memberlistRef = ref(null), listHome = ref([]), kind = ref('all')
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -37,8 +37,9 @@
 
     onMounted(async () => {
         try {
+            gst.util.chkOnMountedTwice(route, 'HomePanel')
             setBasicInfo()
-            if (localStorage.wiseband_lastsel_kind) gst.kindHome = localStorage.wiseband_lastsel_kind
+            if (localStorage.wiseband_lastsel_kind) kind.value = localStorage.wiseband_lastsel_kind
             await getList()
             chanClickOnLoop(true)
         } catch (ex) {
@@ -52,27 +53,18 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/home") {
-                debugger
-                chanClickOnLoop()
+                chanClickOnLoop(true)
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
         }
     })
 
-    watch([() => gst.selChanHome], () => { //MsgList -> GeneralStore -> watch
-        //Home에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 MsgList의 라우팅에서 처리
-        debugger
-        if (!gst.selChanHome) return
-        chanRow.value[gst.selChanHome].scrollIntoView({ behavior: "smooth", block: "nearest" })
-        chanClick(null, null, gst.selChanHome)
-    })
-
-    watch(() => gst.kindHome, async () => {
-        localStorage.wiseband_lastsel_kind = gst.kindHome
-        await getList() 
-        chanClickOnLoop()
-    }) //onMounted()에서 MsgList를 한번 더 호출하므로 다른 방안 찾아봐야 함
+    async function changeKind() {
+        localStorage.wiseband_lastsel_kind = kind.value
+        await getList()
+        chanClickOnLoop(true)
+    }
 
     function setBasicInfo() {
         document.title = "WiSEBand 홈"
@@ -81,25 +73,27 @@
 
     async function getList() {
         try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
-            const res = await axios.post("/menu/qryChan", { kind : gst.kindHome }) //my,other,all
+            const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.listHome = rs.list
+            listHome.value = rs.list
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
-    function chanClickOnLoop(refresh) {
+    function chanClickOnLoop(clickNode, chanid) {
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
-        gst.listHome.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
+        const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
+        if (!chanidToChk) return
+        listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
                 item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
                 procChanRowImg(item)
             }
-            if (item.CHANID == localStorage.wiseband_lastsel_chanid) {
-                if (item.CHANID) chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                chanClick(item, index, null, refresh)
+            if (item.CHANID == chanidToChk) {
+                if (item.CHANID) gst.util.scrollIntoView(chanRow, item.CHANID) //chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                chanClick(item, index, clickNode, chanid)
             }
         })
     }
@@ -121,7 +115,7 @@
                 item.nodeImg = (item.STATE == "A") ? "channel.png" : "lock.png"
                 item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
                 item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
-                item.otherImg = (item.OTHER == "other") ? "other.png" : ""
+                item.otherImg = (item.OTHER == "other") ? "person.png" : ""
                 const color = item.sel ? hush.cons.color_dark : hush.cons.color_light
                 item.nodeImg = color + item.nodeImg
                 if (item.notioffImg) item.notioffImg = color + item.notioffImg
@@ -133,36 +127,36 @@
 
     function procExpCol(type) { //모두필치기,모두접기
         const exploded = (type == "E") ? true : false
-        for (let i = 0; i < gst.listHome.length; i++) {
-            gst.listHome[i].exploded = exploded
-            procChanRowImg(gst.listHome[i])
+        for (let i = 0; i < listHome.value.length; i++) {
+            listHome.value[i].exploded = exploded
+            procChanRowImg(listHome.value[i])
         }
     }
 
-    async function chanClick(row, idx, chanid, refresh) { //depth 1,2를 미리 filter해서 하지 말기
-        try { //chanid 파라미터는 depth2에만 해당
-            if (!chanid && row.DEPTH == "1") { //접기 or 펼치기
+    async function chanClick(row, idx, clickNode, chanid) { //depth 1,2를 미리 filter해서 하지 말기
+        try {
+            if (row.DEPTH == "1") { //접기 or 펼치기
                 row.exploded = (row.exploded) ? false : true
                 procChanRowImg(row)
-                for (let i = idx + 1; i < gst.listHome.length; i++) {
-                    if (gst.listHome[i].DEPTH == "1") break
-                    gst.listHome[i].exploded = row.exploded
+                for (let i = idx + 1; i < listHome.value.length; i++) {
+                    if (listHome.value[i].DEPTH == "1") break
+                    listHome.value[i].exploded = row.exploded
                 }                
                 const arr = [] //브라우저 재실행해도 접기/펼치기 상태 기억해서 그대로 표시하기
-                gst.listHome.forEach((item) => {
+                listHome.value.forEach((item) => {
                     if (item.DEPTH == "1" && item.exploded) arr.push(item.GR_ID)
                 })
                 localStorage.wiseband_exploded_grid = arr.length == 0 ? "" : arr.join(',')                
             } else {
-                gst.listHome.forEach((item) => {
+                listHome.value.forEach((item) => {
                     if (item.DEPTH == "2") {
                         item.sel = false
                         item.hover = false
                         procChanRowImg(item)
                     }
                 })
-                if (chanid) { //Back()경우, MsgList에 열린 채널의 원래 스크롤값을 watch에서 가져온 후 여기로 와서 채널노드의 색상 선택
-                    const row1 = gst.listHome.find((item) => item.CHANID == chanid)
+                if (chanid) { //Back() 경우
+                    const row1 = listHome.value.find((item) => item.CHANID == chanid)
                     if (row1) {
                         row1.sel = true
                         procChanRowImg(row1)
@@ -172,7 +166,7 @@
                     row.sel = true
                     procChanRowImg(row)
                     localStorage.wiseband_lastsel_chanid = row.CHANID
-                    gst.util.goMsgList('home_body', { chanid: row.CHANID }, refresh)
+                    if (clickNode) gst.util.goMsgList('home_body', { chanid: row.CHANID })
                 }
             }
         } catch (ex) {
@@ -227,8 +221,17 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행
-        chanClickOnLoop()
+    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+        if (param.kind == "selectRow") {
+            chanClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
+        } else if (param.kind == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+            const row = listHome.value.find((item) => item.CHANID == param.chanid)
+            if (!row) return
+            const res = await axios.post("/menu/qryKindCnt", { chanid: param.chanid, kind: "notyet" })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            row.mynotyetCnt = rs.data.kindCnt
+        }
     }
 
     function handleEvFromMemberList(chanid) { //MemberList에서 실행
@@ -240,7 +243,7 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
-                <select v-model="gst.kindHome" style="background:var(--second-color);color:var(--second-select-color);border:none">
+                <select v-model="kind" style="background:var(--second-color);color:var(--second-select-color);border:none" @change="changeKind">
                     <option value="my">내 채널</option>
                     <option value="other">다른 채널</option>
                     <option value="all">모든 채널</option>
@@ -259,9 +262,9 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
-            <div v-for="(row, idx) in gst.listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
+            <div v-for="(row, idx) in listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
                 :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }"
-                @click="chanClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                @click="chanClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM" :style="{ paddingLeft: row.DEPTH == '1' ? '0' : '15px' }">
                         <img class="coImg14" :src="gst.html.getImageUrl(row.nodeImg)">

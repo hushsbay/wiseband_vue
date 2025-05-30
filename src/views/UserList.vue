@@ -61,7 +61,7 @@
             setBasicInfo()
             const key = grId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            gst.home.procFromBody("recall", { grid: grId })
+            //gst.home.procFromBody("recall", { grid: grId })
         }
     })
 

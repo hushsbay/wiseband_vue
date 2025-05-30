@@ -115,8 +115,9 @@
 
     /////////////////////////////////////////////////////////////////////////////////////
     
-    function evToPanel() { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
-        emits("ev-to-panel")
+    function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
+        //param = { kind: 'selectRow', chanid: chanid }, { kind: 'updateUnreadCnt' }
+        emits("ev-to-panel", param)
     }
 
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
@@ -135,6 +136,7 @@
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
     const mediaPopupRef = ref(null)
         
+    let temp = ''
     let sideMenu, chanId, msgidInChan
     let grnm = ref(''), chanNm = ref(''), chanImg = ref(''), vipStr = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
@@ -188,7 +190,7 @@
     const observerTopScroll = () => { //위로 스크롤하는 경우
         observerTop.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {
-                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                //await getList({ lastMsgMstCdt: savLastMsgMstCdt })
             } else {
                 return
             }
@@ -199,7 +201,7 @@
     const observerBottomScroll = () => { //아래로 스크롤하는 경우
         observerBottom.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {
-                await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+                //await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
             } else {
                 return
             }
@@ -214,7 +216,8 @@
         //또 다른 현상은 새로고침하면 HomePanel.vue가 먼저 실행되는 것이 아닌 MsgList.vue의 onMounted가 먼저 실행되어서 HomePanel.vue가 실행되면서 
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
-            console.log("Mounted...................................")
+            gst.util.chkOnMountedTwice(route, 'MsgList')
+            temp = hush.util.getRnd() + 'Mounted'
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
             if (hasProp()) {
@@ -227,8 +230,8 @@
                 } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })                    
                 }
-                observerTopScroll()
-                observerBottomScroll()
+                //observerTopScroll()
+                //observerBottomScroll()
                 try { 
                     inEditor.value.focus() 
                 } catch {}
@@ -242,18 +245,20 @@
         if (mounting) {
             mounting = false
         } else {
+            console.log("Activated..................................." + route.fullPath)
+            temp = hush.util.getRnd() + 'Activated'
             if (hasProp()) {
                 setBasicInfoInProp()
             } else {
                 setBasicInfo()
-                observerTopScroll()
-                observerBottomScroll()      
+                //observerTopScroll()
+                //observerBottomScroll()      
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            if (appType == "home") {
-                //gst.home.procFromBody("recall", { chanid: chanId })
-            } else if (appType == "dm" || appType == "later" || appType == "fixed") {
+            if (appType == "home" || appType == "dm") {
+                evToPanel({ kind: "selectRow", chanid: chanId })
+            } else if (appType == "later" || appType == "fixed") {
                 evToPanel()
             }
         }
@@ -316,6 +321,7 @@
         msglist.value = []
         if (kind == 'all') {
             savLastMsgMstCdt = hush.cons.cdtAtLast
+            console.log("listMsg-all")
             await getList({ lastMsgMstCdt: savLastMsgMstCdt })
         } else {
             await getList({ kind: kind })
@@ -345,6 +351,7 @@
             onGoingGetList = true
             let param = { chanid: chanId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
+            //console.log("getList "+"22222222222: " + JSON.stringify(param))
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt
             const msgid = param.msgid
@@ -362,10 +369,10 @@
             }
             vipStr.value = rs.data.vipStr ?? "none" //데이터 없어서 null일 수도 있음 ##34
             grnm.value = rs.data.chanmst.GR_NM
-            chanNm.value = rs.data.chanmst.CHANNM            
+            chanNm.value = rs.data.chanmst.CHANNM
             chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
-            document.title = chanNm.value + " [채널]"
+            document.title = chanNm.value + " [채널-" + temp + "]"
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             chanmemFullExceptMe.value = []
             for (let i = 0; i < rs.data.chandtl.length; i++) {
@@ -722,10 +729,15 @@
                 }
                 return //패널 업데이트 필요없음 (notyet은 변동없음)
             }
-            if (appType == "home") { //if (route.fullPath.includes("/home_body/")) {
-                gst.home.procFromBody("updateUnreadCnt", rq)
-            } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
-                gst.dm.procFromBody("updateUnreadCnt", rq)
+            // if (appType == "home") { //if (route.fullPath.includes("/home_body/")) {
+            //     //gst.home.procFromBody("updateUnreadCnt", rq)
+            //     evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
+            // } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
+            //     //gst.dm.procFromBody("updateUnreadCnt", rq)
+            //     evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
+            // }
+            if (appType == "home" || appType == "dm") {
+                evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)

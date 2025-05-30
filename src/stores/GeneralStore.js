@@ -46,8 +46,8 @@ const GeneralStore = defineStore('General', () => {
     */
     
     ///////////////////////////////////////////////////////////////////////
-    let listHome = ref([]), kindHome = ref('my'), selChanHome = ref('')
-    let listDm = ref([]), kindDm = ref('all')
+    //let listHome = ref([]) //, selChanHome = ref('')
+    //let listDm = ref([]), kindDm = ref('all')
     let listActivity = ref([]), kindActivity = ref('all')
     let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     let listFixed = ref([]), cntFixed = ref('')
@@ -137,45 +137,46 @@ const GeneralStore = defineStore('General', () => {
     }
     
     ///////////////////////////////////////////////////////////////////////////////////
-    const home = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+    // const home = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) {
-            if (type == "recall") {
-                selChanHome.value = obj.chanid
-            } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
-                const row = listHome.value.find((item) => item.CHANID == obj.chanid)
-                if (!row) return
-                const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
-                const rs = util.chkAxiosCode(res.data)
-                if (!rs) return
-                row.mynotyetCnt = rs.data.kindCnt
-            }
-        }
+    //     procFromBody : async function(type, obj) {
+    //         // if (type == "recall") {
+    //         //     selChanHome.value = obj.chanid
+    //         // } else 
+    //         if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+    //             const row = listHome.value.find((item) => item.CHANID == obj.chanid)
+    //             if (!row) return
+    //             const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
+    //             const rs = util.chkAxiosCode(res.data)
+    //             if (!rs) return
+    //             row.mynotyetCnt = rs.data.kindCnt
+    //         }
+    //     }
 
-    }
+    // }
 
-    const dm = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+    // const dm = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) {
-            if (type == "update") {
-                const idx = listDm.value.findIndex((item) => item.CHANID == obj.chanid)
-                if (idx == -1) return
-                const row = listDm.value[idx]
-                row.BODYTEXT = obj.bodytext
-                if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
-                listDm.value.splice(idx, 1)
-                listDm.value.unshift(row)
-            } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
-                const row = listDm.value.find((item) => item.CHANID == obj.chanid)
-                if (!row) return
-                const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
-                const rs = util.chkAxiosCode(res.data)
-                if (!rs) return
-                row.mynotyetCnt = rs.data.mynotyetCnt
-            }
-        }
+    //     procFromBody : async function(type, obj) {
+    //         if (type == "update") {
+    //             const idx = listDm.value.findIndex((item) => item.CHANID == obj.chanid)
+    //             if (idx == -1) return
+    //             const row = listDm.value[idx]
+    //             row.BODYTEXT = obj.bodytext
+    //             if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
+    //             listDm.value.splice(idx, 1)
+    //             listDm.value.unshift(row)
+    //         } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+    //             const row = listDm.value.find((item) => item.CHANID == obj.chanid)
+    //             if (!row) return
+    //             const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
+    //             const rs = util.chkAxiosCode(res.data)
+    //             if (!rs) return
+    //             row.mynotyetCnt = rs.data.mynotyetCnt
+    //         }
+    //     }
 
-    }
+    // }
 
     const later = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
@@ -321,6 +322,16 @@ const GeneralStore = defineStore('General', () => {
 
     const util = {
 
+        chkOnMountedTwice : function(route, str) {
+            if (sessionStorage.mountedFullpath == route.fullPath) {
+                console.log("route.fullPath가 같은데 onMounted() 재호출되어 막음 - 개발 Hot Deply일 수도 있음 (운영에서 체크) - " + route.fullPath)
+                return
+            }
+            sessionStorage.mountedFullpath = route.fullPath
+            setTimeout(function() { sessionStorage.mountedFullpath = '' }, 1000)
+            console.log(str + " Mounted..... " + route.fullPath)
+        }, 
+
         setSnack : function(ex, toastSec, fromConfig) {
             let strMsg, strStack
             if (toastSec == true) { //토스트없이 계속 display
@@ -427,7 +438,7 @@ const GeneralStore = defineStore('General', () => {
         },
 
         scrollIntoView : function(rowRef, rowValue, opt) {
-            let optReal = opt ? opt : { block: "nearest" }
+            let optReal = opt ? opt : { behavior: "smooth", block: "nearest" }
             rowRef.value[rowValue].scrollIntoView(optReal)
         },
 
@@ -487,7 +498,7 @@ const GeneralStore = defineStore('General', () => {
                 let msgid = params.msgid
                 if (!msgid) params.msgid = await util.qryOneMsgNotYet(params.chanid)
                 let obj = { name : nm, params : params}
-                if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
+                //if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
                 if (!msgid && params.msgid.length > 20) { //안읽은 메시지 아이디를 가지고 온 것임 : Panel중에 동일한 로직으로 처리하는 곳이 있음
                     if (!obj.query) obj.query = {}
                     obj.query.notyet = true                    
@@ -581,8 +592,8 @@ const GeneralStore = defineStore('General', () => {
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, 
         snackBar, toast, auth, ctx, html, util,
-        home, listHome, kindHome, selChanHome,
-        dm, listDm, kindDm,
+        //home, listHome, //selChanHome,
+        //dm, listDm, kindDm,
         listActivity, kindActivity, //cntActivity, 
         later, listLater, cntLater, kindLater,
         fixed, listFixed, cntFixed,

@@ -19,7 +19,7 @@
 
     const msglistRef = ref(null), notyetChk = ref(false), searchWord = ref('')
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null)
+    let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all')
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
@@ -46,6 +46,7 @@
 
     onMounted(async () => {
         try {
+            gst.util.chkOnMountedTwice(route, 'DmPanel')
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_lastsel_dm == "notyet") ? true : false
             await getList(true)            
@@ -62,7 +63,7 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/dm") {
-                dmClickOnLoop()
+                dmClickOnLoop(true)
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
@@ -100,14 +101,14 @@
         try {
             if (onGoingGetList) return
             onGoingGetList = true
-            gst.kindDm = localStorage.wiseband_lastsel_dm
+            kindDm.value = localStorage.wiseband_lastsel_dm
             const search = searchWord.value.trim()
             if (refresh) {
-                gst.listDm = []
+                listDm.value = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
-            const res = await axios.post("/menu/qryDm", { kind: gst.kindDm, search: search, lastMsgMstCdt: lastMsgMstCdt })
+            const res = await axios.post("/menu/qryDm", { kind: kindDm.value, search: search, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
                 onGoingGetList = false
@@ -128,7 +129,7 @@
                     }
                 }                
                 procChanRowImg(row)
-                gst.listDm.push(row)
+                listDm.value.push(row)
                 if (row.LASTMSGDT < savLastMsgMstCdt) savLastMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
             }
             await nextTick()
@@ -149,26 +150,40 @@
         row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
     }
 
-    function dmClickOnLoop(refresh) {
-        const chanid = localStorage.wiseband_lastsel_dmchanid
-        if (!chanid) return
-        gst.listDm.forEach((item, index) => {
-            if (item.CHANID == chanid) {
-                chanRow.value[chanid].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                dmClick(item, index, refresh)
+    function dmClickOnLoop(clickNode, chanid) {
+        const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_dmchanid
+        if (!chanidToChk) return
+        let foundIdx = -1
+        listDm.value.forEach((item, index) => {
+            if (item.CHANID == chanidToChk) {
+                gst.util.scrollIntoView(chanRow, chanidToChk) //chanRow.value[chanidToChk].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                dmClick(item, index, clickNode, chanid)
+                foundIdx = index
             }
         })
+        if (foundIdx == -1 && clickNode && listDm.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
+            const row = listDm.value[0]
+            dmClick(row, 0, clickNode, row.CHAIND)
+        }
     }
     
-    async function dmClick(row, idx, refresh) {
+    async function dmClick(row, idx, clickNode, chanid) {
         try {
-            gst.listDm.map((item) => {
+            listDm.value.forEach((item) => {
                item.sel = false
                item.hover = false
             })
-            row.sel = true
-            localStorage.wiseband_lastsel_dmchanid = row.CHANID
-            gst.util.goMsgList('dm_body', { chanid: row.CHANID }, refresh)
+            if (chanid) { //Back() 경우
+                const row1 = listDm.value.find((item) => item.CHANID == chanid)
+                if (row1) {
+                    row1.sel = true
+                    localStorage.wiseband_lastsel_dmchanid = chanid
+                }
+            } else {
+                row.sel = true
+                localStorage.wiseband_lastsel_dmchanid = row.CHANID
+                if (clickNode) gst.util.goMsgList('dm_body', { chanid: row.CHANID })
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -180,14 +195,14 @@
             const res = await axios.post("/chanmsg/toggleChanOption", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            const idx = gst.listDm.findIndex((item) => item.CHANID == row.CHANID)
+            const idx = listDm.value.findIndex((item) => item.CHANID == row.CHANID)
             if (idx > -1) {
                 if (kind == "noti") {
-                    gst.listDm[idx].NOTI = job
+                    listDm.value[idx].NOTI = job
                 } else if (kind == "bookmark") {
-                    gst.listDm[idx].BOOKMARK = job
+                    listDm.value[idx].BOOKMARK = job
                 }
-                procChanRowImg(gst.listDm[idx])
+                procChanRowImg(listDm.value[idx])
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -233,8 +248,25 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행
-        dmClickOnLoop()
+    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+        if (param.kind == "selectRow") {
+            dmClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
+        } else if (param.kind == "update") {
+            const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
+            if (idx == -1) return
+            const row = listDm.value[idx]
+            row.BODYTEXT = param.bodytext
+            if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
+            listDm.value.splice(idx, 1)
+            listDm.value.unshift(row)
+        } else if (param.kind == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+            const row = listHome.value.find((item) => item.CHANID == param.chanid)
+            if (!row) return
+            const res = await axios.post("/menu/qryKindCnt", { chanid: param.chanid, kind: "notyet" })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            row.mynotyetCnt = rs.data.kindCnt
+        }
     }
 
     function handleEvFromMemberList(chanid) { //MemberList에서 실행
@@ -259,9 +291,9 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in gst.listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }"
+            <div v-for="(row, idx) in listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
-                @click="dmClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                @click="dmClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
                         <span>{{ row.memcnt }}명</span>

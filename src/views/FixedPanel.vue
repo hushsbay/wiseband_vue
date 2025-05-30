@@ -44,6 +44,7 @@
 
     onMounted(async () => {
         try {
+            gst.util.chkOnMountedTwice(route, 'FixedPanel')
             setBasicInfo()
             //gst.kindLater = localStorage.wiseband_lastsel_later ? localStorage.wiseband_lastsel_later : "later"
             await getList(true)            
