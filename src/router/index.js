@@ -73,7 +73,7 @@ const router = createRouter({
                     ]                  
                 },
                 {                    
-                    path: 'later',
+                    path: 'later', ///:kind',
                     name: 'later',
                     component: LaterPanel,
                     children: [

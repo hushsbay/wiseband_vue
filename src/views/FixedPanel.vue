@@ -17,7 +17,7 @@
     let afterScrolled = ref(false)
 
     const msglistRef = ref(null)    
-    let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당
+    let scrollArea = ref(null), listFixed = ref([]), cntFixed = ref(0), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
@@ -46,7 +46,6 @@
         try {
             gst.util.chkOnMountedTwice(route, 'FixedPanel')
             setBasicInfo()
-            //gst.kindLater = localStorage.wiseband_lastsel_later ? localStorage.wiseband_lastsel_later : "later"
             await getList(true)            
             observerBottomScroll()
             fixedClickOnLoop(true)
@@ -61,7 +60,7 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/fixed") {
-                fixedClickOnLoop()
+                fixedClickOnLoop(true)
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
@@ -93,7 +92,7 @@
             if (onGoingGetList) return
             onGoingGetList = true
             if (refresh) {
-                gst.listFixed = []
+                listFixed.value = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
@@ -111,7 +110,7 @@
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                gst.listFixed.push(row)
+                listFixed.value.push(row)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
@@ -120,7 +119,7 @@
             } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
-            gst.fixed.getCount()
+            getCount()
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -128,26 +127,41 @@
         }
     }
 
-    function fixedClickOnLoop(refresh) {
-        const msgid = localStorage.wiseband_lastsel_fixedmsgid
-        if (!msgid) return
-        gst.listFixed.forEach((item, index) => {
-            if (item.MSGID == msgid) {
-                msgRow.value[msgid].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                fixedClick(item, index, refresh)
+    function fixedClickOnLoop(clickNode, msgid) {
+        //const msgid = localStorage.wiseband_lastsel_fixedmsgid
+        const msgidToChk = msgid ? msgid : localStorage.wiseband_lastsel_fixedmsgid
+        if (!msgidToChk) return
+        let foundIdx = -1
+        listFixed.value.forEach((item, index) => {
+            if (item.MSGID == msgidToChk) {
+                gst.util.scrollIntoView(msgRow, msgidToChk) //msgRow.value[msgid].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                fixedClick(item, index, clickNode, msgid)
+                foundIdx = index
             }
         })
+        if (foundIdx == -1 && clickNode && listFixed.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
+            const row = listFixed.value[0]
+            fixedClick(row, 0, clickNode, row.CHAIND)
+        }
     }
     
-    async function fixedClick(row, idx, refresh) {
+    async function fixedClick(row, idx, clickNode, msgid) {
         try {            
-            gst.listFixed.map((item) => {
+            listFixed.value.forEach((item) => {
                item.sel = false
                item.hover = false
             })
-            row.sel = true
-            localStorage.wiseband_lastsel_fixedmsgid = row.MSGID
-            gst.util.goMsgList('fixed_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
+            if (msgid) { //Back() 경우
+                const row1 = listFixed.value.find((item) => item.MSGID == msgid)
+                if (row1) {
+                    row1.sel = true
+                    localStorage.wiseband_lastsel_fixedmsgid = msgid
+                }
+            } else {
+                row.sel = true
+                localStorage.wiseband_lastsel_fixedmsgid = row.MSGID
+                if (clickNode) gst.util.goMsgList('fixed_body', { chanid: row.CHANID, msgid: row.MSGID })
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -160,9 +174,9 @@
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Fixed 패널 탭에서는 제거해야 함
-            const idx = gst.listFixed.findIndex((item) => item.MSGID == msgid)
-            if (idx > -1) gst.listFixed.splice(idx, 1)
-            gst.fixed.getCount() //화면에 갯수 업데이트
+            const idx = listFixed.value.findIndex((item) => item.MSGID == msgid)
+            if (idx > -1) listFixed.value.splice(idx, 1)
+            getCount() //화면에 갯수 업데이트
             if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
             const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
             msglistRef.value.procFromParent("fixed", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
@@ -198,8 +212,46 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행
-        fixedClickOnLoop()
+    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+        if (param.kind == "selectRow") {
+            fixedClickOnLoop(false, param.msgid) //뒤로가기는 clickNode = false
+        } else if (param.kind == "update") {
+            const row = listFixed.value.find((item) => item.MSGID == param.msgid)
+            if (row) row.BODYTEXT = param.bodytext
+        } else if (param.kind == "create" || param.kind == "delete") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, kind: work }
+            if (param.kind == "delete") { 
+                const idx = listFixed.value.findIndex((item) => item.MSGID == param.msgid)
+                if (idx > -1) listFixed.value.splice(idx, 1)
+            } else { //create (화면에 없는 걸 보이게 하는 것임)
+                const res = await axios.post("/menu/qryPanel", { msgid: param.msgid })
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs || rs.list.length == 0) return
+                const row = rs.list[0]
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                let added = false
+                const len = listFixed.value.length
+                for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+                    if (param.msgid > listFixed.value[i].MSGID) {
+                        listFixed.value.splice(i, 0, row)
+                        added = true
+                        break
+                    }
+                }
+                if (!added) listFixed.value.push(row)
+            }
+            getCount()
+        }
+    }
+
+    async function getCount() { //화면에 갯수 업데이트
+        try {
+            const res = await axios.post("/menu/qryPanelCount", { kind: "fixed" })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            cntFixed.value = rs.list[0].CNT
+        } catch (ex) {
+            util.showEx(ex, true)
+        }
     }
 </script>
 
@@ -207,12 +259,12 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">고정</div>
-            <div class="chan_side_top_right"><span style="color:white;font-size:15px;font-weight:bold">{{ gst.cntFixed }}</span></div>
+            <div class="chan_side_top_right"><span style="color:white;font-size:15px;font-weight:bold">{{ cntFixed }}</span></div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in gst.listFixed" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
+            <div v-for="(row, idx) in listFixed" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
-                @click="fixedClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                @click="fixedClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
                         <div v-if="row.TYP=='GS'" style="display:flex;align-items:center">

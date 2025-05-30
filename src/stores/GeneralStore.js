@@ -49,9 +49,9 @@ const GeneralStore = defineStore('General', () => {
     //let listHome = ref([]) //, selChanHome = ref('')
     //let listDm = ref([]), kindDm = ref('all')
     let listActivity = ref([]), kindActivity = ref('all')
-    let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
-    let listFixed = ref([]), cntFixed = ref('')
-    let chanItems = ref([]), dmItems = ref([]), kindChanDm = ref('chan'), selChanDm = ref('')
+    //let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
+    //let listFixed = ref([]), cntFixed = ref('')
+    //let chanItems = ref([]), dmItems = ref([]), kindChanDm = ref('chan'), selChanDm = ref('')
     let listGroup = ref([]), kindGroup = ref('my'), selGroup = ref('')
     ///////////////////////////////////////////////////////////////////////
     
@@ -178,51 +178,51 @@ const GeneralStore = defineStore('General', () => {
 
     // }
 
-    const later = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+    // const later = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) {
-            if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
-                const row = listLater.value.find((item) => item.MSGID == obj.msgid)
-                if (row) row.BODYTEXT = obj.bodytext
-            } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
-                if (obj.work == "delete") { 
-                    const idx = listLater.value.findIndex((item) => item.MSGID == obj.msgid)
-                    if (idx > -1) listLater.value.splice(idx, 1)
-                } else { //create (화면에 없는 걸 보이게 하는 것임)
-                    if (kindLater.value == "later") { //'나중에' 패널에서 진행중(later)탭이 아니면 추가된 행 화면업뎃할 일 없음
-                        const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
-                        const rs = util.chkAxiosCode(res.data)
-                        if (!rs || rs.list.length == 0) return
-                        const row = rs.list[0]
-                        row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                        let added = false
-                        const len = listLater.value.length
-                        for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-                            if (obj.msgid > listLater.value[i].MSGID) {
-                                listLater.value.splice(i, 0, row)
-                                added = true
-                                break
-                            }
-                        }
-                        if (!added) listLater.value.push(row)
-                    }
-                }
-                later.getCount() //화면에 갯수 업데이트
-            }
-        },
+    //     procFromBody : async function(type, obj) {
+    //         if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
+    //             const row = listLater.value.find((item) => item.MSGID == obj.msgid)
+    //             if (row) row.BODYTEXT = obj.bodytext
+    //         } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
+    //             if (obj.work == "delete") { 
+    //                 const idx = listLater.value.findIndex((item) => item.MSGID == obj.msgid)
+    //                 if (idx > -1) listLater.value.splice(idx, 1)
+    //             } else { //create (화면에 없는 걸 보이게 하는 것임)
+    //                 if (kindLater.value == "later") { //'나중에' 패널에서 진행중(later)탭이 아니면 추가된 행 화면업뎃할 일 없음
+    //                     const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
+    //                     const rs = util.chkAxiosCode(res.data)
+    //                     if (!rs || rs.list.length == 0) return
+    //                     const row = rs.list[0]
+    //                     row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+    //                     let added = false
+    //                     const len = listLater.value.length
+    //                     for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+    //                         if (obj.msgid > listLater.value[i].MSGID) {
+    //                             listLater.value.splice(i, 0, row)
+    //                             added = true
+    //                             break
+    //                         }
+    //                     }
+    //                     if (!added) listLater.value.push(row)
+    //                 }
+    //             }
+    //             later.getCount() //화면에 갯수 업데이트
+    //         }
+    //     },
 
-        getCount : async function() {
-            try {
-                const res = await axios.post("/menu/qryPanelCount", { kind: "later" })
-                const rs = util.chkAxiosCode(res.data)
-                if (!rs) return
-                cntLater.value = rs.list[0].CNT
-            } catch (ex) {
-                util.showEx(ex, true)
-            }
-        }
+    //     getCount : async function() {
+    //         try {
+    //             const res = await axios.post("/menu/qryPanelCount", { kind: "later" })
+    //             const rs = util.chkAxiosCode(res.data)
+    //             if (!rs) return
+    //             cntLater.value = rs.list[0].CNT
+    //         } catch (ex) {
+    //             util.showEx(ex, true)
+    //         }
+    //     }
 
-    }
+    // }
 
     const activity = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
@@ -258,49 +258,49 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const fixed = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+    // const fixed = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) {
-            if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
-                const row = listFixed.value.find((item) => item.MSGID == obj.msgid)
-                if (row) row.BODYTEXT = obj.bodytext
-            } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
-                if (obj.work == "delete") { 
-                    const idx = listFixed.value.findIndex((item) => item.MSGID == obj.msgid)
-                    if (idx > -1) listFixed.value.splice(idx, 1)
-                } else { //create (화면에 없는 걸 보이게 하는 것임)
-                    const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
-                    const rs = util.chkAxiosCode(res.data)
-                    if (!rs || rs.list.length == 0) return
-                    const row = rs.list[0]
-                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                    let added = false
-                    const len = listFixed.value.length
-                    for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-                        if (obj.msgid > listFixed.value[i].MSGID) {
-                            listFixed.value.splice(i, 0, row)
-                            added = true
-                            break
-                        }
-                    }
-                    if (!added) listFixed.value.push(row)
-                }
-                fixed.getCount() //화면에 갯수 업데이트
-            }
-        },
+    //     procFromBody : async function(type, obj) {
+    //         if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
+    //             const row = listFixed.value.find((item) => item.MSGID == obj.msgid)
+    //             if (row) row.BODYTEXT = obj.bodytext
+    //         } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
+    //             if (obj.work == "delete") { 
+    //                 const idx = listFixed.value.findIndex((item) => item.MSGID == obj.msgid)
+    //                 if (idx > -1) listFixed.value.splice(idx, 1)
+    //             } else { //create (화면에 없는 걸 보이게 하는 것임)
+    //                 const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
+    //                 const rs = util.chkAxiosCode(res.data)
+    //                 if (!rs || rs.list.length == 0) return
+    //                 const row = rs.list[0]
+    //                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+    //                 let added = false
+    //                 const len = listFixed.value.length
+    //                 for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+    //                     if (obj.msgid > listFixed.value[i].MSGID) {
+    //                         listFixed.value.splice(i, 0, row)
+    //                         added = true
+    //                         break
+    //                     }
+    //                 }
+    //                 if (!added) listFixed.value.push(row)
+    //             }
+    //             fixed.getCount() //화면에 갯수 업데이트
+    //         }
+    //     },
 
-        getCount : async function() {
-            try {
-                const res = await axios.post("/menu/qryPanelCount", { kind: "fixed" })
-                const rs = util.chkAxiosCode(res.data)
-                if (!rs) return
-                cntFixed.value = rs.list[0].CNT
-            } catch (ex) {
-                util.showEx(ex, true)
-            }
-        }
+    //     getCount : async function() {
+    //         try {
+    //             const res = await axios.post("/menu/qryPanelCount", { kind: "fixed" })
+    //             const rs = util.chkAxiosCode(res.data)
+    //             if (!rs) return
+    //             cntFixed.value = rs.list[0].CNT
+    //         } catch (ex) {
+    //             util.showEx(ex, true)
+    //         }
+    //     }
 
-    }
+    // }
 
     const group = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
@@ -595,8 +595,8 @@ const GeneralStore = defineStore('General', () => {
         //home, listHome, //selChanHome,
         //dm, listDm, kindDm,
         listActivity, kindActivity, //cntActivity, 
-        later, listLater, cntLater, kindLater,
-        fixed, listFixed, cntFixed,
+        //later, listLater, cntLater, kindLater,
+        //fixed, listFixed, cntFixed,
         group, listGroup, kindGroup, selGroup,
     }
 

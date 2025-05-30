@@ -116,7 +116,6 @@
     /////////////////////////////////////////////////////////////////////////////////////
     
     function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
-        //param = { kind: 'selectRow', chanid: chanid }, { kind: 'updateUnreadCnt' }
         emits("ev-to-panel", param)
     }
 
@@ -259,7 +258,7 @@
             if (appType == "home" || appType == "dm") {
                 evToPanel({ kind: "selectRow", chanid: chanId })
             } else if (appType == "later" || appType == "fixed") {
-                evToPanel()
+                evToPanel({ kind: "selectRow", msgid: msgidInChan })
             }
         }
     })
@@ -672,7 +671,8 @@
                         if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
                     }
                     if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때
-                        gst[appType].procFromBody("work", { msgid: row.MSGID, work: "delete" })
+                        //gst[appType].procFromBody("work", { msgid: row.MSGID, work: "delete" })
+                        evToPanel({ kind: "delete", msgid: row.MSGID }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
                     }
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
@@ -750,10 +750,13 @@
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return            
-            if (appType == "home") {
-                gst.home.procFromBody("updateUnreadCnt", rq)
-            } else if (appType == "dm") { 
-                gst.dm.procFromBody("updateUnreadCnt", rq)
+            // if (appType == "home") {
+            //     gst.home.procFromBody("updateUnreadCnt", rq)
+            // } else if (appType == "dm") { 
+            //     gst.dm.procFromBody("updateUnreadCnt", rq)
+            // }
+            if (appType == "home" || appType == "dm") {
+                evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
             }
             listMsg('notyet')
         } catch (ex) { 
@@ -968,9 +971,13 @@
                 refreshWithGetMsg(rs, editMsgId.value)
             }            
             if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
-                if (crud == "U") gst[appType].procFromBody("update", rq)
+                if (crud == "U") {
+                    //gst[appType].procFromBody("update", rq)
+                    evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
+                }
             } else if (appType == "dm") {
-                gst.dm.procFromBody("update", rq)
+                evToPanel({ kind: "update", chanid: chanId, bodytext: bodytext })
+                //gst.dm.procFromBody("update", rq)
             }
             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
             msgbody.value = ""            
@@ -1469,7 +1476,8 @@
                 if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (appType == "later" || appType == "fixed") { //패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
-                gst[appType].procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
+                //gst[appType].procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
+                evToPanel({ kind: work, msgid: msgid }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)

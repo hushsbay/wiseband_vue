@@ -17,7 +17,7 @@
     let afterScrolled = ref(false)
 
     const msglistRef = ref(null)    
-    let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당
+    let scrollArea = ref(null), listLater = ref([]), cntLater = ref(''), kindLater = ref('later'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
@@ -46,7 +46,7 @@
         try {
             gst.util.chkOnMountedTwice(route, 'LaterPanel')
             setBasicInfo()
-            gst.kindLater = localStorage.wiseband_lastsel_later ? localStorage.wiseband_lastsel_later : "later"
+            kindLater.value = localStorage.wiseband_lastsel_later ? localStorage.wiseband_lastsel_later : "later"
             await getList(true)            
             observerBottomScroll()
             laterClickOnLoop(true)
@@ -61,7 +61,7 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/later") {
-                laterClickOnLoop()
+                laterClickOnLoop(true)
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
@@ -76,6 +76,7 @@
     function setBasicInfo() {
         document.title = "WiSEBand 나중에"
         gst.selSideMenu = "mnuLater" //MsgList.vue에 Blank 방지
+        if (route.params.kind) chanId = route.params.chanid
     }
 
     const onScrolling = () => {
@@ -83,8 +84,8 @@
     }
 
     function procQuery(kind) {
-        gst.kindLater = kind
-        localStorage.wiseband_lastsel_later = gst.kindLater
+        kindLater.value = kind
+        localStorage.wiseband_lastsel_later = kind
         getList(true)
     }
 
@@ -93,11 +94,11 @@
             if (onGoingGetList) return
             onGoingGetList = true
             if (refresh) {
-                gst.listLater = []
+                listLater.value = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
-            const res = await axios.post("/menu/qryPanel", { kind: gst.kindLater, lastMsgMstCdt: lastMsgMstCdt })
+            const res = await axios.post("/menu/qryPanel", { kind: kindLater.value, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
                 onGoingGetList = false
@@ -111,7 +112,7 @@
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                gst.listLater.push(row)
+                listLater.value.push(row)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
@@ -120,7 +121,7 @@
             } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
-            gst.later.getCount() //진행중인 (나중에) 카운팅
+            getCount() //진행중인 (나중에) 카운팅
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -128,26 +129,40 @@
         }
     }
 
-    function laterClickOnLoop(refresh) {
-        const msgid = localStorage.wiseband_lastsel_latermsgid
-        if (!msgid) return
-        gst.listLater.forEach((item, index) => {
-            if (item.MSGID == msgid) {
-                msgRow.value[msgid].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                laterClick(item, index, refresh)
+    function laterClickOnLoop(clickNode, msgid) {
+        const msgidToChk = msgid ? msgid : localStorage.wiseband_lastsel_latermsgid
+        if (!msgidToChk) return
+        let foundIdx = -1
+        listLater.value.forEach((item, index) => {
+            if (item.MSGID == msgidToChk) {
+                gst.util.scrollIntoView(msgRow, msgidToChk) //msgRow.value[msgidToChk].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                laterClick(item, index, clickNode, msgid)
+                foundIdx = index
             }
         })
+        if (foundIdx == -1 && clickNode && listLater.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
+            const row = listLater.value[0]
+            laterClick(row, 0, clickNode, row.CHAIND)
+        }
     }
     
-    async function laterClick(row, idx, refresh) {
+    async function laterClick(row, idx, clickNode, msgid) {
         try {            
-            gst.listLater.map((item) => {
+            listLater.value.forEach((item) => {
                item.sel = false
                item.hover = false
             })
-            row.sel = true
-            localStorage.wiseband_lastsel_latermsgid = row.MSGID
-            gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
+            if (msgid) { //Back() 경우
+                const row1 = listLater.value.find((item) => item.MSGID == msgid)
+                if (row1) {
+                    row1.sel = true
+                    localStorage.wiseband_lastsel_latermsgid = msgid
+                }
+            } else {
+                row.sel = true
+                localStorage.wiseband_lastsel_latermsgid = row.MSGID
+                if (clickNode) gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID })
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -156,13 +171,13 @@
     async function changeAction(kind, row) {
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
             const msgid = row.MSGID
-            const rq = { chanid: row.CHANID, msgid: msgid, kind: gst.kindLater, job: kind } //kind는 현재 상태, job은 바꿀 상태
+            const rq = { chanid: row.CHANID, msgid: msgid, kind: kindLater.value, job: kind } //kind는 현재 상태, job은 바꿀 상태
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Later 패널 탭에서는 제거해야 함 //const work = rs.data.work은 여기서는 무시하고 무조건 delete
-            const idx = gst.listLater.findIndex((item) => item.MSGID == msgid)
-            if (idx > -1) gst.listLater.splice(idx, 1)
-            gst.later.getCount() //화면에 갯수 업데이트
+            const idx = listLater.value.findIndex((item) => item.MSGID == msgid)
+            if (idx > -1) listLater.value.splice(idx, 1)
+            getCount() //화면에 갯수 업데이트
             if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
             const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
             msglistRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
@@ -181,13 +196,13 @@
                 let url = "/body/msglist/" + row.CHANID + "/" + row.MSGID
                 window.open(url)
             }}, //nm: "홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
-            { nm: "보관", disable: (gst.kindLater == "stored") ? true : false, func: async function(item, idx) {
+            { nm: "보관", disable: (kindLater.value == "stored") ? true : false, func: async function(item, idx) {
                 changeAction('stored', row)
             }},
-            { nm: "완료", disable: (gst.kindLater == "finished") ? true : false, func: function(item, idx) {
+            { nm: "완료", disable: (kindLater.value == "finished") ? true : false, func: function(item, idx) {
                 changeAction('finished', row)
             }},
-            { nm: "진행", disable: (gst.kindLater == "later") ? true : false, func: function(item, idx) {
+            { nm: "진행", disable: (kindLater.value == "later") ? true : false, func: function(item, idx) {
                 changeAction('later', row)
             }},
             { nm: "제거", color: "red", func: function(item, idx) {
@@ -207,8 +222,48 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행
-        laterClickOnLoop()
+    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+        if (param.kind == "selectRow") {
+            laterClickOnLoop(false, param.msgid) //뒤로가기는 clickNode = false
+        } else if (param.kind == "update") {
+            const row = listFixed.value.find((item) => item.MSGID == param.msgid)
+            if (row) row.BODYTEXT = param.bodytext
+        } else if (param.kind == "create" || param.kind == "delete") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, kind: work }
+            if (param.kind == "delete") { 
+                const idx = listLater.value.findIndex((item) => item.MSGID == param.msgid)
+                if (idx > -1) listLater.value.splice(idx, 1)
+            } else { //create (화면에 없는 걸 보이게 하는 것임)
+                if (kindLater.value == "later") { //'나중에' 패널에서 진행중(later)탭이 아니면 추가된 행 화면업뎃할 일 없음
+                    const res = await axios.post("/menu/qryPanel", { msgid: param.msgid })
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs || rs.list.length == 0) return
+                    const row = rs.list[0]
+                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                    let added = false
+                    const len = listLater.value.length
+                    for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+                        if (param.msgid > listLater.value[i].MSGID) {
+                            listLater.value.splice(i, 0, row)
+                            added = true
+                            break
+                        }
+                    }
+                    if (!added) listLater.value.push(row)
+                }
+            }
+            getCount()
+        }
+    }
+
+    async function getCount() { //화면에 갯수 업데이트
+        try {
+            const res = await axios.post("/menu/qryPanelCount", { kind: "later" })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            cntLater.value = rs.list[0].CNT
+        } catch (ex) {
+            util.showEx(ex, true)
+        }
     }
 </script>
 
@@ -217,21 +272,21 @@
         <div class="chan_side_top">
             <div class="chan_side_top_left">나중에</div>
             <div class="chan_side_top_right">
-                <div class="procMenu" :class="(gst.kindLater == 'later') ? 'procMenuSel' : ''" @click="procQuery('later')">
-                    진행중<span style="margin-left:3px">{{ gst.cntLater }}</span>
+                <div class="procMenu" :class="(kindLater == 'later') ? 'procMenuSel' : ''" @click="procQuery('later')">
+                    진행중<span style="margin-left:3px">{{ cntLater }}</span>
                 </div>
-                <div class="procMenu" :class="(gst.kindLater == 'stored') ? 'procMenuSel' : ''" @click="procQuery('stored')">
+                <div class="procMenu" :class="(kindLater == 'stored') ? 'procMenuSel' : ''" @click="procQuery('stored')">
                     보관됨
                 </div>
-                <div class="procMenu" :class="(gst.kindLater == 'finished') ? 'procMenuSel' : ''" @click="procQuery('finished')">
+                <div class="procMenu" :class="(kindLater == 'finished') ? 'procMenuSel' : ''" @click="procQuery('finished')">
                     완료됨
                 </div>
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in gst.listLater" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
+            <div v-for="(row, idx) in listLater" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
-                @click="laterClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                @click="laterClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
                         <div v-if="row.TYP=='GS'" style="display:flex;align-items:center">
