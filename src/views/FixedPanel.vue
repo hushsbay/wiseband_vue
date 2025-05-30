@@ -141,7 +141,7 @@
         })
         if (foundIdx == -1 && clickNode && listFixed.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
             const row = listFixed.value[0]
-            fixedClick(row, 0, clickNode, row.CHAIND)
+            fixedClick(row, 0, clickNode, row.MSGID)
         }
     }
     

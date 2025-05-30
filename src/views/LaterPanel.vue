@@ -76,7 +76,7 @@
     function setBasicInfo() {
         document.title = "WiSEBand 나중에"
         gst.selSideMenu = "mnuLater" //MsgList.vue에 Blank 방지
-        if (route.params.kind) chanId = route.params.chanid
+        //if (route.params.kind) chanId = route.params.chanid
     }
 
     const onScrolling = () => {
@@ -142,7 +142,7 @@
         })
         if (foundIdx == -1 && clickNode && listLater.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
             const row = listLater.value[0]
-            laterClick(row, 0, clickNode, row.CHAIND)
+            laterClick(row, 0, clickNode, row.MSGID)
         }
     }
     

@@ -17,7 +17,7 @@
     let afterScrolled = ref(false)
 
     const msglistRef = ref(null), notyetChk = ref(false)
-    let scrollArea = ref(null), msgRow = ref({}) //msgRow는 element를 동적으로 할당
+    let scrollArea = ref(null), listActivity = ref([]), kindActivity = ref('all'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
     let onGoingGetList = false
 
@@ -47,7 +47,7 @@
             gst.util.chkOnMountedTwice(route, 'ActivityPanel')
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_notyet_activity == "Y") ? true : false
-            gst.kindActivity = localStorage.wiseband_lastsel_activity ? localStorage.wiseband_lastsel_activity : "all"
+            kindActivity.value = localStorage.wiseband_lastsel_activity ? localStorage.wiseband_lastsel_activity : "all"
             await getList(true)            
             observerBottomScroll()
             activityClickOnLoop(true)
@@ -89,8 +89,8 @@
     }
 
     function procQuery(kind) {
-        gst.kindActivity = kind
-        localStorage.wiseband_lastsel_activity = gst.kindActivity
+        kindActivity.value = kind
+        localStorage.wiseband_lastsel_activity = kind
         getList(true)
     }
 
@@ -99,12 +99,12 @@
             if (onGoingGetList) return
             onGoingGetList = true
             if (refresh) {
-                gst.listActivity = []
+                listActivity.value = []
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
             const yn = notyetChk.value ? "Y" : "N"
-            const res = await axios.post("/menu/qryActivity", { kind: gst.kindActivity, notyet: yn, lastMsgMstCdt: lastMsgMstCdt })
+            const res = await axios.post("/menu/qryActivity", { kind: kindActivity.value, notyet: yn, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) {
                 onGoingGetList = false
@@ -131,7 +131,7 @@
                     title = "타반응"
                 }
                 row.title = title
-                gst.listActivity.push(row)
+                listActivity.value.push(row)
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
             }
             await nextTick()
@@ -148,26 +148,40 @@
         }
     }
 
-    function activityClickOnLoop(refresh) {
-        const msgid = localStorage.wiseband_lastsel_activitymsgid
-        if (!msgid) return
-        gst.listActivity.forEach((item, index) => {
-            if (item.MSGID == msgid) {
-                msgRow.value[msgid].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                activityClick(item, index, refresh)
+    function activityClickOnLoop(clickNode, msgid) {
+        const msgidToChk = msgid ? msgid : localStorage.wiseband_lastsel_activitymsgid
+        if (!msgidToChk) return
+        let foundIdx = -1
+        listActivity.value.forEach((item, index) => {
+            if (item.MSGID == msgidToChk) {
+                gst.util.scrollIntoView(msgRow, msgidToChk) //msgRow.value[msgid].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                activityClick(item, index, clickNode, msgid)
+                foundIdx = index
             }
         })
+        if (foundIdx == -1 && clickNode && listActivity.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
+            const row = listActivity.value[0]
+            activityClick(row, 0, clickNode, row.MSGID)
+        }
     }
     
-    async function activityClick(row, idx, refresh) {
+    async function activityClick(row, idx, clickNode, msgid) {
         try {            
-            gst.listActivity.map((item) => {
+            listActivity.value.forEach((item) => {
                item.sel = false
                item.hover = false
             })
-            row.sel = true
-            localStorage.wiseband_lastsel_activitymsgid = row.MSGID
-            gst.util.goMsgList('activity_body', { chanid: row.CHANID, msgid: row.MSGID }, refresh)
+            if (msgid) { //Back() 경우
+                const row1 = listActivity.value.find((item) => item.MSGID == msgid)
+                if (row1) {
+                    row1.sel = true
+                    localStorage.wiseband_lastsel_activitymsgid = msgid
+                }
+            } else {
+                row.sel = true
+                localStorage.wiseband_lastsel_activitymsgid = row.MSGID
+                if (clickNode) gst.util.goMsgList('activity_body', { chanid: row.CHANID, msgid: row.MSGID })
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -176,12 +190,12 @@
     async function changeAction(kind, row) {
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
             const msgid = row.MSGID
-            const rq = { chanid: row.CHANID, msgid: msgid, kind: gst.kindActivity, job: kind } //kind는 현재 상태, job은 바꿀 상태
+            const rq = { chanid: row.CHANID, msgid: msgid, kind: kindActivity.value, job: kind } //kind는 현재 상태, job은 바꿀 상태
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Activity 패널 탭에서는 제거해야 함
-            const idx = gst.listActivity.findIndex((item) => item.MSGID == msgid)
-            if (idx > -1) gst.listActivity.splice(idx, 1)
+            const idx = listActivity.value.findIndex((item) => item.MSGID == msgid)
+            if (idx > -1) listActivity.value.splice(idx, 1)
             //gst.activity.getCount() //화면에 갯수 업데이트
             if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
             const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
@@ -215,8 +229,36 @@
         row.hover = false
     }
 
-    function handleEvFromBody() { //MsgList.vue에서 실행
-        activityClickOnLoop()
+    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+        if (param.kind == "selectRow") {
+            activityClickOnLoop(false, param.msgid) //뒤로가기는 clickNode = false
+        } else if (param.kind == "update") {
+            const row = listActivity.value.find((item) => item.MSGID == param.msgid)
+            if (row) row.BODYTEXT = param.bodytext
+        } else if (param.kind == "create" || param.kind == "delete") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, kind: work }
+            if (param.kind == "delete") { 
+                const idx = listActivity.value.findIndex((item) => item.MSGID == param.msgid)
+                if (idx > -1) listActivity.value.splice(idx, 1)
+            } else { //create (화면에 없는 걸 보이게 하는 것임)
+                if (kindActivity.value != "later") { 
+                    const res = await axios.post("/menu/qryActivity", { msgid: param.msgid })
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs || rs.list.length == 0) return
+                    const row = rs.list[0]
+                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                    let added = false
+                    const len = listActivity.value.length
+                    for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+                        if (param.msgid > listActivity.value[i].MSGID) {
+                            listActivity.value.splice(i, 0, row)
+                            added = true
+                            break
+                        }
+                    }
+                    if (!added) listActivity.value.push(row)
+                }
+            }
+        }
     }
 </script>
 
@@ -230,30 +272,30 @@
                 </div>
             </div>
             <div class="chan_side_top_2">
-                <div class="procMenu" :class="(gst.kindActivity == 'all') ? 'procMenuSel' : ''" @click="procQuery('all')">
+                <div class="procMenu" :class="(kindActivity == 'all') ? 'procMenuSel' : ''" @click="procQuery('all')">
                     전체<span style="margin-left:3px"></span>
                 </div>
-                <div class="procMenu" :class="(gst.kindActivity == 'vip') ? 'procMenuSel' : ''" @click="procQuery('vip')">
+                <div class="procMenu" :class="(kindActivity == 'vip') ? 'procMenuSel' : ''" @click="procQuery('vip')">
                     VIP
                 </div>
-                <div class="procMenu" :class="(gst.kindActivity == 'mention') ? 'procMenuSel' : ''" @click="procQuery('mention')">
+                <div class="procMenu" :class="(kindActivity == 'mention') ? 'procMenuSel' : ''" @click="procQuery('mention')">
                     맨션
                 </div>
-                <div class="procMenu" :class="(gst.kindActivity == 'thread') ? 'procMenuSel' : ''" @click="procQuery('thread')">
+                <div class="procMenu" :class="(kindActivity == 'thread') ? 'procMenuSel' : ''" @click="procQuery('thread')">
                     스레드
                 </div>
-                <div class="procMenu" :class="(gst.kindActivity == 'myreact') ? 'procMenuSel' : ''" @click="procQuery('myreact')">
+                <div class="procMenu" :class="(kindActivity == 'myreact') ? 'procMenuSel' : ''" @click="procQuery('myreact')">
                     내반응
                 </div>
-                <div class="procMenu" :class="(gst.kindActivity == 'otherreact') ? 'procMenuSel' : ''" @click="procQuery('otherreact')">
+                <div class="procMenu" :class="(kindActivity == 'otherreact') ? 'procMenuSel' : ''" @click="procQuery('otherreact')">
                     타반응
                 </div>
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in gst.listActivity" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
+            <div v-for="(row, idx) in listActivity" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
-                @click="activityClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
+                @click="activityClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
                         <div style="display:flex;align-items:center">

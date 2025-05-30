@@ -259,7 +259,7 @@
             if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
             listDm.value.splice(idx, 1)
             listDm.value.unshift(row)
-        } else if (param.kind == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
+        } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
             const row = listHome.value.find((item) => item.CHANID == param.chanid)
             if (!row) return
             const res = await axios.post("/menu/qryKindCnt", { chanid: param.chanid, kind: "notyet" })

@@ -730,14 +730,14 @@
                 return //패널 업데이트 필요없음 (notyet은 변동없음)
             }
             // if (appType == "home") { //if (route.fullPath.includes("/home_body/")) {
-            //     //gst.home.procFromBody("updateUnreadCnt", rq)
-            //     evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
+            //     //gst.home.procFromBody("updateNotyetCnt", rq)
+            //     evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
             // } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
-            //     //gst.dm.procFromBody("updateUnreadCnt", rq)
-            //     evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
+            //     //gst.dm.procFromBody("updateNotyetCnt", rq)
+            //     evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
             // }
             if (appType == "home" || appType == "dm") {
-                evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
+                evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -751,12 +751,12 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return            
             // if (appType == "home") {
-            //     gst.home.procFromBody("updateUnreadCnt", rq)
+            //     gst.home.procFromBody("updateNotyetCnt", rq)
             // } else if (appType == "dm") { 
-            //     gst.dm.procFromBody("updateUnreadCnt", rq)
+            //     gst.dm.procFromBody("updateNotyetCnt", rq)
             // }
             if (appType == "home" || appType == "dm") {
-                evToPanel({ kind: "updateUnreadCnt", chanid: chanId })
+                evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
             }
             listMsg('notyet')
         } catch (ex) { 
