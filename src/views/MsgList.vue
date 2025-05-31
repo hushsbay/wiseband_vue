@@ -667,7 +667,7 @@
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                     if (hasProp()) { 
                         evClick({ type: "refreshFromReply", msgid: props.data.msgid })
-                    } else {
+                    } else { //이게 MsgList(부모) -> MsgList(자식)인 경우라면 필요없어 보임 (부모글 삭제시 자식에 댓글 있으면 안되고 댓글 없으면 굳이 화면에서 연동할 필요없음)
                         if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
                     }
                     if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때
