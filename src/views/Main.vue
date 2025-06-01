@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, nextTick, watch } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
     import hush from '/src/stores/Common.js'
@@ -10,6 +10,7 @@
 
     const gst = GeneralStore()
     const router = useRouter()
+    const route = useRoute()
 
     const POPUPHEIGHT = 300
     const popupMenuOn = ref(false) //아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top만 결정하면 됨) 
@@ -216,7 +217,8 @@
                 </div>
             </div>
             <div style="margin-right:18px;display:flex;justify-content:flex-end;align-items:center;cursor:pointer">
-                <span style="margin-right:10px;color:whitesmoke">{{ gst.auth.getCookie("usernm") }}</span><span style="color:whitesmoke;font-weight:bold" @click="logout">Logout</span>
+                <span style="margin-right:10px;color:whitesmoke">{{ gst.auth.getCookie("usernm") }}</span>
+                <span style="color:whitesmoke;font-weight:bold" @click="logout">Logout</span>
             </div>
         </div>
         <div class="body">
@@ -247,14 +249,18 @@
             <div class="main">
                 <div class="content"> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음. 아래 예) /main/dm과 같이 DmPanel을 가져옴
                     <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList에서 keepalive에도 불구하고 onMounted가 2회 이상 계속 발생 or 무한루프(예:홈 메뉴)-->
-                    <router-view v-slot="{ Component }">
+                    <!-- <router-view v-slot="{ Component }">
                         <keep-alive>
                             <component :is="Component" />
+                        </keep-alive>
+                    </router-view> -->
+                    <router-view v-slot="{ Component }">
+                        <keep-alive>                
+                            <component :is="Component" :key="$route.fullPath.split('/')[2]" />
                         </keep-alive>
                     </router-view>
                 </div>
                 <div class="footer">
-            
                 </div>
             </div>
         </div>

@@ -107,19 +107,7 @@ const router = createRouter({
                             component: UserList,
                         }
                     ]                  
-                },
-                // {                    
-                //     path: 'chandm',
-                //     name: 'chandm',
-                //     component: ChanDmPanel,
-                //     children: [
-                //         {
-                //             path: 'chandm_body/:chanid',
-                //             name: 'chandm_body',
-                //             component: MemberList,
-                //         }
-                //     ]                  
-                // }
+                }
             ]
         }        
     ],
