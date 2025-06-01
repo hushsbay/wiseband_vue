@@ -189,8 +189,13 @@
     }
 
     async function logout() {
-        gst.auth.logout()
-        await goRoute({ name: 'login' }, true)
+        debugger
+        //gst.auth.logout()
+        history.replaceState({}, null, null)
+        //await goRoute({ name: 'login' }, true)
+        if (history.state) {
+            return
+        }
     }
 </script>
 
