@@ -48,11 +48,11 @@ const GeneralStore = defineStore('General', () => {
     ///////////////////////////////////////////////////////////////////////
     //let listHome = ref([]) //, selChanHome = ref('')
     //let listDm = ref([]), kindDm = ref('all')
-    let listActivity = ref([]), kindActivity = ref('all')
+    //let listActivity = ref([]), kindActivity = ref('all')
     //let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
     //let listFixed = ref([]), cntFixed = ref('')
     //let chanItems = ref([]), dmItems = ref([]), kindChanDm = ref('chan'), selChanDm = ref('')
-    let listGroup = ref([]), kindGroup = ref('my'), selGroup = ref('')
+    //let listGroup = ref([]), kindGroup = ref('my'), selGroup = ref('')
     ///////////////////////////////////////////////////////////////////////
     
     const auth = {
@@ -224,39 +224,39 @@ const GeneralStore = defineStore('General', () => {
 
     // }
 
-    const activity = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+    // const activity = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) {
-            if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
-                const row = listActivity.value.find((item) => item.MSGID == obj.msgid)
-                if (row) row.BODYTEXT = obj.bodytext
-            } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
-                if (obj.work == "delete") { 
-                    const idx = listActivity.value.findIndex((item) => item.MSGID == obj.msgid)
-                    if (idx > -1) listActivity.value.splice(idx, 1)
-                } else { //create (화면에 없는 걸 보이게 하는 것임)
-                    if (kindActivity.value != "") {
-                        const res = await axios.post("/menu/qryActivity", { msgid: obj.msgid })
-                        const rs = util.chkAxiosCode(res.data)
-                        if (!rs || rs.list.length == 0) return
-                        const row = rs.list[0]
-                        row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                        let added = false
-                        const len = listActivity.value.length
-                        for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-                            if (obj.msgid > listActivity.value[i].MSGID) {
-                                listActivity.value.splice(i, 0, row)
-                                added = true
-                                break
-                            }
-                        }
-                        if (!added) listActivity.value.push(row)
-                    }
-                }
-            }
-        }
+    //     procFromBody : async function(type, obj) {
+    //         if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
+    //             const row = listActivity.value.find((item) => item.MSGID == obj.msgid)
+    //             if (row) row.BODYTEXT = obj.bodytext
+    //         } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
+    //             if (obj.work == "delete") { 
+    //                 const idx = listActivity.value.findIndex((item) => item.MSGID == obj.msgid)
+    //                 if (idx > -1) listActivity.value.splice(idx, 1)
+    //             } else { //create (화면에 없는 걸 보이게 하는 것임)
+    //                 if (kindActivity.value != "") {
+    //                     const res = await axios.post("/menu/qryActivity", { msgid: obj.msgid })
+    //                     const rs = util.chkAxiosCode(res.data)
+    //                     if (!rs || rs.list.length == 0) return
+    //                     const row = rs.list[0]
+    //                     row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+    //                     let added = false
+    //                     const len = listActivity.value.length
+    //                     for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+    //                         if (obj.msgid > listActivity.value[i].MSGID) {
+    //                             listActivity.value.splice(i, 0, row)
+    //                             added = true
+    //                             break
+    //                         }
+    //                     }
+    //                     if (!added) listActivity.value.push(row)
+    //                 }
+    //             }
+    //         }
+    //     }
 
-    }
+    // }
 
     // const fixed = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
@@ -302,22 +302,22 @@ const GeneralStore = defineStore('General', () => {
 
     // }
 
-    const group = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
+    // const group = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
 
-        procFromBody : async function(type, obj) {
-            if (type == "recall") {
-                selGroup.value = obj.grid
-            } else if (type == "update00000000000000UnreadCnt") {
-                const row = listGroup.value.find((item) => item.GR_ID == obj.grid)
-                if (!row) return
-                const res = await axios.post("/menu/qryKindCnt", { grid: obj.grid, kind: "000000000000000000" })
-                const rs = util.chkAxiosCode(res.data)
-                if (!rs) return
-                //row.mynotyetCnt = rs.data.kindCnt
-            }
-        }
+    //     procFromBody : async function(type, obj) {
+    //         if (type == "recall") {
+    //             selGroup.value = obj.grid
+    //         } else if (type == "update00000000000000UnreadCnt") {
+    //             const row = listGroup.value.find((item) => item.GR_ID == obj.grid)
+    //             if (!row) return
+    //             const res = await axios.post("/menu/qryKindCnt", { grid: obj.grid, kind: "000000000000000000" })
+    //             const rs = util.chkAxiosCode(res.data)
+    //             if (!rs) return
+    //             //row.mynotyetCnt = rs.data.kindCnt
+    //         }
+    //     }
 
-    }
+    // }
     ///////////////////////////////////////////////////////////////////////////////////
 
     const util = {
@@ -594,10 +594,10 @@ const GeneralStore = defineStore('General', () => {
         snackBar, toast, auth, ctx, html, util,
         //home, listHome, //selChanHome,
         //dm, listDm, kindDm,
-        listActivity, kindActivity, //cntActivity, 
+        //listActivity, kindActivity, //cntActivity, 
         //later, listLater, cntLater, kindLater,
         //fixed, listFixed, cntFixed,
-        group, listGroup, kindGroup, selGroup,
+        //group, listGroup, kindGroup, selGroup,
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

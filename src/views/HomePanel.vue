@@ -85,7 +85,7 @@
     function chanClickOnLoop(clickNode, chanid) {
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
         const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
-        if (!chanidToChk) return
+        let foundIdx = -1 //if (!chanidToChk) return
         listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
                 item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
@@ -94,8 +94,18 @@
             if (item.CHANID == chanidToChk) {
                 if (item.CHANID) gst.util.scrollIntoView(chanRow, item.CHANID) //chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
                 chanClick(item, index, clickNode, chanid)
+                foundIdx = index
             }
         })
+        if (foundIdx == -1) { //최초 실행시 그룹과 채널이 있는데 선택이 없는 사용자들은 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 별도 대처 필요)
+            for (let i = 0; i < listHome.value.length; i++) {
+                const item = listHome.value[i]
+                procChanRowImg(item)
+                item.exploded = true
+                chanClick(item, index, clickNode, chanid)
+                if (item.CHANID) break
+            }
+        }
     }
 
     function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
@@ -256,9 +266,6 @@
                 <div style="padding:5px;border-radius:8px;" @click="procExpCol('E')">
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'expandall.png')" title="모두펼치기">
                 </div>
-                <!-- <div style="padding:5px;border-radius:8px;" @click="newMsg">
-                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새메시지">
-                </div> -->
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
@@ -278,15 +285,26 @@
                     </div>
                 </div>
             </div>
+            <div v-if="listHome.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
+                <div style="width:100%;word-break:break-all;color:white">
+                    현재 그룹/채널 데이터가 없습니다.<br><br>
+                    조직내 협의를 통해 그룹을 생성합니다.<br>
+                    그룹 우클릭으로 채널을 생성합니다.<br>
+                    DM은 그룹 없이 방을 만들 수 있습니다.
+                </div>
+            </div>
         </div>
     </div>
     <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
-    <div id="chan_body" :style="{ width: chanMainWidth }">
+    <div v-if="listHome.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
+    </div>
+    <div v-else id="chan_body" :style="{ width: chanMainWidth }" style="display:flex;justify-content:center;align-items:center">
+        <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
     </div>
     <member-list ref="memberlistRef" @ev-from-member="handleEvFromMemberList"></member-list>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>

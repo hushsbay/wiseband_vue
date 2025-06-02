@@ -315,16 +315,26 @@
                     <div class="coDotDot" style="color:white;font-weight:bold">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
+            <div v-if="listDm.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
+                <div style="width:100%;word-break:break-all;color:white">
+                    현재 DM 데이터가 없습니다.<br><br>
+                    패널 우측상단 '새DM' 버튼으로<br>
+                    DM방을 만들어 사용하시기 바랍니다.
+                </div>
+            </div>
             <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
         </div>
     </div>
     <resizer nm="dm" @ev-from-resizer="handleFromResizer"></resizer>
-    <div id="chan_body" :style="{ width: chanMainWidth }">
+    <div v-if="listDm.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>                
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody" />
             </keep-alive>
         </router-view>
+    </div>
+    <div v-else id="chan_body" :style="{ width: chanMainWidth }" style="display:flex;justify-content:center;align-items:center">
+        <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
     </div>
     <member-list ref="memberlistRef" @ev-from-member="handleEvFromMemberList"></member-list>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>    

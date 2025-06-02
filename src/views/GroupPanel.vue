@@ -12,7 +12,7 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    let scrollArea = ref(null), groupRow = ref({}) //groupRow는 element를 동적으로 할당
+    let scrollArea = ref(null), listGroup = ref([]), kindGroup = ref('my'), groupRow = ref({}) //groupRow는 element를 동적으로 할당
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -28,7 +28,7 @@
     onMounted(async () => {
         try {
             setBasicInfo()
-            if (localStorage.wiseband_lastsel_group) gst.kindGroup = localStorage.wiseband_lastsel_group
+            if (localStorage.wiseband_lastsel_group) kindGroup.value = localStorage.wiseband_lastsel_group
             await getList()
             groupClickOnLoop(true)
         } catch (ex) {
@@ -49,17 +49,17 @@
         }
     })
 
-    watch([() => gst.selGroup], () => { //UserList -> GeneralStore -> watch
-        //패널에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 UserList의 라우팅에서 처리
-        if (gst.selGroup) groupRow.value[gst.selGroup].scrollIntoView({ behavior: "smooth", block: "nearest" })
-        groupClick(null, null, gst.selGroup)
-    })
+    // watch([() => gst.selGroup], () => { //UserList -> GeneralStore -> watch
+    //     //패널에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 UserList의 라우팅에서 처리
+    //     if (gst.selGroup) groupRow.value[gst.selGroup].scrollIntoView({ behavior: "smooth", block: "nearest" })
+    //     groupClick(null, null, gst.selGroup)
+    // })
 
-    watch(() => gst.kindGroup, async () => {
-        localStorage.wiseband_lastsel_group = gst.kindGroup
-        await getList() 
-        groupClickOnLoop()
-    })
+    // watch(() => kindGroup.value, async () => {
+    //     localStorage.wiseband_lastsel_group = kindGroup.value
+    //     await getList() 
+    //     groupClickOnLoop()
+    // })
 
     function setBasicInfo() {
         document.title = "WiSEBand 그룹"
@@ -68,17 +68,17 @@
 
     async function getList() {
         try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
-            const res = await axios.post("/menu/qryGroup", { kind : gst.kindGroup }) //my,other,all
+            const res = await axios.post("/menu/qryGroup", { kind : kindGroup.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             if (!rs) return
-            gst.listGroup = rs.list
+            listGroup.value = rs.list
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
     function groupClickOnLoop(refresh) {
-        gst.listGroup.forEach((item, index) => {
+        listGroup.value.forEach((item, index) => {
             procgroupRowImg(item)
             if (item.GR_ID == localStorage.wiseband_lastsel_grid) {
                 groupRow.value[item.GR_ID].scrollIntoView({ behavior: "smooth", block: "nearest" })
@@ -97,12 +97,12 @@
     async function groupClick(row, idx, grid, refresh) {
         try {
             // const gridReal = grid ? grid : row.GR_ID
-            // gst.listGroup.forEach((item) => {
+            // listGroup.value.forEach((item) => {
             //     item.sel = false
             //     item.hover = false
             //     procgroupRowImg(item)
             // })
-            // const row1 = gst.listGroup.find((item) => item.GR_ID == gridReal)
+            // const row1 = listGroup.value.find((item) => item.GR_ID == gridReal)
             // if (row1) {
             //     row1.sel = true
             //     procgroupRowImg(row1)
@@ -110,7 +110,7 @@
             //     gst.util.goBodyList('group_body', { grid: row1.GR_ID }, refresh)
             // }
             const gridReal = grid ? grid : row.GR_ID
-            gst.listGroup.forEach((item) => { //const row1 = gst.listGroup.find((item) => item.GR_ID == gridReal)
+            listGroup.value.forEach((item) => { //const row1 = listGroup.value.find((item) => item.GR_ID == gridReal)
                 //item.sel = false
                 //item.hover = false
                 //procgroupRowImg(item)
@@ -190,7 +190,7 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
-                <select v-model="gst.kindGroup" style="background:var(--second-color);color:var(--second-select-color);border:none">
+                <select v-model="kindGroup" style="background:var(--second-color);color:var(--second-select-color);border:none">
                     <option value="my">내 그룹</option>
                     <option value="other">다른 그룹</option>
                     <option value="all">모든 그룹</option>
@@ -203,7 +203,7 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
-            <div v-for="(row, idx) in gst.listGroup" :id="row.GR_ID" :ref="(ele) => { groupRow[row.GR_ID] = ele }"
+            <div v-for="(row, idx) in listGroup" :id="row.GR_ID" :ref="(ele) => { groupRow[row.GR_ID] = ele }"
                 @click="groupClick(row, idx)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div :class="['node', row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.GR_NM">
@@ -215,16 +215,26 @@
                     </div>
                 </div>
             </div>
+            <div v-if="listGroup.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
+                <div style="width:100%;word-break:break-all;color:white">
+                    현재 그룹 데이터가 없습니다.<br><br>
+                    조직내 협의를 통해 그룹을 생성합니다.<br>
+                    (우측상단 '새그룹' 버튼을 사용)
+                </div>
+            </div>
         </div>
     </div>
     <resizer nm="group" @ev-from-resizer="handleFromResizer"></resizer>
-    <div id="chan_body" :style="{ width: chanMainWidth }">
+    <div v-if="listGroup.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
-    </div>    
+    </div> 
+    <div v-else id="chan_body" :style="{ width: chanMainWidth }" style="display:flex;justify-content:center;align-items:center">
+        <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
+    </div>   
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 
