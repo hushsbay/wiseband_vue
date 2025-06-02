@@ -60,7 +60,7 @@
 <template>
     <div class="container">
         <div class="center_body">
-            <div class="center_row">
+            <div class="center_row" style="width:100%;padding-left:45px;justify-content:flex-start">
                 <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
                 <div style="margin-left:5px;font-size:22px;font-weight:bold;cursor:pointer">WiSEBand</div>
             </div>
