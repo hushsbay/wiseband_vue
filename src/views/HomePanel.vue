@@ -39,7 +39,7 @@
         try {
             gst.util.chkOnMountedTwice(route, 'HomePanel')
             setBasicInfo()
-            if (localStorage.wiseband_lastsel_kind) kind.value = localStorage.wiseband_lastsel_kind
+            if (localStorage.wiseband_lastsel_home) kind.value = localStorage.wiseband_lastsel_home
             await getList()
             chanClickOnLoop(true)
         } catch (ex) {
@@ -61,7 +61,7 @@
     })
 
     async function changeKind() {
-        localStorage.wiseband_lastsel_kind = kind.value
+        localStorage.wiseband_lastsel_home = kind.value
         await getList()
         chanClickOnLoop(true)
     }
@@ -74,9 +74,8 @@
     async function getList() {
         try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            listHome.value = rs.list
+            const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
+            listHome.value = rs ? rs.list : []
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -92,7 +91,7 @@
                 procChanRowImg(item)
             }
             if (item.CHANID == chanidToChk) {
-                if (item.CHANID) gst.util.scrollIntoView(chanRow, item.CHANID) //chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                gst.util.scrollIntoView(chanRow, item.CHANID) //chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
                 chanClick(item, index, clickNode, chanid)
                 foundIdx = index
             }
@@ -102,7 +101,7 @@
                 const item = listHome.value[i]
                 procChanRowImg(item)
                 item.exploded = true
-                chanClick(item, index, clickNode, chanid)
+                chanClick(item, i, clickNode, chanid)
                 if (item.CHANID) break
             }
         }

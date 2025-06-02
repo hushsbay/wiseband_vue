@@ -77,7 +77,7 @@
     }
 
     function mouseEnter(e) {
-        setTimeout(function() {
+        //setTimeout(function() {
             prevX = e.pageX
             prevY = e.pageY
             const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
@@ -102,7 +102,7 @@
                 popupMenuPos.value.bottom = null
             }
             popupData.value.id = menuDiv.id
-        }, 500)
+        //}, 500)
     }
 
     function mouseLeave(e) {
@@ -180,8 +180,8 @@
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;align-items:center">
-                <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
-                <div style="margin-left:5px;font-size:22px;color:whitesmoke;font-weight:bold;cursor:pointer">WiSEBand</div>
+                <!-- <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
+                <div style="margin-left:5px;font-size:22px;color:whitesmoke;font-weight:bold;cursor:pointer"></div> -->
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>
@@ -196,6 +196,9 @@
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
+                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center">
+                        <img class="coImg32" src="/src/assets/images/color_slacklogo.png" style=""/>
+                    </div>
                     <div id="sideTop" class="sideTop">
                         <div v-for="(row, idx) in listSel" @click="sideClick(row.ID, row)" :id="row.ID + 'Target'" class="menu cntTarget">
                             <div :id="row.ID" class="coMenuDiv" @mouseenter="(e) => mouseEnter(e)" @mouseleave="(e) => mouseLeave(e)">
@@ -240,57 +243,47 @@
         width:100%;height:100%;display:flex;
         background:var(--primary-color);overflow:hidden; /* hidden이 있어야 sidebar의 아랫공간이 always seen 가능 */
     }
-
     input[type=search]:focus { outline:2px solid lightgreen }
-
     .header {
         width:calc(100% - 40px);min-height:45px;padding:0 20px;display:flex;justify-content:space-between;align-items:center;
         background:var(--primary-color);
     }
-
     .search { width:240px;padding-left:5px;background-color:var(--second-color);color:var(--second-select-color);border:none;border-radius:4px }
     .search::placeholder { color:var(--second-select-color) }
-
     .btn_basic { 
         height:28px;margin-left:10px;padding:0 8px;display:flex;justify-content:center;align-items:center;
         border:1px solid dimgray;border-radius:4px;background-color:var(--primary-color);color:var(--second-select-color);cursor:pointer 
     }
     .btn_basic:hover { background:var(--second-hover-color) }
     .btn_basic:active { background:var(--active-btn) }
-
     .side {
         min-width:70px;height:100%;
         display:flex;flex-direction:column;align-items:center;justify-content:space-between;
         background:var(--primary-color);
     }
-
     .sideTop {
         display:flex;flex-direction:column;overflow:hidden;
     }
-
     .sideBottom { /* sidebar의 아랫공간이 always seen 가능하려면 body에 hidden이 필요함 */
         display:flex;flex-direction:column;justify-content:flex-end;
     }
-
     .main {
         width:calc(100% - 70px);height:100%;display:flex;flex-direction:column;
     }
-
     .content {
         width:calc(100% - 3px);height:100%;display:flex;margin-right:3px;margin-bottom:3px;
         overflow:hidden;
     }
-
     .footer {
         width:calc(100% - 20px);min-height:40px;margin:auto 0 0 0;padding:0 10px;
         display:none;align-items:center;
         background:beige;
     }
-
     .menu { 
         width:55px;min-height:55px;margin:8px 0px; 
         display:flex;flex-direction:column;justify-content:center;align-items:center;
-        color:white;cursor:pointer; }
+        color:white;cursor:pointer; 
+    }
     .menu32 { width:32px;height:32px; }
     .menu32:hover { width:36px;height:36px; }
 </style>

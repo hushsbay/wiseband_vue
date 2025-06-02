@@ -27,6 +27,7 @@
 
     onMounted(async () => {
         try {
+            gst.util.chkOnMountedTwice(route, 'GroupPanel')
             setBasicInfo()
             if (localStorage.wiseband_lastsel_group) kindGroup.value = localStorage.wiseband_lastsel_group
             await getList()
@@ -41,83 +42,73 @@
             mounting = false
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
             setBasicInfo()
+            debugger
             if (route.path == "/main/group") {
-                groupClickOnLoop()
+                groupClickOnLoop(true)
             } else {
-                //UserList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
+                //UserList가 라우팅되는 루틴이며 UserList로부터 처리될 것임
             }
         }
     })
 
-    // watch([() => gst.selGroup], () => { //UserList -> GeneralStore -> watch
-    //     //패널에서 클릭한 채널노드의 상태를 기억하는데 뒤로가기하면 UserList의 라우팅에서 처리
-    //     if (gst.selGroup) groupRow.value[gst.selGroup].scrollIntoView({ behavior: "smooth", block: "nearest" })
-    //     groupClick(null, null, gst.selGroup)
-    // })
-
-    // watch(() => kindGroup.value, async () => {
-    //     localStorage.wiseband_lastsel_group = kindGroup.value
-    //     await getList() 
-    //     groupClickOnLoop()
-    // })
+    async function changeKind() {
+        localStorage.wiseband_lastsel_group = kindGroup.value
+        await getList()
+        groupClickOnLoop(true)
+    }
 
     function setBasicInfo() {
         document.title = "WiSEBand 그룹"
-        gst.selSideMenu = "mnuGroup" //MsgList.vue에 Blank 방지
+        gst.selSideMenu = "mnuGroup" //UserList.vue에 Blank 방지
     }
 
     async function getList() {
         try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
             const res = await axios.post("/menu/qryGroup", { kind : kindGroup.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
-            if (!rs) return
-            listGroup.value = rs.list
+            listGroup.value = rs ? rs.list : []
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
-    function groupClickOnLoop(refresh) {
+    function groupClickOnLoop(clickNode, grid) {
+        debugger
+        let foundIdx = -1
         listGroup.value.forEach((item, index) => {
             procgroupRowImg(item)
             if (item.GR_ID == localStorage.wiseband_lastsel_grid) {
-                groupRow.value[item.GR_ID].scrollIntoView({ behavior: "smooth", block: "nearest" })
-                groupClick(item, index, null, refresh)
+                gst.util.scrollIntoView(groupRow, item.GR_ID) //groupRow.value[item.GR_ID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                groupClick(item, index, clickNode, grid)
+                foundIdx = index
             }
         })
+        if (foundIdx == -1) { //최초 실행시 그룹이 있는데 선택이 없는 사용자들은 맨 처음 그룹을 선택하게 함
+            for (let i = 0; i < listGroup.value.length; i++) {
+                const item = listGroup.value[i]
+                procgroupRowImg(item)
+                groupClick(item, i, clickNode, grid)
+                if (item.GR_ID) break
+            }
+        }
     }
 
     function procgroupRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
         item.otherImg = (item.OTHER == "other") ? "person.png" : ""
         const color = item.sel ? hush.cons.color_dark : hush.cons.color_light
-        item.nodeImg = color + "collapsed.png"
+        item.nodeImg = color + "people2.png"
         if (item.otherImg) item.otherImg = color + item.otherImg
     }
 
-    async function groupClick(row, idx, grid, refresh) {
+    async function groupClick(row, idx, clickNode, grid) {
         try {
-            // const gridReal = grid ? grid : row.GR_ID
-            // listGroup.value.forEach((item) => {
-            //     item.sel = false
-            //     item.hover = false
-            //     procgroupRowImg(item)
-            // })
-            // const row1 = listGroup.value.find((item) => item.GR_ID == gridReal)
-            // if (row1) {
-            //     row1.sel = true
-            //     procgroupRowImg(row1)
-            //     localStorage.wiseband_lastsel_grid = gridReal
-            //     gst.util.goBodyList('group_body', { grid: row1.GR_ID }, refresh)
-            // }
             const gridReal = grid ? grid : row.GR_ID
             listGroup.value.forEach((item) => { //const row1 = listGroup.value.find((item) => item.GR_ID == gridReal)
-                //item.sel = false
-                //item.hover = false
-                //procgroupRowImg(item)
                 if (item.GR_ID == gridReal) {
                     item.sel = true
+                    procgroupRowImg(item)
                     localStorage.wiseband_lastsel_grid = gridReal
-                    gst.util.goBodyList('group_body', { grid: item.GR_ID }, refresh)
+                    if (clickNode) gst.util.goBodyList('group_body', { grid: item.GR_ID })
                 } else {
                     if (item.sel) {
                         item.sel = false
@@ -190,7 +181,7 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
-                <select v-model="kindGroup" style="background:var(--second-color);color:var(--second-select-color);border:none">
+                <select v-model="kindGroup" style="background:var(--second-color);color:var(--second-select-color);border:none" @change="changeKind">
                     <option value="my">내 그룹</option>
                     <option value="other">다른 그룹</option>
                     <option value="all">모든 그룹</option>
