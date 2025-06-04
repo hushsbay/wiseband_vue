@@ -115,9 +115,8 @@
             <div v-if="gst.ctx.data.header" class="popupHeader">
                 <div v-html="gst.ctx.data.header" class="popupHeaderItem coDotDot"></div>
             </div>
-            <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
-                @mouseenter="(e) => mouseEnter(e, row)" @mouseleave="(e) => mouseLeave(e, row)"         
-                @click.stop="rowClick(row, idx)"> 
+            <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid var(--border-color)' : '' }" 
+                @mouseenter="(e) => mouseEnter(e, row)" @mouseleave="(e) => mouseLeave(e, row)" @click.stop="rowClick(row, idx)"> 
                 <div v-if="row.child" class="popupMenuItemChild coDotDot">
                     <div style="display:flex;align-items:center">
                         <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
@@ -164,8 +163,8 @@
     }
 
     .popupMenuItem {
-        width:calc(100% - 16px);height:35px;padding:0 8px;
-        display:flex;align-items:center;border-bottom:1px solid var(--border-color)
+        width:calc(100% - 16px);height:35px;padding:0 20px;
+        display:flex;align-items:center;/*border-bottom:1px solid var(--border-color)*/
     }
 
     .popupMenuItemChild {

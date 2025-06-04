@@ -185,37 +185,46 @@
     }
 
     async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
-        const img = row.nodeImg.replace(hush.cons.color_light, hush.cons.color_dark)        
-        const nm = !row.CHANID ? row.GR_NM : row.CHANNM
-        gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
+        //const img = row.nodeImg.replace(hush.cons.color_light, hush.cons.color_dark)        
+        //const nm = !row.CHANID ? row.GR_NM : row.CHANNM
+        //gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
+        gst.ctx.data.header = ""
         if (!row.CHANID) {            
             gst.ctx.menu = [
                 { nm: "채널 생성", func: function(item, idx) {
                     memberlistRef.value.open("chan", "new", row.GR_ID)
-                }},
-                { nm: "환경 설정" }
+                }}
             ]
         } else {
             gst.ctx.menu = [
-                { nm: "메시지목록 새로고침", func: function(item, idx) {
-                    gst.util.goMsgList('home_body', { chanid: row.CHANID }, true)
+                { nm: "새로고침(메시지목록)", func: function(item, idx) {
+                    //gst.util.goMsgList('home_body', { chanid: row.CHANID }, true)
                 }},
                 { nm: "새창에서 열기", deli: true, func: async function(item, idx) {
                     let url = gst.util.getUrlForOneMsgNotYet(row.CHANID)
                     window.open(url)
                 }},
-                { nm: "정보 보기", func: function(item, idx) {
+                { nm: "채널 정보", func: function(item, idx) {
                     memberlistRef.value.open("chan", row.CHANID, row.CHANNM, row.nodeImg)
                 }},
-                { nm: "즐겨찾기" },
-                { nm: "초대" },
-                { nm: "복사", img: hush.cons.color_dark + "other.png", child: [
-                    { nm: "채널 복사", func: function(item, idx) { 
+                // { nm: "복사", img: hush.cons.color_dark + "other.png", child: [
+                //     { nm: "채널 복사", func: function(item, idx) { 
                         
-                    }},
-                    { nm: "링크 복사" }
-                ]},                
-                { nm: "나가기", color: "red" }
+                //     }},
+                //     { nm: "링크 복사" }
+                // ]},
+                { nm: "알림 끄기", func: function(item, idx) { 
+                    
+                }},
+                { nm: "즐겨찾기 설정", func: function(item, idx) { 
+                    
+                }},                
+                { nm: "채널 링크 복사", deli: true, func: function(item, idx) { 
+                    
+                }},
+                { nm: "채널 나가기", color: "red", func: function(item, idx) { 
+                    
+                }}
             ]            
         }
         gst.ctx.show(e)
