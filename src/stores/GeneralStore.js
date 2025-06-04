@@ -493,7 +493,7 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
-        goMsgList : async function(nm, params, refresh) {
+        goMsgList : async function(nm, params) { //, refresh) {
             try {
                 let msgid = params.msgid
                 if (!msgid) params.msgid = await util.qryOneMsgNotYet(params.chanid)
@@ -504,7 +504,8 @@ const GeneralStore = defineStore('General', () => {
                     obj.query.notyet = true                    
                 }
                 const ele = document.getElementById("chan_center_header") //chan_center_body
-                if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+                //if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+                if (!ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
                     await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
                 } else {
                     await router.push(obj)

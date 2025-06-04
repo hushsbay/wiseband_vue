@@ -59,9 +59,9 @@
     onActivated(async () => {
         if (mounting) {
             mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
+        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
             setBasicInfo()
-            if (route.path == "/main/activity") {
+            if (route.path == "/main/activity") { //사이드메뉴에서 클릭한 경우
                 activityClickOnLoop(true)
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
@@ -105,7 +105,7 @@
             const lastMsgMstCdt = savLastMsgMstCdt
             const yn = notyetChk.value ? "Y" : "N"
             const res = await axios.post("/menu/qryActivity", { kind: kindActivity.value, notyet: yn, lastMsgMstCdt: lastMsgMstCdt })
-            const rs = gst.util.chkAxiosCode(res.data)
+            const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             if (!rs) {
                 onGoingGetList = false
                 return                
@@ -148,7 +148,7 @@
         }
     }
 
-    function activityClickOnLoop(clickNode, msgid) {
+    function activityClickOnLoop(clickNode, msgid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 true. msgid는 명시적으로 해당 노드를 지정해서 처리하는 것임
         const msgidToChk = msgid ? msgid : localStorage.wiseband_lastsel_activitymsgid
         if (!msgidToChk) return
         let foundIdx = -1

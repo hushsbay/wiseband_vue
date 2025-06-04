@@ -40,10 +40,10 @@
     onActivated(async () => {
         if (mounting) {
             mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
+        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             debugger
-            if (route.path == "/main/group") {
+            if (route.path == "/main/group") { //사이드메뉴에서 클릭한 경우
                 groupClickOnLoop(true)
             } else {
                 //UserList가 라우팅되는 루틴이며 UserList로부터 처리될 것임
@@ -63,7 +63,7 @@
     }
 
     async function getList() {
-        try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
+        try { //모든 데이터 가져오기 (페이징/무한스크롤 없음)
             const res = await axios.post("/menu/qryGroup", { kind : kindGroup.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             listGroup.value = rs ? rs.list : []
@@ -72,7 +72,7 @@
         }
     }
 
-    function groupClickOnLoop(clickNode, grid) {
+    function groupClickOnLoop(clickNode, grid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 true. grid는 명시적으로 해당 노드를 지정해서 처리하는 것임
         debugger
         let foundIdx = -1
         listGroup.value.forEach((item, index) => {

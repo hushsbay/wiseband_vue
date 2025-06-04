@@ -18,11 +18,12 @@
     //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
     //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
     //2. HomePanel에서는 MsgList의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
-    //   예1) MsgList url에서 뒤로 가기 눌러 다른 MsgList url로 라우팅되면 MsgList가 먼저 호출되므로 HomePanel의 트리노드 등도 같이 맞춰져야 함
-    //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 역으로 같이 맞춰져야 함
+    //   예1) MsgList url에서 뒤로 가기 눌러 다른 MsgList url로 라우팅되면 MsgList가 먼저 호출되므로 HomePanel의 트리노드 등도 역으로 같이 맞춰져야 함
+    //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 이 경우도 같이 맞춰져야 함
 
-    let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null), listHome = ref([]), kind = ref('all')
+    //let scrollArea = ref(null)
+    let listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
+    let memberlistRef = ref(null)
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -50,9 +51,9 @@
     onActivated(async () => {
         if (mounting) {
             mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 호출되고 onMounted()는 미호출됨
+        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
             setBasicInfo()
-            if (route.path == "/main/home") {
+            if (route.path == "/main/home") { //사이드메뉴에서 클릭한 경우
                 chanClickOnLoop(true)
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
@@ -72,7 +73,7 @@
     }
 
     async function getList() {
-        try { //모든 데이터 가져오기 (페이징,무한스크롤 필요없음)
+        try { //모든 데이터 가져오기 (페이징/무한스크롤 없음)
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             listHome.value = rs ? rs.list : []
@@ -81,28 +82,28 @@
         }
     }
 
-    function chanClickOnLoop(clickNode, chanid) {
+    function chanClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 true. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
         const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
-        let foundIdx = -1 //if (!chanidToChk) return
+        let foundIdx = -1
         listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
                 item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
                 procChanRowImg(item)
             }
             if (item.CHANID == chanidToChk) {
-                gst.util.scrollIntoView(chanRow, item.CHANID) //chanRow.value[item.CHANID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                gst.util.scrollIntoView(chanRow, item.CHANID)
                 chanClick(item, index, clickNode, chanid)
                 foundIdx = index
             }
         })
-        if (foundIdx == -1) { //최초 실행시 그룹과 채널이 있는데 선택이 없는 사용자들은 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 별도 대처 필요)
+        if (foundIdx == -1) { //최초 실행시 그룹과 채널이 선택이 없는 경우 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 html로 안내하기)
             for (let i = 0; i < listHome.value.length; i++) {
                 const item = listHome.value[i]
                 procChanRowImg(item)
                 item.exploded = true
                 chanClick(item, i, clickNode, chanid)
-                if (item.CHANID) break
+                if (item.CHANID) break //사용자그룹(1단계)노드를 처리하고 채널(2단계)노드를 만나면 처리후 break
             }
         }
     }
@@ -267,9 +268,9 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea">
-            <div v-for="(row, idx) in listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID"
-                :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }"
+        <div class="chan_side_main coScrollable" id="chan_side_main"> <!--ref="scrollArea"-->
+            <!-- <div v-for="(row, idx) in listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID" :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }" -->
+            <div v-for="(row, idx) in listHome" :key="row.DEPTH == '1' ? row.GR_ID : row.CHANID" :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }" :keyidx="idx"
                 @click="chanClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']">
                     <div class="coDotDot" :title="row.DEPTH == '1' ? row.GR_NM : row.CHANNM" :style="{ paddingLeft: row.DEPTH == '1' ? '0' : '15px' }">
