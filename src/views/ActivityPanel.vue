@@ -198,13 +198,13 @@
 
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
-        const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID
+        const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID + "?appType=activity"
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: async function(item, idx) {
                 window.open(url)
             }},
             { nm: "메시지 링크 복사", func: function(item, idx) {
-                navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
+                navigator.clipboard.writeText(url).then(() => {
                     gst.util.setToast("메시지 링크가 복사되었습니다.")
                 }).catch(() => {
                     gst.util.setToast("복사 실패. 알 수 없는 문제가 발생했습니다.")
@@ -294,7 +294,7 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in listActivity" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
+            <div v-for="(row, idx) in listActivity" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
                 @click="activityClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">

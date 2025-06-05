@@ -218,9 +218,10 @@
             const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
             const disableStr = (row.STATE == "P") ? true : false
             gst.ctx.menu = [
+                 //"홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 WiSEBand는 부모/자식 모두 동일한 UI이므로 굳이 필요없음
                 { nm: "새창에서 열기", func: async function(item, idx) {
                     let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
-                    window.open(url)
+                    window.open(url + "?appType=home")
                 }},
                 { nm: "채널 정보", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                     memberlistRef.value.open("chan", row.CHANID, row.CHANNM, row.nodeImg)
@@ -234,7 +235,7 @@
                     toggleChanOption("bookmark", job, row)
                 }},
                 { nm: "채널 링크 복사", disable: disableStr, func: function(item, idx) { //공개채널은 해당 그룹내 복사해서 보내면 클릭해서 볼 수 있으므로 활성화. 비공개(STATE=P)채널은 복사해도 쓸 일이 없음
-                    const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/0"
+                    const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/0?appType=home"
                     navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
                         gst.util.setToast("채널 링크가 복사되었습니다.")
                     }).catch(() => {

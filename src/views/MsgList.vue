@@ -219,6 +219,7 @@
             temp = hush.util.getRnd() + 'Mounted'
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
+            if (appType == "msglist" && route.query.appType) appType = route.query.appType //새창에서열기 또는 링크복사시 arr[2]는 msglist이므로 appType을 다시 가져와야 함
             if (hasProp()) {
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
@@ -365,7 +366,7 @@
             if (!rs) {
                 onGoingGetList = false                
                 return
-            }
+            }            
             vipStr.value = rs.data.vipStr ?? "none" //데이터 없어서 null일 수도 있음 ##34
             grnm.value = rs.data.chanmst.GR_NM
             chanNm.value = rs.data.chanmst.CHANNM

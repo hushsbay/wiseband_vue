@@ -13,8 +13,7 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    let observerBottom = ref(null), observerBottomTarget = ref(null)
-    let afterScrolled = ref(false)
+    let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
 
     const msglistRef = ref(null)    
     let scrollArea = ref(null), listLater = ref([]), cntLater = ref(''), kindLater = ref('later'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
@@ -48,8 +47,8 @@
             setBasicInfo()
             kindLater.value = localStorage.wiseband_lastsel_later ? localStorage.wiseband_lastsel_later : "later"
             await getList(true)            
-            observerBottomScroll()
             laterClickOnLoop(true)
+            observerBottomScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -76,7 +75,6 @@
     function setBasicInfo() {
         document.title = "WiSEBand 나중에"
         gst.selSideMenu = "mnuLater" //MsgList.vue에 Blank 방지
-        //if (route.params.kind) chanId = route.params.chanid
     }
 
     const onScrolling = () => {
@@ -100,11 +98,7 @@
             const lastMsgMstCdt = savLastMsgMstCdt
             const res = await axios.post("/menu/qryPanel", { kind: kindLater.value, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
-            if (!rs) {
-                onGoingGetList = false
-                return                
-            }
-            if (rs.list.length == 0) {
+            if (!rs || rs.list.length == 0) {
                 onGoingGetList = false
                 afterScrolled.value = false
                 return
@@ -117,8 +111,8 @@
             }
             await nextTick()
             if (lastMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
-                scrollArea.value.scrollTo({ top: 0 }) //scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-            } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
+                scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
+            } else if (lastMsgMstCdt) {
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
             getCount() //진행중인 (나중에) 카운팅
@@ -187,25 +181,29 @@
 
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
+        const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID + "?appType=later"
         gst.ctx.menu = [
-            { nm: "메시지목록 새로고침", func: function(item, idx) {
-                gst.util.goMsgList('later_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
-            }},
-            { nm: "새창에서 열기", func: function(item, idx) {
-                let url = "/body/msglist/" + row.CHANID + "/" + row.MSGID
+            { nm: "새창에서 열기", func: async function(item, idx) {
                 window.open(url)
-            }}, //nm: "홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 여긴 부모/자식 모두 동일한 UI이므로 굳이 필요없음
+            }},
+            { nm: "메시지 링크 복사", deli: true, func: function(item, idx) {
+                navigator.clipboard.writeText(url).then(() => {
+                    gst.util.setToast("메시지 링크가 복사되었습니다.")
+                }).catch(() => {
+                    gst.util.setToast("복사 실패. 알 수 없는 문제가 발생했습니다.")
+                })
+            }},
             { nm: "보관", disable: (kindLater.value == "stored") ? true : false, func: async function(item, idx) {
                 changeAction('stored', row)
             }},
             { nm: "완료", disable: (kindLater.value == "finished") ? true : false, func: function(item, idx) {
                 changeAction('finished', row)
             }},
-            { nm: "진행", disable: (kindLater.value == "later") ? true : false, func: function(item, idx) {
+            { nm: "진행", disable: (kindLater.value == "later") ? true : false, deli: true, func: function(item, idx) {
                 changeAction('later', row)
             }},
             { nm: "제거", color: "red", func: function(item, idx) {
-                changeAction('delete', row)                
+                changeAction('delete', row)
             }},
         ]            
         gst.ctx.show(e)
@@ -219,6 +217,11 @@
     function mouseLeave(row) {
         if (row.sel) return
         row.hover = false
+    }
+
+    async function refreshPanel() {
+        await getList(true)            
+        laterClickOnLoop(true)
     }
 
     async function handleEvFromBody(param) { //MsgList.vue에서 실행
@@ -289,7 +292,7 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in listLater" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
+            <div v-for="(row, idx) in listLater" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
                 @click="laterClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">

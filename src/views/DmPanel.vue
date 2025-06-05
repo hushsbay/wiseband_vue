@@ -209,7 +209,7 @@
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: async function(item, idx) {
                 let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
-                window.open(url)
+                window.open(url + "?appType=dm")
             }},
             { nm: "DM 정보", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                 memberlistRef.value.open("dm", row.CHANID)
@@ -286,7 +286,7 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }"
+            <div v-for="(row, idx) in listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }" :keyidx="idx"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"
                 @click="dmClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
