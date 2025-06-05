@@ -26,13 +26,13 @@
             document.addEventListener('mousemove', moveHandler)
             document.addEventListener('mouseup', upHandler)
             document.body.style.cursor = 'col-resize'
-            resizeEle.resizer.style.background = 'yellow'
+            resizeEle.resizer.style.background = 'lightsteelblue'
         },
 
         moveHandler : function(e, resizeEle, resizeObj) {
             const dx = e.clientX - resizeObj.posX //마우스가 움직이면 기존 초기 마우스 위치에서 현재 위치값과의 차이를 계산
             document.body.style.cursor = 'col-resize' //크기 조절중 마우스 커서 변경 (resizer에 적용하면 위치가 변경되면서 커서가 해제되기 때문에 body에 적용)
-            resizeEle.resizer.style.background = 'yellow'
+            resizeEle.resizer.style.background = 'lightsteelblue'
             resizeEle.leftSide.style.userSelect = 'none' //이동중 양쪽 영역(왼쪽, 오른쪽)에서 마우스 이벤트와 텍스트 선택을 방지하기 위해 추가 (4행)
             resizeEle.leftSide.style.pointerEvents = 'none'        
             resizeEle.rightSide.style.userSelect = 'none'
@@ -79,8 +79,9 @@
 
     function moveHandler(e) {
         const dx = resize.moveHandler(e, resizeEle, resizeObj)
-        chanSideWidth.value = `${resizeObj.leftWidth + dx + resizeObj.mainSideWidth}px`
+        chanSideWidth.value = `${resizeObj.leftWidth + dx + resizeObj.mainSideWidth - 70}px` //70은 side menu의 min-width
         chanMainWidth.value = `calc(100% - ${chanSideWidth.value})`
+        //console.log(resizeObj.leftWidth+"==="+dx+"==="+resizeObj.mainSideWidth+"####"+chanSideWidth.value+"$$$$"+chanMainWidth.value)
     }
 
     function upHandler() {
@@ -94,7 +95,7 @@
     }
 
     function mouseEnter() {
-        resizeEle.resizer.style.background = 'yellow'
+        resizeEle.resizer.style.background = 'lightsteelblue'
     }
 
     function mouseLeave() {
