@@ -14,13 +14,11 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    let observerBottom = ref(null), observerBottomTarget = ref(null)
-    let afterScrolled = ref(false)
-
-    const msglistRef = ref(null), notyetChk = ref(false), searchWord = ref('')
+    let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
+    let msglistRef = ref(null), notyetChk = ref(false), searchWord = ref('')
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all')
-    let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
+    let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시    
     let onGoingGetList = false
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -225,7 +223,7 @@
                 toggleChanOption("bookmark", job, row)
             }}
             //'DM링크 복사' 메뉴는 '채널링크 복사' 메뉴가 비공개인 경우와 마찬가지로, 아직 쓰임새가 안보여 지원하지 않음
-        ]            
+        ]
         gst.ctx.show(e)
     }
 

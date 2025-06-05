@@ -13,9 +13,7 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    let observerBottom = ref(null), observerBottomTarget = ref(null)
-    let afterScrolled = ref(false)
-
+    let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     const msglistRef = ref(null), notyetChk = ref(false)
     let scrollArea = ref(null), listActivity = ref([]), kindActivity = ref('all'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
@@ -49,8 +47,8 @@
             notyetChk.value = (localStorage.wiseband_notyet_activity == "Y") ? true : false
             kindActivity.value = localStorage.wiseband_lastsel_activity ? localStorage.wiseband_lastsel_activity : "all"
             await getList(true)            
-            observerBottomScroll()
             activityClickOnLoop(true)
+            observerBottomScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -106,11 +104,7 @@
             const yn = notyetChk.value ? "Y" : "N"
             const res = await axios.post("/menu/qryActivity", { kind: kindActivity.value, notyet: yn, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
-            if (!rs) {
-                onGoingGetList = false
-                return                
-            }
-            if (rs.list.length == 0) {
+            if (!rs || rs.list.length == 0) {
                 onGoingGetList = false
                 afterScrolled.value = false
                 return
@@ -122,7 +116,7 @@
                 if (row.TITLE == "vip") {
                     title = "VIP"
                 } else if (row.TITLE == "mention") {
-                    title = "@맨션"
+                    title = "맨션"
                 } else if (row.TITLE == "thread") {
                     title = "스레드"
                 } else if (row.TITLE == "myreact") {
@@ -136,11 +130,10 @@
             }
             await nextTick()
             if (lastMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
-                scrollArea.value.scrollTo({ top: 0 }) //scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-            } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
+                scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
+            } else if (lastMsgMstCdt) {
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
-            //gst.Activity.getCount() //진행중인 (나중에) 카운팅
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -186,35 +179,38 @@
         }
     }
 
-    async function changeAction(kind, row) {
-        try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
-            const msgid = row.MSGID
-            const rq = { chanid: row.CHANID, msgid: msgid, kind: kindActivity.value, job: kind } //kind는 현재 상태, job은 바꿀 상태
-            const res = await axios.post("/chanmsg/changeAction", rq)
-            let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Activity 패널 탭에서는 제거해야 함
-            const idx = listActivity.value.findIndex((item) => item.MSGID == msgid)
-            if (idx > -1) listActivity.value.splice(idx, 1)
-            //gst.activity.getCount() //화면에 갯수 업데이트
-            if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
-            const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
-            msglistRef.value.procFromParent("activity", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function changeAction(kind, row) { //?????????????????????????????????????????
+    //     try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
+    //         const msgid = row.MSGID
+    //         const rq = { chanid: row.CHANID, msgid: msgid, kind: kindActivity.value, job: kind } //kind는 현재 상태, job은 바꿀 상태
+    //         const res = await axios.post("/chanmsg/changeAction", rq)
+    //         let rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Activity 패널 탭에서는 제거해야 함
+    //         const idx = listActivity.value.findIndex((item) => item.MSGID == msgid)
+    //         if (idx > -1) listActivity.value.splice(idx, 1)
+    //         if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
+    //         const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
+    //         msglistRef.value.procFromParent("activity", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
+        const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID
         gst.ctx.menu = [
-            { nm: "메시지목록 새로고침", func: function(item, idx) {
-                gst.util.goMsgList('activity_body', { chanid: row.CHANID, msgid: row.MSGID }, true)
-            }},
-            { nm: "새창에서 열기", func: function(item, idx) {
-                let url = "/body/msglist/" + row.CHANID + "/" + row.MSGID
+            { nm: "새창에서 열기", func: async function(item, idx) {
                 window.open(url)
+            }},
+            { nm: "메시지 링크 복사", func: function(item, idx) {
+                navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
+                    gst.util.setToast("메시지 링크가 복사되었습니다.")
+                }).catch(() => {
+                    gst.util.setToast("복사 실패. 알 수 없는 문제가 발생했습니다.")
+                })
             }}
-        ]            
+        ]
         gst.ctx.show(e)
     }
 
@@ -226,6 +222,11 @@
     function mouseLeave(row) {
         if (row.sel) return
         row.hover = false
+    }
+
+    async function refreshPanel() {
+        await getList(true)            
+        activityClickOnLoop(true)
     }
 
     async function handleEvFromBody(param) { //MsgList.vue에서 실행
@@ -324,7 +325,7 @@
                     </div>
                 </div>
                 <div style="width:100%">
-                    <div class="coDotDot" style="color:white;font-weight:bold">{{ row.BODYTEXT }}</div> 
+                    <div class="coDotDot" style="color:white">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
             <div v-if="listActivity.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
