@@ -184,6 +184,26 @@
         }
     }
 
+    async function toggleChanOption(kind, job, row) {
+        try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
+            const rq = { chanid: row.CHANID, kind: kind, job: job } //kind는 현재 상태, job은 바꿀 상태
+            const res = await axios.post("/chanmsg/toggleChanOption", rq)
+            let rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            const item = listHome.value.find((item) => item.CHANID == row.CHANID)
+            if (item) {
+                if (kind == "noti") {
+                    item.NOTI = job
+                } else if (kind == "bookmark") {
+                    item.BOOKMARK = job
+                }
+                procChanRowImg(item)
+            }
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
     async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         //const img = row.nodeImg.replace(hush.cons.color_light, hush.cons.color_dark)        
         //const nm = !row.CHANID ? row.GR_NM : row.CHANNM
@@ -196,34 +216,31 @@
                 }}
             ]
         } else {
+            const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
+            const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
             gst.ctx.menu = [
-                { nm: "새로고침(메시지목록)", func: function(item, idx) {
-                    //gst.util.goMsgList('home_body', { chanid: row.CHANID }, true)
-                }},
-                { nm: "새창에서 열기", deli: true, func: async function(item, idx) {
-                    let url = gst.util.getUrlForOneMsgNotYet(row.CHANID)
+                { nm: "새창에서 열기", func: async function(item, idx) {
+                    let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
                     window.open(url)
                 }},
-                { nm: "채널 정보", func: function(item, idx) {
+                { nm: "채널 정보", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                     memberlistRef.value.open("chan", row.CHANID, row.CHANNM, row.nodeImg)
                 }},
-                // { nm: "복사", img: hush.cons.color_dark + "other.png", child: [
-                //     { nm: "채널 복사", func: function(item, idx) { 
-                        
-                //     }},
-                //     { nm: "링크 복사" }
-                // ]},
-                { nm: "알림 끄기", func: function(item, idx) { 
-                    
+                { nm: "알림 " + notiStr, func: function(item, idx) { 
+                    const job = (row.NOTI == "X") ? "" : "X"
+                    toggleChanOption("noti", job, row)
                 }},
-                { nm: "즐겨찾기 설정", func: function(item, idx) { 
-                    
-                }},                
-                { nm: "채널 링크 복사", deli: true, func: function(item, idx) { 
-                    
+                { nm: "북마크 " + bookmarkStr, func: function(item, idx) { 
+                    const job = (row.BOOKMARK == "Y") ? "" : "Y"
+                    toggleChanOption("bookmark", job, row)
                 }},
-                { nm: "채널 나가기", color: "red", func: function(item, idx) { 
-                    
+                { nm: "채널 링크 복사", deli: true, func: function(item, idx) {
+                    const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/0"
+                    navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
+                        gst.util.setToast("채널 링크가 복사되었습니다.")
+                    }).catch(() => {
+                        gst.util.setToast("복사 실패. 알 수 없는 문제가 발생했습니다.")
+                    })
                 }}
             ]            
         }
@@ -240,7 +257,12 @@
         row.hover = false
     }
 
-    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+    async function refreshPanel() {
+        await getList()
+        chanClickOnLoop(true)
+    }
+
+    async function handleEvFromBody(param) { //MsgList에서 실행
         if (param.kind == "selectRow") {
             chanClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
@@ -269,10 +291,13 @@
                 </select>
             </div>
             <div class="chan_side_top_right">
-                <div style="padding:5px;border-radius:8px;" @click="procExpCol('C')">
+                <div style="padding:5px;border-radius:8px" @click="refreshPanel">
+                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침">
+                </div>
+                <div style="padding:5px;border-radius:8px" @click="procExpCol('C')">
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'collapseall.png')" title="모두접기기">
                 </div>
-                <div style="padding:5px;border-radius:8px;" @click="procExpCol('E')">
+                <div style="padding:5px;border-radius:8px" @click="procExpCol('E')">
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'expandall.png')" title="모두펼치기">
                 </div>
             </div>

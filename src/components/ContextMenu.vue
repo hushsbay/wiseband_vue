@@ -105,6 +105,18 @@
         ctxChildMenu.value = []
         ctxChildOn.value = false
     }
+
+    /*예) 
+    { nm: "새로고침", deli: true, disable: true, img: "color_slacklogo.png", child: [
+        { nm: "패널(좌측)", func: async function(item, idx) {
+            await getList()
+            chanClickOnLoop(true)
+        }},
+        { nm: "메시지목록(우측)", func: function(item, idx) { 
+                       
+        }}
+    ]}
+    */
 </script>
 
 <template> <!-- 아래 @click.stop은 Main.vue 참조 -->
@@ -117,24 +129,24 @@
             </div>
             <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid var(--border-color)' : '' }" 
                 @mouseenter="(e) => mouseEnter(e, row)" @mouseleave="(e) => mouseLeave(e, row)" @click.stop="rowClick(row, idx)"> 
-                <div v-if="row.child" class="popupMenuItemChild coDotDot">
+                <div v-if="row.child" class="popupMenuItemChild coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
                     <div style="display:flex;align-items:center">
-                        <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
+                        <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:2px">
                         <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
                     </div>
                     <div style="color:dimgray;margin-right:8px">></div>
                 </div>
-                <div v-else class="popupMenuItem coDotDot">
-                    <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
+                <div v-else class="popupMenuItem coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
+                    <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:4px">
                     <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
                 </div>                    
             </div> 
         </div>
         <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle" @mouseleave="mouseLeaveChild">
-            <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid black' : '' }" 
+            <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid var(--border-color)' : '' }" 
                 @click.stop="rowClick(row, idx)">
-                <div class="popupMenuItem coDotDot">
-                    <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:5px">
+                <div class="popupMenuItem coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
+                    <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:2px">
                     <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
                 </div> 
             </div> 
@@ -163,13 +175,13 @@
     }
 
     .popupMenuItem {
-        width:calc(100% - 16px);height:35px;padding:0 20px;
+        width:calc(100% - 20px);height:35px;padding:0 20px;
         display:flex;align-items:center;/*border-bottom:1px solid var(--border-color)*/
     }
 
     .popupMenuItemChild {
-        width:calc(100% - 8px);height:35px;padding-left:8px;
-        display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color)
+        width:calc(100% - 20px);height:35px;padding-left:20px;
+        display:flex;justify-content:space-between;align-items:center;border-bottom:0px solid var(--border-color)
     }
 
 </style>

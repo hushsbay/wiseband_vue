@@ -210,9 +210,9 @@
     }
 
     async function mouseRight(e, row) {        
-        const notiStr = "알림 " + (row.NOTI == "X" ? "해제" : "설정")
-        const bookmarkStr = "즐겨찾기 " + (row.BOOKMARK == "Y" ? "해제" : "설정")
         gst.ctx.data.header = ""
+        const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
+        const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
         gst.ctx.menu = [
             { nm: "메시지목록 새로고침", func: function(item, idx) {
                 gst.util.goMsgList('dm_body', { chanid: row.CHANID }, true)
@@ -224,11 +224,11 @@
             { nm: "정보 보기", func: function(item, idx) {
                 memberlistRef.value.open("dm", row.CHANID)
             }},
-            { nm: notiStr, func: function(item, idx) {
+            { nm: "알림 " + notiStr, func: function(item, idx) {
                 const job = (row.NOTI == "X") ? "" : "X"
                 toggleChanOption("noti", job, row)
             }},
-            { nm: bookmarkStr, func: function(item, idx) {
+            { nm: "북마크 " + bookmarkStr, func: function(item, idx) {
                 const job = (row.BOOKMARK == "Y") ? "" : "Y"
                 toggleChanOption("bookmark", job, row)
             }},
@@ -283,9 +283,10 @@
         <div class="chan_side_top">
             <div class="chan_side_top_left">DM</div>
             <div class="chan_side_top_right">
-                <div style="padding:5px;display:flex;align-items:center;border-radius:8px;" @click="newMsg">
+                <div style="padding:5px;display:flex;align-items:center;border-radius:8px;">
                     <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:80px;margin-right:8px" placeholder="멤버" />
                     <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
+                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
                     <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새DM" @click="newDm()">
                 </div>
             </div>

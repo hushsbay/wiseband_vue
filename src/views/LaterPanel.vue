@@ -270,16 +270,22 @@
 <template>
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
-            <div class="chan_side_top_left">나중에</div>
+            <div class="chan_side_top_left">
+                나중에
+                
+            </div>
             <div class="chan_side_top_right">
+                <div @click="refreshPanel">
+                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" @click="refreshPanel">
+                </div>
                 <div class="procMenu" :class="(kindLater == 'later') ? 'procMenuSel' : ''" @click="procQuery('later')">
-                    진행중<span style="margin-left:3px">{{ cntLater }}</span>
+                    진행<span style="margin-left:3px">{{ cntLater }}</span>
                 </div>
                 <div class="procMenu" :class="(kindLater == 'stored') ? 'procMenuSel' : ''" @click="procQuery('stored')">
-                    보관됨
+                    보관
                 </div>
                 <div class="procMenu" :class="(kindLater == 'finished') ? 'procMenuSel' : ''" @click="procQuery('finished')">
-                    완료됨
+                    완료
                 </div>
             </div>
         </div>
@@ -347,10 +353,10 @@
         width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:var(--border-lg);cursor:pointer
     }
     .chan_side_top_left {
-        width:20%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
+        width:100px;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
     }
     .chan_side_top_right {
-        width:80%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
+        width:calc(100% - 100px);height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
     }
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto

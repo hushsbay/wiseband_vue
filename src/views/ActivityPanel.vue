@@ -267,8 +267,9 @@
         <div class="chan_side_top">
             <div class="chan_side_top_1">
                 <span style="font-size:18px;font-weight:bold">내활동</span>
-                <div style="margin-right:5px">
+                <div style="margin-right:5px;display:flex;align-items:center">
                     <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
+                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
                 </div>
             </div>
             <div class="chan_side_top_2">

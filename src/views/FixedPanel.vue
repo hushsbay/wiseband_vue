@@ -259,7 +259,10 @@
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">고정</div>
-            <div class="chan_side_top_right"><span style="color:white;font-size:15px;font-weight:bold">{{ cntFixed }}</span></div>
+            <div class="chan_side_top_right">
+                <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
+                <span style="color:white;font-size:15px;font-weight:bold">{{ cntFixed }}</span>
+            </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in listFixed" :key="row.MSGID" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }"
