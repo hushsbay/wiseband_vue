@@ -161,7 +161,9 @@
         ["mnuActivity"] : async (row, onMounted) => { await goRoute({ name: 'activity' }, onMounted) },
         ["mnuLater"] : async (row, onMounted) => { await goRoute({ name: 'later' }, onMounted) },
         ["mnuFixed"] : async (row, onMounted) => { await goRoute({ name: 'fixed' }, onMounted) },
-        ["mnuChanDm"] : async (row, onMounted) => { await goRoute({ name: 'chandm' }, onMounted) },
+        ["mnuAuto"] : async (row, onMounted) => { 
+            gst.util.setToast("미개발된 메뉴입니다.") //await goRoute({ name: 'auto' }, onMounted) 
+        },
         ["mnuGroup"] : async (row, onMounted) => { await goRoute({ name: 'group' }, onMounted) }
     }
 

@@ -209,7 +209,7 @@
         gst.ctx.data.header = ""
         if (!row.CHANID) {            
             gst.ctx.menu = [
-                { nm: "채널 생성", func: function(item, idx) {
+                { nm: "채널 만들기", func: function(item, idx) {
                     memberlistRef.value.open("chan", "new", row.GR_ID)
                 }}
             ]
