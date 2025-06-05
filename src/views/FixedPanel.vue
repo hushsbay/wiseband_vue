@@ -127,21 +127,19 @@
         }
     }
 
-    function fixedClickOnLoop(clickNode, msgid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 true. msgid는 명시적으로 해당 노드를 지정해서 처리하는 것임
-        //const msgid = localStorage.wiseband_lastsel_fixedmsgid
+    function fixedClickOnLoop(clickNode, msgid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. msgid는 명시적으로 해당 노드를 지정해서 처리하는 것임
         const msgidToChk = msgid ? msgid : localStorage.wiseband_lastsel_fixedmsgid
-        if (!msgidToChk) return
         let foundIdx = -1
         listFixed.value.forEach((item, index) => {
             if (item.MSGID == msgidToChk) {
-                gst.util.scrollIntoView(msgRow, msgidToChk) //msgRow.value[msgid].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                gst.util.scrollIntoView(msgRow, msgidToChk)
                 fixedClick(item, index, clickNode, msgid)
                 foundIdx = index
             }
         })
-        if (foundIdx == -1 && clickNode && listFixed.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
+        if (foundIdx == -1 && listFixed.value.length > 0) { //무한스크롤이므로 다음 페이지에서 선택된 것은 못가져오는데 그 경우는 처음 노드를 기본으로 선택하도록 함
             const row = listFixed.value[0]
-            fixedClick(row, 0, clickNode, row.MSGID)
+            fixedClick(row, 0, true)
         }
     }
     

@@ -50,8 +50,8 @@
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_lastsel_dm == "notyet") ? true : false
             await getList(true)            
-            observerBottomScroll()
             dmClickOnLoop(true)
+            observerBottomScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -110,11 +110,7 @@
             const lastMsgMstCdt = savLastMsgMstCdt
             const res = await axios.post("/menu/qryDm", { kind: kindDm.value, search: search, lastMsgMstCdt: lastMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
-            if (!rs) {
-                onGoingGetList = false
-                return                
-            }
-            if (rs.list.length == 0) {
+            if (!rs || rs.list.length == 0) {
                 onGoingGetList = false
                 afterScrolled.value = false
                 return
@@ -134,8 +130,8 @@
             }
             await nextTick()
             if (lastMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
-                scrollArea.value.scrollTo({ top: 0 }) //scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-            } else if (lastMsgMstCdt) { //이후에 스크롤 아래로 올려서 이전 데이터를 가지고 오면 높이가 커지는데 
+                scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
+            } else if (lastMsgMstCdt) {
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
             onGoingGetList = false
@@ -150,20 +146,19 @@
         row.bookmarkImg = (row.BOOKMARK == "Y") ? hush.cons.color_light + "bookmark.png" : ""
     }
 
-    function dmClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 true. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
+    function dmClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
         const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_dmchanid
-        if (!chanidToChk) return
         let foundIdx = -1
         listDm.value.forEach((item, index) => {
             if (item.CHANID == chanidToChk) {
-                gst.util.scrollIntoView(chanRow, chanidToChk) //chanRow.value[chanidToChk].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                gst.util.scrollIntoView(chanRow, chanidToChk)
                 dmClick(item, index, clickNode, chanid)
                 foundIdx = index
             }
         })
-        if (foundIdx == -1 && clickNode && listDm.value.length > 0) { //무한스크롤이므로 다음 페이지 선택된 것은 못가져와서 처음 노드를 기본으로 선택하는 것임
+        if (foundIdx == -1 && listDm.value.length > 0) { //무한스크롤이므로 다음 페이지에서 선택된 것은 못가져오는데 그 경우는 처음 노드를 기본으로 선택하도록 함
             const row = listDm.value[0]
-            dmClick(row, 0, clickNode, row.CHAIND)
+            dmClick(row, 0, true)
         }
     }
     
@@ -214,14 +209,11 @@
         const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
         const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
         gst.ctx.menu = [
-            { nm: "메시지목록 새로고침", func: function(item, idx) {
-                gst.util.goMsgList('dm_body', { chanid: row.CHANID }, true)
-            }},
-            { nm: "새창에서 열기", deli: true, func: async function(item, idx) {
-                let url = gst.util.getUrlForOneMsgNotYet(row.CHANID)
+            { nm: "새창에서 열기", func: async function(item, idx) {
+                let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
                 window.open(url)
             }},
-            { nm: "정보 보기", func: function(item, idx) {
+            { nm: "DM 정보", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                 memberlistRef.value.open("dm", row.CHANID)
             }},
             { nm: "알림 " + notiStr, func: function(item, idx) {
@@ -231,9 +223,8 @@
             { nm: "북마크 " + bookmarkStr, func: function(item, idx) {
                 const job = (row.BOOKMARK == "Y") ? "" : "Y"
                 toggleChanOption("bookmark", job, row)
-            }},
-            { nm: "초대" },
-            { nm: "나가기", color: "red" }
+            }}
+            //'DM링크 복사' 메뉴는 '채널링크 복사' 메뉴가 비공개인 경우와 마찬가지로, 아직 쓰임새가 안보여 지원하지 않음
         ]            
         gst.ctx.show(e)
     }
@@ -246,6 +237,15 @@
     function mouseLeave(row) {
         if (row.sel) return
         row.hover = false
+    }
+
+    function newDm() {
+        memberlistRef.value.open("dm", "new")
+    }
+
+    async function refreshPanel() {
+        await getList(true)            
+        dmClickOnLoop(true)
     }
 
     async function handleEvFromBody(param) { //MsgList.vue에서 실행
@@ -271,10 +271,6 @@
 
     function handleEvFromMemberList(chanid) { //MemberList에서 실행
         getList(true) //qryDm으로 하나의 행만 업데이트하기 (신규일 때는 맨 위에 추가하기)
-    }
-
-    function newDm() {
-        memberlistRef.value.open("dm", "new")
     }
 </script>
 
@@ -313,7 +309,7 @@
                     </div>
                 </div>
                 <div style="width:100%">
-                    <div class="coDotDot" style="color:white;font-weight:bold">{{ row.BODYTEXT }}</div> 
+                    <div class="coDotDot" style="color:white">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
             <div v-if="listDm.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">

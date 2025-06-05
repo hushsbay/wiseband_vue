@@ -21,7 +21,6 @@
     //   예1) MsgList url에서 뒤로 가기 눌러 다른 MsgList url로 라우팅되면 MsgList가 먼저 호출되므로 HomePanel의 트리노드 등도 역으로 같이 맞춰져야 함
     //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 이 경우도 같이 맞춰져야 함
 
-    //let scrollArea = ref(null)
     let listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null)
     let mounting = true
@@ -82,7 +81,7 @@
         }
     }
 
-    function chanClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 true. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
+    function chanClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
         const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
         let foundIdx = -1
@@ -100,46 +99,10 @@
         if (foundIdx == -1) { //최초 실행시 그룹과 채널이 선택이 없는 경우 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 html로 안내하기)
             for (let i = 0; i < listHome.value.length; i++) {
                 const item = listHome.value[i]
-                procChanRowImg(item)
-                item.exploded = true
-                chanClick(item, i, clickNode, chanid)
+                if (i == 0) item.exploded = false
+                chanClick(item, i, true)
                 if (item.CHANID) break //사용자그룹(1단계)노드를 처리하고 채널(2단계)노드를 만나면 처리후 break
             }
-        }
-    }
-
-    function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
-        if (item.DEPTH == "1") {
-            item.nodeImg = item.exploded ? hush.cons.color_light + "expanded.png" : hush.cons.color_light + "collapsed.png"
-            item.notioffImg = ""
-            item.bookmarkImg = ""
-            item.otherImg = ""
-        } else {
-            if (item.CHANID == null) {
-                item.nodeImg = hush.cons.color_light + "channel.png"
-                item.notioffImg = ""
-                item.bookmarkImg = ""
-                item.otherImg = ""
-                item.CHANNM = "없음"
-            } else {
-                item.nodeImg = (item.STATE == "A") ? "channel.png" : "lock.png"
-                item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
-                item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
-                item.otherImg = (item.OTHER == "other") ? "person.png" : ""
-                const color = item.sel ? hush.cons.color_dark : hush.cons.color_light
-                item.nodeImg = color + item.nodeImg
-                if (item.notioffImg) item.notioffImg = color + item.notioffImg
-                if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
-                if (item.otherImg) item.otherImg = color + item.otherImg
-            }
-        }
-    }
-
-    function procExpCol(type) { //모두필치기,모두접기
-        const exploded = (type == "E") ? true : false
-        for (let i = 0; i < listHome.value.length; i++) {
-            listHome.value[i].exploded = exploded
-            procChanRowImg(listHome.value[i])
         }
     }
 
@@ -184,6 +147,41 @@
         }
     }
 
+    function procChanRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
+        if (item.DEPTH == "1") {
+            item.nodeImg = item.exploded ? hush.cons.color_light + "expanded.png" : hush.cons.color_light + "collapsed.png"
+            item.notioffImg = ""
+            item.bookmarkImg = ""
+            item.otherImg = ""
+        } else {
+            if (item.CHANID == null) {
+                item.nodeImg = hush.cons.color_light + "channel.png"
+                item.notioffImg = ""
+                item.bookmarkImg = ""
+                item.otherImg = ""
+                item.CHANNM = "없음"
+            } else {
+                item.nodeImg = (item.STATE == "A") ? "channel.png" : "lock.png"
+                item.notioffImg = (item.NOTI == "X") ? "notioff.png" : ""
+                item.bookmarkImg = (item.BOOKMARK == "Y") ? "bookmark.png" : ""
+                item.otherImg = (item.OTHER == "other") ? "person.png" : ""
+                const color = item.sel ? hush.cons.color_dark : hush.cons.color_light
+                item.nodeImg = color + item.nodeImg
+                if (item.notioffImg) item.notioffImg = color + item.notioffImg
+                if (item.bookmarkImg) item.bookmarkImg = color + item.bookmarkImg
+                if (item.otherImg) item.otherImg = color + item.otherImg
+            }
+        }
+    }
+
+    function procExpCol(type) { //모두필치기,모두접기
+        const exploded = (type == "E") ? true : false
+        for (let i = 0; i < listHome.value.length; i++) {
+            listHome.value[i].exploded = exploded
+            procChanRowImg(listHome.value[i])
+        }
+    }
+
     async function toggleChanOption(kind, job, row) {
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
             const rq = { chanid: row.CHANID, kind: kind, job: job } //kind는 현재 상태, job은 바꿀 상태
@@ -218,6 +216,7 @@
         } else {
             const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
             const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
+            const disableStr = (row.STATE == "P") ? true : false
             gst.ctx.menu = [
                 { nm: "새창에서 열기", func: async function(item, idx) {
                     let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
@@ -234,7 +233,7 @@
                     const job = (row.BOOKMARK == "Y") ? "" : "Y"
                     toggleChanOption("bookmark", job, row)
                 }},
-                { nm: "채널 링크 복사", deli: true, func: function(item, idx) {
+                { nm: "채널 링크 복사", disable: disableStr, func: function(item, idx) { //공개채널은 해당 그룹내 복사해서 보내면 클릭해서 볼 수 있으므로 활성화. 비공개(STATE=P)채널은 복사해도 쓸 일이 없음
                     const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/0"
                     navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
                         gst.util.setToast("채널 링크가 복사되었습니다.")
@@ -302,8 +301,7 @@
                 </div>
             </div>
         </div>
-        <div class="chan_side_main coScrollable" id="chan_side_main"> <!--ref="scrollArea"-->
-            <!-- <div v-for="(row, idx) in listHome" :id="row.DEPTH == '1' ? row.GR_ID : row.CHANID" :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }" -->
+        <div class="chan_side_main coScrollable" id="chan_side_main">
             <div v-for="(row, idx) in listHome" :key="row.DEPTH == '1' ? row.GR_ID : row.CHANID" :ref="(ele) => { chanRow[row.DEPTH == '1' ? row.GR_ID : row.CHANID] = ele }" :keyidx="idx"
                 @click="chanClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div v-show="row.DEPTH == '1' || (row.DEPTH == '2' && row.exploded)" :class="['node', row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']">

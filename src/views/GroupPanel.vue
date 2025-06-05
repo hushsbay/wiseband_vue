@@ -73,23 +73,23 @@
     }
 
     function groupClickOnLoop(clickNode, grid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 true. grid는 명시적으로 해당 노드를 지정해서 처리하는 것임
-        debugger
+        const gridToChk = grid ? grid : localStorage.wiseband_lastsel_grid
         let foundIdx = -1
         listGroup.value.forEach((item, index) => {
             procgroupRowImg(item)
             if (item.GR_ID == localStorage.wiseband_lastsel_grid) {
-                gst.util.scrollIntoView(groupRow, item.GR_ID) //groupRow.value[item.GR_ID].scrollIntoView({ behavior: "smooth", block: "nearest" })
+                gst.util.scrollIntoView(groupRow, item.GR_ID)
                 groupClick(item, index, clickNode, grid)
                 foundIdx = index
             }
         })
-        if (foundIdx == -1) { //최초 실행시 그룹이 있는데 선택이 없는 사용자들은 맨 처음 그룹을 선택하게 함
-            for (let i = 0; i < listGroup.value.length; i++) {
-                const item = listGroup.value[i]
-                procgroupRowImg(item)
-                groupClick(item, i, clickNode, grid)
-                if (item.GR_ID) break
-            }
+        if (foundIdx == -1 && listGroup.value.length > 0) { //최초 실행시 그룹이 있는데 선택이 없는 사용자들은 맨 처음 그룹을 선택하게 함
+            //for (let i = 0; i < listGroup.value.length; i++) {
+                const item = listGroup.value[0]
+                //procgroupRowImg(item)
+                groupClick(item, 0, true)
+                //if (item.GR_ID) break
+            //}
         }
     }
 

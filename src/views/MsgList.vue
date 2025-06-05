@@ -1845,6 +1845,9 @@
                     </span>                    
                 </div>
             </div>
+            <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
+                <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
+            </div>
             <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
         </div>
         <div class="chan_center_footer">
