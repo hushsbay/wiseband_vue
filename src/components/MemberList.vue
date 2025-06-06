@@ -303,8 +303,8 @@
                                 <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:5px;" @click="close" title="닫기">
                             </div>
                         </div>
-                        <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
-                            background:whitesmoke;border:1px solid dimgray;border-top:none">
+                        <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
+                            background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
                             <div v-if="chanId" style="width:70%;height:100%;display:flex;align-items:center">
                                 <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="margin-right:12px" />
                                 <span v-if="appType=='chan'" style="margin-right:10px;color:dimgray">채널명 : </span>
@@ -335,14 +335,16 @@
                                 <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
                                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
                                         <div style="display:flex;align-items:center">
-                                            <span style="margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
+                                            <span style="min-width:60px;margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
                                             <span>{{ row.JOB }}</span>
                                         </div>
-                                        <div style="width:45px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
-                                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" :title="row.KIND" style="margin-left:5px;padding:2px;font-size:10px;background:steelblue;color:white;border-radius:5px">
-                                                {{ row.KIND.substring(0, 1).toUpperCase() }}
+                                        <div style="min-width:120px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
+                                                {{ row.KIND=='guest' ? '게스트' : '관리자' }}
                                             </span>
-                                            <span v-if="row.STATE=='C' || row.STATE=='W'" style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">{{ row.STATE }}</span>
+                                            <span v-if="row.STATE=='C' || row.STATE=='W'" class="kind">
+                                                {{ row.STATE=='C' ? '초대필요' : '참여대기' }} 
+                                            </span>
                                         </div>
                                     </div>
                                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
@@ -452,7 +454,7 @@
     .chan_center_header {
         width:100%;min-height:45px;
         display:flex;justify-content:space-between;align-items:center;
-        background:whitesmoke;border:1px solid dimgray;border-bottom:none;overflow:hidden
+        background:whitesmoke;border:1px solid lightgray;border-bottom:none;overflow:hidden
     }
     .chan_center_header_left {
         width:70%;height:100%;padding-left:3px;display:flex;align-items:center;
@@ -461,10 +463,8 @@
     .chan_center_header_right {
         width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
-    /* .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
-    .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; } */
     .chan_center_body {
-        width:100%;height:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;
+        width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
         width:calc(100% - 8px);display:flex;align-items:center;cursor:pointer;border-bottom:1px solid lightgray
@@ -472,31 +472,14 @@
     .chan_center_footer {
         width:calc(100% - 10px);margin:auto 10px 0 0;padding:5px;
         display:flex;flex-direction:column;
-        background:whitesmoke;border:1px solid dimgray;border-radius:5px
+        background:whitesmoke;border:1px solid lightgray;border-radius:5px;
     }
     .chan_right {
         height:100%;border-left:1px solid lightgray; /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
-    /* .topMenu { cursor:pointer }
-    .topMenu:hover { background:whitesmoke;font-weight:bold }
-    .topMenu:active { background:var(--active-color);font-weight:bold }
-    .replyAct { display:flex;align-items:center;cursor:pointer }
-    .replyAct:hover { background:#e6e7eb;border-radius:12px }
-    .replyAct:active { background:var(--active-color) }*/
     .procMenu { padding:3px 3px 0px 3px }
     .procMenu:hover { background:var(--hover-color) }
-    /* .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
-    .procAct:hover { background:lightgray }
-    .procAct:active { background:var(--active-color) }
-    .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
-    .editorMenu:hover { background:lightgray }
-    .editorMenu:active { background:var(--active-color) }
-    .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
-    .saveMenu:hover { opacity:0.5 }
-    .saveMenu:active { background:darkblue;opacity:1.0 }
-    .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
-    .btn:hover { background:lightgray}
-    .btn:active { background:var(--active-color)} */
+    .kind { margin-left:5px;padding:3px 5px;font-size:12px;background:#5DB5FD;color:white;border-radius:5px }
     table { width:100%;border-collapse:collapse }
     td { padding:3px;border:1px solid lightgray }
     .tdLabel { color:dimgray;border:none }

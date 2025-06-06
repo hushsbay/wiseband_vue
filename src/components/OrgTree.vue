@@ -112,7 +112,11 @@
             row.isVip = chkVips(vips, row.USERID)
             row.key = row.USERID + (row.GR_ID ? row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 userid가 들어 있을 것이므로 grid로 추가 구분함
         } else {
-            row.url = (row.LVL == 0 ? "violet_people3" : "violet_people2") + ".png"
+            if (mode.value == "mygroup") {
+                row.url = "violet_people2.png"
+            } else {
+                row.url = (row.LVL == 0 ? "violet_people3" : "violet_people2") + ".png"
+            }
             row.key = org_cd
         }
     }
@@ -250,7 +254,7 @@
             }
         }
         localStorage.wiseband_orgtree_depthToShow = depthToShow.value
-        procQuery("tree")
+        procQuery(mode.value)
     }
 
     function clearAllChk() {
@@ -294,7 +298,7 @@
         <div class="applyToBody" @click="applyToBody()">
             <img :src="gst.html.getImageUrl('violet_left_arrow.png')" style="width:32px;height:32px">
         </div>
-        <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column;border:1px solid lightgray">        
+        <div style="width:calc(100% - 52px);height:100%;display:flex;flex-direction:column;border:1px solid lightgray">        
             <div style="width:100%;height:40px;display:flex;justify-content:space-between;align-items:center;background:whitesmoke">
                 <div style="display:flex;align-items:center">
                     <div v-if="props.kind!='chan'" class="topMenu" :class="mode == 'tree' || mode == 'search' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('tree')">
@@ -317,14 +321,14 @@
                     <div class="chan_center_header_left">
                         <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" style="width:100px" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
-                            <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
+                            <img :src="gst.html.getImageUrl('white_search.png')" class="coImg20">
                         </div>
                         <div class="coImgBtn" @click="reset(mode)">
-                            <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg24" title="리셋">
+                            <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg20" title="새로고침">
                         </div>
-                        <span v-show="mode == 'tree'" class="depth">{{ depthToShow }}</span>
-                        <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(false)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_minus.png')" class="btn_img12"></div>
-                        <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(true)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_plus.png')" class="btn_img12"></div>
+                        <span class="depth" style="margin-right:5px">{{ depthToShow }}</span>
+                        <div class="coImgBtn" @click="changeDepth(false)"><img :src="gst.html.getImageUrl('white_minus.png')" class="coImg18"></div>
+                        <div class="coImgBtn" @click="changeDepth(true)"><img :src="gst.html.getImageUrl('white_plus.png')" class="coImg18"></div>
                         <!-- <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label> -->
                     </div>
                     <div class="chan_center_header_right">
@@ -353,15 +357,9 @@
                             <span v-if="row.isVip" class="vipMark">VIP</span>
                             <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
                         </div>
-                        <div v-if="mode == 'mygroup' || row.USERID" 
-                            style="width:45px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
-                            <span v-if="row.KIND == 'admin' || row.KIND == 'guest'" :title="row.KIND"
-                                style="margin-left:5px;padding:2px;font-size:10px;background:steelblue;color:white;border-radius:5px">
-                                {{ row.KIND.substring(0, 1).toUpperCase() }}
-                            </span>
-                            <span v-if="mode == 'mygroup' && row.USERID && row.IS_SYNC != 'Y'" title="manual"
-                                style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">
-                                M</span>
+                        <div v-if="mode == 'mygroup' || row.USERID" style="min-width:120px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">{{ row.KIND=='guest' ? '게스트' : '관리자' }}</span>
+                            <span v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" class="kind">입력</span>
                         </div>
                     </div>
                 </div>
@@ -394,10 +392,9 @@
     .topMenu:hover { background:var(--hover-color);border-radius:5px }
     .topMenu:active { background:var(--active-color);border-radius:5px }
     .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
-    .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
+    .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid whitesmoke; }
     .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }
     .btn_img12 { width:12px;height:12px;padding:1px;display:flex;align-items:center;justify-content:center }
-    /*btn_spn { margin-left:2px;font-size:14px;color:dimgray } */
     .applyToBody { width:50px;height:100%;display:flex;align-items:center;justify-content:center;
         border-top:1px solid lightgray;border-bottom:1px solid lightgray;cursor:pointer }
     .applyToBody:hover { background:var(--hover-color) }
@@ -405,8 +402,8 @@
         width:100%;height:calc(100% - 40px);display:flex;flex-direction:column
     }
     .chan_center_header {
-        width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;
-        background:whitesmoke;border-bottom:1px solid lightgray;overflow:hidden
+        width:100%;min-height:50px;margin-bottom:2px;display:flex;align-items:center;justify-content:space-between;
+        background:whitesmoke;border-bottom:1px solid lightgray;overflow:hidden;box-shadow:0px 2px 0px gray
     }
     .chan_center_header_left {
         width:80%;height:100%;padding:0 10px;display:flex;align-items:center;
@@ -420,11 +417,9 @@
     .org_body { /* 접기,펼치기 로직때문에 display:flex가 들어가면 안됨 */
         width:100%;justify-content:space-between;cursor:pointer
     }
-    /* .item {  				
-        padding:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1px solid lightgray
-    } */
     .org_body:hover { background:var(--hover-color) }
     .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
     .vipBtn { margin-left:5px;padding:1px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
     .vipMark { margin-left:5px;padding:1px;font-size:10px;background:black;color:white;border-radius:5px }
+    .kind { margin-left:5px;padding:3px 5px;font-size:12px;background:#5DB5FD;color:white;border-radius:5px }
 </style>
