@@ -446,7 +446,7 @@
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
     }
     .chan_center {
-        height:100%;padding: 0 0 0 10px;
+        height:100%;padding: 0 0 0 5px;
         display:flex;flex-direction:column;
     }
     .chan_center_header {
