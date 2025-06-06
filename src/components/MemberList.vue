@@ -300,10 +300,11 @@
                                 </div>
                             </div>
                             <div class="chan_center_header_right">
-                                <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:10px;" @click="close" title="닫기">
+                                <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:5px;" @click="close" title="닫기">
                             </div>
                         </div>
-                        <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--primary-btn-color)">
+                        <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
+                            background:whitesmoke;border:1px solid dimgray;border-top:none">
                             <div v-if="chanId" style="width:70%;height:100%;display:flex;align-items:center">
                                 <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="margin-right:12px" />
                                 <span v-if="appType=='chan'" style="margin-right:10px;color:dimgray">채널명 : </span>
@@ -311,7 +312,7 @@
                                 <span style="margin:0 10px;color:dimgray">생성자 : </span><span>{{ masternm }}</span>
                                 <input v-if="appType!='dm'" type="checkbox" id="checkbox" v-model="state" style="margin-left:20px"/><label v-if="appType!='dm'" for="checkbox">비공개</label>
                             </div>
-                            <div style="width:30%;height:100%;padding-right:10px;display:flex;align-items:center;justify-content:flex-end">
+                            <div style="width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end">
                                 <div v-if="appType=='chan'" class="coImgBtn" @click="saveChanMaster()">
                                     <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
                                     <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "저장" }}</span>
@@ -360,7 +361,7 @@
                             </div>
                         </div>
                         <div class="chan_center_footer">
-                            <div style="padding-top:10px;display:flex;align-items:center;cursor:pointer">
+                            <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
                                 <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
                                     <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
                                     <span class="coImgSpn">멤버저장</span>
@@ -449,17 +450,19 @@
         display:flex;flex-direction:column;
     }
     .chan_center_header {
-        width:100%;min-height:45px;display:flex;justify-content:space-between;align-items:center;;overflow:hidden
+        width:100%;min-height:45px;
+        display:flex;justify-content:space-between;align-items:center;
+        background:whitesmoke;border:1px solid dimgray;border-bottom:none;overflow:hidden
     }
     .chan_center_header_left {
-        width:70%;height:100%;display:flex;align-items:center;
+        width:70%;height:100%;padding-left:3px;display:flex;align-items:center;
         font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
         width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
-    .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
-    .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
+    /* .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
+    .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; } */
     .chan_center_body {
         width:100%;height:100%;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
@@ -467,22 +470,22 @@
         width:calc(100% - 8px);display:flex;align-items:center;cursor:pointer;border-bottom:1px solid lightgray
     }
     .chan_center_footer {
-        width:100%;margin:auto 0 10px 0;
+        width:calc(100% - 10px);margin:auto 10px 0 0;padding:5px;
         display:flex;flex-direction:column;
-        border-top:1px solid var(--primary-btn-color);
+        background:whitesmoke;border:1px solid dimgray;border-radius:5px
     }
     .chan_right {
         height:100%;border-left:1px solid lightgray; /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
-    .topMenu { cursor:pointer }
+    /* .topMenu { cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
     .topMenu:active { background:var(--active-color);font-weight:bold }
     .replyAct { display:flex;align-items:center;cursor:pointer }
     .replyAct:hover { background:#e6e7eb;border-radius:12px }
-    .replyAct:active { background:var(--active-color) }
+    .replyAct:active { background:var(--active-color) }*/
     .procMenu { padding:3px 3px 0px 3px }
-    .procMenu:hover { background:whitesmoke }
-    .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
+    .procMenu:hover { background:var(--hover-color) }
+    /* .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
     .procAct:hover { background:lightgray }
     .procAct:active { background:var(--active-color) }
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
@@ -493,7 +496,7 @@
     .saveMenu:active { background:darkblue;opacity:1.0 }
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
-    .btn:active { background:var(--active-color)}
+    .btn:active { background:var(--active-color)} */
     table { width:100%;border-collapse:collapse }
     td { padding:3px;border:1px solid lightgray }
     .tdLabel { color:dimgray;border:none }

@@ -380,8 +380,6 @@
     .topMenu:active { background:var(--active-color);border-radius:5px }
     .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
-    .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }
-    .btn_spn { margin-left:2px;font-size:14px;color:dimgray }
     .chan_center {
         width:100%;height:calc(100% - 40px);
         display:flex;flex-direction:column;border:1px solid dimgray

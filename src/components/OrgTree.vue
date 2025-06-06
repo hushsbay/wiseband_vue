@@ -291,12 +291,11 @@
 
 <template>
     <div style="width:100%;height:100%;display:flex">
-        <div class="applyToBody" @click="applyToBody()"
-            style="width:50px;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <div class="applyToBody" @click="applyToBody()">
             <img :src="gst.html.getImageUrl('violet_left_arrow.png')" style="width:32px;height:32px">
         </div>
         <div style="width:calc(100% - 50px);height:100%;display:flex;flex-direction:column;border:1px solid lightgray">        
-            <div style="width:100%;height:40px;padding-left:10px;display:flex;justify-content:space-between;align-items:center">
+            <div style="width:100%;height:40px;display:flex;justify-content:space-between;align-items:center;background:whitesmoke">
                 <div style="display:flex;align-items:center">
                     <div v-if="props.kind!='chan'" class="topMenu" :class="mode == 'tree' || mode == 'search' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('tree')">
                         <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people3.png')">
@@ -307,7 +306,7 @@
                         <span style="margin-left:5px;font-weight:bold">내그룹</span> 
                     </div>
                 </div>
-                <div style="padding-right:20px;display:flex;align-items:center">
+                <div style="padding-right:10px;display:flex;align-items:center">
                     <span class="vipMark">VIP</span>
                     <span class="vipBtn" @click="setVip(true)">설정</span>
                     <span class="vipBtn" @click="setVip(false)">해제</span>
@@ -392,19 +391,22 @@
     input { height:28px;margin-right:8px;border:1px solid dimgray }
     input[type="checkbox"] { min-width:16px;min-height:16px }
     .topMenu { cursor:pointer }
-    .topMenu:hover { background:var(--active-color);font-weight:bold }
-    .topMenu:active { background:var(--active-color);font-weight:bold }
+    .topMenu:hover { background:var(--hover-color);border-radius:5px }
+    .topMenu:active { background:var(--active-color);border-radius:5px }
     .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
     .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }
     .btn_img12 { width:12px;height:12px;padding:1px;display:flex;align-items:center;justify-content:center }
-    .btn_spn { margin-left:2px;font-size:14px;color:dimgray }
-    .applyToBody:hover { background:beige }
+    /*btn_spn { margin-left:2px;font-size:14px;color:dimgray } */
+    .applyToBody { width:50px;height:100%;display:flex;align-items:center;justify-content:center;
+        border-top:1px solid lightgray;border-bottom:1px solid lightgray;cursor:pointer }
+    .applyToBody:hover { background:var(--hover-color) }
     .chan_center {
         width:100%;height:calc(100% - 40px);display:flex;flex-direction:column
     }
     .chan_center_header {
-        width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid lightgray;overflow:hidden
+        width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;
+        background:whitesmoke;border-bottom:1px solid lightgray;overflow:hidden
     }
     .chan_center_header_left {
         width:80%;height:100%;padding:0 10px;display:flex;align-items:center;
@@ -421,7 +423,7 @@
     /* .item {  				
         padding:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1px solid lightgray
     } */
-    .org_body:hover { background:whitesmoke }
+    .org_body:hover { background:var(--hover-color) }
     .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
     .vipBtn { margin-left:5px;padding:1px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
     .vipMark { margin-left:5px;padding:1px;font-size:10px;background:black;color:white;border-radius:5px }
