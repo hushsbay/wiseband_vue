@@ -24,16 +24,23 @@
         show.value = true
         appType = strKind //chan or dm
         chanId = strChanid //채널아이디 또는 new
+        memberlist.value = []
+        chanNm.value = ""
         if (appType == "chan") {
             if (chanId == "new") {
                 grId = strChannm //그룹 아이디
+                state.value = false
             } else {
                 chanNm.value = strChannm //chan만 있음
                 chanImg.value = strChanimg //chan만 있음
                 getList()
             }
         } else {
-            if (chanId != "new") getList()
+            if (chanId == "new") {
+                state.value = true
+            } else {
+                getList()
+            }
         }
     }
 
@@ -284,17 +291,19 @@
                         <div class="chan_center_header" id="chan_center_header">
                             <div class="chan_center_header_left">
                                 <img v-if="chanId != 'new'" class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
-                                <div style="display:flex;align-items:center">
-                                    <div v-if="chanId == 'new'" class="coDotDot">새로 만들기 ({{ appType=='dm' ? "DM" : "채널" }})</div>
+                                <div v-if="chanId == 'new'" style="display:flex;align-items:center">
+                                    <div class="coDotDot">새로 만들기 ({{ appType=='dm' ? "DM" : "채널" }})</div>
+                                </div>
+                                <div v-else style="display:flex;align-items:center">
                                     <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
                                     <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
                                 </div>
                             </div>
                             <div class="chan_center_header_right">
-
+                                <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:10px;" @click="close" title="닫기">
                             </div>
                         </div>
-                        <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid lightgray">
+                        <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--primary-btn-color)">
                             <div v-if="chanId" style="width:70%;height:100%;display:flex;align-items:center">
                                 <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="margin-right:12px" />
                                 <span v-if="appType=='chan'" style="margin-right:10px;color:dimgray">채널명 : </span>
@@ -304,12 +313,12 @@
                             </div>
                             <div style="width:30%;height:100%;padding-right:10px;display:flex;align-items:center;justify-content:flex-end">
                                 <div v-if="appType=='chan'" class="coImgBtn" @click="saveChanMaster()">
-                                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                                    <span style="margin:0 5px;color:dimgray">채널저장</span>
+                                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                                    <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "저장" }}</span>
                                 </div>
-                                <div class="coImgBtn" @click="deleteChan" style="margin-left:5px">
-                                    <img :src="gst.html.getImageUrl('dimgray_reset.png')" style="width:24px;height:24px">
-                                    <span style="margin:0 5px;color:dimgray">{{ (appType == "dm" ? "DM" : "채널") + "삭제" }}</span>
+                                <div class="coImgBtn" @click="deleteChan">
+                                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                                    <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "삭제" }}</span>
                                 </div>
                             </div>
                         </div>
@@ -352,17 +361,17 @@
                         </div>
                         <div class="chan_center_footer">
                             <div style="padding-top:10px;display:flex;align-items:center;cursor:pointer">
-                                <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()" style="margin-right:6px">
-                                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                                    <span style="margin:0 5px;color:dimgray">멤버저장</span>
+                                <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
+                                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                                    <span class="coImgSpn">멤버저장</span>
                                 </div>
-                                <div class="coImgBtn" @click="deleteMember()" style="margin-right:6px">
-                                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                                    <span style="margin:0 5px;color:dimgray">멤버삭제</span>
+                                <div class="coImgBtn" @click="deleteMember()">
+                                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                                    <span class="coImgSpn">멤버삭제</span>
                                 </div>
-                                <div class="coImgBtn" @click="inviteToMember()" style="margin-right:6px">
-                                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                                    <span style="margin:0 5px;color:dimgray">초대</span>
+                                <div class="coImgBtn" @click="inviteToMember()">
+                                    <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg24">
+                                    <span class="coImgSpn">초대</span>
                                 </div>
                             </div>
                             <div style="display:flex;align-items:center;cursor:pointer">
@@ -422,6 +431,7 @@
     .v-enter-active, .v-leave-active { transition: opacity 0.5s ease; }
     .v-enter-from, .v-leave-to { opacity: 0; }
     input { height:28px;margin-right:8px;border:1px solid dimgray;border-radius:0px }
+    input[type=text]:focus { outline:2px solid lightgreen }
     .popup {
         position:fixed;width:90%;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;z-index:1000;background:white;
         display:flex;flex-direction:column;border-radius:10px
@@ -459,7 +469,7 @@
     .chan_center_footer {
         width:100%;margin:auto 0 10px 0;
         display:flex;flex-direction:column;
-        border-top:2px solid lightgray;border-radius:5px;
+        border-top:1px solid var(--primary-btn-color);
     }
     .chan_right {
         height:100%;border-left:1px solid lightgray; /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/

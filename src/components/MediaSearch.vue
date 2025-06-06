@@ -183,15 +183,15 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                     <div style="display:flex;align-items:center">
                         <div class="topMenu" :class="tab == 'msg' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('msg')">
-                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_msg.png')">
                             <span style="margin-left:5px;font-weight:bold">메시지</span> 
                         </div>
                         <div class="topMenu" :class="tab == 'file' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('file')">
-                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_file.png')">
                             <span style="margin-left:5px;font-weight:bold">파일</span> 
                         </div>
                         <div class="topMenu" :class="tab == 'image' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('image')">
-                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
                             <span style="margin-left:5px;font-weight:bold">이미지</span> 
                         </div>
                         <div v-if="chanid != ''" style="margin-left:10px;padding:6px;display:flex;align-items:center;border:1px solid lightgray">
@@ -217,12 +217,12 @@
                             <input type="search" v-model="searchText" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="본문" />
                             <input type="search" v-model="fileExt" @keyup.enter="procSearchMedia(true)" style="width:60px" placeholder="확장자" />
                             <div class="coImgBtn" @click="procSearchMedia(true)">
-                                <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
-                                <span class="btn_spn">검색</span>
+                                <img :src="gst.html.getImageUrl('white_search.png')" class="coImg24">
+                                <span class="coImgSpn">검색</span>
                             </div>
-                            <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
-                                <img :src="gst.html.getImageUrl('close.png')" class="btn_img">
-                                <span class="btn_spn">Clear</span>
+                            <div class="coImgBtn" @click="clearText()">
+                                <img :src="gst.html.getImageUrl('white_cancel.png')" class="coImg24">
+                                <span class="coImgSpn">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
@@ -260,12 +260,12 @@
                             <input type="search" v-model="authorNm" @keyup.enter="procSearchMedia(true)" style="width:100px" placeholder="전송자" />
                             <input type="search" v-model="searchText" @keyup.enter="procSearchMedia(true)" style="width:120px" placeholder="본문" />
                             <div class="coImgBtn" @click="procSearchMedia(true)">
-                                <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
-                                <span class="btn_spn">검색</span>
+                                <img :src="gst.html.getImageUrl('white_search.png')" class="coImg24">
+                                <span class="coImgSpn">검색</span>
                             </div>
-                            <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
-                                <img :src="gst.html.getImageUrl('close.png')" class="btn_img">
-                                <span class="btn_spn">Clear</span>
+                            <div class="coImgBtn" @click="clearText()">
+                                <img :src="gst.html.getImageUrl('white_cancel.png')" class="coImg24">
+                                <span class="coImgSpn">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
@@ -304,12 +304,12 @@
                             <input type="search" v-model="authorNm" @keyup.enter="procSearchMsg(true)" style="width:100px" placeholder="전송자" />
                             <input type="search" v-model="searchText" @keyup.enter="procSearchMsg(true)" style="width:120px" placeholder="본문" />
                             <div class="coImgBtn" @click="procSearchMsg(true)">
-                                <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
-                                <span class="btn_spn">검색</span>
+                                <img :src="gst.html.getImageUrl('white_search.png')" class="coImg24">
+                                <span class="coImgSpn">검색</span>
                             </div>
-                            <div class="coImgBtn" @click="clearText()" style="margin-left:5px">
-                                <img :src="gst.html.getImageUrl('close.png')" class="btn_img">
-                                <span class="btn_spn">Clear</span>
+                            <div class="coImgBtn" @click="clearText()">
+                                <img :src="gst.html.getImageUrl('white_cancel.png')" class="coImg24">
+                                <span class="coImgSpn">Clear</span>
                             </div>
                         </div>
                         <div class="chan_center_header_right"></div>
@@ -330,7 +330,7 @@
                                 </div>
                                 <div class="div_bodytext coDotDot">{{ row.BODYTEXT }}</div>
                             </div>
-                            <div style="width:100%;padding:0 10px;display:flex;justify-content:space-between;align-items:center">
+                            <div style="width:calc(100% - 20px);padding:0 10px;display:flex;justify-content:space-between;align-items:center">
                                 <div></div>
                                 <div v-if="row.msgimg.length > 0 || row.msgfile.length > 0 || row.msglink.length > 0"
                                     style="width:calc(100% - 170px);margin-bottom:5px;display:flex;align-items:center;flex-wrap:wrap">
@@ -367,6 +367,7 @@
     .v-enter-active, .v-leave-active { transition: opacity 0.5s ease; }
     .v-enter-from, .v-leave-to { opacity: 0; }
     input { height:28px;margin-right:8px;border:1px solid dimgray;border-radius:0px }
+    input[type=search]:focus { outline:2px solid lightgreen }
     .popup {
         position:fixed;width:90%;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;z-index:1000;background:white;
         display:flex;flex-direction:column;border-radius:10px
@@ -375,8 +376,8 @@
         position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index: 999;
     }
     .topMenu { cursor:pointer }
-    .topMenu:hover { background:var(--active-color);font-weight:bold }
-    .topMenu:active { background:var(--active-color);font-weight:bold }
+    .topMenu:hover { background:var(--hover-color);border-radius:5px }
+    .topMenu:active { background:var(--active-color);border-radius:5px }
     .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
     .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }
@@ -386,7 +387,9 @@
         display:flex;flex-direction:column;border:1px solid dimgray
     }
     .chan_center_header {
-        width:100%;min-height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid dimgray;overflow:hidden
+        width:100%;min-height:60px;
+        display:flex;align-items:center;justify-content:space-between;
+        background:whitesmoke;border-bottom:1px solid dimgray;overflow:hidden
     }
     .chan_center_header_left {
         width:99%;height:100%;padding:20px;display:flex;align-items:center;
@@ -399,10 +402,9 @@
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .file_body {
-        display:flex;flex-direction:column;border-bottom:1px solid lightgray;cursor:pointer
+        width:100%;display:flex;flex-direction:column;border-bottom:1px solid lightgray;cursor:pointer
     }
-    .file_body:hover { background:whitesmoke }
-    .file_body:active { background:lightsteelblue }
+    .file_body:hover { background:var(--hover-color) }
     .image_body {	
         padding:5px;
         display:grid;grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));grid-auto-rows:150px; gap:5px; 
@@ -410,8 +412,7 @@
     .item {  				
         padding:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1px solid lightgray
     }
-    .item:hover { background:whitesmoke }
-    .item:active { background:lightsteelblue }
+    .item:hover { background:var(--hover-color) }
     .msg_body_sub {
         display:flex;margin-bottom:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
     }
@@ -423,6 +424,6 @@
     }
     .div_cdt { width:160px;height:36px;padding:0 10px;display:flex;align-items:center }
     .div_authornm { width:160px;height:36px;padding:0 10px;display:flex;justify-content:space-between;align-items:center }
-    .div_newwin { padding:3px;border-radius:5px;background:beige;cursor:pointer }
-    .div_bodytext { width:calc(100% - 170px);height:36px;display:flex;align-items:center }
+    .div_newwin { padding:3px;border-radius:5px;background:var(--primary-btn-color);color:white;cursor:pointer }
+    .div_bodytext { width:calc(100% - 180px);height:36px;display:flex;align-items:center }
 </style>

@@ -320,8 +320,8 @@
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
                             <img :src="gst.html.getImageUrl('search.png')" class="btn_img">
                         </div>
-                        <div class="coImgBtn" @click="reset(mode)" style="margin-left:5px">
-                            <img :src="gst.html.getImageUrl('dimgray_reset.png')" class="btn_img">
+                        <div class="coImgBtn" @click="reset(mode)">
+                            <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg24" title="리셋">
                         </div>
                         <span v-show="mode == 'tree'" class="depth">{{ depthToShow }}</span>
                         <div v-show="mode == 'tree'" class="coImgBtn" @click="changeDepth(false)" style="margin-left:5px"><img :src="gst.html.getImageUrl('dimgray_minus.png')" class="btn_img12"></div>
@@ -423,6 +423,6 @@
     } */
     .org_body:hover { background:whitesmoke }
     .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
-    .vipBtn { margin-left:5px;padding:1px;font-size:12px;background:lightgray;color:black;border-radius:5px;cursor:pointer }
+    .vipBtn { margin-left:5px;padding:1px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
     .vipMark { margin-left:5px;padding:1px;font-size:10px;background:black;color:white;border-radius:5px }
 </style>

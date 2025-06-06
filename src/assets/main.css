@@ -6,8 +6,12 @@
   --second-select-color:whitesmoke; /*#f5f5f5 => whitesmoke icon */
   --border-color:lightgray; /*#696969 => dimgray icon */
   --border-lg:1px solid lightgray;
-  --active-color:lightsteelblue;
+  --hover-color:#e6f2e6; /*lightsteelblue;*/
+  --active-color:#a6cfa6; /*lightsteelblue;*/
   --active-btn:darkblue;
+  --primary-btn-color:#3B693B;
+  --primary-btn-hover:#427841;
+  --primary-btn-active:#78b177;
 }
 
 html, body { 
@@ -177,13 +181,22 @@ text-align:center;vertical-align:middle;z-index:9998; /*스크롤중에 투명�
 .coImg32 { width:32px;height:32px;cursor:pointer; }
 .coImg64 { width:64px;height:64px;cursor:pointer; }
 
-.coImgBtn {
+/* .coImgBtn {
   padding:4px;
   display:flex;justify-content:center;align-items:center;
   border:1px solid var(--main-color);border-radius:5px;cursor:pointer;
 }
 .coImgBtn:hover { background:var(--active-color);font-weight:bold }
-.coImgBtn:active { color:white;background-color: steelblue }
+.coImgBtn:active { color:white;background-color: steelblue } */
+.coImgBtn {
+  margin-right:5px;padding:4px 8px 4px 7px;
+  display:flex;justify-content:center;align-items:center;
+  border-radius:5px;cursor:pointer;
+  background:var(--primary-btn-color);color:white;
+}
+.coImgBtn:hover { background:var(--primary-btn-hover) } 
+.coImgBtn:active { background:var(--primary-btn-active) }
+.coImgSpn { margin-left:2px;font-size:14px;color:white }
 
 .coImgRound {
   padding:4px;
