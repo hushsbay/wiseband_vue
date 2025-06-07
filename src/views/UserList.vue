@@ -315,140 +315,140 @@
 </script>
 
 <template>
-<div class="chan_main">
-    <div class="chan_center" style="width:calc(100% - 570px);padding-right:10px">
-        <div class="chan_center_header" id="chan_center_header">
-            <div class="chan_center_header_left">
-                 <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
-                <div style="display:flex;align-items:center">                    
-                    <div class="coDotDot">{{ grnm }}</div>
+    <div class="chan_main">
+        <div class="chan_center" style="width:calc(100% - 570px);padding-right:10px">
+            <div class="chan_center_header" id="chan_center_header">
+                <div class="chan_center_header_left">
+                    <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
+                    <div style="display:flex;align-items:center">                    
+                        <div class="coDotDot">{{ grnm }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="chan_center_header_right">
+                <div class="chan_center_header_right">
 
-            </div>
-        </div>
-        <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
-                    background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
-            <div style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
-                <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:12px" />
-                <input type="text" v-model="grnm" style="width:100%" spellcheck="false" placeholder="그룹명"/>
-                <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
-                <span style="min-width:100px">{{ masternm }}</span>
-            </div>
-            <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
-                <div class="coImgBtn" @click="saveGroupMaster()">
-                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
-                    <span class="coImgSpn">그룹저장</span>
-                </div>
-                <div class="coImgBtn" @click="deleteGroup">
-                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
-                    <span class="coImgSpn">그룹삭제</span>
                 </div>
             </div>
-        </div>
-        <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in userlist" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyidx="idx" class="msg_body procMenu"  
-                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="(e) => rowClick(e, row, idx)">
-                <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
-                    <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
+            <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
+                        background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
+                <div style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
+                    <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:12px" />
+                    <input type="text" v-model="grnm" style="width:100%" spellcheck="false" placeholder="그룹명"/>
+                    <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
+                    <span style="min-width:100px">{{ masternm }}</span>
                 </div>
-                <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
-                    <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                </div>
-                <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
-                    <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                        <div style="display:flex;align-items:center">
-                            <span style="margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
-                            <span>{{ row.JOB }}</span>
-                        </div>
-                        <div style="min-width:120px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
-                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
-                                {{ row.KIND=='guest' ? '게스트' : '관리자' }}
-                            </span>
-                            <span v-if="row.SYNC != 'Y'" class="kind">입력</span>
-                        </div>
+                <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
+                    <div class="coImgBtn" @click="saveGroupMaster()">
+                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                        <span class="coImgSpn">그룹저장</span>
                     </div>
-                    <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                        <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                            <div class="coDotDot" style="width:100%">{{ row.ORG }}</div>
-                        </div>
-                        <div style="width:150px;display:flex;justify-content:flex-end">{{ row.EMAIL }}</div>                           
-                    </div>
-                    <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                        <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                            <div class="coDotDot" style="width:100%;color:dimgray">{{ row.RMKS }}</div>
-                        </div>
-                        <div style="width:150px;display:flex;justify-content:flex-end">{{ row.TELNO }}</div>
+                    <div class="coImgBtn" @click="deleteGroup">
+                        <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                        <span class="coImgSpn">그룹삭제</span>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="chan_center_footer">
-            <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
-                <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()">
-                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
-                    <span class="coImgSpn">신규멤버</span>
+            <div class="chan_center_body" id="chan_center_body" ref="scrollArea" @scroll="onScrolling">
+                <div v-for="(row, idx) in userlist" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyidx="idx" class="msg_body procMenu"  
+                    @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="(e) => rowClick(e, row, idx)">
+                    <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
+                        <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
+                    </div>
+                    <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
+                        <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                    </div>
+                    <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
+                        <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center">
+                                <span style="margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
+                                <span>{{ row.JOB }}</span>
+                            </div>
+                            <div style="min-width:100px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                                <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
+                                    {{ row.KIND=='guest' ? '게스트' : '관리자' }}
+                                </span>
+                                <span v-if="row.SYNC != 'Y'" class="kind">입력</span>
+                            </div>
+                        </div>
+                        <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
+                            <div style="width:calc(100% - 150px);display:flex;align-items:center">
+                                <div class="coDotDot" style="width:100%">{{ row.ORG }}</div>
+                            </div>
+                            <div style="width:150px;display:flex;justify-content:flex-end">{{ row.EMAIL }}</div>                           
+                        </div>
+                        <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
+                            <div style="width:calc(100% - 150px);display:flex;align-items:center">
+                                <div class="coDotDot" style="width:100%;color:dimgray">{{ row.RMKS }}</div>
+                            </div>
+                            <div style="width:150px;display:flex;justify-content:flex-end">{{ row.TELNO }}</div>
+                        </div>
+                    </div>
                 </div>
-                <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
-                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
-                    <span class="coImgSpn">멤버저장</span>
-                </div>
-                <div class="coImgBtn" @click="deleteMember()">
-                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
-                    <span class="coImgSpn">멤버삭제</span>
-                </div>
-                <span style="color:darkblue">신규멤버 : 조직도에 없는 멤버 추가시</span>
             </div>
-            <div style="display:flex;align-items:center;cursor:pointer">
-                <table>
-                    <tbody>
-                        <tr>
-                            <td style="width:40px;border:none"></td>
-                            <td style="width:calc(100% - 290px);border:none"></td>
-                            <td style="width:45px;border:none"></td>
-                            <td style="width:200px;border:none"></td>
-                        </tr>
-                        <tr>
-                            <td class="tdLabel">이름</td>
-                            <td class="tdValue">
-                                <input type="text" style="width:100px" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/>
-                                <input type="text" style="width:calc(100% - 130px);margin-left:5px" v-model="rowJob" :disabled="rowIssync == 'Y'" placeholder="직책/업무"/>
-                            </td>
-                            <td class="tdValue" colspan="2">
-                                <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
-                                <input type="radio" id="admin" value="admin" v-model="rowKind"><label for="admin">Admin</label>
-                                <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="tdLabel">소속</td>
-                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrg" :disabled="rowIssync == 'Y'"/></td>
-                            <td class="tdLabel">이메일</td>                        
-                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowIssync == 'Y' || singleMode != 'C'"/></td>
-                        </tr>
-                        <tr>
-                            <td class="tdLabel">비고</td>
-                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowRmks"/></td>
-                            <td class="tdLabel">전화</td>                        
-                            <td class="tdValue"><input type="text" class="tdInput" v-model="rowTelno" :disabled="rowIssync == 'Y'"/></td>   
-                        </tr>
-                    </tbody>
-                </table>
-            </div>  
+            <div class="chan_center_footer">
+                <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
+                    <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()">
+                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                        <span class="coImgSpn">신규</span>
+                    </div>
+                    <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
+                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                        <span class="coImgSpn">저장</span>
+                    </div>
+                    <div class="coImgBtn" @click="deleteMember()">
+                        <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                        <span class="coImgSpn">삭제</span>
+                    </div>
+                    <span style="color:darkblue">신규 : 조직도에 없는 멤버 추가시</span>
+                </div>
+                <div style="display:flex;align-items:center;cursor:pointer">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td style="width:40px;border:none"></td>
+                                <td style="width:calc(100% - 290px);border:none"></td>
+                                <td style="width:45px;border:none"></td>
+                                <td style="width:200px;border:none"></td>
+                            </tr>
+                            <tr>
+                                <td class="tdLabel">이름</td>
+                                <td class="tdValue">
+                                    <input type="text" style="width:100px" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/>
+                                    <input type="text" style="width:calc(100% - 130px);margin-left:5px" v-model="rowJob" :disabled="rowIssync == 'Y'" placeholder="직책/업무"/>
+                                </td>
+                                <td class="tdValue" colspan="2">
+                                    <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
+                                    <input type="radio" id="admin" value="admin" v-model="rowKind"><label for="admin">Admin</label>
+                                    <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="tdLabel">소속</td>
+                                <td class="tdValue"><input type="text" class="tdInput" v-model="rowOrg" :disabled="rowIssync == 'Y'"/></td>
+                                <td class="tdLabel">이메일</td>                        
+                                <td class="tdValue"><input type="text" class="tdInput" v-model="rowEmail" :disabled="rowIssync == 'Y' || singleMode != 'C'"/></td>
+                            </tr>
+                            <tr>
+                                <td class="tdLabel">비고</td>
+                                <td class="tdValue"><input type="text" class="tdInput" v-model="rowRmks"/></td>
+                                <td class="tdLabel">전화</td>                        
+                                <td class="tdValue"><input type="text" class="tdInput" v-model="rowTelno" :disabled="rowIssync == 'Y'"/></td>   
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>  
+            </div>
         </div>
+        <div class="chan_right" style="width:550px">
+            <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
+        </div>  
     </div>
-    <div class="chan_right" style="width:550px">
-        <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
-    </div>  
-</div>
-    <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
+    <!-- <context-menu @ev-menu-click="gst.ctx.proc"></context-menu> -->
 </template>
 
 <style scoped>
     input[type="checkbox"] { min-width:16px;min-height:16px }  
     input[type=text]:focus { outline:2px solid lightgreen }
-    .chan_main { /* 원래는 각 패널에 있다가 msglist 라우팅(새창에서열기) 때문에 여기로 이동 - 댓글 관련 */
+    .chan_main {
         width:100%;height:100%;display:flex;
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
     }
@@ -481,29 +481,11 @@
         background:whitesmoke;border:1px solid lightgray;border-radius:5px;
     }
     .chan_right {
-        height:100%;border-left:1px solid lightgray; /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
+        height:100%;border-left:1px solid lightgray;
     }
-    /* .topMenu { cursor:pointer }
-    .topMenu:hover { background:whitesmoke;font-weight:bold }
-    .topMenu:active { background:var(--active-color);font-weight:bold }
-    .replyAct { display:flex;align-items:center;cursor:pointer }
-    .replyAct:hover { background:#e6e7eb;border-radius:12px }
-    .replyAct:active { background:var(--active-color) } */
     .procMenu { padding:3px 3px 0px 3px }
     .procMenu:hover { background:var(--hover-color) }
-    /* .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
-    .procAct:hover { background:lightgray }
-    .procAct:active { background:var(--active-color) }
-    .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
-    .editorMenu:hover { background:lightgray }
-    .editorMenu:active { background:var(--active-color) }
-    .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
-    .saveMenu:hover { opacity:0.5 }
-    .saveMenu:active { background:darkblue;opacity:1.0 }
-    .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
-    .btn:hover { background:lightgray}
-    .btn:active { background:var(--active-color)} */
-    .kind { margin-left:5px;padding:3px 5px;font-size:12px;background:#5DB5FD;color:white;border-radius:5px }
+    .kind { margin-left:5px;padding:3px 5px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }
     table { width:100%;border-collapse:collapse }
     td { padding:3px;border:1px solid lightgray }
     .tdLabel { color:dimgray;border:none }

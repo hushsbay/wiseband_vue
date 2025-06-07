@@ -339,7 +339,7 @@
                                             <span style="min-width:60px;margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
                                             <span>{{ row.JOB }}</span>
                                         </div>
-                                        <div style="min-width:120px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                                        <div style="min-width:100px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
                                             <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
                                                 {{ row.KIND=='guest' ? '게스트' : '관리자' }}
                                             </span>
@@ -481,7 +481,7 @@
     }
     .procMenu { padding:3px 3px 0px 3px }
     .procMenu:hover { background:var(--hover-color) }
-    .kind { margin-left:5px;padding:3px 5px;font-size:12px;background:#5DB5FD;color:white;border-radius:5px }
+    .kind { margin-left:5px;padding:3px 5px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }
     table { width:100%;border-collapse:collapse }
     td { padding:3px;border:1px solid lightgray }
     .tdLabel { color:dimgray;border:none }

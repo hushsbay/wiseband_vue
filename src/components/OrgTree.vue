@@ -362,11 +362,11 @@
                             <span v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" class="kind">입력</span>
                         </div> -->
                         <div v-if="(mode == 'mygroup' || row.USERID) && (row.KIND=='guest' || row.KIND=='admin')" 
-                            style="min-width:54px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            style="min-width:48px;height:40px;margin-right:3px;display:flex;justify-content:flex-end;align-items:center">
                             <span class="kind">{{ row.KIND=='guest' ? '게스트' : '관리자' }}</span>
                         </div>
                         <div v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" 
-                            style="min-width:40px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            style="min-width:36px;height:40px;margin-right:3px;display:flex;justify-content:flex-end;align-items:center">
                             <span class="kind">입력</span>
                         </div>
                     </div>
@@ -431,5 +431,5 @@
     .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
     .vipBtn { margin-left:5px;padding:1px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
     .vipMark { margin-left:5px;padding:1px;font-size:10px;background:black;color:white;border-radius:5px }
-    .kind { margin-left:5px;padding:3px 5px;font-size:12px;background:#5DB5FD;color:white;border-radius:5px }
+    .kind { margin-left:5px;padding:3px 5px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }
 </style>
