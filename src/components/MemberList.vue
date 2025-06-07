@@ -287,7 +287,7 @@
         <div v-if="show">
             <div class="popup">
                 <div class="chan_main">
-                    <div class="chan_center" style="width:calc(100% - 620px);padding-right:10px;">
+                    <div class="chan_center" style="width:calc(100% - 570px);padding-right:10px">
                         <div class="chan_center_header" id="chan_center_header">
                             <div class="chan_center_header_left">
                                 <img v-if="chanId != 'new'" class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
@@ -305,14 +305,15 @@
                         </div>
                         <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
                             background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
-                            <div v-if="chanId" style="width:70%;height:100%;display:flex;align-items:center">
-                                <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="margin-right:12px" />
-                                <span v-if="appType=='chan'" style="margin-right:10px;color:dimgray">채널명 : </span>
-                                <input v-if="appType=='chan'" type="text" v-model="chanNm" style="width:300px"/>
-                                <span style="margin:0 10px;color:dimgray">생성자 : </span><span>{{ masternm }}</span>
-                                <input v-if="appType!='dm'" type="checkbox" id="checkbox" v-model="state" style="margin-left:20px"/><label v-if="appType!='dm'" for="checkbox">비공개</label>
+                            <div v-if="chanId" style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
+                                <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:12px" />
+                                <input v-if="appType=='chan'" type="text" v-model="chanNm" style="width:100%" spellcheck="false" placeholder="채널명"/>
+                                <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
+                                <span style="min-width:100px">{{ masternm }}</span>
+                                <input v-if="appType!='dm'" type="checkbox" id="checkbox" v-model="state" style="min-width:18px;margin-left:12px"/>
+                                <label v-if="appType!='dm'" for="checkbox" style="min-width:50px">비공개</label>
                             </div>
-                            <div style="width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end">
+                            <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
                                 <div v-if="appType=='chan'" class="coImgBtn" @click="saveChanMaster()">
                                     <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
                                     <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "저장" }}</span>
@@ -381,9 +382,9 @@
                                 <table>
                                     <tbody>
                                         <tr>
-                                            <td style="width:50px;border:none"></td>
-                                            <td style="width:calc(100% - 300px);border:none"></td>
-                                            <td style="width:50px;border:none"></td>
+                                            <td style="width:40px;border:none"></td>
+                                            <td style="width:calc(100% - 285px);border:none"></td>
+                                            <td style="width:45px;border:none"></td>
                                             <td style="width:200px;border:none"></td>
                                         </tr>
                                         <tr>
@@ -391,8 +392,8 @@
                                             <td class="tdValue">
                                                 <input type="text" style="width:150px" v-model="rowUsernm" disabled="true"/>
                                                 <span style="margin-left:10px;color:dimgray">직책/업무</span>
-                                                <input type="text" style="width:200px;margin-left:10px" v-model="rowJob" disabled="true"/>
-                                                <span style="margin-left:10px">{{  }}</span>
+                                                <input type="text" style="width:150px;margin-left:10px" v-model="rowJob" disabled="true"/>
+                                                <!-- <span style="margin-left:10px">{{  }}</span> -->
                                             </td>
                                             <td class="tdValue" colspan="2">
                                                 <div style="display:flex;align-items:center">
@@ -419,7 +420,7 @@
                             </div>  
                         </div>
                     </div>
-                    <div class="chan_right" style="width:600px">
+                    <div class="chan_right" style="width:550px">
                         <org-tree mode="mygroup" :kind="appType" ref="orgRef" @ev-click="applyToBody"></org-tree>
                     </div>  
                 </div>

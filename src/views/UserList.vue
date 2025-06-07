@@ -311,7 +311,7 @@
 
 <template>
 <div class="chan_main">
-    <div class="chan_center" style="width:calc(100% - 620px);padding-right:10px;">
+    <div class="chan_center" style="width:calc(100% - 570px);padding-right:10px">
         <div class="chan_center_header" id="chan_center_header">
             <div class="chan_center_header_left">
                  <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
@@ -323,20 +323,22 @@
 
             </div>
         </div>
-        <div style="width:100%;height:40px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid lightgray">
-            <div style="width:70%;height:100%;display:flex;align-items:center">
-                <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="margin-right:12px" />
-                <span style="margin-right:10px;color:dimgray">그룹명 : </span><input type="text" v-model="grnm" style="width:300px"/>
-                <span style="margin:0 10px;color:dimgray">생성자 : </span><span>{{ masternm }}</span>
+        <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
+                    background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
+            <div style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
+                <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:12px" />
+                <input type="text" v-model="grnm" style="width:100%" spellcheck="false" placeholder="그룹명"/>
+                <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
+                <span style="min-width:100px">{{ masternm }}</span>
             </div>
-            <div style="width:30%;height:100%;padding-right:10px;display:flex;align-items:center;justify-content:flex-end">
+            <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
                 <div class="coImgBtn" @click="saveGroupMaster()">
-                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                    <span style="margin:0 5px;color:dimgray">그룹명저장</span>
+                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                    <span class="coImgSpn">그룹저장</span>
                 </div>
-                <div class="coImgBtn" @click="deleteGroup" style="margin-left:5px">
-                    <img :src="gst.html.getImageUrl('dimgray_reset.png')" style="width:24px;height:24px">
-                    <span style="margin:0 5px;color:dimgray">그룹삭제</span>
+                <div class="coImgBtn" @click="deleteGroup">
+                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                    <span class="coImgSpn">그룹삭제</span>
                 </div>
             </div>
         </div>
@@ -355,11 +357,11 @@
                             <span style="margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
                             <span>{{ row.JOB }}</span>
                         </div>
-                        <div style="width:45px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
-                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" :title="row.KIND" style="margin-left:5px;padding:2px;font-size:10px;background:steelblue;color:white;border-radius:5px">
-                                {{ row.KIND.substring(0, 1).toUpperCase() }}
+                        <div style="min-width:120px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
+                                {{ row.KIND=='guest' ? '게스트' : '관리자' }}
                             </span>
-                            <span v-if="row.SYNC != 'Y'" title="수동입력" style="margin-left:5px;padding:2px;font-size:10px;background:darkred;color:white;border-radius:5px">M</span>
+                            <span v-if="row.SYNC != 'Y'" class="kind">입력</span>
                         </div>
                     </div>
                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
@@ -378,36 +380,35 @@
             </div>
         </div>
         <div class="chan_center_footer">
-            <div style="padding-top:10px;display:flex;align-items:center;cursor:pointer">
-                <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()" style="margin-right:6px">
-                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                    <span style="margin:0 5px;color:dimgray">신규멤버</span>
+            <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
+                <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()">
+                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                    <span class="coImgSpn">신규멤버</span>
                 </div>
-                <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()" style="margin-right:6px">
-                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                    <span style="margin:0 5px;color:dimgray">멤버저장</span>
+                <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
+                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                    <span class="coImgSpn">멤버저장</span>
                 </div>
-                <div class="coImgBtn" @click="deleteMember()" style="margin-right:6px">
-                    <img :src="gst.html.getImageUrl('search.png')" style="width:24px;height:24px">
-                    <span style="margin:0 5px;color:dimgray">멤버삭제</span>
+                <div class="coImgBtn" @click="deleteMember()">
+                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                    <span class="coImgSpn">멤버삭제</span>
                 </div>
-                <span style="color:darkblue">조직도에 없는 멤버만 신규멤버 버튼으로 추가합니다.</span>
+                <span style="color:darkblue">신규멤버 : 조직도에 없는 멤버 추가시</span>
             </div>
             <div style="display:flex;align-items:center;cursor:pointer">
                 <table>
                     <tbody>
                         <tr>
-                            <td style="width:50px;border:none"></td>
-                            <td style="width:calc(100% - 250px);border:none"></td>
-                            <td style="width:50px;border:none"></td>
-                            <td style="width:150px;border:none"></td>
+                            <td style="width:40px;border:none"></td>
+                            <td style="width:calc(100% - 290px);border:none"></td>
+                            <td style="width:45px;border:none"></td>
+                            <td style="width:200px;border:none"></td>
                         </tr>
                         <tr>
                             <td class="tdLabel">이름</td>
                             <td class="tdValue">
-                                <input type="text" style="width:150px" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/>
-                                <span style="margin-left:10px;color:dimgray">직책/업무</span>
-                                <input type="text" style="width:200px;margin-left:10px" v-model="rowJob" :disabled="rowIssync == 'Y'"/>
+                                <input type="text" style="width:100px" v-model="rowUsernm" :disabled="rowIssync == 'Y'"/>
+                                <input type="text" style="width:calc(100% - 130px);margin-left:5px" v-model="rowJob" :disabled="rowIssync == 'Y'" placeholder="직책/업무"/>
                             </td>
                             <td class="tdValue" colspan="2">
                                 <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
@@ -432,7 +433,7 @@
             </div>  
         </div>
     </div>
-    <div class="chan_right" style="width:600px">
+    <div class="chan_right" style="width:550px">
         <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
     </div>  
 </div>
@@ -441,6 +442,7 @@
 
 <style scoped>
     input[type="checkbox"] { min-width:16px;min-height:16px }  
+    input[type=text]:focus { outline:2px solid lightgreen }
     .chan_main { /* 원래는 각 패널에 있다가 msglist 라우팅(새창에서열기) 때문에 여기로 이동 - 댓글 관련 */
         width:100%;height:100%;display:flex;
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
@@ -450,10 +452,11 @@
         display:flex;flex-direction:column;
     }
     .chan_center_header {
-        width:100%;min-height:45px;display:flex;justify-content:space-between;align-items:center;;overflow:hidden
+        width:100%;min-height:45px;display:flex;justify-content:space-between;align-items:center;
+        background:whitesmoke;border:1px solid lightgray;border-bottom:none;overflow:hidden
     }
     .chan_center_header_left {
-        width:70%;height:100%;display:flex;align-items:center;
+        width:70%;height:100%;padding-left:3px;display:flex;align-items:center;
         font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
@@ -468,9 +471,9 @@
         width:calc(100% - 8px);display:flex;align-items:center;cursor:pointer;border-bottom:1px solid lightgray
     }
     .chan_center_footer {
-        width:100%;margin:auto 0 10px 0;
+        width:calc(100% - 10px);margin:auto 10px 5px 0;padding:5px;
         display:flex;flex-direction:column;
-        border-top:2px solid lightgray;border-radius:5px;
+        background:whitesmoke;border:1px solid lightgray;border-radius:5px;
     }
     .chan_right {
         height:100%;border-left:1px solid lightgray; /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
@@ -495,6 +498,7 @@
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
+    .kind { margin-left:5px;padding:3px 5px;font-size:12px;background:#5DB5FD;color:white;border-radius:5px }
     table { width:100%;border-collapse:collapse }
     td { padding:3px;border:1px solid lightgray }
     .tdLabel { color:dimgray;border:none }

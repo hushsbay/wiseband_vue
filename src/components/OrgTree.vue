@@ -347,19 +347,27 @@
                             <div style="margin-left:5px">{{ row.orgnm }}</div>
                             <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
                         </div>
-                        <div v-else class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
-                            :style="{ paddingLeft: row.paddingleft }" style="width:calc(100% - 45px);height:40px;display:flex;align-items:center">
+                        <div v-else class="coDotDot" :title="row.JOB + '/' + row.TELNO + '/' + row.EMAIL"
+                            :style="{ paddingLeft: row.paddingleft }" style="width:100%;height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                             <div style="margin-left:5px;font-weight:bold">{{ row.USERNM }}</div>
-                            <div style="margin-left:5px">{{ row.ORG }}</div>
-                            <div style="margin-left:5px">{{ row.JOB }}</div>
                             <span v-if="row.isVip" class="vipMark">VIP</span>
-                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
+                            <div style="margin-left:5px">{{ row.ORG }}</div>
+                            <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>                            
+                            <!-- <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div> -->
                         </div>
-                        <div v-if="mode == 'mygroup' || row.USERID" style="min-width:120px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                        <!-- <div v-if="mode == 'mygroup' || row.USERID" style="height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
                             <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">{{ row.KIND=='guest' ? '게스트' : '관리자' }}</span>
                             <span v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" class="kind">입력</span>
+                        </div> -->
+                        <div v-if="(mode == 'mygroup' || row.USERID) && (row.KIND=='guest' || row.KIND=='admin')" 
+                            style="min-width:54px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            <span class="kind">{{ row.KIND=='guest' ? '게스트' : '관리자' }}</span>
+                        </div>
+                        <div v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" 
+                            style="min-width:40px;height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            <span class="kind">입력</span>
                         </div>
                     </div>
                 </div>
@@ -371,12 +379,13 @@
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                             <div style="margin-left:5px;font-weight:bold">{{ row.USERNM }}</div>
-                            <div style="margin-left:5px;color:darkblue">{{ row.TOP_ORG_NM }}</div>
-                            <div style="margin-left:5px;color:darkblue">{{ row.ORG_NM }}</div>
-                            <div style="margin-left:5px">{{ row.JOB }}</div>
                             <span v-if="row.isVip" class="vipMark">VIP</span>
-                            <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
-                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div>
+                            <div style="margin-left:5px">{{ row.TOP_ORG_NM }}</div>
+                            <div style="margin-left:5px">{{ row.ORG_NM }}</div>
+                            <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>
+                            
+                            <!-- <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
+                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div> -->
                         </div>
                     </div>
                 </div>
@@ -387,6 +396,7 @@
 
 <style scoped>
     input { height:28px;margin-right:8px;border:1px solid dimgray }
+    input[type=search]:focus { outline:2px solid lightgreen }
     input[type="checkbox"] { min-width:16px;min-height:16px }
     .topMenu { cursor:pointer }
     .topMenu:hover { background:var(--hover-color);border-radius:5px }
@@ -395,7 +405,7 @@
     .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid whitesmoke; }
     .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }
     .btn_img12 { width:12px;height:12px;padding:1px;display:flex;align-items:center;justify-content:center }
-    .applyToBody { width:50px;height:100%;display:flex;align-items:center;justify-content:center;
+    .applyToBody { width:40px;height:100%;display:flex;align-items:center;justify-content:center;
         border-top:1px solid lightgray;border-bottom:1px solid lightgray;cursor:pointer }
     .applyToBody:hover { background:var(--hover-color) }
     .chan_center {
