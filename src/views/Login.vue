@@ -117,6 +117,6 @@
         border-radius:4px;background-color:var(--primary-color);color:white;cursor:pointer 
     }
     .btn_basic:hover { background:var(--second-hover-color) }
-    .btn_basic:active { background:var(--active-btn) }
+    /* .btn_basic:active { background:var(--active-btn) } */
 
 </style>	

@@ -6,9 +6,9 @@
   --second-select-color:whitesmoke; /*#f5f5f5 => whitesmoke icon */
   --border-color:lightgray; /*#696969 => dimgray icon */
   --border-lg:1px solid lightgray;
-  --hover-color:#e6f2e6; /*lightsteelblue;*/
-  --active-color:#a6cfa6; /*lightsteelblue;*/
-  --active-btn:darkblue;
+  --hover-color:#e6f2e6;
+  /* --active-color:#a6cfa6; */
+  /* --active-btn:darkblue; */
   --primary-btn-color:#3B693B; /* https://uicolors.app/generate/3b693b */
   --primary-btn-hover:#427841;
   --primary-btn-active:#78b177;

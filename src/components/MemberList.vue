@@ -391,8 +391,9 @@
                                             <td class="tdLabel">이름</td>
                                             <td class="tdValue">
                                                 <input type="text" style="width:150px" v-model="rowUsernm" disabled="true"/>
-                                                <span style="margin-left:10px;color:dimgray">직책/업무</span>
-                                                <input type="text" style="width:150px;margin-left:10px" v-model="rowJob" disabled="true"/>
+                                                <!-- <span style="margin-left:10px;color:dimgray">직책/업무</span>
+                                                <input type="text" style="width:150px;margin-left:10px" v-model="rowJob" disabled="true"/> -->
+                                                <input type="text" style="width:calc(100% - 190px);margin-left:5px" v-model="rowJob" :disabled="true" placeholder="직책/업무"/>
                                                 <!-- <span style="margin-left:10px">{{  }}</span> -->
                                             </td>
                                             <td class="tdValue" colspan="2">

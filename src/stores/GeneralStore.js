@@ -355,16 +355,25 @@ const GeneralStore = defineStore('General', () => {
             } else {
                 let arrStack, line
                 if (fromConfig) { //main.js의 app.config.errorHandler()에서만 true로 호출되도록 한 것임 (이 경우 ex.stack의 1번째 행이 직전 호출 함수임)
-                arrStack = ex.stack.split("\n")
-                line = 1
-              } else {
-                const strStack = new Error().stack
-                arrStack = strStack.split("\n")
-                line = arrStack.length - 1 //ex.stack의 마지막 행이 직전 호출 함수임
-              }
-              snackBar.value.msg = strMsg.replace(/\n/g, "<br>")
-              snackBar.value.where = arrStack[line]
-            }    
+                    arrStack = ex.stack.split("\n")
+                    line = 1
+                } else {
+                    const strStack = new Error().stack
+                    arrStack = strStack.split("\n")
+                    line = arrStack.length - 1 //ex.stack의 마지막 행이 직전 호출 함수임
+                }
+                const arr = strMsg.split("\n") //strMsg 예) [-811] user>login : 비번이 다릅니다.\nuid[oldclock]<br>at goLoginNext (http://localhost:5173/src/views/Login.vue?t=1749296700208:64:27)
+                if (arr.length > 1) {
+                    const brr = arr[0].split(" : ")
+                    if (brr.length > 1) {
+                        brr[1] = "<span style='font-weight:bold'>" + brr[1] + "</span>"
+                        arr[0] = brr.join(" : ")
+                        strMsg = arr.join("\n")
+                    }
+                }
+                snackBar.value.msg = strMsg.replace(/\n/g, "<br>")
+                snackBar.value.where = arrStack[line]
+            }
         },
 
         setToast : function(ex, toastSec, close) {

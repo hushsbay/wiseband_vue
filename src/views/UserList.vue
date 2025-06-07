@@ -48,7 +48,7 @@
                 //gst.util.setSnack("먼저 그룹명을 입력후 그룹명저장을 누르시기 바랍니다.", true)
             } else {
                 await getList()                    
-            }
+            }            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -59,7 +59,6 @@
             mounting = false
         } else {
             setBasicInfo()
-            debugger
             const key = grId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
             //gst.home.procFromBody("recall", { grid: grId })
@@ -478,15 +477,15 @@
     .chan_right {
         height:100%;border-left:1px solid lightgray; /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
-    .topMenu { cursor:pointer }
+    /* .topMenu { cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
     .topMenu:active { background:var(--active-color);font-weight:bold }
     .replyAct { display:flex;align-items:center;cursor:pointer }
     .replyAct:hover { background:#e6e7eb;border-radius:12px }
-    .replyAct:active { background:var(--active-color) }
+    .replyAct:active { background:var(--active-color) } */
     .procMenu { padding:3px 3px 0px 3px }
-    .procMenu:hover { background:whitesmoke }
-    .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
+    .procMenu:hover { background:var(--hover-color) }
+    /* .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
     .procAct:hover { background:lightgray }
     .procAct:active { background:var(--active-color) }
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
@@ -497,7 +496,7 @@
     .saveMenu:active { background:darkblue;opacity:1.0 }
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
-    .btn:active { background:var(--active-color)}
+    .btn:active { background:var(--active-color)} */
     .kind { margin-left:5px;padding:3px 5px;font-size:12px;background:#5DB5FD;color:white;border-radius:5px }
     table { width:100%;border-collapse:collapse }
     td { padding:3px;border:1px solid lightgray }

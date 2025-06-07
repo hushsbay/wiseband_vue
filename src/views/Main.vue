@@ -257,7 +257,7 @@
         border:1px solid dimgray;border-radius:4px;background-color:var(--primary-color);color:var(--second-select-color);cursor:pointer 
     }
     .btn_basic:hover { background:var(--second-hover-color) }
-    .btn_basic:active { background:var(--active-btn) }
+    /* .btn_basic:active { background:var(--active-btn) } */
     .side {
         min-width:70px;height:100%;
         display:flex;flex-direction:column;align-items:center;justify-content:space-between;
