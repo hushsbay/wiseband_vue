@@ -13,28 +13,20 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    const emits = defineEmits(["ev-to-panel"]) //1) ev-click : OrgTree -> UserList 2) ev-to-panel : UserList -> GroupPanel
-    //defineExpose({ procFromParent }) //부모(예:GroupPanel) => UserList의 procFromParent()를 호출하기 위함 : procFromParent는 바로 아래 OrgTree(자식)의 procFromParent()를 호출하기도 함
-
-    //async function procFromParent(kind) {
-    //    if (kind == "newGroup") {
-    //        alert(kind)
-    //    }
-    //}
-    
-    function evToPanel(grid) { //말 그대로 패널에게 호출하는 것임
-        emits("ev-to-panel", grid)
+    const emits = defineEmits(["ev-to-panel"]) //UserList -> GroupPanel
+        
+    function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
+        emits("ev-to-panel", param)
     }
 
     const orgRef = ref(null) //UserList(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
 
     const g_userid = gst.auth.getCookie("userid")
-    let mounting = true
+    let mounting = true, sideMenu = "mnuGroup", grId
     
     const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
-    let onGoingGetList = false
+    let onGoingGetList = false, prevScrollY
         
-    let sideMenu = "mnuGroup", grId
     let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C')
     let userlist = ref([])
 
@@ -45,7 +37,7 @@
         try {
             setBasicInfo()
             if (grId == "new") {
-                //gst.util.setSnack("먼저 그룹명을 입력후 그룹명저장을 누르시기 바랍니다.", true)
+                //gst.util.setSnack("그룹명을 입력후 '그룹저장'을 누르시면 됩니다.", true)
             } else {
                 await getList()                    
             }            
@@ -59,9 +51,10 @@
             mounting = false
         } else {
             setBasicInfo()
-            const key = grId
+            const key = sideMenu + grId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
             //gst.home.procFromBody("recall", { grid: grId })
+            evToPanel({ kind: "selectRow", grid: grId })
         }
     })
 
@@ -69,6 +62,13 @@
         //sideMenu = gst.selSideMenu
         //if (!sideMenu) sideMenu = "mnuGroup"
         if (route.params.grid) grId = route.params.grid
+    }
+
+    function saveCurScrollY(posY) {
+        if (!sideMenu || !grId) return
+        const key = sideMenu + grId
+        if (!gst.objSaved[key]) gst.objSaved[key] = {}
+        gst.objSaved[key].scrollY = posY
     }
 
     async function getList(addedParam) {
@@ -108,6 +108,12 @@
 
     function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = false
+    }
+
+    const onScrolling = () => { 
+        if (!scrollArea.value) return //오류 만났을 때
+        prevScrollY = scrollArea.value.scrollTop
+        saveCurScrollY(prevScrollY)
     }
 
     async function applyToBody(arr, mode) {

@@ -524,12 +524,11 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
-        goBodyList : async function(nm, params, refresh) {
+        goBodyList : async function(nm, params) {
             try {
                 let obj = { name : nm, params : params}
-                if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
                 const ele = document.getElementById("chan_center_header") //chan_center_body
-                if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+                if (!ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
                     await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
                 } else {
                     await router.push(obj)
