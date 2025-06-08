@@ -124,9 +124,10 @@
     async function handleEvFromBody(param) { //UserList.vue에서 실행
         if (param.kind == "selectRow") {
             groupClickOnLoop(false, param.grid) //뒤로가기는 clickNode = false
-        } else { //로직 더 구현 필요
-            //await getList()
-            //groupClickOnLoop()
+        } else if (param.kind == "saveGroup" || param.kind == "deleteGroup") {
+            await getList()
+            groupClickOnLoop()
+        } else { //로직 더 구현 필요            
             //if (!grid) newGroup() //그룹삭제
         }
     }

@@ -53,14 +53,11 @@
             setBasicInfo()
             const key = sideMenu + grId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            //gst.home.procFromBody("recall", { grid: grId })
             evToPanel({ kind: "selectRow", grid: grId })
         }
     })
 
     function setBasicInfo() {        
-        //sideMenu = gst.selSideMenu
-        //if (!sideMenu) sideMenu = "mnuGroup"
         if (route.params.grid) grId = route.params.grid
     }
 
@@ -78,7 +75,7 @@
             let param = { grid: grId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const kind = param.kind
-            const res = await axios.post("/user/qryGroupWithUserList", param)
+            const res = await axios.post("/user/qryGroupWithUser", param)
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
                 onGoingGetList = false                
@@ -118,7 +115,7 @@
 
     async function applyToBody(arr, mode) {
         if (grId == "new" || singleMode.value != "C") {
-            gst.util.setSnack("먼저 그룹이 저장되어야 하고 행선택도 없어야 합니다.")
+            gst.util.setSnack("먼저 그룹이 저장되어야 하고 행선택도 없어야 합니다.", true)
             return
         }
         const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
@@ -150,11 +147,9 @@
             const idx = gst.util.getKeyIndex(userRow, row.USERID)
             if (idx > -1) userlist.value[idx].chk = true
         }
-        if (brr.length == 1) {
-            gst.util.scrollIntoView(userRow, brr[0].USERID)
-        }
-        orgRef.value.procFromParent("refresh")
-        if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
+        if (brr.length == 1) gst.util.scrollIntoView(userRow, brr[0].USERID)
+        if (mode == "mygroup") orgRef.value.procFromParent("refresh")
+        if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length, true)
     }
 
     function changeChk(row, idx) {
@@ -233,7 +228,7 @@
                     rq.USERNM = rowUsernm.value
                     rq.ORG = rowOrg.value
                     rq.JOB = rowJob.value
-                    rq.EMAIL = rowJob.value
+                    rq.EMAIL = rowEmail.value
                     rq.TELNO = rowTelno.value
                 }
                 rq.KIND = rowKind.value
@@ -280,10 +275,10 @@
         }
     }
 
-    async function saveGroupMaster() {
+    async function saveGroup() {
         try {
             const rq = { GR_ID: grId, GR_NM: grnm.value } //grId=new일 경우는 신규그룹 생성
-            const res = await axios.post("/user/saveGroupMaster", rq)
+            const res = await axios.post("/user/saveGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             if (grId == "new") {
@@ -291,7 +286,7 @@
                 await getList()
             }
             localStorage.wiseband_lastsel_grid = grId
-            evToPanel(grId)
+            evToPanel({ kind: "saveGroup", grid: grId })
             orgRef.value.procFromParent("refresh")
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -305,9 +300,8 @@
             const res = await axios.post("/user/deleteGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            evToPanel()
+            evToPanel({ kind: "deleteGroup", grid: grId })
             orgRef.value.procFromParent("refresh")
-            await router.replace({ name : 'group_body', params : { grid: "new" }})
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -325,7 +319,7 @@
                     </div>
                 </div>
                 <div class="chan_center_header_right">
-
+                    <span style="font-weight:bold">{{ userlist.length }}명</span>
                 </div>
             </div>
             <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
@@ -337,7 +331,7 @@
                     <span style="min-width:100px">{{ masternm }}</span>
                 </div>
                 <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
-                    <div class="coImgBtn" @click="saveGroupMaster()">
+                    <div class="coImgBtn" @click="saveGroup()">
                         <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
                         <span class="coImgSpn">그룹저장</span>
                     </div>
@@ -387,7 +381,7 @@
             <div class="chan_center_footer">
                 <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
                     <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()">
-                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                        <img :src="gst.html.getImageUrl('white_new.png')" class="coImg24">
                         <span class="coImgSpn">신규</span>
                     </div>
                     <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
@@ -465,7 +459,7 @@
         font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
-        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
+        width:30%;height:100%;padding-right:5px;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }

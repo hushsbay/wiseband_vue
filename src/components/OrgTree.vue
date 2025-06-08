@@ -57,7 +57,7 @@
     async function procQuery(strMode) {
         mode.value = strMode
         if (strMode == "tree") depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
-        const controller = (strMode == "tree") ? "orgTree" : "qryGroupWithUserList"
+        const controller = (strMode == "tree") ? "orgTree" : "qryGroupWithUser"
         const notShowMsgIfNoData = (strMode == "tree") ? false : true
         const res = await axios.post("/user/" + controller)
         const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
