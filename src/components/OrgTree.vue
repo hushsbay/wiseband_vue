@@ -71,7 +71,7 @@
             const userlist = row.userlist
             if (userlist.length > 0) {
                 procNode(row, userlist[0], 'org')
-                for (let j = 0; j < userlist.length; j++) {
+                for (let j = 0; j < userlist.length; j++) { //org에 userlist가 있으면 루프돌면서 추가
                     const item = userlist[j]
                     orglist.value.push(item)
                     procNode(item, null, 'user', vips)
@@ -84,11 +84,13 @@
                 }
             }
         }
+        debugger
+        debugger
     }
 
     function procNode(row, rowNext, kind, vips) {
         const lvl = parseInt(row.LVL) //org,user,mygroup에 모두 존재
-        const org_cd = row.ORG_CD ? row.ORG_CD : row.GR_ID //1) tree에는 ORG_CD가 org 및 user에 모두 존재 2) mygroup에서는 GR_ID
+        const org_cd = row.ORG_CD ? row.ORG_CD : row.GR_ID //1) tree,search에는 ORG_CD가 org 및 user에 모두 존재 2) mygroup에서는 GR_ID
         const nodekind = row.USERID ? "U" : "G" //사용자(U),그룹(G=회사or부서or내그룹)
         let hasChild
         if (nodekind == "U" || rowNext == null) { //사용자면 false, 다음행이 없는 마지막이면 false
@@ -97,7 +99,7 @@
             hasChild = false
         } else {
             hasChild = true
-        }
+        }        
         let disp = (lvl <= depthToShow.value) ? "flex" : "none"
         let expanded = (lvl < depthToShow.value) ? true : false
         const paddingLeft = lvl * 25 + 6
@@ -107,6 +109,7 @@
         row.haschild = hasChild
         row.expanded = expanded
         row.paddingleft = paddingLeft + "px"
+        //if (row.ORG_NM == "경영본부") debugger
         if (nodekind == "U") {
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, row.USERID)
@@ -173,14 +176,14 @@
             const rowCur = orglist.value[i]
             const lvlCur = parseInt(rowCur.LVL)
             if (lvlCur <= lvl) break
-            if (expanded) {
-                rowCur.dispstatePrev = rowCur.dispstate
+            if (expanded) { //예) 클릭한 부서노드가 펼쳐져 있으면 그 아래는 모두 안보이게 하되
+                rowCur.dispstatePrev = rowCur.dispstate //dispstatePrev로 이전 상태를 기억해서 나중에 펼칠 때 그 상태대로 복원하기 
                 rowCur.dispstate = "none"
             } else { //펼쳐야 함
                 if (lvlCur == lvl + 1) {
                     rowCur.dispstate = "flex"
                 } else {
-                    rowCur.dispstate = rowCur.dispstatePrev
+                    if (rowCur.dispstatePrev) rowCur.dispstate = rowCur.dispstatePrev
                 }
             }
             j += 1
