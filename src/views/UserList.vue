@@ -122,7 +122,7 @@
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
             const rq = { crud: "C", GR_ID: grId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member" }
-            if (mode == "tree") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
+            if (mode == "tree" || mode == "search") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
                 rq.SYNC = "Y"
             } else { //mygroup (인사연동+수동입력 혼재)
                 if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
@@ -147,7 +147,7 @@
             const idx = gst.util.getKeyIndex(userRow, row.USERID)
             if (idx > -1) userlist.value[idx].chk = true
         }
-        if (brr.length == 1) gst.util.scrollIntoView(userRow, brr[0].USERID)
+        if (brr.length > 0) gst.util.scrollIntoView(userRow, brr[0].USERID)
         if (mode == "mygroup") orgRef.value.procFromParent("refresh")
         if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length, true)
     }

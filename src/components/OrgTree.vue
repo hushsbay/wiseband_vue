@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted } from 'vue' 
+    import { ref, onMounted, nextTick } from 'vue' 
     import axios from 'axios'
     
     import hush from '/src/stores/Common.js'
@@ -12,15 +12,19 @@
     
     defineExpose({ open, close, procFromParent })
 
-    let mode = ref('tree'), show = ref(true), searchText = ref('')
+    let mode = ref('tree'), show = ref(true), searchText = ref(''), myteam = ref('')
     let depthToShow = ref(1), chkCnt = ref(0) //mygroup을 고려해서 depthToShow는 기본적으로는 반드시 1로 해야 함
     let maxLevel = 1
 
     const scrollArea = ref(null), orglist = ref([]), orgRow = ref({}) //orgRow는 element를 동적으로 할당
 
+    const g_toporgcd = gst.auth.getCookie("toporgcd")
+    const g_orgcd = gst.auth.getCookie("orgcd")
+
     onMounted(async () => {
         try {
             mode.value = props.mode
+            myteam.value = (localStorage.wiseband_orgtree_myteam == "true") ? true : false
             await procQuery(mode.value)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -46,6 +50,11 @@
         procQuery(strMode)
     }
 
+    async function toggleMyTeam() {
+        localStorage.wiseband_orgtree_myteam = myteam.value ? true : false
+        if (myteam.value) procQuery("tree")
+    }
+
     function selectOne() {
         if (searchText.value.trim() == "") {
             procQuery("tree")
@@ -56,10 +65,14 @@
 
     async function procQuery(strMode) {
         mode.value = strMode
-        if (strMode == "tree") depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
+        if (strMode == "tree") {
+            depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
+        } else if (strMode == "mygroup") {
+            depthToShow.value = localStorage.wiseband_orgtree_depthToShow_mygroup ?? 1
+        }
         const controller = (strMode == "tree") ? "orgTree" : "qryGroupWithUser"
         const notShowMsgIfNoData = (strMode == "tree") ? false : true
-        const res = await axios.post("/user/" + controller)
+        const res = await axios.post("/user/" + controller, { myteam: ((strMode == "tree" && myteam.value) ? gst.auth.getCookie("orgcd") : "") })
         const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
         if (!rs) return
         orglist.value = []
@@ -84,8 +97,24 @@
                 }
             }
         }
-        debugger
-        debugger
+        const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임
+        if (myOrgArr && myOrgArr.length > 0) { //마지막이 회사코드, 처음이 본인 소속부서임
+            for (let j = myOrgArr.length - 1; j >= 0; j--) {
+                let k = 0
+                for (let i = k; i < orglist.value.length; i++) {
+                    const row = orglist.value[i]
+                    if (row.nodekind == "G") { //console.log(myOrgArr[j].ORG_CD+"============"+row.ORG_CD+"============"+i)
+                        if (row.ORG_CD == myOrgArr[j].ORG_CD) { //console.log(myOrgArr[j].ORG_CD+"============"+i)
+                            clickNode(null, row, i)
+                            k = i + 1
+                            break
+                        }
+                    }
+                }
+            }
+            await nextTick()
+            orgRow.value[myOrgArr[0].ORG_CD].scrollIntoView(true) //true 필요. true=scrollIntoViewOptions: {block: "start", inline: "nearest"}와 동일
+        }
     }
 
     function procNode(row, rowNext, kind, vips) {
@@ -109,7 +138,6 @@
         row.haschild = hasChild
         row.expanded = expanded
         row.paddingleft = paddingLeft + "px"
-        //if (row.ORG_NM == "경영본부") debugger
         if (nodekind == "U") {
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, row.USERID)
@@ -162,7 +190,7 @@
     }
 
     function clickNode(e, row, idx) {
-        if (e.target.nodeName == "INPUT") return //e.currentTarget.nodeName은 DIV로 나옴
+        if (e && e.target.nodeName == "INPUT") return //e.currentTarget.nodeName은 DIV로 나옴
         const hasChild = row.haschild
         const nodekind = row.nodekind
         const expanded = row.expanded
@@ -188,7 +216,7 @@
             }
             j += 1
         }  
-        if (j > 0) procExpCol(expanded, row, idx)
+        if (j > 0) procExpCol(expanded, row)
     }
 
     function procExpCol(expanded, row) {
@@ -237,6 +265,9 @@
             }
             const arr = getCheckedUser()
             chkCnt.value = arr.length
+        } else {
+            const arr = getCheckedUser()
+            chkCnt.value = arr.length
         }
     }
 
@@ -256,7 +287,11 @@
                 depthToShow.value = parseInt(depthToShow.value) - 1
             }
         }
-        localStorage.wiseband_orgtree_depthToShow = depthToShow.value
+        if (mode.value == "tree") {
+            localStorage.wiseband_orgtree_depthToShow = depthToShow.value    
+        } else if (mode.value == "mygroup") {
+            localStorage.wiseband_orgtree_depthToShow_mygroup = depthToShow.value    
+        }        
         procQuery(mode.value)
     }
 
@@ -322,7 +357,7 @@
             <div class="chan_center">
                 <div class="chan_center_header">
                     <div class="chan_center_header_left">
-                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" style="width:100px" />
+                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" style="width:90px" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
                             <img :src="gst.html.getImageUrl('white_search.png')" class="coImg20">
                         </div>
@@ -332,10 +367,11 @@
                         <span class="depth" style="margin-right:5px">{{ depthToShow }}</span>
                         <div class="coImgBtn" @click="changeDepth(false)"><img :src="gst.html.getImageUrl('white_minus.png')" class="coImg18"></div>
                         <div class="coImgBtn" @click="changeDepth(true)"><img :src="gst.html.getImageUrl('white_plus.png')" class="coImg18"></div>
-                        <!-- <input type="checkbox" id="myteam" v-model="myteam" @change="selectMyTeam" style="margin-left:12px"/><label for="myteam" style="font-size:14px">내팀</label> -->
+                        <input v-show="mode == 'tree'" type="checkbox" id="myteam" v-model="myteam" style="margin-left:10px" @change="toggleMyTeam"/>
+                        <label v-show="mode == 'tree'" for="myteam" style="font-size:14px">내팀</label>
                     </div>
                     <div class="chan_center_header_right">
-                        <span style="margin-right:5px">선택 :</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
+                        <span style="margin-right:5px">선택:</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
                         <span class="vipBtn" style="margin-left:10px" @click="clearAllChk()">해제</span>
                     </div>
                 </div>
@@ -347,7 +383,7 @@
                             style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
                             <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
-                            <div style="margin-left:5px">{{ row.orgnm }}</div>
+                            <div style="margin-left:5px">{{ row.orgnm }}{{row.key}}</div>
                             <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
                         </div>
                         <div v-else class="coDotDot" :title="row.JOB + '/' + row.TELNO + '/' + row.EMAIL"
@@ -375,7 +411,7 @@
                     </div>
                 </div>
                 <div v-show="mode == 'search'" class="chan_center_body" ref="scrollArea">
-                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyidx="idx" 
+                    <div v-for="(row, idx) in orglist" :key="row.key"  :keyidx="idx" 
                         class="org_body" @click="(e) => clickNode(e, row, idx)">
                         <div class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
                             style="width:100%;height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">
@@ -419,10 +455,10 @@
         background:whitesmoke;border-bottom:1px solid lightgray;overflow:hidden;box-shadow:0px 2px 0px gray
     }
     .chan_center_header_left {
-        width:80%;height:100%;padding:0 10px;display:flex;align-items:center;
+        width:calc(100% - 140px);height:100%;padding:0 10px;display:flex;align-items:center;
     }
     .chan_center_header_right {
-        width:20%;height:100%;padding:0 10px;display:flex;align-items:center;justify-content:flex-end;
+        width:100px;height:100%;padding:0 10px;display:flex;align-items:center;justify-content:flex-end;
     }
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto
