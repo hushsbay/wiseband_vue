@@ -9,9 +9,10 @@
   --hover-color:#e6f2e6;
   /* --active-color:#a6cfa6; */
   /* --active-btn:darkblue; */
-  --primary-btn-color:#3B693B; /* https://uicolors.app/generate/3b693b */
-  --primary-btn-hover:#427841;
-  --primary-btn-active:#78b177;
+  /*--primary-btn-color:#3B693B; / https://uicolors.app/generate/3b693b */
+  --primary-btn-color:rgb(90, 46, 93);
+  --primary-btn-hover:rgb(106, 56, 114);
+  --primary-btn-active:rgb(131, 56, 138);  
 }
 
 html, body { 
