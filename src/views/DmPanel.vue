@@ -15,7 +15,7 @@
     const gst = GeneralStore()
 
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
-    let msglistRef = ref(null), notyetChk = ref(false), searchWord = ref('')
+    let notyetChk = ref(false), searchWord = ref('') //msglistRef = ref(null), 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all')
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시    
@@ -102,7 +102,7 @@
             kindDm.value = localStorage.wiseband_lastsel_dm
             const search = searchWord.value.trim()
             if (refresh) {
-                listDm.value = []
+                listDm.value = [] //여기서 이 배열을 초기화한 후 다시 담으면 노드가 다시 만들어지면서 특정행이 클릭되고 MsgList가 onMounted()됨을 유의
                 savLastMsgMstCdt = hush.cons.cdtAtLast
             }
             const lastMsgMstCdt = savLastMsgMstCdt
@@ -133,6 +133,33 @@
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
             onGoingGetList = false
+        } catch (ex) {
+            onGoingGetList = false
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function getSingleDm(chanid) { //한행에 대해 새로고침
+        try {
+            if (onGoingGetList) return
+            onGoingGetList = true
+            const res = await axios.post("/menu/qryDm", { chanid: chanid, lastMsgMstCdt: hush.cons.cdtAtLast })
+            const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
+            if (!rs || rs.list.length == 0) {
+                onGoingGetList = false
+                return
+            }
+            const row = rs.list[0]
+            for (let i = 0; i < row.picture.length; i++) {
+                if (row.picture[i] == null) {
+                    row.url[i] = null
+                } else {
+                    row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
+                }
+            }                
+            procChanRowImg(row)            
+            onGoingGetList = false
+            return row
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
@@ -242,7 +269,7 @@
     }
 
     async function refreshPanel() {
-        await getList(true)            
+        await getList(true) //true시 listDm이 초기화되었다 다시 추가되므로 MsgList의 onMounted()가 실행됨을 유의 ?!?!
         dmClickOnLoop(true)
     }
 
@@ -267,8 +294,35 @@
         }
     }
 
-    function handleEvFromMemberList(chanid) { //MemberList에서 실행
-        refreshPanel()
+    async function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
+        if (kind == "update") {
+            const row = await getSingleDm(chanid)
+            // listDm.value.forEach((item, index) => {
+            //     if (item.CHANID == row.CHANID) {
+            //         item = row
+            //         gst.util.scrollIntoView(chanRow, row.CHANID)
+            //         dmClick(item, index, true, row.CHANID)
+            //     }
+            // })
+            for (let i = 0; i < listDm.value.length; i++) {
+                if (listDm.value[i].CHANID == row.CHANID) {
+                    listDm.value[i] = row
+                    //MsgList의 마스터(특히, 멤버목록) 새로고침 필요
+                    break
+                }
+            }
+        } else if (kind == "delete") {
+            const idx = listDm.value.findIndex((item) => item.CHANID == chanid)
+            if (idx == -1) return
+            listDm.value.splice(idx, 1)
+            //MsgList의 마스터(특히, 멤버목록) 새로고침(제거) 필요
+        } else if (kind == "create") {
+            const row = await getSingleDm(chanid)
+            listDm.value.unshift(row)
+            setTimeout(function() { //await nextTick()으로 처리가 안되어, MsgList에서 역으로 뭔가 처리하는 것이 있는지 봐도 없음. 일단 임시방편으로 1초후 처리
+                dmClick(listDm.value[0], 0, true) //이 때 새 라우팅이므로 MsgList의 onMounted()가 당연히 발생함
+            }, 1000)
+        }
     }
 </script>
 
@@ -321,10 +375,10 @@
         </div>
     </div>
     <resizer nm="dm" @ev-from-resizer="handleFromResizer"></resizer>
-    <div v-if="listDm.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
+    <div v-if="listDm.length > 0" id="chan_body" :style="{ width: chanMainWidth }"> <!--<component ref="msglistRef" -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
-                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody" />
+                <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody" />
             </keep-alive>
         </router-view>
     </div>

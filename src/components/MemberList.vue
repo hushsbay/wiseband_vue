@@ -16,8 +16,8 @@
     const emits = defineEmits(["ev-from-member"]) //memberlist -> HomePanel or DmPanel
     defineExpose({ open, close }) //부모(예:HomePanel,DmPanel) => MemberList의 open(), close() 호출
     
-    function evToPanel() { //말 그대로 패널에게 호출하는 것임
-        emits("ev-from-member", chanId)
+    function evToPanel(kind) { //말 그대로 패널에게 호출하는 것임
+        emits("ev-from-member", chanId, kind)
     }
 
     function open(strKind, strChanid, strChannm, strChanimg) {
@@ -105,7 +105,6 @@
     }
 
     async function applyToBody(arr, mode) {
-        debugger
         if (appType == "chan" && (chanId == "new" || singleMode.value != "C")) {
             gst.util.setSnack("먼저 채널이 저장되어야 하고 행선택도 없어야 합니다.")
             return
@@ -131,7 +130,7 @@
         if (brr.length == 1) {
             gst.util.scrollIntoView(memberRow, brr[0].USERID)
         }
-        if (appType == "dm") evToPanel()
+        if (appType == "dm") evToPanel("update")
         if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
     }
 
@@ -225,7 +224,7 @@
             }
             newMember()
             await getList()
-            if (appType == "dm") evToPanel()
+            if (appType == "dm") evToPanel("update")
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -240,8 +239,10 @@
             if (chanId == "new") {
                 chanId = rs.data.chanid
                 if (appType == "chan") await getList() //dm new일 땐 사용자가 아닌 자동 마스터 저장
+                evToPanel("create")
+            } else {
+                evToPanel("update")
             }
-            evToPanel()
             return true
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -255,7 +256,7 @@
             const res = await axios.post("/chanmsg/deleteChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            evToPanel()
+            evToPanel("delete")
             setTimeout(function() { close() }, 1000) //이 행을 실행하면 MsgList.vue의 onMounted가 실행이 됨 ()
         } catch (ex) { 
             gst.util.showEx(ex, true)
