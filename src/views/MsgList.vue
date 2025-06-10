@@ -224,6 +224,7 @@
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
             } else {
+                debugger
                 setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
                 if (msgidInChan) {
                     await getList({ msgid: msgidInChan, kind: "atHome" })
@@ -245,6 +246,7 @@
         if (mounting) {
             mounting = false
         } else {
+            debugger
             console.log("Activated..................................." + route.fullPath)
             temp = hush.util.getRnd() + 'Activated'
             if (hasProp()) {

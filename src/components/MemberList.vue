@@ -105,11 +105,12 @@
     }
 
     async function applyToBody(arr, mode) {
+        debugger
         if (appType == "chan" && (chanId == "new" || singleMode.value != "C")) {
             gst.util.setSnack("먼저 채널이 저장되어야 하고 행선택도 없어야 합니다.")
             return
         } else if (appType == "dm" && chanId == "new") {
-            const ret = await saveChanMaster()
+            const ret = await saveChan()
             if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
         }
         const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
@@ -230,10 +231,10 @@
         }
     }
 
-    async function saveChanMaster() {
+    async function saveChan() {
         try {
             const rq = { GR_ID: grId, CHANID: chanId, CHANNM: chanNm.value, STATE: state.value ? "P" : "" } //chanId=new일 경우는 신규 채널 생성
-            const res = await axios.post("/chanmsg/saveChanMaster", rq)
+            const res = await axios.post("/chanmsg/saveChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return false //dm은 행저장시 new일 때는 여기 마스터를 먼저 저장함
             if (chanId == "new") {
@@ -255,6 +256,7 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             evToPanel()
+            setTimeout(function() { close() }, 1000) //이 행을 실행하면 MsgList.vue의 onMounted가 실행이 됨 ()
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -314,7 +316,7 @@
                                 <label v-if="appType!='dm'" for="checkbox" style="min-width:50px">비공개</label>
                             </div>
                             <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
-                                <div v-if="appType=='chan'" class="coImgBtn" @click="saveChanMaster()">
+                                <div v-if="appType=='chan'" class="coImgBtn" @click="saveChan()">
                                     <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
                                     <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "저장" }}</span>
                                 </div>

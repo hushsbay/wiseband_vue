@@ -276,7 +276,7 @@
     }
 
     function handleEvFromMemberList(chanid) { //MemberList에서 실행
-        getList() //qryDm으로 하나의 행만 업데이트하기 (신규일 때는 맨 위에 추가하기)
+        refreshPanel()
     }
 </script>
 
