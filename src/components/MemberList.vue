@@ -293,37 +293,37 @@
                     <div class="chan_center" style="width:calc(100% - 570px);padding-right:10px">
                         <div class="chan_center_header" id="chan_center_header">
                             <div class="chan_center_header_left">
-                                <img v-if="chanId != 'new'" class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
-                                <div v-if="chanId == 'new'" style="display:flex;align-items:center">
-                                    <div class="coDotDot">새로 만들기 ({{ appType=='dm' ? "DM" : "채널" }})</div>
-                                </div>
-                                <div v-else style="display:flex;align-items:center">
-                                    <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
-                                    <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
+                                <div class="coDotDot">
+                                    <img v-if="chanId != 'new'" class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
+                                    <span v-if="chanId == 'new'">새로 만들기 ({{ appType=='dm' ? "DM" : "채널" }})</span>
+                                    <span v-else>
+                                        <span v-if="appType=='dm'">{{ chanmemFullExceptMe.join(", ") }}</span>
+                                        <span v-else>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span>
+                                    </span>
                                 </div>
                             </div>
                             <div class="chan_center_header_right">
-                                <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:5px;" @click="close" title="닫기">
+                                <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:5px" @click="close" title="닫기">
                             </div>
                         </div>
-                        <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
+                        <div style="width:calc(100% - 12px);height:40px;margin-bottom:2px;padding:0 5px 5px 5px;display:flex;justify-content:space-between;align-items:center;
                             background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
                             <div v-if="chanId" style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
-                                <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:12px" />
+                                <input v-show="memberlist.length > 0" type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:10px" />
                                 <input v-if="appType=='chan'" type="text" v-model="chanNm" style="width:100%" spellcheck="false" placeholder="채널명"/>
-                                <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
-                                <span style="min-width:100px">{{ masternm }}</span>
-                                <input v-if="appType!='dm'" type="checkbox" id="checkbox" v-model="state" style="min-width:18px;margin-left:12px"/>
-                                <label v-if="appType!='dm'" for="checkbox" style="min-width:50px">비공개</label>
+                                <input v-if="appType!='dm'" type="checkbox" id="checkbox" v-model="state" style="min-width:18px;margin-left:10px"/>
+                                <label v-if="appType!='dm'" for="checkbox" style="min-width:48px">비공개</label>
+                                <span style="min-width:36px;margin-left:10px;color:dimgray">관리:</span>
+                                <span class="coDotDot" style="min-width:80px">{{ masternm }}</span>
                             </div>
                             <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
                                 <div v-if="appType=='chan'" class="coImgBtn" @click="saveChan()">
-                                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
-                                    <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "저장" }}</span>
+                                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
+                                    <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "방저장" }}</span>
                                 </div>
                                 <div class="coImgBtn" @click="deleteChan">
-                                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
-                                    <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "삭제" }}</span>
+                                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
+                                    <span class="coImgSpn">{{ (appType == "dm" ? "DM" : "채널") + "방삭제" }}</span>
                                 </div>
                             </div>
                         </div>
@@ -338,11 +338,13 @@
                                 </div>
                                 <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
                                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                                        <div style="display:flex;align-items:center">
-                                            <span style="min-width:60px;margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
-                                            <span>{{ row.JOB }}</span>
+                                        <div style="width:calc(100% - 100px);display:flex;align-items:center">
+                                            <div class="coDotDot">
+                                                <span style="width:60px;margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
+                                                <span>{{ row.JOB }}</span>
+                                            </div>
                                         </div>
-                                        <div style="min-width:100px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                                        <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">
                                             <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
                                                 {{ row.KIND=='guest' ? '게스트' : '관리자' }}
                                             </span>
@@ -352,16 +354,28 @@
                                         </div>
                                     </div>
                                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                                        <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                                            <div class="coDotDot" style="width:100%">{{ row.ORG }}</div>
+                                        <div style="width:calc(100% - 150px)">
+                                            <div class="coDotDot">
+                                                <span>{{ row.ORG }}</span>
+                                            </div>
                                         </div>
-                                        <div style="width:150px;display:flex;justify-content:flex-end">{{ row.EMAIL }}</div>                           
+                                        <div style="width:150px;display:flex;justify-content:flex-end">
+                                            <div class="coDotDot">
+                                                <span style="color:dimgray">{{ row.EMAIL }}</span>
+                                            </div>
+                                        </div>                           
                                     </div>
                                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                                        <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                                            <div class="coDotDot" style="width:100%;color:dimgray">{{ row.RMKS }}</div>
+                                        <div style="width:calc(100% - 150px)">
+                                            <div class="coDotDot">
+                                                <span style="color:dimgray">{{ row.RMKS }}</span>
+                                            </div>
                                         </div>
-                                        <div style="width:150px;display:flex;justify-content:flex-end">{{ row.TELNO }}</div>
+                                        <div style="width:150px;display:flex;justify-content:flex-end">
+                                            <div class="coDotDot">
+                                                <span style="color:dimgray">{{ row.TELNO }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -369,15 +383,15 @@
                         <div class="chan_center_footer">
                             <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
                                 <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
-                                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
                                     <span class="coImgSpn">멤버저장</span>
                                 </div>
                                 <div class="coImgBtn" @click="deleteMember()">
-                                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
                                     <span class="coImgSpn">멤버삭제</span>
                                 </div>
                                 <div class="coImgBtn" @click="inviteToMember()">
-                                    <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg24">
+                                    <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg20">
                                     <span class="coImgSpn">초대</span>
                                 </div>
                             </div>
@@ -453,23 +467,21 @@
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
     }
     .chan_center {
-        height:100%;padding: 0 0 0 5px;
-        display:flex;flex-direction:column;
+        height:100%;display:flex;flex-direction:column;
     }
     .chan_center_header {
-        width:100%;min-height:45px;
+        width:calc(100% - 12px);min-height:45px;padding:0 5px 0 5px;
         display:flex;justify-content:space-between;align-items:center;
         background:whitesmoke;border:1px solid lightgray;border-bottom:none;overflow:hidden
     }
     .chan_center_header_left {
-        width:70%;height:100%;padding-left:3px;display:flex;align-items:center;
-        font-size:18px;font-weight:bold;cursor:pointer
+        width:90%;height:100%;padding-left:5px;display:flex;align-items:center;font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
-        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
+        width:10%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .chan_center_body {
-        width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
+        width:calc(100% - 12px);height:100%;padding:0 5px 0 7px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
         width:calc(100% - 8px);display:flex;align-items:center;cursor:pointer;border-bottom:1px solid lightgray

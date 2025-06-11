@@ -468,7 +468,7 @@
     }
     .org_body:hover { background:var(--hover-color) }
     .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
-    .vipBtn { margin-left:5px;padding:1px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
-    .vipMark { margin-left:5px;padding:1px;font-size:10px;background:black;color:white;border-radius:5px }
-    .kind { margin-left:5px;padding:3px 5px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }
+    .vipBtn { margin-left:5px;padding:1px 2px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
+    .vipMark { margin-left:5px;padding:1px 2px 2px 2px;font-size:10px;background:black;color:white;border-radius:5px }
+    .kind { margin-left:5px;padding:3px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }
 </style>
