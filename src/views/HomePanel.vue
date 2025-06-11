@@ -223,7 +223,7 @@
                     let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
                     window.open(url + "?appType=home")
                 }},
-                { nm: "채널 정보", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
+                { nm: "채널 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                     memberlistRef.value.open("chan", row.CHANID, row.CHANNM, row.nodeImg)
                 }},
                 { nm: "알림 " + notiStr, func: function(item, idx) { 

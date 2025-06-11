@@ -310,7 +310,7 @@
 
 <template>
     <div class="chan_main">
-        <div class="chan_center" style="width:calc(100% - 570px);padding-right:10px">
+        <div class="chan_center" style="width:calc(100% - 550px);padding-right:10px">
             <div class="chan_center_header" id="chan_center_header">
                 <div class="chan_center_header_left">
                     <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
@@ -327,16 +327,18 @@
                 <div style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
                     <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:12px" />
                     <input type="text" v-model="grnm" style="width:100%" spellcheck="false" placeholder="그룹명"/>
-                    <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
-                    <span style="min-width:100px">{{ masternm }}</span>
+                    <!-- <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
+                    <span style="min-width:100px">{{ masternm }}</span> -->
+                    <span style="min-width:36px;margin-left:10px;color:dimgray">관리:</span>
+                    <span class="coDotDot" style="min-width:80px">{{ masternm }}</span>
                 </div>
                 <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
                     <div class="coImgBtn" @click="saveGroup()">
-                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
                         <span class="coImgSpn">그룹저장</span>
                     </div>
                     <div class="coImgBtn" @click="deleteGroup">
-                        <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                        <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
                         <span class="coImgSpn">그룹삭제</span>
                     </div>
                 </div>
@@ -352,11 +354,23 @@
                     </div>
                     <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
                         <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                            <div style="display:flex;align-items:center">
-                                <span style="margin-right:10px;font-weight:bold;color:darkblue">{{ row.USERNM }}</span>
+                            <!-- <div style="display:flex;align-items:center">
+                                <span style="margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
                                 <span>{{ row.JOB }}</span>
                             </div>
-                            <div style="min-width:100px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
+                            <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">
+                                <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
+                                    {{ row.KIND=='guest' ? '게스트' : '관리자' }}
+                                </span>
+                                <span v-if="row.SYNC != 'Y'" class="kind">입력</span>
+                            </div> -->
+                            <div style="width:calc(100% - 100px);display:flex;align-items:center">
+                                <div class="coDotDot">
+                                    <span style="width:60px;margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
+                                    <span>{{ row.JOB }}</span>
+                                </div>
+                            </div>
+                            <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">
                                 <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
                                     {{ row.KIND=='guest' ? '게스트' : '관리자' }}
                                 </span>
@@ -364,16 +378,28 @@
                             </div>
                         </div>
                         <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                            <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                                <div class="coDotDot" style="width:100%">{{ row.ORG }}</div>
+                            <div style="width:calc(100% - 150px)">
+                                <div class="coDotDot">
+                                    <span>{{ row.ORG }}</span>
+                                </div>
                             </div>
-                            <div style="width:150px;display:flex;justify-content:flex-end">{{ row.EMAIL }}</div>                           
+                            <div style="width:150px;display:flex;justify-content:flex-end">
+                                <div class="coDotDot">
+                                    <span style="color:dimgray">{{ row.EMAIL }}</span>
+                                </div>
+                            </div>
                         </div>
                         <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                            <div style="width:calc(100% - 150px);display:flex;align-items:center">
-                                <div class="coDotDot" style="width:100%;color:dimgray">{{ row.RMKS }}</div>
+                            <div style="width:calc(100% - 150px)">
+                                <div class="coDotDot">
+                                    <span style="color:dimgray">{{ row.RMKS }}</span>
+                                </div>
                             </div>
-                            <div style="width:150px;display:flex;justify-content:flex-end">{{ row.TELNO }}</div>
+                            <div style="width:150px;display:flex;justify-content:flex-end">
+                                <div class="coDotDot">
+                                    <span style="color:dimgray">{{ row.TELNO }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -381,15 +407,15 @@
             <div class="chan_center_footer">
                 <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
                     <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()">
-                        <img :src="gst.html.getImageUrl('white_new.png')" class="coImg24">
+                        <img :src="gst.html.getImageUrl('white_new.png')" class="coImg20">
                         <span class="coImgSpn">신규</span>
                     </div>
                     <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
-                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg24">
+                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
                         <span class="coImgSpn">저장</span>
                     </div>
                     <div class="coImgBtn" @click="deleteMember()">
-                        <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg24">
+                        <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
                         <span class="coImgSpn">삭제</span>
                     </div>
                     <span style="color:darkblue">신규 : 조직도에 없는 멤버 추가시</span>
@@ -432,11 +458,10 @@
                 </div>  
             </div>
         </div>
-        <div class="chan_right" style="width:550px">
+        <div class="chan_right" style="width:550px;height:calc(100% - 12px);margin:5px 0">
             <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
         </div>  
     </div>
-    <!-- <context-menu @ev-menu-click="gst.ctx.proc"></context-menu> -->
 </template>
 
 <style scoped>
@@ -447,7 +472,7 @@
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
     }
     .chan_center {
-        height:100%;padding: 0 0 0 10px;
+        height:100%;padding: 5px 0 0 10px;
         display:flex;flex-direction:column;
     }
     .chan_center_header {
@@ -459,7 +484,7 @@
         font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
-        width:30%;height:100%;padding-right:5px;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
+        width:30%;height:100%;padding-right:8px;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
@@ -470,7 +495,7 @@
         width:calc(100% - 8px);display:flex;align-items:center;cursor:pointer;border-bottom:1px solid lightgray
     }
     .chan_center_footer {
-        width:calc(100% - 10px);margin:auto 10px 5px 0;padding:5px;
+        width:calc(100% - 10px);margin:auto 10px 10px 0;padding:5px;
         display:flex;flex-direction:column;
         background:whitesmoke;border:1px solid lightgray;border-radius:5px;
     }

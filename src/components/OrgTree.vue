@@ -359,14 +359,14 @@
                     <div class="chan_center_header_left">
                         <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" style="width:90px" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
-                            <img :src="gst.html.getImageUrl('white_search.png')" class="coImg20">
+                            <img :src="gst.html.getImageUrl('white_search.png')" class="coImg16">
                         </div>
                         <div class="coImgBtn" @click="reset(mode)">
-                            <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg20" title="새로고침">
+                            <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg16" title="새로고침">
                         </div>
                         <span class="depth" style="margin-right:5px">{{ depthToShow }}</span>
-                        <div class="coImgBtn" @click="changeDepth(false)"><img :src="gst.html.getImageUrl('white_minus.png')" class="coImg18"></div>
-                        <div class="coImgBtn" @click="changeDepth(true)"><img :src="gst.html.getImageUrl('white_plus.png')" class="coImg18"></div>
+                        <div class="coImgBtn" @click="changeDepth(false)"><img :src="gst.html.getImageUrl('white_minus.png')" class="coImg16"></div>
+                        <div class="coImgBtn" @click="changeDepth(true)"><img :src="gst.html.getImageUrl('white_plus.png')" class="coImg16"></div>
                         <input v-show="mode == 'tree'" type="checkbox" id="myteam" v-model="myteam" style="margin-left:10px" @change="toggleMyTeam"/>
                         <label v-show="mode == 'tree'" for="myteam" style="font-size:14px">내팀</label>
                     </div>
@@ -383,7 +383,7 @@
                             style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
                             <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
-                            <div style="margin-left:5px">{{ row.orgnm }}{{row.key}}</div>
+                            <div style="margin-left:5px">{{ row.orgnm }}</div>
                             <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
                         </div>
                         <div v-else class="coDotDot" :title="row.JOB + '/' + row.TELNO + '/' + row.EMAIL"
@@ -401,11 +401,11 @@
                             <span v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" class="kind">입력</span>
                         </div> -->
                         <div v-if="(mode == 'mygroup' || row.USERID) && (row.KIND=='guest' || row.KIND=='admin')" 
-                            style="min-width:48px;height:40px;margin-right:3px;display:flex;justify-content:flex-end;align-items:center">
+                            style="min-width:36px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">
                             <span class="kind">{{ row.KIND=='guest' ? '게스트' : '관리자' }}</span>
                         </div>
                         <div v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" 
-                            style="min-width:36px;height:40px;margin-right:3px;display:flex;justify-content:flex-end;align-items:center">
+                            style="min-width:32px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">
                             <span class="kind">입력</span>
                         </div>
                     </div>
@@ -470,5 +470,5 @@
     .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
     .vipBtn { margin-left:5px;padding:1px 2px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
     .vipMark { margin-left:5px;padding:1px 2px 2px 2px;font-size:10px;background:black;color:white;border-radius:5px }
-    .kind { margin-left:5px;padding:3px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }
+    .kind { padding:3px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }
 </style>

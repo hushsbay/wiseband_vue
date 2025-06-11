@@ -25,6 +25,7 @@
         appType = strKind //chan or dm
         chanId = strChanid //채널아이디 또는 new
         memberlist.value = []
+        newMember()
         chanNm.value = ""
         if (appType == "chan") {
             if (chanId == "new") {
@@ -185,7 +186,7 @@
         chkEditRow()
     }
 
-    async function saveMember() {
+    async function saveMember() { //신규저장 없음 (멤버는 채널인 경우 내그룹에서 가져오고 DM의 경우는 조직도와 내그룹에서 가져옴)
         try {
             const arr = memberlist.value.filter(item => item.chk)
             if (arr.length > 1) { //기본적으로는 이 경고가 나오지 않아야 함
@@ -195,13 +196,17 @@
             if (arr.length == 0) { //신규멤버 (여기서는 W입력만 해당됨)
                 gst.util.setSnack("먼저 행을 선택하시기 바랍니다.")
                 return
-            } else {
-                const row = arr[0] //row.USERID is one of key
-                const rq = { crud: "U", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: rowKind.value }
-                const res = await axios.post("/chanmsg/saveChanMember", rq)
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return //서버 호출 저장 진행후 아래 처리 + 패널에도 반영
             }
+            const row = arr[0] //row.USERID is one of key
+            const rq = { crud: "U", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: rowKind.value }
+            const res = await axios.post("/chanmsg/saveChanMember", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            memberlist.value.forEach(item => { //반영할 항목들이 많으면 아예 qry로 한행 읽어서 해당 배열 항목 한행만 새로고침하면 되나 여기서는 딱 한개 필드만 반영하면 되므로 아래와 같이 처리
+                if (item.USERID == row.USERID) {
+                    item.KIND = rowKind.value
+                }
+            })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -257,7 +262,7 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             evToPanel("delete")
-            setTimeout(function() { close() }, 1000) //이 행을 실행하면 MsgList.vue의 onMounted가 실행이 됨 ()
+            setTimeout(function() { close() }, 500)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -290,7 +295,7 @@
         <div v-if="show">
             <div class="popup">
                 <div class="chan_main">
-                    <div class="chan_center" style="width:calc(100% - 570px);padding-right:10px">
+                    <div class="chan_center" style="width:calc(100% - 550px);padding-right:10px">
                         <div class="chan_center_header" id="chan_center_header">
                             <div class="chan_center_header_left">
                                 <div class="coDotDot">
@@ -303,6 +308,7 @@
                                 </div>
                             </div>
                             <div class="chan_center_header_right">
+                                <span style="font-weight:bold;margin-right:10px">{{ memberlist.length }}명</span>
                                 <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:5px" @click="close" title="닫기">
                             </div>
                         </div>
@@ -379,8 +385,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <div v-if="memberlist.length == 0">
+                                <div v-if="appType=='chan'" style="width:100%;height:100%;margin-top:50px;display:flex;justify-content:center;word-break:break-all">
+                                    현재 채널방 정보가 없습니다.<br>
+                                    채널은 조직내 협의를 통해 생성합니다.<br><br>
+                                    먼저 상단의 채널명과 공개여부를 설정하고<br> 
+                                    '채널방저장' 버튼을 누른 후 오른쪽 패널에서<br>
+                                    멤버를 선택해 추가하시기 바랍니다.<br><br>
+                                    채널에 참여할 멤버는 내그룹에서 선택 가능합니다.<br>
+                                    좌측 사이드 '내그룹' 메뉴를 이용해 멤버를 설정합니다.
+                                    <br>
+                                </div>
+                                <div v-else style="width:100%;height:100%;margin-top:50px;display:flex;justify-content:center;word-break:break-all">
+                                    현재 DM방 정보가 없습니다.<br>
+                                    DM방은 사용자가 원하는 대로 생성합니다.<br><br>
+                                    오른쪽 패널에서 멤버를 선택해 추가하시기 바랍니다.
+                                </div>
+                            </div>
                         </div>
-                        <div class="chan_center_footer">
+                        <div v-show="memberlist.length > 0" class="chan_center_footer">
                             <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
                                 <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
                                     <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
@@ -446,7 +469,7 @@
             <div class="overlay" @click="close"></div>
         </div>
     </Transition>
-    <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
+    <!-- <context-menu @ev-menu-click="gst.ctx.proc"></context-menu> -->
 </template>
 
 <style scoped>

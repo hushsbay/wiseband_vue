@@ -175,7 +175,8 @@ text-align:center;vertical-align:middle;z-index:9998; /*스크롤중에 투명�
 
 .coDotDot { overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
 
-.coImg14 { width:14px;height:14px }
+.coImg14 { width:14px;height:14px;cursor:pointer; }
+.coImg16 { width:16px;height:16px;cursor:pointer; }
 .coImg18 { width:18px;height:18px;cursor:pointer; }
 .coImg20 { width:20px;height:20px;cursor:pointer; }
 .coImg24 { width:24px;height:24px;cursor:pointer; }

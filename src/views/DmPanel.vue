@@ -238,7 +238,7 @@
                 let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
                 window.open(url + "?appType=dm")
             }},
-            { nm: "DM 정보", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
+            { nm: "DM 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                 memberlistRef.value.open("dm", row.CHANID)
             }},
             { nm: "알림 " + notiStr, func: function(item, idx) {
@@ -335,7 +335,7 @@
                     <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:80px;margin-right:8px" placeholder="멤버" />
                     <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
-                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="DM 만들기" @click="newDm()">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="DM방 만들기" @click="newDm()">
                 </div>
             </div>
         </div>
