@@ -315,7 +315,7 @@
                 <div class="chan_center_header_left">
                     <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
                     <div style="display:flex;align-items:center">                    
-                        <div class="coDotDot">{{ grnm }}</div>
+                        <div class="coDotDot">{{ grnm ? grnm : "새그룹 만들기" }}</div>
                     </div>
                 </div>
                 <div class="chan_center_header_right">
@@ -325,10 +325,8 @@
             <div style="width:100%;height:40px;margin-bottom:2px;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center;
                         background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
                 <div style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
-                    <input type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:12px" />
-                    <input type="text" v-model="grnm" style="width:100%" spellcheck="false" placeholder="그룹명"/>
-                    <!-- <span style="min-width:40px;margin:0 5px;color:dimgray">관리 :</span>
-                    <span style="min-width:100px">{{ masternm }}</span> -->
+                    <input v-show="userlist.length > 0" type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:5px" />
+                    <input type="text" v-model="grnm" style="width:100%;margin-left:5px" spellcheck="false" placeholder="그룹명"/>
                     <span style="min-width:36px;margin-left:10px;color:dimgray">관리:</span>
                     <span class="coDotDot" style="min-width:80px">{{ masternm }}</span>
                 </div>
@@ -403,8 +401,12 @@
                         </div>
                     </div>
                 </div>
+                <div v-if="userlist.length == 0" style="width:100%;height:100%;margin-top:50px;display:flex;justify-content:center;word-break:break-all">
+                    먼저 상단의 그룹명을 설정후 '그룹저장' 버튼을<br>
+                    누른 후 오른쪽 패널에서 멤버를 선택해 추가하시기 바랍니다.
+                </div>
             </div>
-            <div class="chan_center_footer">
+            <div v-show="userlist.length > 0" class="chan_center_footer">
                 <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
                     <div v-if="singleMode!=''" class="coImgBtn" @click="newMember()">
                         <img :src="gst.html.getImageUrl('white_new.png')" class="coImg20">

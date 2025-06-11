@@ -387,18 +387,15 @@
                             </div>
                             <div v-if="memberlist.length == 0">
                                 <div v-if="appType=='chan'" style="width:100%;height:100%;margin-top:50px;display:flex;justify-content:center;word-break:break-all">
-                                    현재 채널방 정보가 없습니다.<br>
-                                    채널은 조직내 협의를 통해 생성합니다.<br><br>
+                                    채널은 조직내 협의를 통해 생성합니다.<br>
                                     먼저 상단의 채널명과 공개여부를 설정하고<br> 
                                     '채널방저장' 버튼을 누른 후 오른쪽 패널에서<br>
                                     멤버를 선택해 추가하시기 바랍니다.<br><br>
                                     채널에 참여할 멤버는 내그룹에서 선택 가능합니다.<br>
                                     좌측 사이드 '내그룹' 메뉴를 이용해 멤버를 설정합니다.
-                                    <br>
                                 </div>
                                 <div v-else style="width:100%;height:100%;margin-top:50px;display:flex;justify-content:center;word-break:break-all">
-                                    현재 DM방 정보가 없습니다.<br>
-                                    DM방은 사용자가 원하는 대로 생성합니다.<br><br>
+                                    DM방은 사용자가 원하는 대로 생성합니다.<br>
                                     오른쪽 패널에서 멤버를 선택해 추가하시기 바랍니다.
                                 </div>
                             </div>

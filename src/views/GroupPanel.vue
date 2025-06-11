@@ -144,7 +144,7 @@
             <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px">
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
-                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="새그룹" @click="newGroup">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="내그룹 만들기" @click="newGroup">
                 </div>
             </div>
         </div>
