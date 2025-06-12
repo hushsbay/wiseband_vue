@@ -82,8 +82,10 @@
     }
 
     function procgroupRowImg(item) { //svg는 이미지 컬러링이 가능하나 핸들링이 쉽지 않아 png로 별도 이미지 교체로 처리
+        item.otherImg = (item.OTHER == "other") ? "person.png" : ""
         const color = item.sel ? hush.cons.color_dark : hush.cons.color_light
         item.nodeImg = color + "people2.png"
+        if (item.otherImg) item.otherImg = color + item.otherImg
     }
 
     async function groupClick(row, idx, clickNode, grid) {
@@ -156,7 +158,9 @@
                         <img class="coImg14" :src="gst.html.getImageUrl(row.nodeImg)">
                         {{ row.GR_NM }}
                     </div>
-                    <div class="nodeRight"></div>
+                    <div class="nodeRight">
+                        <img v-if="row.otherImg" class="coImg14" :src="gst.html.getImageUrl(row.otherImg)" title="다른 그룹">
+                    </div>
                 </div>
             </div>
             <div v-if="listGroup.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
