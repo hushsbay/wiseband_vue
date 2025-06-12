@@ -16,6 +16,7 @@ const GeneralStore = defineStore('General', () => {
     let selSideMenu = ref("")
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
+    const bottomMsg = ref('')
 
     /* Vue에서의 컴포넌트간 통신은 여러가지 기법이 있는데 콤포넌트간 통신이 필요한 경우는 아래와 같음 
        Later.vue 패널을 예로 설명. 여기서는 자식과 손주(스레드댓글)가 동일한 MsgList임을 유의!!
@@ -401,7 +402,10 @@ const GeneralStore = defineStore('General', () => {
         },
 
         chkAxiosCode : function(data, notShowMsgIfNoData) { //data는 axios의 rs.data
-            setTimeout(function() { util.setToast("") }, 100) //setting은 main.js axios에 있음
+            setTimeout(function() { 
+                util.setToast("")
+                //bottomMsg.value = ""
+            }, 100) //setting은 main.js axios에 있음
             if (data == "") {
                 util.setSnack('서버 Response data가 없습니다.', true)
                 return null
@@ -600,7 +604,7 @@ const GeneralStore = defineStore('General', () => {
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, 
-        snackBar, toast, auth, ctx, html, util,
+        snackBar, toast, bottomMsg, auth, ctx, html, util,
         //home, listHome, //selChanHome,
         //dm, listDm, kindDm,
         //listActivity, kindActivity, //cntActivity, 

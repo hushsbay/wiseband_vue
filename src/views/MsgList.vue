@@ -189,7 +189,7 @@
     const observerTopScroll = () => { //위로 스크롤하는 경우
         observerTop.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {
-                //await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
             } else {
                 return
             }
@@ -200,7 +200,7 @@
     const observerBottomScroll = () => { //아래로 스크롤하는 경우
         observerBottom.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {
-                //await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+                await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
             } else {
                 return
             }
@@ -224,15 +224,15 @@
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
             } else {
-                debugger
+                //debugger
                 setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
                 if (msgidInChan) {
                     await getList({ msgid: msgidInChan, kind: "atHome" })
                 } else {
                     await getList({ lastMsgMstCdt: savLastMsgMstCdt })                    
                 }
-                //observerTopScroll()
-                //observerBottomScroll()
+                observerTopScroll()
+                observerBottomScroll()
                 try { 
                     inEditor.value.focus() 
                 } catch {}
@@ -246,15 +246,15 @@
         if (mounting) {
             mounting = false
         } else {
-            debugger
+            //debugger
             console.log("Activated..................................." + route.fullPath)
             temp = hush.util.getRnd() + 'Activated'
             if (hasProp()) {
                 setBasicInfoInProp()
             } else {
                 setBasicInfo()
-                //observerTopScroll()
-                //observerBottomScroll()      
+                observerTopScroll()
+                observerBottomScroll()      
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
@@ -527,6 +527,7 @@
 
     async function getMsg(addedParam, verbose) {
         try {
+            debugger
             let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryMsg", param)
@@ -556,6 +557,7 @@
 
     async function qryAction(addedParam) {
         try {
+            debugger
             let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryAction", param)
@@ -569,6 +571,7 @@
 
     async function qryActionForUser(addedParam) {
         try {
+            debugger
             let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryActionForUser", param)
@@ -699,11 +702,13 @@
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
         readMsgToBeSeen()
+        console.log("readMsgToBeSeen:"+"==="+prevScrollY+"==="+prevScrollHeight)
         if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         saveCurScrollY(prevScrollY)
     }
 
     async function refreshMsgDtlWithQryAction(msgid) {
+        debugger
         let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
         if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
         const item = msglist.value.find(function(row) { return row.MSGID == msgid })
@@ -711,7 +716,8 @@
     }
 
     async function updateWithNewKind(msgid, oldKind, newKind) {
-        try {            
+        try { 
+            debugger           
             const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -748,7 +754,8 @@
     }
 
     async function updateAllWithNewKind(oldKind, newKind) {
-        try {            
+        try {     
+            debugger       
             const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -768,10 +775,11 @@
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
+        debugger
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
         if (!eleTop) {
             return
-        } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음 =>
+        } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
             setTimeout(function() { readMsgToBeSeen() }, 500)
         } else {
             const idTop = eleTop.id
@@ -1444,6 +1452,7 @@
 
     async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
         try {
+            debugger
             if (kind == "notyet") return //react typ = checked, done, watching
             const rq = { chanid: chanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
@@ -1457,6 +1466,7 @@
 
     async function changeAction(msgid, kind, newKind) { //changeAction은 보안상 크게 문제없는 액션만 처리하기로 함 : newKind 없으면 서버에서 kind로만 판단해 처리
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
+            debugger
             let jobIfExist = "" //데이터가 있을 경우에 한해 delete면 지우고 delete가 아닌 값이면 그 값으로 update하면 됨
             if (kind == 'later' || kind == 'stored' || kind == 'finished' || kind == 'fixed') {
                 jobIfExist = (!newKind) ? "delete" : newKind
@@ -2037,9 +2047,12 @@
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
     .editorMenu:hover { background:lightgray }
     .editorMenu:active { background:var(--active-color) }
-    .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
+    /*.saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
     .saveMenu:hover { opacity:0.5 }
-    .saveMenu:active { background:darkblue;opacity:1.0 }
+    .saveMenu:active { background:darkblue;opacity:1.0 }*/
+    .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:#3B693B;border-radius:5px }
+    .saveMenu:hover { opacity:0.8 }
+    .saveMenu:active { opacity:0.6 }
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}

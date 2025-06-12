@@ -232,6 +232,9 @@
                     </router-view>
                 </div>
                 <div class="footer">
+                    <div class="coDotDot">
+                        {{ gst.bottomMsg }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -277,12 +280,12 @@
         overflow:hidden;
     }
     .footer {
-        width:calc(100% - 20px);min-height:40px;margin:auto 0 0 0;padding:0 10px;
-        display:none;align-items:center;
-        background:beige;
+        width:calc(100% - 24px);height:24px;margin:auto 0 0 0;padding:0 10px;
+        display:flex;align-items:center;
+        background:var(-primary-color);color:white
     }
     .menu { 
-        width:55px;min-height:55px;margin:8px 0px; 
+        width:55px;min-height:55px;margin:8px 0; 
         display:flex;flex-direction:column;justify-content:center;align-items:center;
         color:white;cursor:pointer; 
     }

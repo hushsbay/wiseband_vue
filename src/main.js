@@ -39,7 +39,12 @@ axios.defaults.baseURL = domainStr //https://cokes.tistory.com/123, https://inpa
 axios.defaults.withCredentials = true //localhost 2개의 다른 포트시 쿠키 전송안되는 것은 nest main.ts enableCors()도 필요
 axios.interceptors.request.use(
     function (config) {
-        gst.util.setToast(hush.cons.toastMsg, true) //clear는 axios response interceptor에 구현해도 되나 chkAxiosCode in gst에 이미 구현되어 있어 그대로 둠
+        console.log("main.js axios config : " + config.url + " ::: " + JSON.stringify(config.data))
+        if (CountQueuingStrategy.url == "/chanmsg/qry") {
+            gst.bottomMsg = hush.cons.toastMsg
+        } else {
+            gst.util.setToast(hush.cons.toastMsg, true) //clear는 axios response interceptor에 구현해도 되나 chkAxiosCode in gst에 이미 구현되어 있어 그대로 둠
+        }
         return config
     }, function (error) { 
         return Promise.reject(error) 
