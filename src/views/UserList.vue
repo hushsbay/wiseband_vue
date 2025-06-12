@@ -224,13 +224,13 @@
             } else {
                 const row = arr[0] //row.USERID is one of key
                 const rq = { crud: "U", GR_ID: grId, USERID: row.USERID }
-                if (row.SYNC != "Y") {                
-                    rq.USERNM = rowUsernm.value
+                //if (row.SYNC != "Y") {                
                     rq.ORG = rowOrg.value
                     rq.JOB = rowJob.value
                     rq.EMAIL = rowEmail.value
                     rq.TELNO = rowTelno.value
-                }
+                //}
+                rq.USERNM = rowUsernm.value
                 rq.KIND = rowKind.value
                 rq.RMKS = rowRmks.value                
                 const res = await axios.post("/user/saveMember", rq)
