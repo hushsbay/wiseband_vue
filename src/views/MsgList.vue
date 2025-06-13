@@ -66,6 +66,7 @@
     const editorId = hasProp() ? "msgContent_prop" : "msgContent"
 
     function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
+        if (hasProp()) return
         if (thread.value.msgid) {
             thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
             setWidthForThread(null, "close")            
@@ -88,14 +89,14 @@
 
     function setWidthForThread(openWith, type) { //openWith : 향후 마우스 드래그나 버튼 방식으로 넓이 조정 가능하도록 하기 위함
         if (type == "close") {
-            widthChanCenter.value = 'calc(100% - 20px)'
             widthChanRight.value = '0px'
+            widthChanCenter.value = 'calc(100% - 20px)'            
         } else {
             if (openWith) {
                 //위 설명 참조
             } else {
-                widthChanCenter.value = 'calc(100% - 620px)'
-                widthChanRight.value = '600px'
+                widthChanRight.value = '450px'
+                widthChanCenter.value = 'calc(100% - 460px)'                
             }
         }
     }
@@ -122,7 +123,7 @@
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
-    const MAX_PICTURE_CNT = 11, adminShowID = ref(false)
+    const MAX_PICTURE_CNT = 10, adminShowID = ref(false)
     const g_userid = gst.auth.getCookie("userid")
     let mounting = true, appType
     
@@ -288,34 +289,12 @@
 
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
-        gst.ctx.menu = [
-            { nm: "새창에서 열기", func: function(item, idx) {
-
-            }},
-            { nm: "정보 보기", func: function(item, idx) {
-                
-            }},
-            { nm: "링크 복사", func: function(item, idx) {
-                
-            }},
-            { nm: "설정", func: function(item, idx) {
-                
-            }},
-            { nm: "알림 변경", func: function(item, idx) {
-                
-            }},
-            { nm: "즐겨찾기", func: function(item, idx) {
-                
-            }},
+        gst.ctx.menu = [            
             { nm: "나가기", color: 'red', func: function(item, idx) {
                 
             }}
         ]
         gst.ctx.show(e)
-    }
-
-    function chanProperty() {
-        alert("hahaha")
     }
 
     async function listMsg(kind) {
@@ -517,7 +496,10 @@
             } else if (firstMsgMstCdt) {
                 //그냥 두면 됨
             }
-            readMsgToBeSeen()
+            setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
+                //방안: afterScrolled이 true이면 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 false일 경우만 호출하기로 함 : /chanmsg/updateWithNewKind 참조
+                if (!afterScrolled.value) readMsgToBeSeen()
+            }, 2000)
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -584,9 +566,10 @@
     }
 
     function memProfile(e, row) {
-        gst.ctx.data.header = row.AUTHORNM
+        const imgUrl = (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) ? chandtlObj.value[row.USERID].url : gst.html.getImageUrl('user.png')
+        gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.AUTHORNM
         gst.ctx.menu = [
-            { nm: "메시지 보내기", func: function(item, idx) {
+            { nm: "DM 열기", func: function() {
                 
             }},
             { nm: "VIP로 설정", func: function(item, idx) {
@@ -618,39 +601,23 @@
         }
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "반응 추가", img: "dimgray_emoti.png", func: function(item, idx) {
-                alert(JSON.stringify(row))
-            }},
-            { nm: "스레드(댓글)", img: "dimgray_thread.png", func: function(item, idx) {
-                
-            }},
-            { nm: "메시지 전달", img: "dimgray_forward.png", func: function(item, idx) {
-                
-            }},
             { nm: textRead, func: function(item, idx) {
                 updateWithNewKind(row.MSGID, oldKind, newKind)
             }},
-            { nm: "리마인더 받기", child: [
-                { nm: "1시간 후", func: function(item, idx) { 
-                    alert(item.nm+"@@@@"+idx)
-                }},
-                { nm: "내일", func: function(item, idx) { 
-                    
-                }},
-                { nm: "다음 주", func: function(item, idx) { 
-                    
-                }},
-                { nm: "사용자 지정", func: function(item, idx) { 
-                    
-                }}                
-            ]},
-            { nm: "새 댓글시 알림 받기", func: function(item, idx) {
-                
-            }},
-            { nm: "채널에 고정", func: function(item, idx) {
-                
-            }},
-            { nm: "링크로 복사", func: function(item, idx) {
+            // { nm: "리마인더 받기", child: [
+            //     { nm: "1시간 후", func: function(item, idx) { 
+            //         
+            //     }},
+            //     { nm: "내일", func: function(item, idx) { 
+            //     }},
+            //     { nm: "다음 주", func: function(item, idx) { 
+            //     }},
+            //     { nm: "사용자 지정", func: function(item, idx) { 
+            //     }}                
+            // ]},
+            // { nm: "새 댓글시 알림 받기", func: function(item, idx) { //무조건 알림 받기가 기본
+            // }},
+            { nm: "메시지 링크로 복사", func: function(item, idx) {
                 
             }},
             { nm: "메시지 편집", func: function(item, idx) {
@@ -716,8 +683,8 @@
     }
 
     async function updateWithNewKind(msgid, oldKind, newKind) {
-        try { 
-            debugger           
+        try {
+            if (msgid == "20250529164700161926024750") debugger
             const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -775,12 +742,11 @@
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
-        debugger
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
         if (!eleTop) {
             return
         } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
-            setTimeout(function() { readMsgToBeSeen() }, 500)
+            setTimeout(function() { readMsgToBeSeen() }, 500) //토스트를 bottomMsg로 대체해서 여기 올 경우는 없을 것이나 그대로 둠
         } else {
             const idTop = eleTop.id
             let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
@@ -806,6 +772,7 @@
                         if (ele) {
                             const rect = ele.getBoundingClientRect()
                             if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
+                                debugger
                                 updateWithNewKind(msgid, "notyet", "read") //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
                             }
                         }
@@ -1043,15 +1010,17 @@
     }
 
     function procMention(e, row) {
-        let imgUrl
-        if (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) {
-            imgUrl = chandtlObj.value[row.USERID].url
-        } else {
-            imgUrl = gst.html.getImageUrl('user.png')
-        }
-        gst.ctx.data.header = "<img src='" + imgUrl + "' style='width:32px;height:32px'><span style='margin-left:5px'>" + row.USERNM + "</span>"
+        const imgUrl = (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) ? chandtlObj.value[row.USERID].url : gst.html.getImageUrl('user.png')
+        gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.USERNM
+        // let imgUrl
+        // if (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) {
+        //     imgUrl = chandtlObj.value[row.USERID].url
+        // } else {
+        //     imgUrl = gst.html.getImageUrl('user.png')
+        // }
+        // gst.ctx.data.header = "<img src='" + imgUrl + "' style='width:32px;height:32px'><span style='margin-left:5px'>" + row.USERNM + "</span>"
         gst.ctx.menu = [
-            { nm: "DM으로 이동", func: function() {
+            { nm: "DM 열기", func: function() {
                 
             }},
             { nm: "VIP 설정", func: function() {
@@ -1680,267 +1649,273 @@
 </script>
 
 <template>
-<div class="chan_main">
-    <div class="chan_center" :style="{ width: widthChanCenter }">
-        <div class="chan_center_header" id="chan_center_header">
-            <div class="chan_center_header_left">
-                <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
-                <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
-                <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
-                <div v-else style="display:flex;align-items:center">                    
-                    <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
-                    <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
-                </div>
-                <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span> 
-            </div>
-            <div class="chan_center_header_right">
-                <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold"
-                    @click="chanProperty('member')">
-                    <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
-                        <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+    <div class="chan_main">
+        <div class="chan_center" :style="{ width: widthChanCenter }">
+            <div class="chan_center_header" id="chan_center_header">
+                <div class="chan_center_header_left">
+                    <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
+                    <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
+                    <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
+                    <div v-else style="display:flex;align-items:center">                    
+                        <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
+                        <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
                     </div>
-                    <span>{{ chandtl.length }}</span>
+                    <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span> 
                 </div>
-                <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
-                    <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
-                </div>
-                <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
-                    <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => evClick({ type: 'close' })">
-                </div>
-            </div>
-        </div>
-        <div v-if="!hasProp()" class="chan_center_nav" id="chan_center_nav">
-            <div class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
-                <span style="margin-left:5px;font-weight:bold">메시지</span> 
-            </div>
-            <div class="topMenu" :class="listMsgSel == 'notyet' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('notyet')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_notyet.png')">
-                <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
-            </div>
-            <div class="topMenu" :class="listMsgSel == 'unread' ? 'list_msg_sel' : 'list_msg_unsel'"  @click="listMsg('unread')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_unread.png')">
-                <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
-            </div>
-            <div class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_msg.png')">
-                <span style="margin-left:5px;font-weight:bold">검색</span> 
-            </div>
-            <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_file.png')">
-                <span style="margin-left:5px;font-weight:bold">파일</span> 
-            </div>
-            <div class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
-                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
-                <span style="margin-left:5px;font-weight:bold">이미지</span> 
-            </div>
-            <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
-            <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
-                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span>
-            <span v-show="listMsgSel == 'unread'" @click="updateAllWithNewKind('unread', 'read')"
-                  style="padding:2px;margin-left:20px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span>
-        </div> 
-        <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
-            <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
-            <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
-                :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
-                @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
-                <div style="display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
-                    <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
-                        class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row)">
-                    <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)">
-                    <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
-                    <span v-if="vipStr.includes(row.AUTHORID)" 
-                          style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span>
-                    <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
-                    <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
-                    <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
-                        아직 안읽은 메시지입니다. {{ row.firstNotYet == "child" ? "(댓글)" : "" }}
-                    </span>
-                </div>
-                <div style="width:100%;display:flex;margin:10px 0">
-                    <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
-                        <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
-                        <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
-                        <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                <div class="chan_center_header_right">
+                    <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
+                        <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
+                            <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                        </div>
+                        <span>{{ chandtl.length }}</span>
                     </div>
-                    <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
-                </div>
-                <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
-                <div class="msg_body_sub"><!-- 반응, 댓글 -->
-                    <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                        <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                        <span style="margin-left:3px">{{ row1.CNT}}</span>
+                    <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                        <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
                     </div>
-                    <!-- 나중에 정리되면 여기 열고 위에 닫기 <div v-for="(row1, idx1) in row.msgdtl">
-                        <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                            <span style="margin-left:3px">{{ row1.CNT}}</span>
-                        </div>
-                    </div> -->
-                    <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
-                        <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
-                    </div>     
-                    <div v-if="row.reply.length > 0" class="replyAct" @click="openThread(row.MSGID)">
-                        <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center">
-                            <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
-                                class="coImg18" style="border-radius:9px">
-                            <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
-                        </div>
-                        <div v-if="row.reply.length < row.replyinfo[0].CNT_BY_USER" style="display:flex;align-items:center;margin-left:2px">
-                            ..{{ row.replyinfo[0].CNT_BY_USER }}명
-                        </div>
-                        <div style="margin:0 5px;display:flex;align-items:center">
-                            <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
-                            <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
-                            <span style="margin:0 4px;color:dimgray">최근 :</span>
-                            <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
-                            <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
-                        </div>
+                    <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                        <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => evClick({ type: 'close' })">
                     </div>
                 </div>
-                <div class="msg_body_sub"><!-- Mention -->
-                    <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
-                        <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
-                        @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
-                            @{{ row1.USERNM }}
+            </div>
+            <div v-if="!hasProp()" class="chan_center_nav" id="chan_center_nav">
+                <div class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
+                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
+                    <span style="margin-left:5px;font-weight:bold">메시지</span> 
+                </div>
+                <div class="topMenu" :class="listMsgSel == 'notyet' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('notyet')">
+                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_notyet.png')">
+                    <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
+                </div>
+                <div class="topMenu" :class="listMsgSel == 'unread' ? 'list_msg_sel' : 'list_msg_unsel'"  @click="listMsg('unread')">
+                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_unread.png')">
+                    <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
+                </div>
+                <div class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
+                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_msg.png')">
+                    <span style="margin-left:5px;font-weight:bold">검색</span> 
+                </div>
+                <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
+                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_file.png')">
+                    <span style="margin-left:5px;font-weight:bold">파일</span> 
+                </div>
+                <div class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
+                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
+                    <span style="margin-left:5px;font-weight:bold">이미지</span> 
+                </div>
+                <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
+                <!-- <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
+                    style="padding:2px;margin-left:15px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span>
+                <span v-show="listMsgSel == 'unread'" @click="updateAllWithNewKind('unread', 'read')"
+                    style="padding:2px;margin-left:15px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span> -->
+                <div v-show="listMsgSel == 'notyet'" class="coImgBtn" @click="updateAllWithNewKind('notyet', 'read')" style="margin:0 0 4px 12px">
+                    <span class="coImgSpn">모두읽음처리</span>
+                </div>
+                <div v-show="listMsgSel == 'unread'" class="coImgBtn" @click="updateAllWithNewKind('unread', 'read')" style="margin:0 0 4px 12px">
+                    <span class="coImgSpn">모두읽음처리</span>
+                </div>
+            </div> 
+            <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
+                <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+                <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
+                    :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
+                    @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
+                    <div style="display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
+                        <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
+                            class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
+                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
+                        <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
+                        <!-- <span v-if="vipStr.includes(row.AUTHORID)" 
+                            style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span> -->
+                        <span v-if="vipStr.includes(row.AUTHORID)" class="vipMark">VIP</span>
+                        <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
+                        <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
+                        <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
+                            아직 안읽은 메시지입니다. {{ row.firstNotYet == "child" ? "(댓글)" : "" }}
                         </span>
                     </div>
+                    <div style="width:100%;display:flex;margin:10px 0">
+                        <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
+                            <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
+                            <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
+                            <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                        </div>
+                        <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
+                    </div>
+                    <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
+                    <div class="msg_body_sub"><!-- 반응, 댓글 -->
+                        <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                            <span style="margin-left:3px">{{ row1.CNT}}</span>
+                        </div> -->
+                        <div v-for="(row1, idx1) in row.msgdtl">
+                            <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                                <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                                <span style="margin-left:3px">{{ row1.CNT}}</span>
+                            </div>
+                        </div>
+                        <!-- <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
+                        </div>      -->
+                        <div v-if="row.reply.length > 0" class="replyAct" @click="openThread(row.MSGID)">
+                            <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center">
+                                <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
+                                    class="coImg18" style="border-radius:9px">
+                                <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
+                            </div>
+                            <div v-if="row.reply.length < row.replyinfo[0].CNT_BY_USER" style="display:flex;align-items:center;margin-left:2px">
+                                ..{{ row.replyinfo[0].CNT_BY_USER }}명
+                            </div>
+                            <div style="margin:0 5px;display:flex;align-items:center">
+                                <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
+                                <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
+                                <span style="margin:0 4px;color:dimgray">최근 :</span>
+                                <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
+                                <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="msg_body_sub"><!-- Mention -->
+                        <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
+                            <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
+                            @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
+                                @{{ row1.USERNM }}
+                            </span>
+                        </div>
+                    </div>
+                    <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
+                        <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
+                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
+                            <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
+                            <div v-show="row5.hover" class="msg_file_seemore">
+                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                            </div>
+                        </div>                
+                    </div>
+                    <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
+                        <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
+                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)">
+                            <div style="height:100%;display:flex;align-items:center">
+                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
+                                <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
+                            </div>
+                            <div v-show="row5.hover" class="msg_file_seemore">
+                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
+                        <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
+                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
+                            <div style="height:100%;display:flex;align-items:center">
+                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
+                                <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
+                            </div>
+                            <div v-show="row5.hover" class="msg_file_seemore">
+                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                            </div>
+                        </div>
+                    </div>
+                    <div v-show="row.hover" class="msg_proc">
+                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watching')"></span>
+                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
+                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
+                        <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
+                        <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
+                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span>
+                        <span class="procAct">
+                            <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
+                        </span>
+                        <span class="procAct">
+                            <img class="coImg18" :src="gst.html.getImageUrl(!row.act_fixed ? 'dimgray_fixed.png' : 'violet_fixed.png')" title="고정" @click="changeAction(row.MSGID, 'fixed')">
+                        </span>
+                        <span class="procAct">
+                            <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
+                        </span>                    
+                    </div>
                 </div>
-                <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
-                    <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
-                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
-                        <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
-                        <div v-show="row5.hover" class="msg_file_seemore">
-                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
+                    <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
+                </div>
+                <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+            </div>
+            <div class="chan_center_footer">
+                <div class="editor_header">
+                    <div v-if="editMsgId" style="margin-left:10px;display:flex;align-items:center">
+                        <div class="btn" @click="saveMsg" style="margin-right:10px">저장</div>
+                        <div class="btn" @click="cancelMsg">취소</div>
+                    </div>
+                    <div v-else class="saveMenu" @click="saveMsg">
+                        <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
+                    </div>
+                    <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_addlink.png')" 
+                        title="링크추가" @click="uploadLink('addlink')">
+                    <span v-if="hasProp()">
+                        <input v-if="!editMsgId" id="file_upload_prop" type=file multiple hidden @change="uploadFile" />
+                        <label v-if="!editMsgId" for="file_upload_prop">
+                            <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
+                        </label>
+                    </span>
+                    <span v-else>
+                        <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
+                        <label v-if="!editMsgId" for="file_upload">
+                            <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
+                        </label>
+                    </span>
+                    <div style="width:8px;height:20px;margin-left:12px;border-left:1px solid dimgray"></div>
+                    <!-- <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" 
+                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="addEmoti()"> -->
+                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_makelink.png')" title="링크로변환"
+                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="makeLink()">
+                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게"
+                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('B')">
+                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
+                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('S')">
+                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
+                        @click="htmlView()"><!--개발자사용-->
+                </div>
+                <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                    @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                </div>
+                <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                    @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                </div>
+                <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
+                <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
+                    <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row, 'temp')" class="msg_image_each">
+                        <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
+                        <div v-show="row.hover" class="msg_file_del">
+                            <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('I', 'temp', idx)">
                         </div>
                     </div>                
                 </div>
-                <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
-                    <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
-                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)">
-                        <div style="height:100%;display:flex;align-items:center">
-                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
-                            <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
+                <div v-if="fileBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
+                    <div v-for="(row, idx) in fileBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="downloadFile('temp', row)" class="msg_file_each">
+                        <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ hush.util.formatBytes(row.size) }}</span>)</div>
+                        <div v-show="row.hover" class="msg_file_del">
+                            <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('F', 'temp', idx)">
                         </div>
-                        <div v-show="row5.hover" class="msg_file_seemore">
-                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
-                        </div>
-                    </div>
-                </div>
-                <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
-                    <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
-                        @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
-                        <div style="height:100%;display:flex;align-items:center">
-                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
-                            <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
-                        </div>
-                        <div v-show="row5.hover" class="msg_file_seemore">
-                            <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                    </div><!-- 아래 진행바는 db에 파일저장시엔 용량제한이 있으므로 실제 육안으로는 보이지 않고 파일시스템 저장 적용시 대용량에 한해서 보이게 될 것임 -->
+                    <div v-for="(row, idx) in uploadFileProgress" v-show="row.percent > 0 && row.percent < 100" class="msg_file_each">
+                        <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
+                        <div class="msg_file_seemore">
+                            <span style="padding:0 5px;color:red">{{ row.percent }}%</span>
                         </div>
                     </div>
                 </div>
-                <div v-show="row.hover" class="msg_proc">
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watching')"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span>
-                    <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
-                    <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span>
-                    <span class="procAct">
-                        <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
-                    </span>
-                    <span class="procAct">
-                        <img class="coImg18" :src="gst.html.getImageUrl(!row.act_fixed ? 'dimgray_fixed.png' : 'violet_fixed.png')" title="고정" @click="changeAction(row.MSGID, 'fixed')">
-                    </span>
-                    <span class="procAct">
-                        <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
-                    </span>                    
-                </div>
-            </div>
-            <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
-                <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
-            </div>
-            <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
-        </div>
-        <div class="chan_center_footer">
-            <div class="editor_header">
-                <div v-if="editMsgId" style="margin-left:10px;display:flex;align-items:center">
-                    <div class="btn" @click="saveMsg" style="margin-right:10px">저장</div>
-                    <div class="btn" @click="cancelMsg">취소</div>
-                </div>
-                <div v-else class="saveMenu" @click="saveMsg">
-                    <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
-                </div>
-                <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_addlink.png')" 
-                    title="링크추가" @click="uploadLink('addlink')">
-                <span v-if="hasProp()">
-                    <input v-if="!editMsgId" id="file_upload_prop" type=file multiple hidden @change="uploadFile" />
-                    <label v-if="!editMsgId" for="file_upload_prop">
-                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
-                    </label>
-                </span>
-                <span v-else>
-                    <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
-                    <label v-if="!editMsgId" for="file_upload">
-                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
-                    </label>
-                </span>
-                <div style="width:8px;height:20px;margin-left:12px;border-left:1px solid dimgray"></div>
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" 
-                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="addEmoti()">
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_makelink.png')" title="링크로변환"
-                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="makeLink()">
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게"
-                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('B')">
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
-                    :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('S')">
-                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
-                    @click="htmlView()"><!--개발자사용-->
-            </div>
-            <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
-            </div>
-            <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
-            </div>
-            <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
-            <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
-                <div v-for="(row, idx) in imgBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="showImage(row, 'temp')" class="msg_image_each">
-                    <img :src="row.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row)">
-                    <div v-show="row.hover" class="msg_file_del">
-                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('I', 'temp', idx)">
-                    </div>
-                </div>                
-            </div>
-            <div v-if="fileBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
-                <div v-for="(row, idx) in fileBlobArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="downloadFile('temp', row)" class="msg_file_each">
-                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ hush.util.formatBytes(row.size) }}</span>)</div>
-                    <div v-show="row.hover" class="msg_file_del">
-                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('F', 'temp', idx)">
-                    </div>
-                </div><!-- 아래 진행바는 db에 파일저장시엔 용량제한이 있으므로 실제 육안으로는 보이지 않고 파일시스템 저장 적용시 대용량에 한해서 보이게 될 것임 -->
-                <div v-for="(row, idx) in uploadFileProgress" v-show="row.percent > 0 && row.percent < 100" class="msg_file_each">
-                    <div><span style="margin-right:3px">{{ row.name }}</span>(<span>{{ row.size }}</span>)</div>
-                    <div class="msg_file_seemore">
-                        <span style="padding:0 5px;color:red">{{ row.percent }}%</span>
-                    </div>
-                </div>
-            </div>
-            <div v-if="linkArr.length > 0 && !editMsgId" class="msg_body_blob">
-                <div v-for="(row, idx) in linkArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="openLink(row.url)" class="msg_file_each">
-                    <div><span style="margin-right:3px;color:#005192">{{ row.text }}</span></div>
-                    <div v-show="row.hover" class="msg_file_del">
-                        <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('L', 'temp', idx)">
+                <div v-if="linkArr.length > 0 && !editMsgId" class="msg_body_blob">
+                    <div v-for="(row, idx) in linkArr" @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @click="openLink(row.url)" class="msg_file_each">
+                        <div><span style="margin-right:3px;color:#005192">{{ row.text }}</span></div>
+                        <div v-show="row.hover" class="msg_file_del">
+                            <img class="coImg14" :src="gst.html.getImageUrl('close.png')" @click.stop="delBlob('L', 'temp', idx)">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
+            <msg-list :data="thread" @ev-click="clickFromProp" ref="msglistRef"></msg-list>
+        </div>  
     </div>
-    <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
-        <msg-list :data="thread" @ev-click="clickFromProp" ref="msglistRef"></msg-list>
-    </div>  
-</div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-image ref="imgPopupRef" :param="imgParam">
         <img :src="imgPopupUrl" :style='imgPopupStyle'>
@@ -2031,7 +2006,7 @@
         width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
     }
     .chan_right {
-        height:100%;border-left:1px solid var(--second-color); /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
+        height:100%;border-left:var(--border-lg) /* 여기에 다시 MsgList.vue가 들어오므로 chan_center class를 염두에 둬야 함 padding: 0 20px;display:none;flex-direction:column;*/
     }
     .topMenu { cursor:pointer }
     .topMenu:hover { background:whitesmoke;font-weight:bold }
@@ -2057,4 +2032,5 @@
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
     .mynotyet { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:orange;color:white;font-size:12px;padding:4px;margin-left:10px }
+    .vipMark { margin-left:5px;padding:1px 2px 2px 2px;font-size:10px;background:black;color:white;border-radius:5px }
 </style>

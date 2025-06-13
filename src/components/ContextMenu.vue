@@ -164,7 +164,7 @@
     }
 
     .popupHeader {
-        width:calc(100% - 12px);height:30px;padding:6px;
+        width:calc(100% - 10px);height:30px;padding:5px 5px;
         display:flex;justify-content:space-between;align-items:center;
         border-bottom:2px solid var(--border-color)
     }
