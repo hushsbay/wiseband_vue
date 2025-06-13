@@ -339,8 +339,8 @@
             </div>
         </div>
     </div>
-    <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
-    <div v-if="listHome.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
+    <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer><!--바로 아래 min,max아니면 스레드 열고 닫을 때마다 미세하게 넓이가 고정되지 않음-->
+    <div v-if="listHome.length > 0" id="chan_body" :style="{ minWidth: chanMainWidth, maxWidth: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>

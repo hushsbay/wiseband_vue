@@ -96,8 +96,8 @@
             if (openWith) {
                 //위 설명 참조
             } else {
-                widthChanRight.value = '450px'
-                widthChanCenter.value = 'calc(100% - 460px)'                
+                widthChanRight.value = '500px'
+                widthChanCenter.value = 'calc(100% - 520px)'                
             }
         }
     }
@@ -1746,7 +1746,7 @@
                 <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
                     :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                     @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
-                    <div style="display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
+                    <div style="width:100%;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
                         <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
                             class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
                         <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
@@ -1766,7 +1766,9 @@
                             <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
                             <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                         </div>
-                        <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
+                        <div style="width:calc(100% - 40px);overflow-x:auto">
+                            <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
+                        </div>
                     </div>
                     <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                     <div class="msg_body_sub"><!-- 반응, 댓글 -->
@@ -1987,7 +1989,7 @@
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
-        position:relative;display:flex;flex-direction:column;margin:5px 0 0 0;
+        width:calc(100% - 20px);display:flex;flex-direction:column;margin:5px 0 0 0; /*position:relative;*/
     }
     .msg_body_sub {
         display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
@@ -2004,8 +2006,8 @@
     .msg_body_blob {
         margin-bottom:5px;padding-left:8px;display:flex;flex-wrap:wrap;justify-content:flex-start
     }
-    .msg_file_each {
-        position:relative;min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    .msg_file_each { /*position:relative;*/
+        min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_file_each:active { background:lightsteelblue }
     .msg_file_seemore {
@@ -2014,8 +2016,8 @@
     .msg_file_del {
         position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;background:beige
     }
-    .msg_image_each {
-        position:relative;width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    .msg_image_each {/*position:relative;*/
+        width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_proc {
         position:absolute;height:20px;right:3px;top:1px;padding:5px 0 5px 10px;z-index:8888;
