@@ -5,7 +5,7 @@
 
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
-    import PopupList from "/src/components/PopupList.vue"
+    import PopupSidemenu from "/src/components/PopupSidemenu.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
 
     const gst = GeneralStore()
@@ -239,7 +239,7 @@
             </div>
         </div>
     </div>
-    <popup-list :popupOn="popupMenuOn" :popupPos="popupMenuPos" :list="listPopupMenu" :popupData="popupData" @ev-click="sideClick" @ev-leave="popupMenuOn=false"></popup-list> 
+    <popup-sidemenu :popupOn="popupMenuOn" :popupPos="popupMenuPos" :list="listPopupMenu" :popupData="popupData" @ev-click="sideClick" @ev-leave="popupMenuOn=false"></popup-sidemenu> 
     <media-search ref="mediaPopupRef"></media-search>
 </template>
 
