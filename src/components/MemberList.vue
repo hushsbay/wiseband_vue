@@ -27,6 +27,7 @@
         memberlist.value = []
         newMember()
         chanNm.value = ""
+        masternm.value = ""
         if (appType == "chan") {
             if (chanId == "new") {
                 grId = strChannm //그룹 아이디
@@ -70,7 +71,7 @@
             if (onGoingGetList) return
             onGoingGetList = true
             let param = { chanid: chanId }
-            const res = await axios.post("/chanmsg/qryChanDmWithMemberList", param)
+            const res = await axios.post("/chanmsg/qryChanMstDtl", param)
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
                 onGoingGetList = false                
@@ -132,6 +133,7 @@
             gst.util.scrollIntoView(memberRow, brr[0].USERID)
         }
         if (appType == "dm") evToPanel("update")
+        evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
         if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
     }
 
@@ -230,6 +232,7 @@
             newMember()
             await getList()
             if (appType == "dm") evToPanel("update")
+            evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -247,6 +250,7 @@
                 evToPanel("create")
             } else {
                 evToPanel("update")
+                evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
             }
             return true
         } catch (ex) { 

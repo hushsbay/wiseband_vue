@@ -44,6 +44,11 @@
         } else if (kind == "deleteMsg") {
             const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
             if (idx > -1) msglist.value.splice(idx, 1)
+        } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
+            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId })
+            const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
+            if (!rs) return
+            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
         }
     }
 
@@ -325,6 +330,24 @@
         return (minuteDiff <= 1) ? true : false
     }
 
+    function setChanMstDtl(chanmstParam, chandtlParam) {
+        document.title = chanmstParam.CHANNM + " [채널-" + temp + "]"
+        grnm.value = chanmstParam.GR_NM
+        chanNm.value = chanmstParam.CHANNM
+        chanImg.value = gst.util.getChanImg(chanmstParam.TYP, chanmstParam.STATE)
+        chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
+        chanmemFullExceptMe.value = []
+        const len = chandtlParam.length
+        for (let i = 0; i < len; i++) {
+            const row = chandtlParam[i]    
+            row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+            chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
+            if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+            if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
+        }
+        chandtl.value = chandtlParam
+    }
+
     //chanid는 기본 param
     //1) lastMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) firstMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
@@ -355,21 +378,23 @@
                 return
             }            
             vipStr.value = rs.data.vipStr ?? "none" //데이터 없어서 null일 수도 있음 ##34
-            grnm.value = rs.data.chanmst.GR_NM
-            chanNm.value = rs.data.chanmst.CHANNM
-            chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
-            document.title = chanNm.value + " [채널-" + temp + "]"
-            chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
-            chanmemFullExceptMe.value = []
-            for (let i = 0; i < rs.data.chandtl.length; i++) {
-                const row = rs.data.chandtl[i]    
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
-                if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
-                if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
-            }
-            chandtl.value = rs.data.chandtl
+            // document.title = rs.data.chanmst.CHANNM + " [채널-" + temp + "]"
+            // grnm.value = rs.data.chanmst.GR_NM
+            // chanNm.value = rs.data.chanmst.CHANNM
+            // chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
+            // chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
+            // chanmemFullExceptMe.value = []
+            // const len = rs.data.chandtl.length
+            // for (let i = 0; i < len; i++) {
+            //     const row = rs.data.chandtl[i]    
+            //     row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+            //     chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
+            //     if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+            //     if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
+            // }
+            // chandtl.value = rs.data.chandtl
+            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
             if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
             const msgArr = rs.data.msglist
             if (msgArr.length == 0) {
@@ -643,7 +668,7 @@
             }},
             { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
                 try {
-                    //if (!window.confirm("삭제후엔 복구가 불가능합니다. 진행할까요?")) return
+                    //if (!window.confirm("삭제후 복구가 불가능합니다. 진행할까요?")) return
                     const res = await axios.post("/chanmsg/delMsg", { 
                         msgid: row.MSGID, chanid: chanId
                     })
@@ -1989,7 +2014,7 @@
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
-        width:calc(100% - 20px);display:flex;flex-direction:column;margin:5px 0 0 0; /*position:relative;*/
+        position:relative;width:calc(100% - 20px);display:flex;flex-direction:column;margin:5px 0 0 0; /*position:relative는 floating menu에 필요*/
     }
     .msg_body_sub {
         display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
@@ -2006,8 +2031,8 @@
     .msg_body_blob {
         margin-bottom:5px;padding-left:8px;display:flex;flex-wrap:wrap;justify-content:flex-start
     }
-    .msg_file_each { /*position:relative;*/
-        min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    .msg_file_each { /*position:relative는 floating menu에 필요*/
+        position:relative;min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_file_each:active { background:lightsteelblue }
     .msg_file_seemore {
@@ -2016,8 +2041,8 @@
     .msg_file_del {
         position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;background:beige
     }
-    .msg_image_each {/*position:relative;*/
-        width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
+    .msg_image_each {/*position:relative는 floating menu에 필요*/
+        position:relative;width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
     .msg_proc {
         position:absolute;height:20px;right:3px;top:1px;padding:5px 0 5px 10px;z-index:8888;

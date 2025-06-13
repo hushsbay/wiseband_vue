@@ -29,7 +29,7 @@
     //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 이 경우도 같이 맞춰져야 함
 
     let listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null)
+    let memberlistRef = ref(null), msglistRef = ref(null)
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -98,6 +98,12 @@
                 procChanRowImg(item)
             }
             if (item.CHANID == chanidToChk) {
+                const grIdx = listHome.value.findIndex(grItem => grItem.DEPTH == "1" && grItem.GR_ID == item.GR_ID)
+                if (grIdx > -1) { //채널아이디의 그룹이 펼쳐지지 않았으면 펼치기
+                    const grRow = listHome.value[grIdx]
+                    grRow.exploded = false
+                    chanClick(grRow, grIdx)
+                }
                 gst.util.scrollIntoView(chanRow, item.CHANID)
                 chanClick(item, index, clickNode, chanid)
                 foundIdx = index
@@ -106,6 +112,7 @@
         if (foundIdx == -1) { //최초 실행시 그룹과 채널이 선택이 없는 경우 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 html로 안내하기)
             for (let i = 0; i < listHome.value.length; i++) {
                 const item = listHome.value[i]
+                if (item.CHANID == null) continue //그룹은 있는데 그 아래 채널이 없는 경우 한 행 '없음'이라고 표시됨
                 if (i == 0) item.exploded = false
                 chanClick(item, i, true)
                 if (item.CHANID) break //사용자그룹(1단계)노드를 처리하고 채널(2단계)노드를 만나면 처리후 break
@@ -135,6 +142,7 @@
                         procChanRowImg(item)
                     }
                 })
+                if (row.CHANID == null) return //그룹은 있는데 그 아래 채널이 없는 경우 한 행 '없음'이라고 표시됨
                 if (chanid) { //Back() 경우
                     const row1 = listHome.value.find((item) => item.CHANID == chanid)
                     if (row1) {
@@ -286,8 +294,12 @@
         }
     }
 
-    function handleEvFromMemberList(chanid) { //MemberList에서 실행
-        refreshPanel()
+    function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
+        if (kind == "forwardToBody") {
+            msglistRef.value.procFromParent(kind)
+        } else {
+            refreshPanel()
+        }
     }
 </script>
 
@@ -343,7 +355,7 @@
     <div v-if="listHome.length > 0" id="chan_body" :style="{ minWidth: chanMainWidth, maxWidth: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>
-                <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
     </div>
