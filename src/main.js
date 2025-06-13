@@ -40,7 +40,7 @@ axios.defaults.withCredentials = true //localhost 2개의 다른 포트시 쿠�
 axios.interceptors.request.use(
     function (config) {
         //console.log("main.js axios config : " + config.url + " ::: " + JSON.stringify(config.data))
-        if (config.data.toastMsg) {
+        if (config.data && config.data.toastMsg) {
             gst.util.setToast(hush.cons.toastMsg, true) //clear는 axios response interceptor에 구현해도 되나 chkAxiosCode in gst에 이미 구현되어 있어 그대로 둠
         } else {
             gst.bottomMsg = config.url + " :: " + JSON.stringify(config.data)

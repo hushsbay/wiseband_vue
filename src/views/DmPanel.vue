@@ -14,6 +14,13 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    const props = defineProps({ fromPopupChanDm: String })
+    const emits = defineEmits(["ev-click"])
+
+    function listRowClick(row) {
+        emits("ev-click", "dm", row.CHANID)
+    }
+
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     let notyetChk = ref(false), searchWord = ref('') //msglistRef = ref(null), 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
@@ -202,7 +209,11 @@
             } else {
                 row.sel = true
                 localStorage.wiseband_lastsel_dmchanid = row.CHANID
-                if (clickNode) gst.util.goMsgList('dm_body', { chanid: row.CHANID })
+                if (props.fromPopupChanDm == "Y") {
+                    listRowClick(row)
+                } else {
+                    if (clickNode) gst.util.goMsgList('dm_body', { chanid: row.CHANID })
+                }
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -327,7 +338,7 @@
 </script>
 
 <template>
-    <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
+    <div class="chan_side" id="chan_side" :style="{ width: props.fromPopupChanDm ? '100%' : chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">DM</div>
             <div class="chan_side_top_right">
@@ -335,7 +346,7 @@
                     <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:80px;margin-right:8px" placeholder="멤버" />
                     <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
-                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="DM방 만들기" @click="newDm()">
+                    <img v-if="!props.fromPopupChanDm" class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="DM방 만들기" @click="newDm()">
                 </div>
             </div>
         </div>

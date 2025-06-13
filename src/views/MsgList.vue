@@ -8,6 +8,7 @@
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
+    import PopupChanDm from "/src/components/PopupChanDm.vue"
     import MemberPiceach from "/src/components/MemberPiceach.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
             
@@ -134,7 +135,7 @@
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
-    const mediaPopupRef = ref(null)
+    const mediaPopupRef = ref(null), popupChanDmRef = ref(null)
         
     let temp = ''
     let sideMenu, chanId, msgidInChan
@@ -149,6 +150,8 @@
 
     let savFirstMsgMstCdt = hush.cons.cdtAtFirst, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 오래된 일시와 최근 일시
     let onGoingGetList = false, prevScrollY, prevScrollHeight //, getAlsoWhenDown = ""
+
+    const popupChanDmOn = ref(false), listPopupChanDm = ref([]), dataPopupChanDm = ref({})
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -620,6 +623,12 @@
             // ]},
             // { nm: "새 댓글시 알림 받기", func: function(item, idx) { //무조건 알림 받기가 기본
             // }},
+            { nm: "채널로 메시지 전달", func: function(item, idx) {
+                forwardMsg("home", row.MSGID)
+            }},
+            { nm: "DM으로 메시지 전달", func: function(item, idx) {
+                forwardMsg("dm", row.MSGID)
+            }},
             { nm: "메시지 링크로 복사", func: function(item, idx) {
                 
             }},
@@ -1318,7 +1327,7 @@
         inEditor.value.focus()
         //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
         return
-        }
+    }
     
     async function okPopup(kind) {
         if (kind == "addlink" || kind == "makelink") {
@@ -1436,8 +1445,18 @@
         }
     }
 
-    async function forwardMsg(msgid) { //내가 편집(발송)가능한 채널과 DM방중에서 1개를 선택해 table에 insert후 해당 패널의 방으로 이동해 바로 보여주기
-        gst.util.goMsgList('home_body', { chanid: "20250122084532918913033403", msgid: "20250403164738102175090528" })
+    // function clickPopupChanDm() {
+    //     alert("111")
+    // }
+
+    function okChanDmPopup(kind, chanid) {
+        alert(kind+"=="+chanid)
+        popupChanDmRef.value.close()
+    }
+
+    async function forwardMsg(kind, msgid) { //내가 편집(발송)가능한 채널과 DM방중에서 1개를 선택해 table에 insert후 해당 패널의 방으로 이동해 바로 보여주기
+        popupChanDmRef.value.open(kind)
+        //gst.util.goMsgList('home_body', { chanid: "20250122084532918913033403", msgid: "20250403164738102175090528" })
         //다른 채널의 메시지가 잘 열림. 그러나 다른 채널이 선택되어 표시되어야 하고 해당 채널이 최종까지 업데이트되어야 하므로 마지막에 구현하기로 함
     }
 
@@ -1829,7 +1848,7 @@
                         <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
                         <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
                         <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
-                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span>
+                        <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span> -->
                         <span class="procAct">
                             <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
                         </span>
@@ -1935,6 +1954,7 @@
             <!-- <span style="margin-top:10px;color:dimgray">링크를 한 필드에만 넣어도 됩니다.</span> -->
         </div>
     </popup-common>
+    <popup-chan-dm ref="popupChanDmRef" @ev-click-chandm="okChanDmPopup"></popup-chan-dm> 
     <media-search ref="mediaPopupRef"></media-search>
 </template>
 

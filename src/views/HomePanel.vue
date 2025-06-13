@@ -13,6 +13,13 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    const props = defineProps({ fromPopupChanDm: String })
+    const emits = defineEmits(["ev-click"])
+
+    function listRowClick(row) {
+        emits("ev-click", "home", row.CHANID)
+    }
+
     //1. HomePanel 상태 정의는 아래와 같음
     //   1) Depth는 1,2 단계만 존재 : 1단계는 사용자그룹 (슬랙의 워크스페이스) 2단계는 채널
     //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
@@ -139,7 +146,11 @@
                     row.sel = true
                     procChanRowImg(row)
                     localStorage.wiseband_lastsel_chanid = row.CHANID
-                    if (clickNode) gst.util.goMsgList('home_body', { chanid: row.CHANID })
+                    if (props.fromPopupChanDm == "Y") {
+                        listRowClick(row)
+                    } else {
+                        if (clickNode) gst.util.goMsgList('home_body', { chanid: row.CHANID })
+                    }
                 }
             }
         } catch (ex) {
@@ -281,7 +292,7 @@
 </script>
 
 <template>
-    <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
+    <div class="chan_side" id="chan_side" :style="{ width: props.fromPopupChanDm ? '100%' : chanSideWidth }">
         <div class="chan_side_top">
             <div class="chan_side_top_left">
                 <select v-model="kind" style="background:var(--second-color);color:var(--second-select-color);border:none" @change="changeKind">
