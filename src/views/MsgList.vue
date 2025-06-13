@@ -289,7 +289,10 @@
 
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
-        gst.ctx.menu = [            
+        gst.ctx.menu = [
+            { nm: "초대", func: function(item, idx) {
+                
+            }}
             { nm: "나가기", color: 'red', func: function(item, idx) {
                 
             }}
@@ -1431,6 +1434,11 @@
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
+    }
+
+    async function forwardMsg(msgid) { //내가 편집(발송)가능한 채널과 DM방중에서 1개를 선택해 table에 insert후 해당 패널의 방으로 이동해 바로 보여주기
+        gst.util.goMsgList('home_body', { chanid: "20250122084532918913033403", msgid: "20250403164738102175090528" })
+        //다른 채널의 메시지가 잘 열림. 그러나 다른 채널이 선택되어 표시되어야 하고 해당 채널이 최종까지 업데이트되어야 하므로 마지막에 구현하기로 함
     }
 
     async function changeAction(msgid, kind, newKind) { //changeAction은 보안상 크게 문제없는 액션만 처리하기로 함 : newKind 없으면 서버에서 kind로만 판단해 처리
