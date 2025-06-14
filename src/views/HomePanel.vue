@@ -110,7 +110,12 @@
             }
         })
         if (foundIdx == -1) { //최초 실행시 그룹과 채널이 선택이 없는 경우 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 html로 안내하기)
-            for (let i = 0; i < listHome.value.length; i++) {
+            const len = listHome.value.length
+            if (len == 0) { //패널에 데이터가 없음
+                gst.util.goMsgList('home_body', { chanid: chanid, msgid: "nodata" })
+                return
+            }
+            for (let i = 0; i < len; i++) {
                 const item = listHome.value[i]
                 if (item.CHANID == null) continue //그룹은 있는데 그 아래 채널이 없는 경우 한 행 '없음'이라고 표시됨
                 if (i == 0) item.exploded = false

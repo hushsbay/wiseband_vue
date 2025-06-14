@@ -24,7 +24,7 @@
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     let notyetChk = ref(false), searchWord = ref('') //msglistRef = ref(null), 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all')
+    let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all'), msglistRef = ref(null)
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시    
     let onGoingGetList = false
 
@@ -308,17 +308,12 @@
     async function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
         if (kind == "update") {
             const row = await getSingleDm(chanid)
-            // listDm.value.forEach((item, index) => {
-            //     if (item.CHANID == row.CHANID) {
-            //         item = row
-            //         gst.util.scrollIntoView(chanRow, row.CHANID)
-            //         dmClick(item, index, true, row.CHANID)
-            //     }
-            // })
             for (let i = 0; i < listDm.value.length; i++) {
                 if (listDm.value[i].CHANID == row.CHANID) {
                     listDm.value[i] = row
-                    //MsgList의 마스터(특히, 멤버목록) 새로고침 필요
+                    listDm.value[i].sel = true
+                    //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 
+                    //home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
                     break
                 }
             }
@@ -326,13 +321,21 @@
             const idx = listDm.value.findIndex((item) => item.CHANID == chanid)
             if (idx == -1) return
             listDm.value.splice(idx, 1)
-            //MsgList의 마스터(특히, 멤버목록) 새로고침(제거) 필요
+            if (listDm.value.length > 0) {
+               dmClick(listDm.value[0], 0, true)
+            } else { //패널에 데이터가 없음
+                gst.util.goMsgList('dm_body', { chanid: chanid, msgid: "nodata" })
+            }
+            //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 
+            //home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
         } else if (kind == "create") {
             const row = await getSingleDm(chanid)
             listDm.value.unshift(row)
             setTimeout(function() { //await nextTick()으로 처리가 안되어, MsgList에서 역으로 뭔가 처리하는 것이 있는지 봐도 없음. 일단 임시방편으로 1초후 처리
                 dmClick(listDm.value[0], 0, true) //이 때 새 라우팅이므로 MsgList의 onMounted()가 당연히 발생함
             }, 1000)
+        } else if (kind == "forwardToBody") {
+            msglistRef.value.procFromParent(kind)
         }
     }
 </script>
@@ -368,7 +371,10 @@
                 <div class="nodeMiddle">
                     <div style="display:flex;align-items:center">
                         <member-piclist :row="row"></member-piclist>
-                        <div style="color:whitesmoke;font-weight:bold;margin-left:8px">{{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}</div>    
+                        <div style="color:whitesmoke;font-weight:bold;margin-left:8px">
+                            {{ row.memcnt > 1 ? row.memnm.join(", ") : "나에게" }}
+                            {{ row.memcnt > hush.cons.picCnt ? '..' : '' }}
+                        </div>    
                     </div>
                 </div>
                 <div style="width:100%">
@@ -389,7 +395,7 @@
     <div v-if="listDm.length > 0" id="chan_body" :style="{ width: chanMainWidth }"> <!--<component ref="msglistRef" -->
         <router-view v-slot="{ Component }">
             <keep-alive>                
-                <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody" />
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody" />
             </keep-alive>
         </router-view>
     </div>

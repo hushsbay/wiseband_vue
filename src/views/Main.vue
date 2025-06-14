@@ -282,7 +282,7 @@
     .footer {
         width:calc(100% - 24px);height:24px;margin:auto 0 0 0;padding:0 10px;
         display:flex;align-items:center;
-        background:var(-primary-color);color:dimgray
+        background:var(-primary-color);color:lightgray
     }
     .menu { 
         width:55px;min-height:55px;margin:8px 0; 

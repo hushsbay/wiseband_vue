@@ -142,9 +142,9 @@
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
     const mediaPopupRef = ref(null), popupChanDmRef = ref(null)
         
-    let temp = ''
+    let subTitle = ''
     let sideMenu, chanId, msgidInChan
-    let grnm = ref(''), chanNm = ref(''), chanImg = ref(''), vipStr = ref('')
+    let grnm = ref(''), chanNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
     let msglist = ref([]), fetchByScrollEnd = ref(false)
 
@@ -225,7 +225,7 @@
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
             gst.util.chkOnMountedTwice(route, 'MsgList')
-            temp = hush.util.getRnd() + 'Mounted'
+            subTitle = hush.util.getRnd() + 'M'
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
             if (appType == "msglist" && route.query.appType) appType = route.query.appType //새창에서열기 또는 링크복사시 arr[2]는 msglist이므로 appType을 다시 가져와야 함
@@ -233,7 +233,6 @@
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
             } else {
-                //debugger
                 setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
                 if (msgidInChan) {
                     await getList({ msgid: msgidInChan, kind: "atHome" })
@@ -255,9 +254,7 @@
         if (mounting) {
             mounting = false
         } else {
-            //debugger
-            console.log("Activated..................................." + route.fullPath)
-            temp = hush.util.getRnd() + 'Activated'
+            subTitle = subTitle.replace("M", "A")
             if (hasProp()) {
                 setBasicInfoInProp()
             } else {
@@ -284,8 +281,14 @@
         sideMenu = gst.selSideMenu
         if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
         if (route.params.chanid) chanId = route.params.chanid
-        const tmpMsgid = route.params.msgid
-        if (tmpMsgid && tmpMsgid != "0") msgidInChan = tmpMsgid //댓글의 msgid일 수도 있음
+        const pMsgid = route.params.msgid
+        if (pMsgid == "nodata") {
+            pageData.value = pMsgid
+        } else if (pMsgid == "0") {
+            //skip
+        } else if (pMsgid) {
+            msgidInChan = pMsgid //댓글의 msgid일 수도 있음
+        } //if (pMsgid && pMsgid != "0") msgidInChan = pMsgid //댓글의 msgid일 수도 있음
     }
 
     function saveCurScrollY(posY) {
@@ -331,7 +334,7 @@
     }
 
     function setChanMstDtl(chanmstParam, chandtlParam) {
-        document.title = chanmstParam.CHANNM + " [채널-" + temp + "]"
+        document.title = chanmstParam.CHANNM + " [채널-" + subTitle + "]"
         grnm.value = chanmstParam.GR_NM
         chanNm.value = chanmstParam.CHANNM
         chanImg.value = gst.util.getChanImg(chanmstParam.TYP, chanmstParam.STATE)
@@ -357,7 +360,7 @@
     //6) kind(notyet or unread)
     async function getList(addedParam) {
         try {
-            if (onGoingGetList) return
+            if (onGoingGetList || pageData.value == "nodata") return
             onGoingGetList = true
             let param = { chanid: chanId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
@@ -540,7 +543,6 @@
 
     async function getMsg(addedParam, verbose) {
         try {
-            debugger
             let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryMsg", param)
@@ -570,7 +572,6 @@
 
     async function qryAction(addedParam) {
         try {
-            debugger
             let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryAction", param)
@@ -584,7 +585,6 @@
 
     async function qryActionForUser(addedParam) {
         try {
-            debugger
             let param = { chanid: chanId } //기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
             const res = await axios.post("/chanmsg/qryActionForUser", param)
@@ -712,7 +712,6 @@
     }
 
     async function refreshMsgDtlWithQryAction(msgid) {
-        debugger
         let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
         if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
         const item = msglist.value.find(function(row) { return row.MSGID == msgid })
@@ -720,8 +719,7 @@
     }
 
     async function updateWithNewKind(msgid, oldKind, newKind) {
-        try {
-            if (msgid == "20250529164700161926024750") debugger
+        try { //if (msgid == "20250529164700161926024750") debugger
             const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -759,7 +757,6 @@
 
     async function updateAllWithNewKind(oldKind, newKind) {
         try {     
-            debugger       
             const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -809,7 +806,6 @@
                         if (ele) {
                             const rect = ele.getBoundingClientRect()
                             if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
-                                debugger
                                 updateWithNewKind(msgid, "notyet", "read") //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
                             }
                         }
@@ -1702,6 +1698,10 @@
 
 <template>
     <div class="chan_main">
+        <div v-if="!hasProp() && pageData=='nodata'" 
+            style="top:0;left:0;width:100%;height:100%;margin-right:-10000px;padding:30px 0 0 30px;background:white;z-index:9999">
+            <span>데이터가 없습니다.<br>왼쪽 패널에서 노드를 클릭하시기 바랍니다.</span>
+        </div>
         <div class="chan_center" :style="{ width: widthChanCenter }">
             <div class="chan_center_header" id="chan_center_header">
                 <div class="chan_center_header_left">
@@ -1709,7 +1709,7 @@
                     <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
                     <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
                     <div v-else style="display:flex;align-items:center">                    
-                        <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.join(", ") }}</div>
+                        <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length > 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
                         <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
                     </div>
                     <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span> 
@@ -1964,11 +1964,11 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div>            
         </div>
         <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
             <msg-list :data="thread" @ev-click="clickFromProp" ref="msglistRef"></msg-list>
-        </div>  
+        </div>        
     </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-image ref="imgPopupRef" :param="imgParam">

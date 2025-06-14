@@ -438,8 +438,8 @@
     input[type=search]:focus { outline:2px solid lightgreen }
     input[type="checkbox"] { min-width:16px;min-height:16px }
     .topMenu { cursor:pointer }
-    .topMenu:hover { background:var(--hover-color);border-radius:5px }
-    .topMenu:active { background:var(--active-color);border-radius:5px }
+    .topMenu:hover { background:var(--hover-color) }
+    .topMenu:active { background:var(--active-color) }
     .tab_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
     .tab_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid whitesmoke; }
     .btn_img { height:18px;padding:1px;display:flex;align-items:center;justify-content:center }

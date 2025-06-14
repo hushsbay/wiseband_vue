@@ -66,7 +66,7 @@ const router = createRouter({
                     component: ActivityPanel,
                     children: [
                         {
-                            path: 'activity_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
+                            path: 'activity_body/:chanid/:msgid',
                             name: 'activity_body',
                             component: MsgList,
                         }
@@ -111,8 +111,8 @@ const router = createRouter({
             ]
         }        
     ],
-    //scrollBehavior는 포기 : overflow:hidden 빼면 가능하다고 하나 구현 어려움
-    //대신 keepalive + onscrollend + onActivated hook에서 더 자유도 높게 해결함
+    //scrollBehavior는 overflow:hidden 빼면 가능하다고 하나 입맛대로 구현이 어려워
+    //keepalive + onscrollend + onActivated hook에서 더 자유도 높게 해결함
 })
 
 router.beforeEach((to, from) => {
