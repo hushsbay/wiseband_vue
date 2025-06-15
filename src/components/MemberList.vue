@@ -60,17 +60,22 @@
     let onGoingGetList = false
         
     let grId
-    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C')
+    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C'), stateSel = ref("A")
     let memberlist = ref([]), chanmemFullExceptMe = ref([]), appType
 
     let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
     let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref(''), rowState = ref('')
+
+    function changeStateSel() {
+        getList(stateSel.value) //여기서만 파라미터로 조회 (로컬스토리지도 필요없음. 사용자가 콤보선택시만 파라미터 사용)
+    }
     
-    async function getList() {
+    async function getList(sel) {
         try {
             if (onGoingGetList) return
             onGoingGetList = true
-            let param = { chanid: chanId }
+            stateSel.value = sel ? sel : "A"
+            let param = { chanid: chanId, state: stateSel.value }
             const res = await axios.post("/chanmsg/qryChanMstDtl", param)
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
@@ -306,12 +311,17 @@
                                     <img v-if="chanId != 'new'" class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
                                     <span v-if="chanId == 'new'">새로 만들기 ({{ appType=='dm' ? "DM" : "채널" }})</span>
                                     <span v-else>
-                                        <span v-if="appType=='dm'">{{ chanmemFullExceptMe.join(", ") }}</span>
+                                        <span v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length > 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</span>
                                         <span v-else>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span>
                                     </span>
                                 </div>
                             </div>
                             <div class="chan_center_header_right">
+                                <select v-model="stateSel" style="margin-right:10px;background:transparent;border:none" @change="changeStateSel">
+                                    <option value="A">모두조회</option>
+                                    <option value="C">초대필요</option>
+                                    <option value="W">참여대기</option>
+                                </select>
                                 <span style="font-weight:bold;margin-right:10px">{{ memberlist.length }}명</span>
                                 <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:5px" @click="close" title="닫기">
                             </div>
@@ -389,7 +399,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div v-if="memberlist.length == 0">
+                            <div v-if="memberlist.length == 0 && stateSel == 'A'">
                                 <div v-if="appType=='chan'" style="width:100%;height:100%;margin-top:50px;display:flex;justify-content:center;word-break:break-all">
                                     채널은 조직내 협의를 통해 생성합니다.<br>
                                     먼저 상단의 채널명과 공개여부를 설정하고<br> 
@@ -499,10 +509,10 @@
         background:whitesmoke;border:1px solid lightgray;border-bottom:none;overflow:hidden
     }
     .chan_center_header_left {
-        width:90%;height:100%;padding-left:5px;display:flex;align-items:center;font-size:18px;font-weight:bold;cursor:pointer
+        width:70%;height:100%;padding-left:5px;display:flex;align-items:center;font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
-        width:10%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
+        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .chan_center_body {
         width:calc(100% - 12px);height:100%;padding:0 5px 0 7px;display:flex;flex-direction:column;flex:1;overflow-y:auto;

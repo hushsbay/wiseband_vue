@@ -301,9 +301,6 @@
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "초대", func: function(item, idx) {
-                
-            }},
             { nm: "나가기", color: 'red', func: function(item, idx) {
                 
             }}

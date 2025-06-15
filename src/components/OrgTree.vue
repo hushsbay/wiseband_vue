@@ -402,7 +402,7 @@
                         </div> -->
                         <div v-if="(mode == 'mygroup' || row.USERID) && (row.KIND=='guest' || row.KIND=='admin')" 
                             style="min-width:36px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">
-                            <span class="kind">{{ row.KIND=='guest' ? '게스트' : '관리자' }}</span>
+                            <span class="kind">{{ row.KIND=='guest' ? '외부인' : '관리자' }}</span>
                         </div>
                         <div v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" 
                             style="min-width:32px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">
