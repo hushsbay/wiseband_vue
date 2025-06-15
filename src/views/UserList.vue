@@ -28,9 +28,9 @@
     let onGoingGetList = false, prevScrollY
         
     let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C')
-    let userlist = ref([])
+    let userlist = ref([]), chkArr = ref([])
 
-    let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
+    let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('member')
     let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref('')
 
     onMounted(async () => {
@@ -118,7 +118,6 @@
             gst.util.setSnack("먼저 그룹이 저장되어야 하고 행선택도 없어야 합니다.", true)
             return
         }
-        debugger
         const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
@@ -164,8 +163,13 @@
         chkEditRow()
     }
 
+    function getCheckedArr() {
+        chkArr.value = userlist.value.filter(item => item.chk)
+        return chkArr.value
+    }
+
     function chkEditRow() {
-        const arr = userlist.value.filter(item => item.chk)
+        const arr = getCheckedArr() //userlist.value.filter(item => item.chk)
         if (arr.length == 1) {
             singleMode.value = 'E' //편집모드
             rowIssync.value = arr[0].SYNC
@@ -185,7 +189,7 @@
             rowOrg.value = ''
             rowJob.value = ''
             rowRmks.value = ''
-            rowKind.value = ''
+            rowKind.value = 'member'
             rowEmail.value = ''
             rowTelno.value = ''
         }
@@ -204,7 +208,7 @@
 
     async function saveMember() {
         try {
-            const arr = userlist.value.filter(item => item.chk)
+            const arr = getCheckedArr() //userlist.value.filter(item => item.chk)
             if (arr.length > 1) {
                 gst.util.setSnack("한 행 이상 선택되었습니다.")
                 return
@@ -255,7 +259,7 @@
 
     async function deleteMember() {
         try {
-            const arr = userlist.value.filter(item => item.chk)
+            const arr = getCheckedArr() //userlist.value.filter(item => item.chk)
             const len = arr.length
             if (len == 0) {
                 gst.util.setSnack("선택한 행이 없습니다.")
@@ -370,9 +374,7 @@
                                 </div>
                             </div>
                             <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">
-                                <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
-                                    {{ row.KIND=='guest' ? '게스트' : '관리자' }}
-                                </span>
+                                <span v-if="row.KIND=='admin'" class="kind">관리자</span>
                                 <span v-if="row.SYNC != 'Y'" class="kind">입력</span>
                             </div>
                         </div>
@@ -421,7 +423,8 @@
                         <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
                         <span class="coImgSpn">삭제</span>
                     </div>
-                    <span style="color:darkblue">신규 : 조직도에 없는 멤버 추가시</span>
+                    <span style="margin-right:5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
+                    <!-- <span style="color:darkblue">신규 : 조직도에 없는 멤버 추가시</span> -->
                 </div>
                 <div style="display:flex;align-items:center;cursor:pointer">
                     <table>
@@ -441,7 +444,7 @@
                                 <td class="tdValue" colspan="2">
                                     <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
                                     <input type="radio" id="admin" value="admin" v-model="rowKind"><label for="admin">Admin</label>
-                                    <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label>
+                                    <!-- <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label> -->
                                 </td>
                             </tr>
                             <tr>

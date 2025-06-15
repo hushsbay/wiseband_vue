@@ -60,7 +60,7 @@
     let onGoingGetList = false
         
     let grId
-    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C'), stateSel = ref("A")
+    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C'), stateSel = ref("A"), chkArr = ref([])
     let memberlist = ref([]), chanmemFullExceptMe = ref([]), appType
 
     let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
@@ -153,8 +153,13 @@
         chkEditRow()
     }
 
+    function getCheckedArr() {
+        chkArr.value = memberlist.value.filter(item => item.chk)
+        return chkArr.value
+    }
+
     function chkEditRow() {
-        const arr = memberlist.value.filter(item => item.chk)
+        const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
         if (arr.length == 1) {
             singleMode.value = 'E' //편집모드
             rowIssync.value = arr[0].SYNC
@@ -195,7 +200,7 @@
 
     async function saveMember() { //신규저장 없음 (멤버는 채널인 경우 내그룹에서 가져오고 DM의 경우는 조직도와 내그룹에서 가져옴)
         try {
-            const arr = memberlist.value.filter(item => item.chk)
+            const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
             if (arr.length > 1) { //기본적으로는 이 경고가 나오지 않아야 함
                 gst.util.setSnack("한 행 이상 선택되었습니다.")
                 return
@@ -221,7 +226,7 @@
 
     async function deleteMember() {
         try {
-            const arr = memberlist.value.filter(item => item.chk)
+            const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
             const len = arr.length
             if (len == 0) {
                 gst.util.setSnack("선택한 행이 없습니다.")
@@ -279,7 +284,7 @@
 
     async function inviteToMember() {
         try {
-            const arr = memberlist.value.filter(item => item.chk)
+            const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
             const len = arr.length
             if (len == 0) {
                 gst.util.setSnack("선택한 행이 없습니다.")
@@ -428,6 +433,7 @@
                                     <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg20">
                                     <span class="coImgSpn">초대</span>
                                 </div>
+                                <span style="margin-right:5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
                             </div>
                             <div style="display:flex;align-items:center;cursor:pointer">
                                 <table>
