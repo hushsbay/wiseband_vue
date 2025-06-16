@@ -1706,7 +1706,7 @@
                     <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
                     <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
                     <div v-else style="display:flex;align-items:center">                    
-                        <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length > 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
+                        <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
                         <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
                     </div>
                     <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span> 

@@ -296,7 +296,7 @@
             listDm.value.splice(idx, 1)
             listDm.value.unshift(row)
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
-            const row = listHome.value.find((item) => item.CHANID == param.chanid)
+            const row = listDm.value.find((item) => item.CHANID == param.chanid)
             if (!row) return
             const res = await axios.post("/menu/qryKindCnt", { chanid: param.chanid, kind: "notyet" })
             const rs = gst.util.chkAxiosCode(res.data)

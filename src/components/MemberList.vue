@@ -53,6 +53,7 @@
     const orgRef = ref(null) //memberlist(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
 
     const g_userid = gst.auth.getCookie("userid")
+    const g_usernm = gst.auth.getCookie("usernm")
     let mounting = true
     
     let kind = ref(''), show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null), state = ref(false)
@@ -97,6 +98,7 @@
                 memberlist.value.push(row)
             }
             onGoingGetList = false
+            if (rs.data.chanidAlready) gst.util.setSnack("동일한 멤버로 구성된 DM방이 이미 존재합니다. 방을 삭제하거나 멤버를 변경해 주시기 바랍니다.", true)
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
@@ -284,19 +286,33 @@
 
     async function inviteToMember() {
         try {
-            const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
+            let arr = [] //const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
+            memberlist.value.forEach(item => {
+                if (item.chk) arr.push(item.USERID)
+            })
             const len = arr.length
             if (len == 0) {
                 gst.util.setSnack("선택한 행이 없습니다.")
                 return
             }
-            if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다. 계속할까요?")) return
-            for (let i = 0; i < len; i++) {
-                const rq = { CHANID: chanId, USERID: arr[i].USERID }
-                const res = await axios.post("/chanmsg/inviteToMember", rq)
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return
+            if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다.\n계속할까요?")) return
+            // for (let i = 0; i < len; i++) {
+            //     const rq = { CHANID: chanId, USERID: arr[i].USERID }
+            //     const res = await axios.post("/chanmsg/inviteToMember", rq)
+            //     const rs = gst.util.chkAxiosCode(res.data)
+            //     if (!rs) return
+            // }
+            let channmStr = ""
+            if (appType == 'dm') {
+                channmStr = (chanmemFullExceptMe.value.length >= 1) ? chanmemFullExceptMe.value.join(", ") + ", " + g_usernm: g_usernm
+            } else {
+                channmStr = chanNm + (grnm ? "[" + grnm+ "]" : "")
             }
+
+            const rq = { CHANID: chanId, CHANNM: channmStr, USERIDS: arr }
+            const res = await axios.post("/chanmsg/inviteToMember", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
             gst.util.setSnack("메일 발송 완료")
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -316,7 +332,7 @@
                                     <img v-if="chanId != 'new'" class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px">
                                     <span v-if="chanId == 'new'">새로 만들기 ({{ appType=='dm' ? "DM" : "채널" }})</span>
                                     <span v-else>
-                                        <span v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length > 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</span>
+                                        <span v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</span>
                                         <span v-else>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span>
                                     </span>
                                 </div>
