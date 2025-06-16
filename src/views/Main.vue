@@ -176,6 +176,10 @@
         gst.auth.logout()
         await goRoute({ name: 'login' }, true)
     }
+
+    function handleEvFromPanel(kind, menu) {
+        alert(kind+"==="+menu)
+    }
 </script>
 
 <template>
@@ -227,7 +231,7 @@
                 <div class="content"><!-- <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList의 $route.fullPath이므로 unique하지 않아 onMounted가 수회 발생 or 무한루프(예:홈 메뉴)-->
                     <router-view v-slot="{ Component }">
                         <keep-alive>                
-                            <component :is="Component" :key="$route.fullPath.split('/')[2]" />
+                            <component :is="Component" :key="$route.fullPath.split('/')[2]" @ev-to-side="handleEvFromPanel"/>
                         </keep-alive>
                     </router-view>
                 </div>

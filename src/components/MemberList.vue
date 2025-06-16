@@ -122,26 +122,33 @@
             if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
         }
         const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
+        let warn = ""
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
             const rq = { crud: "C", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member", SYNC: row.SYNC }
-            const res = await axios.post("/chanmsg/saveChanMember", rq)
-            const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
-            if (rs) brr.push(row) //if (!rs) return //loop내 오류메시지 표시하려면 break가 아닌 return을 사용해야 하나 오류 표시하지 않고 추가 성공한 항목만 담아서 표시함
-        }        
-        await getList()
-        await nextTick()
-        for (let i = 0; i < brr.length; i++) {
-            const row = brr[i]
-            const idx = gst.util.getKeyIndex(memberRow, row.USERID)
-            if (idx > -1) memberlist.value[idx].chk = true
+            const res = await axios.post("/chanmsg/saveChanMember", rq) //const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
+            if (res.data.code != hush.cons.OK) {
+                warn = "[" + res.data.code + "] " + res.data.msg
+                break
+            } else {
+                brr.push(row)
+            }
         }
-        if (brr.length == 1) {
-            gst.util.scrollIntoView(memberRow, brr[0].USERID)
+        if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
+            await getList()
+            await nextTick()
+            for (let i = 0; i < brr.length; i++) {
+                const row = brr[i]
+                const idx = gst.util.getKeyIndex(memberRow, row.USERID)
+                if (idx > -1) memberlist.value[idx].chk = true
+            }
+            if (brr.length == 1) {
+                gst.util.scrollIntoView(memberRow, brr[0].USERID)
+            }
+            if (appType == "dm") evToPanel("update")
+            evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
         }
-        if (appType == "dm") evToPanel("update")
-        evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
-        if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length)
+        if (warn) gst.util.setSnack(warn, true) //경고있을 경우 사용자에게 알려야 함
     }
 
     function changeChk(row, idx) {
@@ -439,11 +446,11 @@
                             <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
                                 <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
                                     <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
-                                    <span class="coImgSpn">멤버저장</span>
+                                    <span class="coImgSpn">저장</span>
                                 </div>
                                 <div class="coImgBtn" @click="deleteMember()">
                                     <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
-                                    <span class="coImgSpn">멤버삭제</span>
+                                    <span class="coImgSpn">삭제</span>
                                 </div>
                                 <div class="coImgBtn" @click="inviteToMember()">
                                     <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg20">

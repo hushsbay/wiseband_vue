@@ -296,6 +296,10 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             row.mynotyetCnt = rs.data.kindCnt
+        } else if (param.kind == "refreshPanel") {
+            refreshPanel()
+        } else if (param.kind == "forwardToSide") {
+            
         }
     }
 

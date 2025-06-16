@@ -15,10 +15,14 @@
     const gst = GeneralStore()
 
     const props = defineProps({ fromPopupChanDm: String })
-    const emits = defineEmits(["ev-click"])
+    const emits = defineEmits(["ev-click", "ev-to-side"])
 
     function listRowClick(row) {
         emits("ev-click", "dm", row.CHANID)
+    }
+
+    function evToSide(kind, menu) {
+        emits("ev-to-side", kind, menu) //kiind=forwardToSide/menu=home,later..
     }
 
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
@@ -295,6 +299,10 @@
             if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
             listDm.value.splice(idx, 1)
             listDm.value.unshift(row)
+        } else if (param.kind == "delete") {
+            const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
+            if (idx == -1) return
+            listDm.value.splice(idx, 1)
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
             const row = listDm.value.find((item) => item.CHANID == param.chanid)
             if (!row) return
@@ -302,6 +310,10 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             row.mynotyetCnt = rs.data.kindCnt
+        } else if (param.kind == "refreshPanel") {
+            refreshPanel()
+        } else if (param.kind == "forwardToSide") {
+            evToSide(param.kind, param.menu)
         }
     }
 

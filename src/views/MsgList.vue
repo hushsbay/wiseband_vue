@@ -143,7 +143,7 @@
     const mediaPopupRef = ref(null), popupChanDmRef = ref(null)
         
     let subTitle = ''
-    let sideMenu, chanId, msgidInChan
+    let sideMenu, chanId, msgidInChan, STATE_NODATA = "nodata"
     let grnm = ref(''), chanNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
     let msglist = ref([]), fetchByScrollEnd = ref(false)
@@ -228,6 +228,7 @@
             subTitle = hush.util.getRnd() + 'M'
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
+            debugger
             if (appType == "msglist" && route.query.appType) appType = route.query.appType //새창에서열기 또는 링크복사시 arr[2]는 msglist이므로 appType을 다시 가져와야 함
             if (hasProp()) {
                 setBasicInfoInProp()
@@ -254,6 +255,7 @@
         if (mounting) {
             mounting = false
         } else {
+            debugger
             subTitle = subTitle.replace("M", "A")
             if (hasProp()) {
                 setBasicInfoInProp()
@@ -282,7 +284,7 @@
         if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
         if (route.params.chanid) chanId = route.params.chanid
         const pMsgid = route.params.msgid
-        if (pMsgid == "nodata") {
+        if (pMsgid == STATE_NODATA) {
             pageData.value = pMsgid
         } else if (pMsgid == "0") {
             //skip
@@ -301,8 +303,18 @@
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: "나가기", color: 'red', func: function(item, idx) {
-                
+            { nm: "나가기", color: 'red', func: async function(item, idx) {
+                try {
+                    if (!confirm("퇴장시 방 관리자의 초대가 없으면 다시 들어올 수 없습니다. 계속할까요?")) return
+                    const rq = { CHANID: chanId, USERID: g_userid }
+                    const res = await axios.post("/chanmsg/deleteChanMember", rq)
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs) return
+                    pageData.value = STATE_NODATA
+                    evToPanel({ kind: "delete", chanid: chanId })
+                } catch (ex) { 
+                    gst.util.showEx(ex, true)
+                }
             }}
         ]
         gst.ctx.show(e)
@@ -357,7 +369,7 @@
     //6) kind(notyet or unread)
     async function getList(addedParam) {
         try {
-            if (onGoingGetList || pageData.value == "nodata") return
+            if (onGoingGetList || pageData.value == STATE_NODATA) return
             onGoingGetList = true
             let param = { chanid: chanId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
@@ -652,7 +664,7 @@
                 forwardMsg("dm", row.MSGID)
             }},
             { nm: "메시지 링크로 복사", func: function(item, idx) {
-                
+                evToPanel({ kind: "forwardToSide", menu: "home" }) //단순 메뉴 클릭하라고 하는 것임
             }},
             { nm: "메시지 편집", func: function(item, idx) {
                 editMsgId.value = row.MSGID
@@ -1451,7 +1463,6 @@
 
     async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
         try {
-            debugger
             if (kind == "notyet") return //react typ = checked, done, watching
             const rq = { chanid: chanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleAction", rq)
@@ -1463,24 +1474,26 @@
         }
     }
 
-    // function clickPopupChanDm() {
-    //     alert("111")
-    // }
-
-    function okChanDmPopup(kind, chanid) {
-        alert(kind+"=="+chanid)
+    async function okChanDmPopup(kind, strChanid, strMsgid) { //바로 아래 forwardMsg()에서 연결됨
         popupChanDmRef.value.close()
+        const rq = { chanid: chanId, msgid: strMsgid, targetChanid: strChanid } //선택한 채널의 메시지를 targetChanid에 복사
+        const res = await axios.post("/chanmsg/forwardToChan", rq)
+        let rs = gst.util.chkAxiosCode(res.data)
+        if (!rs) return
+        if (kind == appType) {
+            evToPanel({ kind: "refreshPanel" })
+        } else { //home->dm/dm->home
+            //gst.util.goMsgList(kind + '_body', { chanid: strChanid, msgid: rs.data.newMsgid }) //선택은 되나 데이터 업데이트 안됨 (향후 리얼타임 반영에서 처리해야 함)
+            evToPanel({ kind: "forwardToSide", menu: kind }) //단순 메뉴 클릭하라고 하는 것임
+        }
     }
 
     async function forwardMsg(kind, msgid) { //내가 편집(발송)가능한 채널과 DM방중에서 1개를 선택해 table에 insert후 해당 패널의 방으로 이동해 바로 보여주기
-        popupChanDmRef.value.open(kind)
-        //gst.util.goMsgList('home_body', { chanid: "20250122084532918913033403", msgid: "20250403164738102175090528" })
-        //다른 채널의 메시지가 잘 열림. 그러나 다른 채널이 선택되어 표시되어야 하고 해당 채널이 최종까지 업데이트되어야 하므로 마지막에 구현하기로 함
+        popupChanDmRef.value.open(kind, msgid) //바로 위 okChanDmPopup()으로 연결됨
     }
 
     async function changeAction(msgid, kind, newKind) { //changeAction은 보안상 크게 문제없는 액션만 처리하기로 함 : newKind 없으면 서버에서 kind로만 판단해 처리
         try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
-            debugger
             let jobIfExist = "" //데이터가 있을 경우에 한해 delete면 지우고 delete가 아닌 값이면 그 값으로 update하면 됨
             if (kind == 'later' || kind == 'stored' || kind == 'finished' || kind == 'fixed') {
                 jobIfExist = (!newKind) ? "delete" : newKind
@@ -1695,7 +1708,7 @@
 
 <template>
     <div class="chan_main">
-        <div v-if="!hasProp() && pageData=='nodata'" 
+        <div v-if="!hasProp() && pageData==STATE_NODATA" 
             style="top:0;left:0;width:100%;height:100%;margin-right:-10000px;padding:30px 0 0 30px;background:white;z-index:9999">
             <span>데이터가 없습니다.<br>왼쪽 패널에서 노드를 클릭하시기 바랍니다.</span>
         </div>

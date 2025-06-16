@@ -14,14 +14,15 @@
     const emits = defineEmits(["ev-click-chandm"])
 
     function setInfoToParent() {
-        emits("ev-click-chandm", kind.value, chanid.value)
+        emits("ev-click-chandm", kind.value, chanid.value, msgid.value)
     }
 
-    let show = ref(false), kind = ref('home'), chanid = ref('')
+    let show = ref(false), kind = ref('home'), chanid = ref(''), msgid = ref('')
 
-    async function open(strKind) {
+    async function open(strKind, strMsgid) {
         show.value = true
         changeKind(strKind)
+        msgid.value = strMsgid
     }
 
     function changeKind(strKind) {

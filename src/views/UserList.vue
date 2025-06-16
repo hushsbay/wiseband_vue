@@ -119,6 +119,7 @@
             return
         }
         const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
+        let warn = ""
         for (let i = 0; i < arr.length; i++) {
             const row = arr[i]
             const rq = { crud: "C", GR_ID: grId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member" }
@@ -136,20 +137,26 @@
                     rq.RMKS = row.RMKS
                 }
             }
-            const res = await axios.post("/user/saveMember", rq)
-            const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
-            if (rs) brr.push(row) //loop내 오류메시지 표시하려면 break가 아닌 return을 사용해야 하나 오류 표시하지 않고 추가 성공한 항목만 담아서 표시함
+            const res = await axios.post("/user/saveMember", rq) //const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
+            if (res.data.code != hush.cons.OK) {
+                warn = "[" + res.data.code + "] " + res.data.msg
+                break
+            } else {
+                brr.push(row)
+            }
         }
-        await getList()
-        await nextTick()
-        for (let i = 0; i < brr.length; i++) {
-            const row = brr[i]
-            const idx = gst.util.getKeyIndex(userRow, row.USERID)
-            if (idx > -1) userlist.value[idx].chk = true
+        if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
+            await getList()
+            await nextTick()
+            for (let i = 0; i < brr.length; i++) {
+                const row = brr[i]
+                const idx = gst.util.getKeyIndex(userRow, row.USERID)
+                if (idx > -1) userlist.value[idx].chk = true
+            }
+            if (brr.length > 0) gst.util.scrollIntoView(userRow, brr[0].USERID)
+            if (mode == "mygroup") orgRef.value.procFromParent("refresh")
         }
-        if (brr.length > 0) gst.util.scrollIntoView(userRow, brr[0].USERID)
-        if (mode == "mygroup") orgRef.value.procFromParent("refresh")
-        if (arr.length != brr.length) gst.util.setSnack("선택 : " + arr.length + " / 추가 : " + brr.length, true)
+        if (warn) gst.util.setSnack(warn, true) //경고있을 경우 사용자에게 알려야 함
     }
 
     function changeChk(row, idx) {

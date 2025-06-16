@@ -132,6 +132,7 @@ router.beforeEach((to, from) => {
             const arr = from.path.split("/")
             const fromPath2 = "/" + arr[1] + "/" + arr[2]
             if (to.path == fromPath2) {
+                debugger
                 console.log('body -> panel (새로고침 등으로 body에서 panel을 호출하는 것은 막음)')
                 return false
             }
