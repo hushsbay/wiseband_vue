@@ -85,8 +85,12 @@
     })
 
     function setBasicInfo() {
-        document.title = "WiSEBand DM"
-        gst.selSideMenu = "mnuDm" //MsgList.vue에 Blank 방지
+        if (props.fromPopupChanDm == "Y") {
+            //MsgList > PopupChanDm > DmPanel에서는 팝업이므로 gst.selSideMenu가 변경되면 안됨
+        } else {
+            document.title = "WiSEBand DM"
+            gst.selSideMenu = "mnuDm" //MsgList.vue에 Blank 방지
+        }
     }
 
     const onScrolling = () => {

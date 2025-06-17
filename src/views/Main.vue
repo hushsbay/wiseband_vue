@@ -35,20 +35,34 @@
             window.addEventListener('resize', () => { decideSeeMore() })
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
-            let idx = -1    
-            let lastSelMenu = localStorage.wiseband_lastsel_menu
-            if (lastSelMenu) {
-                idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
-            } else {
-                lastSelMenu = "mnuHome"
-            }
-            const idxReal = (idx == -1) ? 0 : idx
-            const row = listSel.value[idxReal]
-            sideClick(lastSelMenu, row, true)
+            // let idx = -1    
+            // let lastSelMenu = localStorage.wiseband_lastsel_menu
+            // if (lastSelMenu) {
+            //     idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
+            // } else {
+            //     lastSelMenu = "mnuHome"
+            // }
+            // const idxReal = (idx == -1) ? 0 : idx
+            // const row = listSel.value[idxReal]
+            // sideClick(lastSelMenu, row, true)
+            sideClickOnLoop(null, true)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
+
+    function sideClickOnLoop(selMenu, onMounted) {
+        let idx = -1    
+        let lastSelMenu = selMenu ? selMenu : localStorage.wiseband_lastsel_menu
+        if (lastSelMenu) {
+            idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
+        } else {
+            lastSelMenu = "mnuHome"
+        }
+        const idxReal = (idx == -1) ? 0 : idx
+        const row = listSel.value[idxReal]
+        sideClick(lastSelMenu, row, onMounted)
+    }
 
     watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
@@ -177,8 +191,9 @@
         await goRoute({ name: 'login' }, true)
     }
 
-    function handleEvFromPanel(kind, menu) {
-        alert(kind+"==="+menu)
+    function handleEvFromPanel(kind, menu) { //예) kind: "forwardToSide", menu: "home" => Home.vue의 onMounted() => MsgList.vue
+        const menuStr = "mnu" + menu.substring(0, 1).toUpperCase() + menu.substring(1)
+        sideClickOnLoop(menuStr)
     }
 </script>
 
@@ -231,7 +246,7 @@
                 <div class="content"><!-- <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList의 $route.fullPath이므로 unique하지 않아 onMounted가 수회 발생 or 무한루프(예:홈 메뉴)-->
                     <router-view v-slot="{ Component }">
                         <keep-alive>                
-                            <component :is="Component" :key="$route.fullPath.split('/')[2]" @ev-to-side="handleEvFromPanel"/>
+                            <component :is="Component" :key="$route.fullPath.split('/')[2]" @ev-to-side="handleEvFromPanel" fromPopupChanDm="" />
                         </keep-alive>
                     </router-view>
                 </div>

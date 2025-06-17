@@ -330,7 +330,7 @@ const GeneralStore = defineStore('General', () => {
             }
             sessionStorage.mountedFullpath = route.fullPath
             setTimeout(function() { sessionStorage.mountedFullpath = '' }, 1000)
-            console.log(str + " Mounted..... " + route.fullPath)
+            //console.log(str + " Mounted..... " + route.fullPath)
         }, 
 
         setSnack : function(ex, toastSec, fromConfig) {
@@ -506,19 +506,17 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
-        goMsgList : async function(nm, params) { //, refresh) {
+        goMsgList : async function(nm, params, refresh) {
             try {
                 let msgid = params.msgid
                 if (!msgid) params.msgid = await util.qryOneMsgNotYet(params.chanid)
                 let obj = { name : nm, params : params}
-                //if (refresh) Object.assign(obj, { query : { ver: Math.random() }})
                 if (!msgid && params.msgid.length > 20) { //안읽은 메시지 아이디를 가지고 온 것임 : Panel중에 동일한 로직으로 처리하는 곳이 있음
                     if (!obj.query) obj.query = {}
                     obj.query.notyet = true                    
                 }
                 const ele = document.getElementById("chan_center_header") //chan_center_body
-                //if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
-                if (!ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
+                if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
                     await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
                 } else {
                     await router.push(obj)

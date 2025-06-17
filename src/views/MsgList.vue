@@ -286,7 +286,7 @@
         const pMsgid = route.params.msgid
         if (pMsgid == STATE_NODATA) {
             pageData.value = pMsgid
-        } else if (pMsgid == "0") {
+        } else if (pMsgid == "0" || pMsgid == "nocache") {
             //skip
         } else if (pMsgid) {
             msgidInChan = pMsgid //댓글의 msgid일 수도 있음
@@ -325,7 +325,7 @@
         msglist.value = []
         if (kind == 'all') {
             savLastMsgMstCdt = hush.cons.cdtAtLast
-            console.log("listMsg-all")
+            //console.log("listMsg-all")
             await getList({ lastMsgMstCdt: savLastMsgMstCdt })
         } else {
             await getList({ kind: kind })
@@ -664,7 +664,7 @@
                 forwardMsg("dm", row.MSGID)
             }},
             { nm: "메시지 링크로 복사", func: function(item, idx) {
-                evToPanel({ kind: "forwardToSide", menu: "home" }) //단순 메뉴 클릭하라고 하는 것임
+                
             }},
             { nm: "메시지 편집", func: function(item, idx) {
                 editMsgId.value = row.MSGID
@@ -715,7 +715,7 @@
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
         readMsgToBeSeen()
-        console.log("readMsgToBeSeen:"+"==="+prevScrollY+"==="+prevScrollHeight)
+        //console.log("readMsgToBeSeen:"+"==="+prevScrollY+"==="+prevScrollHeight)
         if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         saveCurScrollY(prevScrollY)
     }
@@ -1480,12 +1480,14 @@
         const res = await axios.post("/chanmsg/forwardToChan", rq)
         let rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return
-        if (kind == appType) {
-            evToPanel({ kind: "refreshPanel" })
-        } else { //home->dm/dm->home
-            //gst.util.goMsgList(kind + '_body', { chanid: strChanid, msgid: rs.data.newMsgid }) //선택은 되나 데이터 업데이트 안됨 (향후 리얼타임 반영에서 처리해야 함)
-            evToPanel({ kind: "forwardToSide", menu: kind }) //단순 메뉴 클릭하라고 하는 것임
-        }
+        window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=home") //최적안. 아래가 구현안되면 이 안으로 가기 (사용자 입장에서도 무리 없음)
+        // if (kind == appType) {
+        //     evToPanel({ kind: "refreshPanel" })
+        // } else { //home->dm or dm->home 등등
+        //     //gst.util.goMsgList(kind + '_body', { chanid: strChanid, msgid: rs.data.newMsgid }) //선택은 되나 데이터 업데이트 안됨 (향후 리얼타임 반영에서 처리해야 함)
+        //     //location.href = "/main/home/home_body/20250122084532918913033403/" + rs.data.newMsgid
+        //     evToPanel({ kind: "forwardToSide", menu: kind }) //단순 메뉴 클릭하라고 하는 것임
+        // }
     }
 
     async function forwardMsg(kind, msgid) { //내가 편집(발송)가능한 채널과 DM방중에서 1개를 선택해 table에 insert후 해당 패널의 방으로 이동해 바로 보여주기

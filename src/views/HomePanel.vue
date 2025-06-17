@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, onActivated } from 'vue' 
+    import { ref, onMounted, onActivated, nextTick } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
@@ -14,10 +14,14 @@
     const gst = GeneralStore()
 
     const props = defineProps({ fromPopupChanDm: String })
-    const emits = defineEmits(["ev-click"])
+    const emits = defineEmits(["ev-click", "ev-to-side"])
 
     function listRowClick(row) {
         emits("ev-click", "home", row.CHANID)
+    }
+
+    function evToSide(kind, menu) {
+        emits("ev-to-side", kind, menu) //kiind=forwardToSide/menu=home,later..
     }
 
     //1. HomePanel 상태 정의는 아래와 같음
@@ -28,8 +32,9 @@
     //   예1) MsgList url에서 뒤로 가기 눌러 다른 MsgList url로 라우팅되면 MsgList가 먼저 호출되므로 HomePanel의 트리노드 등도 역으로 같이 맞춰져야 함
     //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 이 경우도 같이 맞춰져야 함
 
+    let keepAliveRef = ref(null)
     let listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null), msglistRef = ref(null)
+    let memberlistRef = ref(null), msglistRef = ref(null) //, clearCacheUrl = ref('')
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -48,7 +53,10 @@
             setBasicInfo()
             if (localStorage.wiseband_lastsel_home) kind.value = localStorage.wiseband_lastsel_home
             await getList()
-            chanClickOnLoop(true)
+            debugger
+            if (props.fromPopupChanDm != "Y") {
+                chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -60,7 +68,9 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/home") { //사이드메뉴에서 클릭한 경우
-                chanClickOnLoop(true)
+                if (props.fromPopupChanDm != "Y") {
+                    chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
+                }
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
@@ -74,8 +84,12 @@
     }
 
     function setBasicInfo() {
-        document.title = "WiSEBand 홈"
-        gst.selSideMenu = "mnuHome" //MsgList.vue에 Blank 방지
+        if (props.fromPopupChanDm == "Y") {
+            //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 gst.selSideMenu가 변경되면 안됨
+        } else {
+            document.title = "WiSEBand 홈"
+            gst.selSideMenu = "mnuHome" //MsgList.vue에 Blank 방지
+        }
     }
 
     async function getList() {
@@ -92,6 +106,7 @@
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
         const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
         let foundIdx = -1
+        debugger
         listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
                 item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
@@ -231,7 +246,7 @@
         //const nm = !row.CHANID ? row.GR_NM : row.CHANNM
         //gst.ctx.data.header = "<img src='/src/assets/images/" + img + "' class='coImg18' style='margin-right:5px'>" + "<span>" + nm + "</span>"
         gst.ctx.data.header = ""
-        if (!row.CHANID) {            
+        if (!row.CHANID) {
             gst.ctx.menu = [
                 { nm: "채널 만들기", func: function(item, idx) {
                     memberlistRef.value.open("chan", "new", row.GR_ID)
@@ -241,8 +256,16 @@
             const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
             const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
             const disableStr = (row.STATE == "P") ? true : false
+            const disableRefresh = (!row.sel) ? true : false
             gst.ctx.menu = [
-                 //"홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 WiSEBand는 부모/자식 모두 동일한 UI이므로 굳이 필요없음
+                //"홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 WiSEBand는 부모/자식 모두 동일한 UI이므로 굳이 필요없음
+                { nm: "메시지목록 새로고침", disable: disableRefresh, func: async function(item, idx) { //disable의 의미는 선택된 노드가 route.fullPath와 동일한 채널임을 보장함
+                    gst.util.setToast("reloading " + row.CHANNM)
+                    const ka = keepAliveRef.value._.__v_cache //const mapChild = ka.get(route.fullPath)
+                    ka.delete(route.fullPath)
+                    gst.util.goMsgList('home_body', { chanid: row.CHANID, msgid: "nocache" }) //동일한 주소 클릭시 라우팅 그대로 있으므로 갈아끼워야 함 (향후, redirect로 개선하기로 함)
+                    setTimeout(function() { gst.util.goMsgList('home_body', { chanid: row.CHANID }, true) }, 1000)
+                }},
                 { nm: "새창에서 열기", func: async function(item, idx) {
                     let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
                     window.open(url + "?appType=home")
@@ -298,8 +321,8 @@
             row.mynotyetCnt = rs.data.kindCnt
         } else if (param.kind == "refreshPanel") {
             refreshPanel()
-        } else if (param.kind == "forwardToSide") {
-            
+        } else if (param.kind == "forwardToSide") {            
+            evToSide(param.kind, param.menu)
         }
     }
 
@@ -358,12 +381,23 @@
                     DM은 그룹 없이 방을 만들 수 있습니다.
                 </div>
             </div>
-        </div>
+        </div>        
     </div>
-    <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer><!--바로 아래 min,max아니면 스레드 열고 닫을 때마다 미세하게 넓이가 고정되지 않음-->
+    <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
+    <!--clearCacheUrl 방안은 캐시 제거후 다른 채널도 (캐시 제거되어 - 컴포넌트가 unmount되서 그럴 듯) 처음 한번은 새로운 데이터를 가져옴
+        개발자가 지정한 특정 채널만 제거되고 나머지는 그대로 캐싱해야 더 바람직할 것임 (keepAliveRef로 해결함)-->
     <div v-if="listHome.length > 0" id="chan_body" :style="{ minWidth: chanMainWidth, maxWidth: chanMainWidth }">
-        <router-view v-slot="{ Component }">
+        <!-- <router-view v-slot="{ Component }" v-if="$route.fullPath==clearCacheUrl">
+            <component :is="Component" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
+        </router-view>
+        <router-view v-slot="{ Component }" v-else>
+            <div style="color:white">keep-alive</div>
             <keep-alive>
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
+            </keep-alive>
+        </router-view> -->
+        <router-view v-slot="{ Component }">
+            <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
