@@ -620,26 +620,38 @@
         const bool = vipStr.value.includes(',' + row.AUTHORID + ',') ? false : true
         gst.ctx.menu = [
             { nm: "DM 보내기", func: async function() {
-                const res = await axios.post("/menu/qryDmTwo", { USERID: row.AUTHORID })
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return null
-                const chanid = rs.data.chanid
-                if (chanid) {
+                try {
+                    const res = await axios.post("/menu/qryDmTwo", { USERID: row.AUTHORID })
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs) return null
+                    let chanid = rs.data.chanid
+                    if (!chanid) { //둘만의 방이 없으므로 새로 추가해야 함
+                        const rq = { CHANID: "new", MEMBER: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM }] } //신규 DM방 생성 (멤버도 함께 생성)
+                        const res = await axios.post("/chanmsg/saveChan", rq)
+                        const rs = gst.util.chkAxiosCode(res.data)
+                        if (!rs) return
+                        chanid = rs.data.chanid
+                        debugger
+                    }
                     window.open("/body/msglist/" + chanid + "/0?appType=dm")
-                } else { //둘만의 방이 없으므로 새로 추가해야 함
-
+                } catch (ex) { 
+                    gst.util.showEx(ex, true)
                 }
             }},
             { nm: "VIP " + displayStr, func: async function(item, idx) {
-                const res = await axios.post("/user/setVip", { 
-                    list: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM }], bool: bool
-                })
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return
-                if (bool) {
-                    vipStr.value += row.AUTHORID + ","
-                } else {                    
-                    vipStr.value = vipStr.value.replace(row.AUTHORID + ",", "")
+                try {
+                    const res = await axios.post("/user/setVip", { 
+                        list: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM }], bool: bool
+                    })
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs) return
+                    if (bool) {
+                        vipStr.value += row.AUTHORID + ","
+                    } else {                    
+                        vipStr.value = vipStr.value.replace(row.AUTHORID + ",", "")
+                    }
+                } catch (ex) { 
+                    gst.util.showEx(ex, true)
                 }
             }}
         ]
@@ -732,15 +744,15 @@
 
     function rowEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = true
-        debugger
-        const msgdtlArr = row.msgdtl
-        const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
-        const msgid = row.MSGID
-        if (msgdtlRow) {
-            //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-        } else {
-            updateWithNewKind(msgid, "notyet", "read")
-        }
+        // debugger
+        // const msgdtlArr = row.msgdtl
+        // const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+        // const msgid = row.MSGID
+        // if (msgdtlRow) {
+        //     //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
+        // } else {
+        //     updateWithNewKind(msgid, "notyet", "read")
+        // }
     }
 
     function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
