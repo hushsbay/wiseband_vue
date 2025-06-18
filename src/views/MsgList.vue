@@ -677,14 +677,14 @@
                 editMsgId.value = row.MSGID
                 prevEditData = document.getElementById(editorId).innerHTML
                 if (prevEditData.trim() != "") {
-                    //gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
-                    //return
+                    gst.util.setToast("에디터에 이미 편집중인 데이터가 있습니다.")
+                    return
                 }
                 msgbody.value = row.BODY
             }},
             { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
                 try {
-                    //if (!window.confirm("삭제후 복구가 불가능합니다. 진행할까요?")) return
+                    if (!window.confirm("삭제후 복구가 불가능합니다. 진행할까요?")) return
                     const res = await axios.post("/chanmsg/delMsg", { 
                         msgid: row.MSGID, chanid: chanId
                     })
