@@ -141,7 +141,7 @@
         if (nodekind == "U") {
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, row.USERID)
-            row.key = row.USERID + (row.GR_ID ? row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 userid가 들어 있을 것이므로 grid로 추가 구분함
+            row.key = row.USERID + (row.GR_ID ? hush.cons.deli + row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 userid가 들어 있을 것이므로 grid로 추가 구분함
         } else {
             if (mode.value == "mygroup") {
                 row.url = "violet_people2.png"
@@ -307,14 +307,15 @@
             gst.util.setToast("먼저 사용자를 선택하시기 바랍니다.")
             return
         }
-        const list = getCheckedUser(["userid", "usernm"])
+        const list = getCheckedUser(["GR_ID", "USERID", "USERNM"])
         const res = await axios.post("/user/setVip", { 
             list: list, bool: bool
         })
         const rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return
         list.forEach(item => {
-            const idx = gst.util.getKeyIndex(orgRow, item.userid)
+            const key = item.USERID + (item.GR_ID ? hush.cons.deli + item.GR_ID : "")
+            const idx = gst.util.getKeyIndex(orgRow, key)
             orglist.value[idx].isVip = bool
         })
         let msg = (bool ? "설정 완료" : "해제 완료") + " (" + rs.data.retCnt + "명)"

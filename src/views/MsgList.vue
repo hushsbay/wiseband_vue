@@ -396,7 +396,7 @@
                 onGoingGetList = false                
                 return
             }            
-            vipStr.value = rs.data.vipStr ?? "none" //데이터 없어서 null일 수도 있음 ##34
+            vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             // document.title = rs.data.chanmst.CHANNM + " [채널-" + temp + "]"
             // grnm.value = rs.data.chanmst.GR_NM
@@ -613,17 +613,34 @@
     }
 
     function memProfile(e, row) {
-        const imgUrl = (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) ? chandtlObj.value[row.USERID].url : gst.html.getImageUrl('user.png')
+        const userObj = chandtlObj.value[row.AUTHORID]
+        const imgUrl = (userObj && userObj.url) ? userObj.url : gst.html.getImageUrl('user.png')
         gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.AUTHORNM
+        const displayStr = vipStr.value.includes(',' + row.AUTHORID + ',') ? "해제" : "설정"
+        const bool = vipStr.value.includes(',' + row.AUTHORID + ',') ? false : true
         gst.ctx.menu = [
-            { nm: "DM 열기", func: function() {
-                
+            { nm: "DM 보내기", func: async function() {
+                const res = await axios.post("/menu/qryDmTwo", { USERID: row.AUTHORID })
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return null
+                const chanid = rs.data.chanid
+                if (chanid) {
+                    window.open("/body/msglist/" + chanid + "/0?appType=dm")
+                } else { //둘만의 방이 없으므로 새로 추가해야 함
+
+                }
             }},
-            { nm: "VIP로 설정", func: function(item, idx) {
-                
-            }},
-            { nm: "퇴장 시키기", color: 'red', func: function(item, idx) {
-                
+            { nm: "VIP " + displayStr, func: async function(item, idx) {
+                const res = await axios.post("/user/setVip", { 
+                    list: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM }], bool: bool
+                })
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+                if (bool) {
+                    vipStr.value += row.AUTHORID + ","
+                } else {                    
+                    vipStr.value = vipStr.value.replace(row.AUTHORID + ",", "")
+                }
             }}
         ]
         gst.ctx.show(e)
@@ -671,7 +688,12 @@
                 forwardMsg("dm", row.MSGID)
             }},
             { nm: "메시지 링크로 복사", func: function(item, idx) {
-                
+                const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=home"
+                navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
+                    gst.util.setToast("메시지 링크가 복사되었습니다.")
+                }).catch(() => {
+                    gst.util.setToast("복사 실패. 알 수 없는 문제가 발생했습니다.")
+                })
             }},
             { nm: "메시지 편집", func: function(item, idx) {
                 editMsgId.value = row.MSGID
@@ -710,6 +732,15 @@
 
     function rowEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = true
+        debugger
+        const msgdtlArr = row.msgdtl
+        const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+        const msgid = row.MSGID
+        if (msgdtlRow) {
+            //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
+        } else {
+            updateWithNewKind(msgid, "notyet", "read")
+        }
     }
 
     function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
@@ -1059,17 +1090,11 @@
     }
 
     function procMention(e, row) {
-        const imgUrl = (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) ? chandtlObj.value[row.USERID].url : gst.html.getImageUrl('user.png')
+        const userObj = chandtlObj.value[row.USERID]
+        const imgUrl = (userObj && userObj.url) ? userObj.url : gst.html.getImageUrl('user.png')
         gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.USERNM
-        // let imgUrl
-        // if (chandtlObj.value[row.USERID] && chandtlObj.value[row.USERID].url) {
-        //     imgUrl = chandtlObj.value[row.USERID].url
-        // } else {
-        //     imgUrl = gst.html.getImageUrl('user.png')
-        // }
-        // gst.ctx.data.header = "<img src='" + imgUrl + "' style='width:32px;height:32px'><span style='margin-left:5px'>" + row.USERNM + "</span>"
         gst.ctx.menu = [
-            { nm: "DM 열기", func: function() {
+            { nm: "DM 보내기", func: function() {
                 
             }},
             { nm: "VIP 설정", func: function() {
@@ -1797,7 +1822,7 @@
                         <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
                         <!-- <span v-if="vipStr.includes(row.AUTHORID)" 
                             style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span> -->
-                        <span v-if="vipStr.includes(row.AUTHORID)" class="vipMark">VIP</span>
+                        <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
                         <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                         <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
                         <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
