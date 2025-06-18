@@ -49,13 +49,15 @@
 
     onMounted(async () => {
         try {
-            gst.util.chkOnMountedTwice(route, 'HomePanel')
+            console.log("Home Mounted..... " + route.fullPath)
+            if (!gst.util.chkOnMountedTwice(route, 'HomePanel')) return            
             setBasicInfo()
             if (localStorage.wiseband_lastsel_home) kind.value = localStorage.wiseband_lastsel_home
             await getList()
-            debugger
-            if (props.fromPopupChanDm != "Y") {
+            if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
                 chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
+            } else {
+                chanClickOnLoop(false)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -63,13 +65,16 @@
     })
 
     onActivated(async () => {
+        console.log("Home Activated..... " + route.fullPath)
         if (mounting) {
             mounting = false
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/home") { //사이드메뉴에서 클릭한 경우
-                if (props.fromPopupChanDm != "Y") {
+                if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
                     chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
+                } else {
+                    chanClickOnLoop(false)
                 }
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
@@ -84,7 +89,7 @@
     }
 
     function setBasicInfo() {
-        if (props.fromPopupChanDm == "Y") {
+        if (props.fromPopupChanDm == "Y") { //fromPopupChanDm은 home과 dm만 해당
             //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 gst.selSideMenu가 변경되면 안됨
         } else {
             document.title = "WiSEBand 홈"
@@ -106,7 +111,6 @@
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
         const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
         let foundIdx = -1
-        debugger
         listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
                 item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
@@ -174,7 +178,7 @@
                     row.sel = true
                     procChanRowImg(row)
                     localStorage.wiseband_lastsel_chanid = row.CHANID
-                    if (props.fromPopupChanDm == "Y") {
+                    if (props.fromPopupChanDm == "Y") { //fromPopupChanDm은 home과 dm만 해당
                         listRowClick(row)
                     } else {
                         if (clickNode) gst.util.goMsgList('home_body', { chanid: row.CHANID })
@@ -259,13 +263,14 @@
             const disableRefresh = (!row.sel) ? true : false
             gst.ctx.menu = [
                 //"홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 WiSEBand는 부모/자식 모두 동일한 UI이므로 굳이 필요없음
+                /* 아직 미사용 : 정확히 어디에 사용할 지 아직 미결정 (향후 실시간 반영때 다시 고민. 현재는 아래 개선점도 있음)
                 { nm: "메시지목록 새로고침", disable: disableRefresh, func: async function(item, idx) { //disable의 의미는 선택된 노드가 route.fullPath와 동일한 채널임을 보장함
                     gst.util.setToast("reloading " + row.CHANNM)
                     const ka = keepAliveRef.value._.__v_cache //const mapChild = ka.get(route.fullPath)
                     ka.delete(route.fullPath)
-                    gst.util.goMsgList('home_body', { chanid: row.CHANID, msgid: "nocache" }) //동일한 주소 클릭시 라우팅 그대로 있으므로 갈아끼워야 함 (향후, redirect로 개선하기로 함)
+                    gst.util.goMsgList('home_body', { chanid: row.CHANID, msgid: "nocache" }) //동일한 주소 클릭시 라우팅 그대로 있으므로 갈아끼워야 함 (향후 개선하기로 함)
                     setTimeout(function() { gst.util.goMsgList('home_body', { chanid: row.CHANID }, true) }, 1000)
-                }},
+                }},*/
                 { nm: "새창에서 열기", func: async function(item, idx) {
                     let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
                     window.open(url + "?appType=home")
@@ -319,10 +324,10 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             row.mynotyetCnt = rs.data.kindCnt
-        } else if (param.kind == "refreshPanel") {
+        /*} else if (param.kind == "refreshPanel") { //지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조
             refreshPanel()
         } else if (param.kind == "forwardToSide") {            
-            evToSide(param.kind, param.menu)
+            evToSide(param.kind, param.menu) 향후 사용시 모든 패널에 evToSide 검토 필요 */
         }
     }
 
@@ -393,6 +398,11 @@
         <router-view v-slot="{ Component }" v-else>
             <div style="color:white">keep-alive</div>
             <keep-alive>
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
+            </keep-alive>
+        </router-view> -->
+        <!-- <router-view v-slot="{ Component }">
+            <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view> -->

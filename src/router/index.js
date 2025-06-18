@@ -11,8 +11,8 @@ import GroupPanel from '/src/views/GroupPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 import UserList from '/src/views/UserList.vue'
 
-//import GeneralStore from '/src/stores/GeneralStore.js'
-//let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
+import GeneralStore from '/src/stores/GeneralStore.js'
+let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL), //import.meta.env.BASE_URL => /로 표시됨
@@ -120,9 +120,8 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from) => {
-    //if (!gst) gst = GeneralStore() //참조 (1)
-    console.log("## from.path: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
-    console.log("## to.path: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(from.query))
+    if (!gst) gst = GeneralStore() //참조 (1)
+    gst.util.setRouteFromTo(to, from)
     //아래 return false를 안막으면 두번 이상 실행되는데 원인을 모르는 것이 많음
     //keepalive시 Mounted hook은 처음 말고는 안 먹혀도 여기 beforeEach와 Activeted/Deactivated는 먹힘을 유의 (그래서 onMounted()가 2회 수행되는 수도 있을 것임)
     //각 vue의 gst.util.chkOnMountedTwice() 참조 - onMounted가 2회 이상 실행되어 막음 (Hot Deploy가 원인일 수도 있어 운영에서 체크 필요)
@@ -133,10 +132,10 @@ router.beforeEach((to, from) => {
             console.log('body -> body (새로고침 등으로 같은 body : 안막으면 onMounted 두번 호출됨)')
             return false
         } else {
-            const arr = from.path.split("/")
-            const fromPath2 = "/" + arr[1] + "/" + arr[2]
+            const arr = from.path.split("/") //예) /main/dm/dm_body/20250428084532918913033115/0"
+            const fromPath2 = "/" + arr[1] + "/" + arr[2] //예) /main/dm
             if (to.path == fromPath2) {
-                debugger
+                //debugger
                 console.log('body -> panel (새로고침 등으로 body에서 panel을 호출하는 것은 막음)')
                 return false
             }

@@ -224,11 +224,12 @@
         //또 다른 현상은 새로고침하면 HomePanel.vue가 먼저 실행되는 것이 아닌 MsgList.vue의 onMounted가 먼저 실행되어서 HomePanel.vue가 실행되면서 
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
-            gst.util.chkOnMountedTwice(route, 'MsgList')
+            console.log("MsgList Mounted..... " + route.fullPath)
+            //if (!gst.util.chkOnMountedTwice(route, 'MsgList')) return
             subTitle = hush.util.getRnd() + 'M'
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
-            debugger
+            //debugger
             if (appType == "msglist" && route.query.appType) appType = route.query.appType //새창에서열기 또는 링크복사시 arr[2]는 msglist이므로 appType을 다시 가져와야 함
             if (hasProp()) {
                 setBasicInfoInProp()
@@ -252,10 +253,12 @@
     })
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
+        if (!route.fullPath.includes("_body")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생하는데 원인 파악이 현재까지 안되어 일단 여기서 차단
+        console.log("MsgList Activated..... " + route.fullPath)
         if (mounting) {
             mounting = false
         } else {
-            debugger
+            //debugger
             subTitle = subTitle.replace("M", "A")
             if (hasProp()) {
                 setBasicInfoInProp()
@@ -266,10 +269,13 @@
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            if (appType == "home" || appType == "dm") {
-                evToPanel({ kind: "selectRow", chanid: chanId })
-            } else if (appType == "later" || appType == "fixed") {
-                evToPanel({ kind: "selectRow", msgid: msgidInChan })
+            if (gst.routedToSamePanelFromMsgList) { //아래는 사이드 메뉴 같은 경우만 실행됨 : 사용자가 방내 범위내에서 노드를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 안바뀌고 해당 패널내에서 라우팅하는 경우
+                console.log("MsgList Activated selectRow..... " + appType + "==="+ chanId)
+                if (appType == "home" || appType == "dm") {
+                    evToPanel({ kind: "selectRow", chanid: chanId })
+                } else if (appType == "activity" || appType == "later" || appType == "fixed") {
+                    evToPanel({ kind: "selectRow", msgid: msgidInChan })
+                }
             }
         }
     })
@@ -279,18 +285,19 @@
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
     })
 
-    function setBasicInfo() {        
+    function setBasicInfo() {
+        //debugger
         sideMenu = gst.selSideMenu
         if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
         if (route.params.chanid) chanId = route.params.chanid
         const pMsgid = route.params.msgid
         if (pMsgid == STATE_NODATA) {
             pageData.value = pMsgid
-        } else if (pMsgid == "0" || pMsgid == "nocache") {
+        } else if (pMsgid == "0" || pMsgid == "nocache") { //현재 nocache는 사용처 없음
             //skip
         } else if (pMsgid) {
             msgidInChan = pMsgid //댓글의 msgid일 수도 있음
-        } //if (pMsgid && pMsgid != "0") msgidInChan = pMsgid //댓글의 msgid일 수도 있음
+        }
     }
 
     function saveCurScrollY(posY) {
@@ -1474,20 +1481,20 @@
         }
     }
 
-    async function okChanDmPopup(kind, strChanid, strMsgid) { //바로 아래 forwardMsg()에서 연결됨
+    async function okChanDmPopup(kind, strChanid, strMsgid) { //바로 아래 forwardMsg()에서 연결됨 : strChanid(새로 선택한 채널(DM)방), strMsgid(전달하려고 하는 기존 메시지)
         popupChanDmRef.value.close()
         const rq = { chanid: chanId, msgid: strMsgid, targetChanid: strChanid } //선택한 채널의 메시지를 targetChanid에 복사
-        const res = await axios.post("/chanmsg/forwardToChan", rq)
+        const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
         let rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return
-        window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=home") //최적안. 아래가 구현안되면 이 안으로 가기 (사용자 입장에서도 무리 없음)
-        // if (kind == appType) {
-        //     evToPanel({ kind: "refreshPanel" })
-        // } else { //home->dm or dm->home 등등
-        //     //gst.util.goMsgList(kind + '_body', { chanid: strChanid, msgid: rs.data.newMsgid }) //선택은 되나 데이터 업데이트 안됨 (향후 리얼타임 반영에서 처리해야 함)
-        //     //location.href = "/main/home/home_body/20250122084532918913033403/" + rs.data.newMsgid
-        //     evToPanel({ kind: "forwardToSide", menu: kind }) //단순 메뉴 클릭하라고 하는 것임
-        // }
+        window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=" + kind)
+        /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)
+           다만 슬랙은 새창을 띄우지 않아서 아래 2안으로 노력했는데 2안시 마지막 단계인 MsgList의 캐시제거가 살짝 구현이 안되었음. 필요시 2안으로 노력을 더 기울여도 되나 각 패널에 추가해야 하는 것이 번거로울 것임
+        if (kind == appType) {
+            evToPanel({ kind: "refreshPanel" })
+        } else { //home->dm or dm->home 등등
+            evToPanel({ kind: "forwardToSide", menu: kind })
+        }*/
     }
 
     async function forwardMsg(kind, msgid) { //내가 편집(발송)가능한 채널과 DM방중에서 1개를 선택해 table에 insert후 해당 패널의 방으로 이동해 바로 보여주기

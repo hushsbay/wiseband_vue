@@ -22,6 +22,7 @@
     //## 더보기를 누르면 사용자가 설정하지 않은 메뉴와 화면에서 육안으로 보이지 않는 메뉴가 (화면 사이즈가 변함에 따라) 실시간으로 보여져야 함
 
     let prevX, prevY
+    let keepAliveRef = ref(null)
     let mediaPopupRef = ref(null), searchText = ref('')
     
     onMounted(async () => {
@@ -65,6 +66,8 @@
     }
 
     watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
+        //debugger
+        console.log("Main gst.selSideMenu..... " + gst.selSideMenu)
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
     })
 
@@ -139,7 +142,8 @@
             row.sel = true
             if (!onMounted && id == gst.selSideMenu) return //사용자 최초 시작시엔 무조건 HomePanel 호출
             if (popupId != "mnuSeeMore") {
-                gst.selSideMenu = id
+                console.log("Main 메뉴 클릭 gst.selSideMenu..... " + gst.selSideMenu)
+                gst.selSideMenu = id                
                 localStorage.wiseband_lastsel_menu = id
             }
             procMenu[id].call(null, row, onMounted)
@@ -192,8 +196,11 @@
     }
 
     function handleEvFromPanel(kind, menu) { //예) kind: "forwardToSide", menu: "home" => Home.vue의 onMounted() => MsgList.vue
+        //현재 미사용. 지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조
         const menuStr = "mnu" + menu.substring(0, 1).toUpperCase() + menu.substring(1)
-        sideClickOnLoop(menuStr)
+        const ka = keepAliveRef.value._.__v_cache
+        ka.delete(menu) //const appType = route.fullPath.split("/")[2] //arr[2] = home,dm 등..
+        sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
     }
 </script>
 
@@ -245,7 +252,7 @@
             <div class="main">
                 <div class="content"><!-- <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList의 $route.fullPath이므로 unique하지 않아 onMounted가 수회 발생 or 무한루프(예:홈 메뉴)-->
                     <router-view v-slot="{ Component }">
-                        <keep-alive>                
+                        <keep-alive ref="keepAliveRef">
                             <component :is="Component" :key="$route.fullPath.split('/')[2]" @ev-to-side="handleEvFromPanel" fromPopupChanDm="" />
                         </keep-alive>
                     </router-view>

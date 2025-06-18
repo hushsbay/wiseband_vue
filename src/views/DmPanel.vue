@@ -55,11 +55,15 @@
 
     onMounted(async () => {
         try {
-            gst.util.chkOnMountedTwice(route, 'DmPanel')
+            if (!gst.util.chkOnMountedTwice(route, 'DmPanel')) return
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_lastsel_dm == "notyet") ? true : false
-            await getList(true)            
-            dmClickOnLoop(true)
+            await getList(true)
+            if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
+                dmClickOnLoop(true)
+            } else {
+                dmClickOnLoop(false)
+            }
             observerBottomScroll()
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -72,7 +76,11 @@
         } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
             setBasicInfo()
             if (route.path == "/main/dm") { //사이드메뉴에서 클릭한 경우
-                dmClickOnLoop(true)
+                if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
+                    dmClickOnLoop(true)
+                } else {
+                    dmClickOnLoop(false)
+                }
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
@@ -314,10 +322,10 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             row.mynotyetCnt = rs.data.kindCnt
-        } else if (param.kind == "refreshPanel") {
+        /*} else if (param.kind == "refreshPanel") { //지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조
             refreshPanel()
-        } else if (param.kind == "forwardToSide") {
-            evToSide(param.kind, param.menu)
+        } else if (param.kind == "forwardToSide") {            
+            evToSide(param.kind, param.menu) 향후 사용시 모든 패널에 evToSide 검토 필요 */
         }
     }
 
