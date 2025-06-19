@@ -130,7 +130,7 @@
     let afterScrolled = ref(false)
 
     const MAX_PICTURE_CNT = 10, adminShowID = ref(false)
-    const g_userid = gst.auth.getCookie("userid")
+    const g_userid = gst.auth.getCookie("userid"), g_usernm = gst.auth.getCookie("usernm")
     let mounting = true, appType
     
     let widthChanCenter = ref('calc(100% - 20px)')
@@ -160,7 +160,7 @@
 
     //dm 보내기 (신규)
     let showUserSearch = ref(false), userSearchedRef = useTemplateRef('userSearchedRef')
-    let userSearched = ref([]), userAdded = ref([])
+    let userSearched = ref([]), userAdded = ref([]), dmChanIdAlready = ref('')
     let searchInput = ref('searchInput'), searchedResultTop = ref(85)
     let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
 
@@ -844,6 +844,7 @@
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
+        if (showUserSearch.value) return //DM방 만들기에서는 무시
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
         if (!eleTop) {
             return
@@ -943,6 +944,10 @@
             const pastedData = e.clipboardData.items //e.originalEvent.clipboardData.items
             if (pastedData.length == 0) return
             if (pastedData[0].type.includes("image")) { //예) image/png
+                if (appType == "dm" && showUserSearch.value) {
+                    gst.util.setSnack("Dm방 새로 만들 때에는 텍스트만 전송 가능합니다.")
+                    return
+                }
                 if (editMsgId.value) {
                     gst.util.setToast("편집중인 메시지에는 이미지 붙이기가 불가능합니다.", 3)
                     return
@@ -1010,6 +1015,20 @@
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
         try { //파일,이미지,링크가 있다면 미리 업로드된 상태이며 crud가 C일 때만 업로드 되며 U일 때는 슬랙과 동일하게 업로드되지 않음 (본문만 수정저장됨)
+            if (appType == "dm" && showUserSearch.value) { //DM방 새로 만들기
+                if (dmChanIdAlready.value) {
+                    gst.util.setSnack("위 '기존 DM방 열기' 버튼을 이용하시기 바랍니다.")
+                    return
+                }
+                const member = []
+                userAdded.value.forEach(item => { member.push({ USERID: item.USERID, USERNM: item.USERNM, SYNC: item.ORG_NM ? "Y" : "" }) })
+                const rq = { CHANID: "new", MEMBER: member } //신규 DM방 생성 (멤버도 함께 생성)
+                const res = await axios.post("/chanmsg/saveChan", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+                chanId = rs.data.chanid
+                localStorage.wiseband_lastsel_dmchanid = chanId
+            }
             let body = document.getElementById(editorId).innerHTML.trim()
             if (body == "") return
             let bodytext = document.getElementById(editorId).innerText.trim()
@@ -1061,6 +1080,12 @@
             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
             msgbody.value = ""            
             editMsgId.value = null
+            if (appType == "dm" && showUserSearch.value) { //DM방 새로 만들기
+                dmChanIdAlready.value = ""
+                userAdded.value = []
+                dmChanIdAlready.value = false                
+                evToPanel({ kind: "refreshPanel" })
+            }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1077,6 +1102,10 @@
 
     async function uploadLink(kind, text) {
         try {
+            if (appType == "dm" && showUserSearch.value) {
+                gst.util.setSnack("Dm방 새로 만들 때에는 텍스트만 전송 가능합니다.")
+                return
+            }
             popupRefKind.value = kind
             linkText.value = text ?? ""
             linkPopupRef.value.open()
@@ -1461,6 +1490,10 @@
 
     async function uploadFile(e) {
         try {
+            if (appType == "dm" && showUserSearch.value) {
+                gst.util.setSnack("Dm방 새로 만들 때에는 텍스트만 전송 가능합니다.")
+                return
+            }
             const files = e.target.files
             if (fileBlobArr.value.length + files.length > hush.cons.uploadMaxCount) {
                 gst.util.setToast("업로드 파일 갯수는 메시지별로 " + hush.cons.uploadMaxCount + "개(기존 파일 포함)까지만 가능합니다.", 5, true)
@@ -1761,7 +1794,7 @@
     }
     ////////////////////////////////////////////////////////////////////////////////////
 
-    function procClearSearch() {
+    async function procClearSearch() {
         if (searchText.value == "") userSearched.value = []
     }
 
@@ -1785,6 +1818,7 @@
             }
             if (rs.list.length == 1) {
                 addUserToDm(rs.list[0])
+                searchText.value = ""
             } else {
                 userSearched.value = arr
             }            
@@ -1800,7 +1834,7 @@
     async function addUserToDm(row) {
         const found = userAdded.value.findIndex(item => item.USERID == row.USERID)
         if (found > -1) {
-            userAdded.value[found].found = true
+            userAdded.value[found].found = true //기존 중복 표시임
             setTimeout(function() { userAdded.value[found].found = false }, 1000)
             return
         }
@@ -1809,15 +1843,31 @@
             return
         }
         userAdded.value.push(row)
-        userAdded.value[userAdded.value.length - 1].found = true
+        userAdded.value[userAdded.value.length - 1].found = true //기존 중복이 아닌 새로운 추가 표시임
         setTimeout(function() { userAdded.value[userAdded.value.length - 1].found = false }, 500)
         await nextTick()
         const topVal = document.getElementById("divAddedUser").offsetHeight + document.getElementById("divAddUser").offsetHeight
         searchedResultTop.value = topVal + 5
+        ///////////////////////////////////////////////////////////
+        const member = [] //기존 DM방 여부 체크
+        userAdded.value.forEach(item => { member.push(item.USERID) })
+        const res = await axios.post("/menu/qryDmChkExist", { member: member })
+        const rs = gst.util.chkAxiosCode(res.data)
+        if (!rs) return null
+        dmChanIdAlready.value = rs.data.chanid
     }
 
     function delUserItem(idx) {
         userAdded.value.splice(idx, 1)
+    }
+
+    function openDmRoom(newWin) {
+        if (newWin) {
+            window.open("/body/msglist/" + dmChanIdAlready.value + "/0?appType=dm")
+        } else {
+            let obj = { name : "dm_body", params : { chanid: dmChanIdAlready.value, msgid: "0" }}
+            router.push(obj)
+        }
     }
 </script>
 
@@ -1848,6 +1898,16 @@
                                @keyup="(e) => procInput(e)" @input="procClearSearch" @focus="searchInput.select()" />
                     </div>
                     <div style="margin-left:10px;display:flex;align-items:center">(대상인원 : {{ userAdded.length }})</div>
+                </div>
+                <div style="margin-top:20px;display:flex;align-items:center">
+                    <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom()">
+                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
+                        <span class="coImgSpn">기존 DM방 열기</span>
+                    </div>
+                    <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom(true)">
+                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
+                        <span class="coImgSpn">기존 DM방 새창으로 열기 </span>
+                    </div>
                 </div>
                 <div style="margin-top:20px">1. DM방을 새로 만듭니다.</div>
                 <div style="margin-top:20px">2. 임직원 또는 등록된 외부인의 이름(일부)을 넣고 Enter를 누르면 가져옵니다.</div>
