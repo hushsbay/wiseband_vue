@@ -61,6 +61,11 @@ const router = createRouter({
                             path: 'dm_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
                             name: 'dm_body',
                             component: MsgList,
+                        },
+                        {
+                            path: 'dm_body_new',
+                            name: 'dm_body_new',
+                            component: MsgList,
                         }
                     ]                  
                 },

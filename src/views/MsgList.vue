@@ -158,6 +158,12 @@
 
     const popupChanDmOn = ref(false), listPopupChanDm = ref([]), dataPopupChanDm = ref({})
 
+    //dm 보내기 (신규)
+    let showUserSearch = ref(false), userSearchedRef = useTemplateRef('userSearchedRef')
+    let userSearched = ref([]), userAdded = ref([])
+    let searchInput = ref('searchInput'), searchedResultTop = ref(85)
+    let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
+
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
     //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/ => 목적이 다르고 헛점도 많이 보이지만 참고할 만한 내용도 많음
@@ -235,17 +241,21 @@
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
             } else {
-                setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
-                if (msgidInChan) {
-                    await getList({ msgid: msgidInChan, kind: "atHome" })
+                if (route.fullPath == "/main/dm/dm_body_new") {
+                    showUserSearch.value = true
                 } else {
-                    await getList({ lastMsgMstCdt: savLastMsgMstCdt })                    
+                    setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
+                    if (msgidInChan) {
+                        await getList({ msgid: msgidInChan, kind: "atHome" })
+                    } else {
+                        await getList({ lastMsgMstCdt: savLastMsgMstCdt })                    
+                    }
+                    observerTopScroll()
+                    observerBottomScroll()
+                    //try { 
+                        inEditor.value.focus() 
+                    //} catch {}
                 }
-                observerTopScroll()
-                observerBottomScroll()
-                try { 
-                    inEditor.value.focus() 
-                } catch {}
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -631,7 +641,6 @@
                         const rs = gst.util.chkAxiosCode(res.data)
                         if (!rs) return
                         chanid = rs.data.chanid
-                        debugger
                     }
                     window.open("/body/msglist/" + chanid + "/0?appType=dm")
                 } catch (ex) { 
@@ -1752,11 +1761,6 @@
     }
     ////////////////////////////////////////////////////////////////////////////////////
 
-    let userSearchedRef = useTemplateRef('userSearchedRef')
-    let userSearched = ref([]), userAdded = ref([])
-    let searchInput = ref('searchInput'), searchedResultTop = ref(85)
-    let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
-
     function procClearSearch() {
         if (searchText.value == "") userSearched.value = []
     }
@@ -1776,6 +1780,7 @@
                 } else {
                     row.userInfo = row.USERNM + "/" + row.JOB.trim() + "/" + row.ORG_NM + "/" + row.TOP_ORG_NM
                 }
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 arr.push(row)
             }
             if (rs.list.length == 1) {
@@ -1799,12 +1804,20 @@
             setTimeout(function() { userAdded.value[found].found = false }, 1000)
             return
         }
+        if (row.USERID == g_userid) {
+            gst.util.setSnack("본인 아이디는 추가하지 않습니다.")
+            return
+        }
         userAdded.value.push(row)
         userAdded.value[userAdded.value.length - 1].found = true
         setTimeout(function() { userAdded.value[userAdded.value.length - 1].found = false }, 500)
         await nextTick()
         const topVal = document.getElementById("divAddedUser").offsetHeight + document.getElementById("divAddUser").offsetHeight
         searchedResultTop.value = topVal + 5
+    }
+
+    function delUserItem(idx) {
+        userAdded.value.splice(idx, 1)
     }
 </script>
 
@@ -1815,12 +1828,13 @@
             <span>데이터가 없습니다.<br>왼쪽 패널에서 노드를 클릭하시기 바랍니다.</span>
         </div>
         <div class="chan_center" :style="{ width: widthChanCenter }">
-            <div style="position:relative;width:100%;display:flex;flex-direction:column">
+            <div v-if="showUserSearch" style="position:relative;width:100%;display:flex;flex-direction:column">
                 <div id="divAddedUser" style="min-height:50px;margin-top:3px;display:flex">
                     <div style="min-width:40px;display:flex;align-items:center;font-weight:bold">대상 :</div>
                     <div class="msg_body_blob">
-                        <div v-for="(row, idx) in userAdded" class="msg_file_each" :style="{ background: row.found ? 'var(--hover-color)' : '' }">
-                            <div><span style="margin-right:3px;color:#005192">{{ row.userInfo }}</span></div>
+                        <div v-for="(row, idx) in userAdded" class="msg_file_each" @click="delUserItem(idx)" :style="{ background: row.found ? 'var(--hover-color)' : '' }">
+                            <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                            <div><span style="margin:0 3px;color:#005192">{{ row.userInfo }}</span></div>
                             <div class="msg_file_del">
                                 <img class="coImg14" :src="gst.html.getImageUrl('close.png')">
                             </div>
@@ -1830,22 +1844,26 @@
                 <div id="divAddUser" style="min-height:30px;margin-top:3px;display:flex">
                     <div style="min-width:48px;display:flex;align-items:center;font-weight:bold">추가 :</div>
                     <div>
-                        <input type="search" ref="searchInput" v-model="searchText"  spellcheck="false" style="width:402px"
+                        <input type="search" ref="searchInput" v-model="searchText"  spellcheck="false" style="width:402px" placeholder="이름을 넣고 Enter를 누르십시오."
                                @keyup="(e) => procInput(e)" @input="procClearSearch" @focus="searchInput.select()" />
                     </div>
                     <div style="margin-left:10px;display:flex;align-items:center">(대상인원 : {{ userAdded.length }})</div>
                 </div>
+                <div style="margin-top:20px">1. DM방을 새로 만듭니다.</div>
+                <div style="margin-top:20px">2. 임직원 또는 등록된 외부인의 이름(일부)을 넣고 Enter를 누르면 가져옵니다.</div>
+                <div style="margin-top:20px">3. 추가된 이름(대상)을 확인하고 최초 메시지를 보내고 나면 방이 만들어집니다.</div>
                 <div v-show="userSearched.length > 0" style="position:absolute;left:0;margin-top:3px;display:flex" :style="{ top: searchedResultTop + 'px' }">
                     <div style="width:48px"></div>
                     <div ref="userSearchedRef" tabindex="1" 
-                        style="width:400px;min-height:60px;max-height:180px;border:1px solid dimgray;background:whitesmoke;z-index:1000;overflow-y:scroll;overflow-x:hidden">
+                        style="width:390px;min-height:60px;max-height:180px;padding:5px;border:1px solid dimgray;background:whitesmoke;z-index:1000;overflow-y:scroll;overflow-x:hidden">
                         <div v-for="(row, idx) in userSearched" @click="addUserToDm(row)" class="coHover" style="width:100%;min-height:30px;display:flex;align-items:center">
-                            <div class="coDotDot" :title="row.userInfo">{{ row.userInfo }}</div>
+                            <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                            <div class="coDotDot" :title="row.userInfo" style="margin-left:5px">{{ row.userInfo }}</div>
                         </div>                            
                     </div>
                 </div>
             </div>
-            <div class="chan_center_header" id="chan_center_header">
+            <div v-if="!showUserSearch" class="chan_center_header" id="chan_center_header">
                 <div class="chan_center_header_left">
                     <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
                     <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
@@ -1871,7 +1889,7 @@
                     </div>
                 </div>
             </div>
-            <div v-if="!hasProp()" class="chan_center_nav" id="chan_center_nav">
+            <div v-if="!hasProp() && !showUserSearch" class="chan_center_nav" id="chan_center_nav">
                 <div class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                     <span style="margin-left:5px;font-weight:bold">메시지</span> 

@@ -291,8 +291,16 @@
         row.hover = false
     }
 
-    function newDm() {
-        memberlistRef.value.open("dm", "new")
+    async function newDm(manage) {
+        if (manage) {
+            memberlistRef.value.open("dm", "new")
+        } else {
+            listDm.value.forEach((item) => { //선택 해제
+                item.sel = false
+                item.hover = false
+            })
+            await router.push({ name: "dm_body_new" })
+        }
     }
 
     async function refreshPanel() {
@@ -370,12 +378,17 @@
             <div class="chan_side_top_left">DM</div>
             <div class="chan_side_top_right">
                 <div style="padding:5px;display:flex;align-items:center;border-radius:8px;">
-                    <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:80px;margin-right:8px" placeholder="멤버" />
+                    <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:100px;margin-right:8px" placeholder="멤버" />
                     <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
-                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
-                    <img v-if="!props.fromPopupChanDm" class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="DM방 만들기" @click="newDm()">
+                    <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:0px" @click="refreshPanel">
+                    <!-- <img v-if="!props.fromPopupChanDm" class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="DM방 만들기" @click="newDm()"> -->
                 </div>
             </div>
+        </div>
+        <div style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:whitesmoke;border-bottom:1px solid lightgray;cursor:pointer">
+            <span style="margin-right:10px" @click="newDm()">신규</span>
+            <span style="margin-right:10px">|</span>
+            <span style="margin-right:10px" @click="newDm(true)">신규(관리)</span>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }" :keyidx="idx"
@@ -436,7 +449,7 @@
         display:flex;flex-direction:column;background:var(--second-color);border-top-left-radius:10px;border-bottom-left-radius:10px
     }
     .chan_side_top {
-        width:100%;height:50px;display:flex;justify-content:space-between;border-bottom:1px solid lightgray;cursor:pointer
+        width:100%;height:40px;display:flex;justify-content:space-between;border-bottom:0px solid lightgray;cursor:pointer
     }
     .chan_side_top_left {
         width:10%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
