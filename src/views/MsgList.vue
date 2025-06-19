@@ -1750,6 +1750,62 @@
         showHtml.value = true
         msgbody.value = document.getElementById(editorId).innerHTML
     }
+    ////////////////////////////////////////////////////////////////////////////////////
+
+    let userSearchedRef = useTemplateRef('userSearchedRef')
+    let userSearched = ref([]), userAdded = ref([])
+    let searchInput = ref('searchInput'), searchedResultTop = ref(85)
+    let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
+
+    function procClearSearch() {
+        if (searchText.value == "") userSearched.value = []
+    }
+
+    async function procInput(e) {
+        if (e.keyCode == 13) { //Enter
+            const param = { searchText: searchUser, onlyAllUsers: true }
+            const res = await axios.post("/user/procOrgSearch", param)
+            const rs = gst.util.chkAxiosCode(res.data) 
+            if (!rs) return
+            userSearched.value = []
+            const arr = []
+            for (let i = 0; i < rs.list.length; i++) {
+                const row = rs.list[i]
+                if (row.ORG_NM == "" & row.TOP_ORG_NM == "") {
+                    row.userInfo = row.USERNM + "/" + row.EMAIL
+                } else {
+                    row.userInfo = row.USERNM + "/" + row.JOB.trim() + "/" + row.ORG_NM + "/" + row.TOP_ORG_NM
+                }
+                arr.push(row)
+            }
+            if (rs.list.length == 1) {
+                addUserToDm(rs.list[0])
+            } else {
+                userSearched.value = arr
+            }            
+        } else if (e.keyCode == 40) { //Arrow Down (focus to result list)
+            userSearchedRef.value.focus() //tabIndex를 사용해 포커싱은 되는데 해당 div에서 화살표 위아래 누를 때 선택행이 변경되도록 해야 함 (향후 도전)
+        } else if (e.keyCode == 8 || e.keyCode == 46) { //BackSpace, Del
+            userSearched.value = []
+        } else {
+            searchUser = e.target.value
+        }
+    }
+
+    async function addUserToDm(row) {
+        const found = userAdded.value.findIndex(item => item.USERID == row.USERID)
+        if (found > -1) {
+            userAdded.value[found].found = true
+            setTimeout(function() { userAdded.value[found].found = false }, 1000)
+            return
+        }
+        userAdded.value.push(row)
+        userAdded.value[userAdded.value.length - 1].found = true
+        setTimeout(function() { userAdded.value[userAdded.value.length - 1].found = false }, 500)
+        await nextTick()
+        const topVal = document.getElementById("divAddedUser").offsetHeight + document.getElementById("divAddUser").offsetHeight
+        searchedResultTop.value = topVal + 5
+    }
 </script>
 
 <template>
@@ -1759,6 +1815,36 @@
             <span>데이터가 없습니다.<br>왼쪽 패널에서 노드를 클릭하시기 바랍니다.</span>
         </div>
         <div class="chan_center" :style="{ width: widthChanCenter }">
+            <div style="position:relative;width:100%;display:flex;flex-direction:column">
+                <div id="divAddedUser" style="min-height:50px;margin-top:3px;display:flex">
+                    <div style="min-width:40px;display:flex;align-items:center;font-weight:bold">대상 :</div>
+                    <div class="msg_body_blob">
+                        <div v-for="(row, idx) in userAdded" class="msg_file_each" :style="{ background: row.found ? 'var(--hover-color)' : '' }">
+                            <div><span style="margin-right:3px;color:#005192">{{ row.userInfo }}</span></div>
+                            <div class="msg_file_del">
+                                <img class="coImg14" :src="gst.html.getImageUrl('close.png')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="divAddUser" style="min-height:30px;margin-top:3px;display:flex">
+                    <div style="min-width:48px;display:flex;align-items:center;font-weight:bold">추가 :</div>
+                    <div>
+                        <input type="search" ref="searchInput" v-model="searchText"  spellcheck="false" style="width:402px"
+                               @keyup="(e) => procInput(e)" @input="procClearSearch" @focus="searchInput.select()" />
+                    </div>
+                    <div style="margin-left:10px;display:flex;align-items:center">(대상인원 : {{ userAdded.length }})</div>
+                </div>
+                <div v-show="userSearched.length > 0" style="position:absolute;left:0;margin-top:3px;display:flex" :style="{ top: searchedResultTop + 'px' }">
+                    <div style="width:48px"></div>
+                    <div ref="userSearchedRef" tabindex="1" 
+                        style="width:400px;min-height:60px;max-height:180px;border:1px solid dimgray;background:whitesmoke;z-index:1000;overflow-y:scroll;overflow-x:hidden">
+                        <div v-for="(row, idx) in userSearched" @click="addUserToDm(row)" class="coHover" style="width:100%;min-height:30px;display:flex;align-items:center">
+                            <div class="coDotDot" :title="row.userInfo">{{ row.userInfo }}</div>
+                        </div>                            
+                    </div>
+                </div>
+            </div>
             <div class="chan_center_header" id="chan_center_header">
                 <div class="chan_center_header_left">
                     <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
@@ -2090,6 +2176,7 @@
     .msg_file_each { /*position:relative는 floating menu에 필요*/
         position:relative;min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
     }
+    .msg_file_each:hover { background:var(--hover-color) }
     .msg_file_each:active { background:lightsteelblue }
     .msg_file_seemore {
         position:absolute;top:0;right:0;padding:0 3px;height:30px;display:flex;align-items:center;background:whitesmoke;border-radius:0px

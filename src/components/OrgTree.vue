@@ -152,6 +152,10 @@
         }
     }
 
+    function procClearSearch() {
+        if (searchText.value == "") reset("tree")
+    }
+
     async function procSearch() {
         mode.value = "search"
         const param = { searchText: searchText.value.trim() }
@@ -358,7 +362,7 @@
             <div class="chan_center">
                 <div class="chan_center_header">
                     <div class="chan_center_header_left">
-                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" style="width:90px" />
+                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" @input="procClearSearch" style="width:90px" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
                             <img :src="gst.html.getImageUrl('white_search.png')" class="coImg16">
                         </div>
