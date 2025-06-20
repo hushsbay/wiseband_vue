@@ -13,6 +13,7 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    let keepAliveRef = ref(null)
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     const msglistRef = ref(null), notyetChk = ref(false)
     let scrollArea = ref(null), listActivity = ref([]), kindActivity = ref('all'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
@@ -341,7 +342,7 @@
     <resizer nm="activity" @ev-from-resizer="handleFromResizer"></resizer>
     <div v-if="listActivity.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
-            <keep-alive>                
+            <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>

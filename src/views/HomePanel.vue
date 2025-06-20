@@ -137,7 +137,7 @@
             for (let i = 0; i < len; i++) {
                 const item = listHome.value[i]
                 if (item.CHANID == null) continue //그룹은 있는데 그 아래 채널이 없는 경우 한 행 '없음'이라고 표시됨
-                if (i == 0) item.exploded = false
+                item.exploded = (item.CHANID == "") ? false : true
                 chanClick(item, i, true)
                 if (item.CHANID) break //사용자그룹(1단계)노드를 처리하고 채널(2단계)노드를 만나면 처리후 break
             }

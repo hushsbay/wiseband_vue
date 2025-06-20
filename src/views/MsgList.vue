@@ -231,7 +231,7 @@
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
             console.log("MsgList Mounted..... " + route.fullPath)
-            //if (!gst.util.chkOnMountedTwice(route, 'MsgList')) return
+            if (!gst.util.chkOnMountedTwice(route, 'MsgList')) return
             subTitle = hush.util.getRnd() + 'M'
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
@@ -647,20 +647,23 @@
         const displayStr = vipStr.value.includes(',' + row.AUTHORID + ',') ? "해제" : "설정"
         const bool = vipStr.value.includes(',' + row.AUTHORID + ',') ? false : true
         gst.ctx.menu = [
-            { nm: "DM 보내기", func: async function() {
+            { nm: "DM 보내기", func: async function() { //1대1은 새창에서 여는 게 효율적일 수도 ..
+                //1) DM의 newDm()을 호출하려면 dm 라우팅을 타야 함 2) 홈패널의 MsgList에서 DM 라우팅하면 MsgList가 수회 반복되는 문제 발생함 (Dm 패널로 가서 처리하려면 Main.vue까지 가서 Dm을 불러야 함)
                 try {
-                    const res = await axios.post("/menu/qryDmTwo", { USERID: row.AUTHORID })
+                    const res = await axios.post("/menu/qryDmChkExist", { member: [row.AUTHORID] })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return null
                     let chanid = rs.data.chanid
                     if (!chanid) { //둘만의 방이 없으므로 새로 추가해야 함
-                        const rq = { CHANID: "new", MEMBER: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM }] } //신규 DM방 생성 (멤버도 함께 생성)
+                        const SYNC = chandtlObj.value[row.AUTHORID] ? chandtlObj.value[row.AUTHORID].SYNC : "Y"
+                        const rq = { CHANID: "new", MEMBER: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM, SYNC: SYNC }] } //신규 DM방 생성 (멤버도 함께 생성)
                         const res = await axios.post("/chanmsg/saveChan", rq)
                         const rs = gst.util.chkAxiosCode(res.data)
                         if (!rs) return
                         chanid = rs.data.chanid
+                        localStorage.wiseband_lastsel_dmchanid = chanid
                     }
-                    window.open("/body/msglist/" + chanid + "/0?appType=dm")
+                    openDmRoom(chanid, true) //window.open("/body/msglist/" + chanid + "/0?appType=dm")
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
@@ -1025,9 +1028,9 @@
 
     function keyUpEnter(e) {
         if (e.ctrlKey) {
-            saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
+            //saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
         } else {
-            //일단 줄바꿈으로 동작하게 하기
+            saveMsg() //일단 줄바꿈으로 동작하게 하기
         }
     }
 
@@ -1879,11 +1882,11 @@
         userAdded.value.splice(idx, 1)
     }
 
-    function openDmRoom(newWin) {
+    function openDmRoom(chanid, newWin) {
         if (newWin) {
-            window.open("/body/msglist/" + dmChanIdAlready.value + "/0?appType=dm")
+            window.open("/body/msglist/" + chanid + "/0?appType=dm")
         } else {
-            let obj = { name : "dm_body", params : { chanid: dmChanIdAlready.value, msgid: "0" }}
+            let obj = { name : "dm_body", params : { chanid: chanid, msgid: "0" }} //DM 패널이 아니라면 MsgList Mounted 반복되는 문제 발생
             router.push(obj)
         }
     }
@@ -1918,11 +1921,11 @@
                     <div style="margin-left:10px;display:flex;align-items:center">(대상인원 : {{ userAdded.length }})</div>
                 </div>
                 <div style="margin-top:20px;display:flex;align-items:center">
-                    <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom()">
+                    <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom(dmChanIdAlready)">
                         <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
                         <span class="coImgSpn">기존 DM방 열기</span>
                     </div>
-                    <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom(true)">
+                    <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom(dmChanIdAlready, true)">
                         <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
                         <span class="coImgSpn">기존 DM방 새창으로 열기 </span>
                     </div>
@@ -2041,7 +2044,11 @@
                             <span style="margin-left:3px">{{ row1.CNT}}</span>
                         </div> -->
                         <div v-for="(row1, idx1) in row.msgdtl">
-                            <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                            <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                                <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                                <span style="margin-left:3px">{{ row1.CNT}}</span>
+                            </div> -->
+                            <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                                 <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 <span style="margin-left:3px">{{ row1.CNT}}</span>
                             </div>

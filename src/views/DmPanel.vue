@@ -25,6 +25,7 @@
         emits("ev-to-side", kind, menu) //kiind=forwardToSide/menu=home,later..
     }
 
+    let keepAliveRef = ref(null)
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     let notyetChk = ref(false), searchWord = ref('') //msglistRef = ref(null), 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
@@ -431,7 +432,7 @@
     <resizer nm="dm" @ev-from-resizer="handleFromResizer"></resizer>
     <div v-if="listDm.length > 0" id="chan_body" :style="{ width: chanMainWidth }"> <!--<component ref="msglistRef" -->
         <router-view v-slot="{ Component }">
-            <keep-alive>                
+            <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody" />
             </keep-alive>
         </router-view>

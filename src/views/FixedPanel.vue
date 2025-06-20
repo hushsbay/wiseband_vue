@@ -15,6 +15,7 @@
 
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
 
+    let keepAliveRef = ref(null)
     const msglistRef = ref(null)    
     let scrollArea = ref(null), listFixed = ref([]), cntFixed = ref(0), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
@@ -308,7 +309,7 @@
     <resizer nm="fixed" @ev-from-resizer="handleFromResizer"></resizer>
     <div v-if="listFixed.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
-            <keep-alive>                
+            <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
             </keep-alive>
         </router-view>
