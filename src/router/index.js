@@ -10,6 +10,7 @@ import FixedPanel from '/src/views/FixedPanel.vue'
 import GroupPanel from '/src/views/GroupPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 import UserList from '/src/views/UserList.vue'
+import DummySkeleton from '/src/components/DummySkeleton.vue'
 
 import GeneralStore from '/src/stores/GeneralStore.js'
 let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
@@ -49,6 +50,11 @@ const router = createRouter({
                             path: 'home_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
                             name: 'home_body',
                             component: MsgList,
+                        },
+                        {
+                            path: 'dummy_skeleton',
+                            name: 'home_dumskel',
+                            component: DummySkeleton
                         }
                     ]
                 },
@@ -66,6 +72,11 @@ const router = createRouter({
                             path: 'dm_body_new',
                             name: 'dm_body_new',
                             component: MsgList,
+                        },
+                        {
+                            path: 'dummy_skeleton',
+                            name: 'dm_dumskel',
+                            component: DummySkeleton
                         }
                     ]                  
                 },
@@ -78,6 +89,11 @@ const router = createRouter({
                             path: 'activity_body/:chanid/:msgid',
                             name: 'activity_body',
                             component: MsgList,
+                        },
+                        {
+                            path: 'dummy_skeleton',
+                            name: 'activity_dumskel',
+                            component: DummySkeleton
                         }
                     ]                  
                 },
@@ -90,6 +106,11 @@ const router = createRouter({
                             path: 'later_body/:chanid/:msgid',
                             name: 'later_body',
                             component: MsgList,
+                        },
+                        {
+                            path: 'dummy_skeleton',
+                            name: 'later_dumskel',
+                            component: DummySkeleton
                         }
                     ]                  
                 },
@@ -102,6 +123,11 @@ const router = createRouter({
                             path: 'fixed_body/:chanid/:msgid',
                             name: 'fixed_body',
                             component: MsgList,
+                        },
+                        {
+                            path: 'dummy_skeleton',
+                            name: 'fixed_dumskel',
+                            component: DummySkeleton
                         }
                     ]                  
                 },

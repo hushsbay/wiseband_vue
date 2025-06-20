@@ -279,7 +279,7 @@
 
     async function deleteChan() {
         try {
-            if (!confirm("[" + chanNm.value + "]채널에 대해 전체 삭제를 진행합니다. 계속할까요?")) return
+            if (!confirm("방 전체 삭제를 진행합니다. 계속할까요?")) return
             const rq = { CHANID: chanId }
             const res = await axios.post("/chanmsg/deleteChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)

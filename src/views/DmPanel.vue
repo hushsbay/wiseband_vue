@@ -256,7 +256,7 @@
         }
     }
 
-    async function mouseRight(e, row) {        
+    async function mouseRight(e, row) {
         gst.ctx.data.header = ""
         const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
         const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
@@ -272,7 +272,7 @@
                 const job = (row.NOTI == "X") ? "" : "X"
                 toggleChanOption("noti", job, row)
             }},
-            { nm: "북마크 " + bookmarkStr, func: function(item, idx) {
+            { nm: "북마크 " + bookmarkStr, deli:true, func: function(item, idx) {
                 const job = (row.BOOKMARK == "Y") ? "" : "Y"
                 toggleChanOption("bookmark", job, row)
             }}
@@ -330,7 +330,7 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             row.mynotyetCnt = rs.data.kindCnt
-        } else if (param.kind == "refreshPanel") { //DM방 만들기에서 사용
+        } else if (param.kind == "refreshPanel") { //방 나가기,삭제에서 사용
             refreshPanel()
         /*} else if (param.kind == "forwardToSide") { //지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조            
             evToSide(param.kind, param.menu) 향후 사용시 모든 패널에 evToSide 검토 필요 */

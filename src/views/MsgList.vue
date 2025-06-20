@@ -144,7 +144,7 @@
         
     let subTitle = ''
     let sideMenu, chanId, msgidInChan, STATE_NODATA = "nodata"
-    let grnm = ref(''), chanNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
+    let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
     let msglist = ref([]), fetchByScrollEnd = ref(false)
 
@@ -319,16 +319,32 @@
 
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
+        const disableStr = (chanMasterId.value == g_userid) ? false : true
         gst.ctx.menu = [
-            { nm: "나가기", color: 'red', func: async function(item, idx) {
+            { nm: "방 나가기", func: async function(item, idx) {
                 try {
                     if (!confirm("퇴장시 방 관리자의 초대가 없으면 다시 들어올 수 없습니다. 계속할까요?")) return
                     const rq = { CHANID: chanId, USERID: g_userid }
                     const res = await axios.post("/chanmsg/deleteChanMember", rq)
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
-                    pageData.value = STATE_NODATA
-                    evToPanel({ kind: "delete", chanid: chanId })
+                    //evToPanel({ kind: "delete", chanid: chanId })
+                    await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조 
+                    evToPanel({ kind: "refreshPanel" })                   
+                } catch (ex) { 
+                    gst.util.showEx(ex, true)
+                }
+            }},
+            { nm: "방 삭제", disable: disableStr, func: async function(item, idx) {
+                try {
+                    if (!confirm("방 전체 삭제를 진행합니다. 계속할까요?")) return
+                    const rq = { CHANID: chanId }
+                    const res = await axios.post("/chanmsg/deleteChan", rq)
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs) return
+                    //evToPanel({ kind: "delete", chanid: chanId })
+                    await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조                    
+                    evToPanel({ kind: "refreshPanel" })
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
@@ -363,6 +379,8 @@
         document.title = chanmstParam.CHANNM + " [채널-" + subTitle + "]"
         grnm.value = chanmstParam.GR_NM
         chanNm.value = chanmstParam.CHANNM
+        chanMasterId.value = chanmstParam.MASTERID
+        chanMasterNm.value = chanmstParam.MASTERNM
         chanImg.value = gst.util.getChanImg(chanmstParam.TYP, chanmstParam.STATE)
         chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
         chanmemFullExceptMe.value = []
@@ -1985,6 +2003,7 @@
                 <div v-show="listMsgSel == 'unread'" class="coImgBtn" @click="updateAllWithNewKind('unread', 'read')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">모두읽음처리</span>
                 </div>
+                <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
                 <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
