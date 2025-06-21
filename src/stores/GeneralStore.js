@@ -412,11 +412,12 @@ const GeneralStore = defineStore('General', () => {
             }
             if (data.code != hush.cons.OK) {
                 if (notShowMsgIfNoData && data.code == hush.cons.NOT_FOUND) {
-                    //데이터 없을 경우에 메시지없이 넘어가야 할 때가 있음
-                } else if (!route.fullPath.startsWith("/login") && data.code.startsWith(hush.cons.auth_err_prefix)) {
-                    router.replace({ name : 'login' }) //alert(data.msg + "[" + data.code + "]") //예) 인증이 필요합니다.
+                    //데이터 없을 경우에 메시지 없이 넘어가야 할 때가 있음
                 } else {
                     util.setSnack("[" + data.code + "] " + data.msg, true)
+                    if (data.code.startsWith(hush.cons.auth_err_prefix) && !route.fullPath.startsWith("/login")) {
+                        router.replace({ name : 'login' }) //예) jwt token expired
+                    }
                 }
                 return null
             } //axios call은 res.data 아래 code,msg,data,list로 nest로부터 받음
