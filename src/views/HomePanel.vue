@@ -55,6 +55,7 @@
             if (localStorage.wiseband_lastsel_home) kind.value = localStorage.wiseband_lastsel_home
             await getList()
             if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
+                console.log("Home Mounted.....click.... " + route.fullPath)
                 chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
             } else {
                 chanClickOnLoop(false)
@@ -72,6 +73,7 @@
             setBasicInfo()
             if (route.path == "/main/home") { //사이드메뉴에서 클릭한 경우
                 if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
+                    console.log("Home Activated.....click.... " + route.fullPath)
                     chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
                 } else {
                     chanClickOnLoop(false)

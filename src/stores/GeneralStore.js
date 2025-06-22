@@ -323,9 +323,9 @@ const GeneralStore = defineStore('General', () => {
 
     const util = {
 
-        chkOnMountedTwice : function(route, str) {
+        chkOnMountedTwice : function(route, str) { //MsgList가 1초 이내 2번 mounted되는데 이 루틴으로 한번만 막으려 했으나 노드자동클릭 안되는 현상 발생해 모두 막아야 함
             if (sessionStorage.mountedFullpath == route.fullPath) {
-                console.log(str + " - route.fullPath가 동일한데 onMounted() 재호출되어 막음 - 개발 Hot Deply일 수도 있음 (운영에서 체크) - " + route.fullPath)
+                console.log(str + " - route.fullPath가 동일한데 onMounted() 재호출되어 막음 - 개발 Hot Deploy일 수도 있음 (운영에서 체크) - " + route.fullPath)
                 return false
             }
             sessionStorage.mountedFullpath = route.fullPath

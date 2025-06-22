@@ -231,11 +231,10 @@
         //호출하는 MsgList.vue와 충돌해 페이지가 안뜸 => router의 index.js에서 beforeEach()로 해결함 $$76
         try {
             console.log("MsgList Mounted..... " + route.fullPath)
-            if (!gst.util.chkOnMountedTwice(route, 'MsgList')) return
+            //if (!gst.util.chkOnMountedTwice(route, 'MsgList')) return
             subTitle = hush.util.getRnd() + 'M'
             const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
             appType = arr[2] //home,dm,later,msglist..
-            //debugger
             if (appType == "msglist" && route.query.appType) appType = route.query.appType //새창에서열기 또는 링크복사시 arr[2]는 msglist이므로 appType을 다시 가져와야 함
             if (hasProp()) {
                 setBasicInfoInProp()
@@ -263,12 +262,11 @@
     })
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
-        if (!route.fullPath.includes("_body")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생하는데 원인 파악이 현재까지 안되어 일단 여기서 차단
-        console.log("MsgList Activated..... " + route.fullPath)
+        if (!route.fullPath.includes("_body")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
+        console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
         if (mounting) {
             mounting = false
         } else {
-            //debugger
             subTitle = subTitle.replace("M", "A")
             if (hasProp()) {
                 setBasicInfoInProp()
@@ -296,7 +294,6 @@
     })
 
     function setBasicInfo() {
-        //debugger
         sideMenu = gst.selSideMenu
         if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
         if (route.params.chanid) chanId = route.params.chanid
@@ -408,7 +405,6 @@
             onGoingGetList = true
             let param = { chanid: chanId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            //console.log("getList "+"22222222222: " + JSON.stringify(param))
             const lastMsgMstCdt = param.lastMsgMstCdt
             const firstMsgMstCdt = param.firstMsgMstCdt
             const msgid = param.msgid
@@ -1026,7 +1022,15 @@
         }
     }
 
-    function keyUpEnter(e) {
+    // function keyUpEnter(e) {
+    //     if (e.ctrlKey) {
+    //         //saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
+    //     } else {
+    //         saveMsg() //일단 줄바꿈으로 동작하게 하기
+    //     }
+    // }
+
+    function keyDownEnter(e) {
         if (e.ctrlKey) {
             //saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
         } else {
@@ -2037,7 +2041,7 @@
                             <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
                         </div>
                     </div>
-                    <div v-if="row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
+                    <div v-if="row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                     <div class="msg_body_sub"><!-- 반응, 댓글 -->
                         <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                             <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
@@ -2174,10 +2178,10 @@
                         @click="htmlView()"><!--개발자사용-->
                 </div>
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
-                </div>
+                    @paste="pasteData" @keydown.enter.prevent="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
                 <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keyup.enter="keyUpEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                    @paste="pasteData" @keydown.enter.prevent="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
                 </div>
                 <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
                 <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
