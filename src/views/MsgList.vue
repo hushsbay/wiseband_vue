@@ -1518,7 +1518,7 @@
             if (appType == "dm" && showUserSearch.value) {
                 gst.util.setSnack("Dm방 새로 만들 때에는 텍스트만 전송 가능합니다.")
                 return
-            }
+            }            
             const files = e.target.files
             if (fileBlobArr.value.length + files.length > hush.cons.uploadMaxCount) {
                 gst.util.setToast("업로드 파일 갯수는 메시지별로 " + hush.cons.uploadMaxCount + "개(기존 파일 포함)까지만 가능합니다.", 5, true)
@@ -1559,6 +1559,7 @@
                 filesToUpload.push({ hover: false, name: files[i].name, size: files[i].size, cdt: rs.data.cdt })
             }
             fileBlobArr.value = [...fileBlobArr.value, ...filesToUpload]
+            e.target.value = '' //clear하지 않으면 동일한 파일명이 바로 올라가지 않음 (change event 관련)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
