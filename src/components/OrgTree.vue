@@ -12,7 +12,7 @@
     
     defineExpose({ open, close, procFromParent })
 
-    let mode = ref('tree'), show = ref(true), searchText = ref(''), myteam = ref('')
+    let mode = ref('tree'), show = ref(true), searchText = ref(''), myteam = ref(''), mycomp = ref('')
     let depthToShow = ref(1), chkCnt = ref(0) //mygroup을 고려해서 depthToShow는 기본적으로는 반드시 1로 해야 함
     let maxLevel = 1
 
@@ -24,7 +24,18 @@
     onMounted(async () => {
         try {
             mode.value = props.mode
-            myteam.value = (localStorage.wiseband_orgtree_myteam == "true") ? true : false
+            if (localStorage.wiseband_orgtree_myteam == "true" || localStorage.wiseband_orgtree_myteam == "false") {
+                myteam.value = (localStorage.wiseband_orgtree_myteam == "true") ? true : false
+            } else { //기본을 true로 설정
+                myteam.value = true
+                localStorage.wiseband_orgtree_myteam = true
+            }
+            if (localStorage.wiseband_orgtree_mycomp == "true" || localStorage.wiseband_orgtree_mycomp == "false") {
+                mycomp.value = (localStorage.wiseband_orgtree_mycomp == "true") ? true : false
+            } else { //기본을 true로 설정
+                mycomp.value = true
+                localStorage.wiseband_orgtree_mycomp = true
+            }
             await procQuery(mode.value)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -52,7 +63,16 @@
 
     async function toggleMyTeam() {
         localStorage.wiseband_orgtree_myteam = myteam.value ? true : false
-        if (myteam.value) procQuery("tree")
+        if (myteam.value) {
+            localStorage.wiseband_orgtree_depthToShow = 0
+            await nextTick()
+            procQuery("tree")
+        }
+    }
+
+    async function toggleMyComp() {
+        localStorage.wiseband_orgtree_mycomp = mycomp.value ? true : false
+        if (myteam.value || mycomp.value) procQuery("tree")
     }
 
     function selectOne() {
@@ -72,7 +92,11 @@
         }
         const controller = (strMode == "tree") ? "orgTree" : "qryGroupWithUser"
         const notShowMsgIfNoData = (strMode == "tree") ? false : true
-        const res = await axios.post("/user/" + controller, { myteam: ((strMode == "tree" && myteam.value) ? gst.auth.getCookie("orgcd") : "") })
+        const res = await axios.post("/user/" + controller, { 
+            myteam: (strMode == "tree" && myteam.value) ? gst.auth.getCookie("orgcd") : "",
+            mycomp: (strMode == "tree" && mycomp.value) ? gst.auth.getCookie("toporgcd") : "",
+            toastMsg: true
+        })
         const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
         if (!rs) return
         orglist.value = []
@@ -105,6 +129,7 @@
                     const row = orglist.value[i]
                     if (row.nodekind == "G") { //console.log(myOrgArr[j].ORG_CD+"============"+row.ORG_CD+"============"+i)
                         if (row.ORG_CD == myOrgArr[j].ORG_CD) { //console.log(myOrgArr[j].ORG_CD+"============"+i)
+                            //if (!row.exploded) 
                             clickNode(null, row, i)
                             k = i + 1
                             break
@@ -276,6 +301,7 @@
     }
 
     function changeDepth(val) {
+        if (myteam.value) myteam.value = false
         if (val == true) {
             if (depthToShow.value >= maxLevel) {
                 depthToShow.value = maxLevel
@@ -352,6 +378,8 @@
                         <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people2.png')">
                         <span style="margin-left:5px;font-weight:bold">내그룹</span> 
                     </div>
+                    <span style="margin:0 5px 0 10px;color:dimgray">선택:</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
+                    <span class="vipBtn" style="margin-left:8px" @click="clearAllChk()">해제</span>
                 </div>
                 <div style="padding-right:10px;display:flex;align-items:center">
                     <span class="vipMark">VIP</span>
@@ -362,22 +390,23 @@
             <div class="chan_center">
                 <div class="chan_center_header">
                     <div class="chan_center_header_left">
-                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" @input="procClearSearch" style="width:90px" />
+                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" @input="procClearSearch" style="width:100px" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
                             <img :src="gst.html.getImageUrl('white_search.png')" class="coImg16">
                         </div>
                         <div class="coImgBtn" @click="reset(mode)">
                             <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg16" title="새로고침">
                         </div>
+                        
+                        <input v-show="mode == 'tree'" type="checkbox" id="myteam" v-model="myteam" style="margin-left:10px" @change="toggleMyTeam"/>
+                        <label v-show="mode == 'tree'" for="myteam" style="">내팀</label>
+                        <input v-show="mode == 'tree'" type="checkbox" id="mycomp" v-model="mycomp" style="margin-left:10px" @change="toggleMyComp"/>
+                        <label v-show="mode == 'tree'" for="mycomp" style="">내회사</label>
+                    </div>
+                    <div class="chan_center_header_right">
                         <span class="depth" style="margin-right:5px">{{ depthToShow }}</span>
                         <div class="coImgBtn" @click="changeDepth(false)"><img :src="gst.html.getImageUrl('white_minus.png')" class="coImg16"></div>
                         <div class="coImgBtn" @click="changeDepth(true)"><img :src="gst.html.getImageUrl('white_plus.png')" class="coImg16"></div>
-                        <input v-show="mode == 'tree'" type="checkbox" id="myteam" v-model="myteam" style="margin-left:10px" @change="toggleMyTeam"/>
-                        <label v-show="mode == 'tree'" for="myteam" style="font-size:14px">내팀</label>
-                    </div>
-                    <div class="chan_center_header_right">
-                        <span style="margin-right:5px">선택:</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
-                        <span class="vipBtn" style="margin-left:10px" @click="clearAllChk()">해제</span>
                     </div>
                 </div>
                 <div v-show="mode == 'tree' || mode == 'mygroup'" class="chan_center_body" ref="scrollArea">
@@ -463,7 +492,7 @@
         width:calc(100% - 140px);height:100%;padding:0 10px;display:flex;align-items:center;
     }
     .chan_center_header_right {
-        width:100px;height:100%;padding:0 10px;display:flex;align-items:center;justify-content:flex-end;
+        width:100px;height:100%;padding:0 5px;display:flex;align-items:center;justify-content:flex-end;
     }
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto
@@ -472,7 +501,7 @@
         width:100%;justify-content:space-between;cursor:pointer
     }
     .org_body:hover { background:var(--hover-color) }
-    .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px;margin-left:10px }
+    .depth { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:dimgray;color:white;font-size:12px;padding:4px }
     .vipBtn { margin-left:5px;padding:1px 2px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
     .vipMark { margin-left:5px;padding:1px 2px 2px 2px;font-size:10px;background:black;color:white;border-radius:5px }
     .kind { padding:3px;font-size:10px;background:#5DB5FD;color:white;border-radius:5px }

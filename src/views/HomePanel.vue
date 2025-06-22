@@ -14,14 +14,14 @@
     const gst = GeneralStore()
 
     const props = defineProps({ fromPopupChanDm: String })
-    const emits = defineEmits(["ev-click", "ev-to-side"])
+    const emits = defineEmits(["ev-click"]) //, "ev-to-side"])
 
     function listRowClick(row) {
         emits("ev-click", "home", row.CHANID)
     }
 
     function evToSide(kind, menu) {
-        emits("ev-to-side", kind, menu) //kiind=forwardToSide/menu=home,later..
+        //emits("ev-to-side", kind, menu) //kiind=forwardToSide/menu=home,later..
     }
 
     //1. HomePanel 상태 정의는 아래와 같음

@@ -332,7 +332,7 @@
         <div v-if="show">
             <div class="popup">
                 <div class="chan_main">
-                    <div class="chan_center" style="width:calc(100% - 550px);padding-right:10px">
+                    <div class="chan_center" style="width:calc(100% - 560px);padding-right:10px">
                         <div class="chan_center_header" id="chan_center_header">
                             <div class="chan_center_header_left">
                                 <div class="coDotDot">
@@ -501,7 +501,7 @@
                             </div>  
                         </div>
                     </div>
-                    <div class="chan_right" style="width:550px">
+                    <div class="chan_right" style="width:560px">
                         <org-tree mode="mygroup" :kind="appType" ref="orgRef" @ev-click="applyToBody"></org-tree>
                     </div>  
                 </div>

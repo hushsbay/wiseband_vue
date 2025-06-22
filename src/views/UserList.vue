@@ -322,7 +322,7 @@
 
 <template>
     <div class="chan_main">
-        <div class="chan_center" style="width:calc(100% - 550px);padding-right:10px">
+        <div class="chan_center" style="width:calc(100% - 560px);padding-right:10px">
             <div class="chan_center_header" id="chan_center_header">
                 <div class="chan_center_header_left">
                     <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
@@ -471,7 +471,7 @@
                 </div>  
             </div>
         </div>
-        <div class="chan_right" style="width:550px;height:calc(100% - 12px);margin:5px 0">
+        <div class="chan_right" style="width:560px;height:calc(100% - 12px);margin:5px 0">
             <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
         </div>  
     </div>

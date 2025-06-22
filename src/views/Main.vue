@@ -251,9 +251,14 @@
             </div>
             <div class="main">
                 <div class="content"><!-- <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList의 $route.fullPath이므로 unique하지 않아 onMounted가 수회 발생 or 무한루프(예:홈 메뉴)-->
-                    <router-view v-slot="{ Component }">
+                    <!-- <router-view v-slot="{ Component }">
                         <keep-alive ref="keepAliveRef">
                             <component :is="Component" :key="$route.fullPath.split('/')[2]" @ev-to-side="handleEvFromPanel" fromPopupChanDm="" />
+                        </keep-alive>
+                    </router-view> -->
+                    <router-view v-slot="{ Component }">
+                        <keep-alive ref="keepAliveRef">
+                            <component :is="Component" :key="$route.fullPath.split('/')[2]" />
                         </keep-alive>
                     </router-view>
                 </div>

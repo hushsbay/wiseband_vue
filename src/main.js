@@ -54,5 +54,5 @@ axios.interceptors.request.use(
 app.config.errorHandler = (err, instance, info) => {
     //click event에서 router.push({ path : "./Wisepush" })시 router 객체 import를 일부러 막고 Exception 발생시 아래와 같았음
     //1) err.message, err.stack 2) instance는 Target이 _pStores {main: Proxy}로 나오는데 현재 사용할 케이스를 찾지 못함 3) info는 "native event handler"로 나옴
-    gst.util.setSnack(err, false)
+    gst.util.setSnack(err, true)
 }
