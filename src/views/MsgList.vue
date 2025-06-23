@@ -164,6 +164,9 @@
     let searchInput = ref('searchInput'), searchedResultTop = ref(85)
     let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
 
+    //실시간 반영
+    let logdt = '', perLastCdt = '', realLastCdt = ''
+
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
     //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/ => 목적이 다르고 헛점도 많이 보이지만 참고할 만한 내용도 많음
@@ -223,11 +226,53 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
+    let tempInfo = ref([])
     async function chkDataLog() {
         try {
-            const res = await axios.post("/chanmsg/qryDataLog", { logdt : '', kind: "msg" })//////////////////////////////////////////@@@@@@@@@@@@
+            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt, kind: "msg", chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true)
-            
+            const arr = rs.list
+            const len = arr.length
+            if (len > 0) {
+                //debugger
+                let msgidFrom = ""
+                for (let i = 0; i < len; i++) {
+                    const row = arr[i]
+                    if (row.CUD == "C") {
+                        msgidFrom = row.MSGID
+                        break
+                    }
+                }
+                if (msgidFrom != "") {
+                    //qry()로 데이터 끝까지 읽어와서
+
+                    if (perLastCdt < realLastCdt) {
+                        //정보로 쌓아두기 (갯수 추가 등)
+                    } else { //리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
+
+                    }
+                    await nextTick() //배열추가된 부분이므로 동기 처리 필요
+                }
+                for (let i = 0; i < len; i++) {
+                    const row = arr[i]
+                    if (row.CUD == "U") { //U일 경우는 서버호출해서 데이터 가져와서 하나씩 업데이트하면 됨
+                        tempInfo.value.push({ kind: "U", msgid: row.MSGID })
+                    }
+                }
+                for (let i = 0; i < len; i++) { //C->U->D 순서로 처리하기 (타임라인이 만들고 삭제는 있을 수 있음. 만들고 업데이트하고 삭제도 있을 수 있음)
+                    const row = arr[i]
+                    if (row.CUD == "D") { //서버 읽을 필요없이 바로 배열에서 제거하면 됨
+                        tempInfo.value.push({ kind: "D", msgid: row.MSGID })
+                        const idx = gst.util.getKeyIndex(msgRow, row.MSGID) //처리한 화면에서는 이미 지워서 화면에 없을 것임 (-1)
+                        if (idx > -1) {
+                            msglist.value.splice(idx, 1) //const item = msglist.value[idx]
+                            await nextTick() //배열삭제된 부분이므로 동기 처리 필요
+                        }
+                    }
+                }
+            }
+            logdt = rs.data.logdt //오류 발생시 이 부분이 실행되면 안될 것임 /////////////////////////////////////////////////////
+            setTimeout(function() { chkDataLog() }, 1000 * 20)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -266,7 +311,7 @@
                     //} catch {}
                 }
             }
-
+            setTimeout(function() { chkDataLog() }, 1000 * 10)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -532,8 +577,14 @@
                 }
                 if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
                 if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
-                msgRow.value[row.MSGID.toString()] = row.MSGID
-            }
+                //msgRow.value[row.MSGID.toString()] = row.MSGID
+                if (row.CDT > perLastCdt) perLastCdt = row.CDT
+            } //###876
+            //1. perLastCdt(가져온 최근메시지CDT)와 realLastCdt(atHome에서처럼 가져오지 않았지만 실제 최근메시지CDT)를 비교해 같거나 perLastCdt가 크면 그 다음에 리얼타임으로 반영되는 추가분은 화면에 뿌려도 무방함
+            //2. realLastCdt가 더 크면 중간에 (서버에서 갖고 오지 않아서) 이빨 빠진 리스트 상태이므로 리얼타임으로 반영하려고 갖고 오더라도 화면에 반영하지 말고 사용자에게 보이게 정보만 쌓아두기로 함
+            //   - 그래서 그걸 클릭하면 그동안 쌓아 두었던 것을 가져 오든지 아니면 최근것부터 뿌리고 이전 스크롤하게 하기로 함
+            realLastCdt = rs.list.length > 0 ? rs.list[0].CDT : ""
+            logdt = rs.data.logdt
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
                 const blobUrl = hush.util.getImageBlobUrl(item.BUFFER.data)
@@ -610,13 +661,21 @@
 
     function refreshWithGetMsg(rs, msgid) {
         let item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (item) { //필요한 경우 추가하기로 함. 그러나 결국엔 한번에 붓는 것도 필요해 질 것임
+        if (item) { 
             item.BODY = rs.msgmst.BODY
             item.UDT = rs.msgmst.UDT
-            item.reply = rs.reply
-            item.replyinfo = rs.replyinfo
+
             item.act_later = rs.act_later
             item.act_fixed = rs.act_fixed
+
+            item.msgdtl = rs.msgdtl
+            item.msgdtlmention = rs.msgdtlmention
+            item.msgfile = rs.msgsub.msgfile
+            item.msgimg = rs.msgsub.msgimg
+            item.msglink = rs.msgsub.msglink
+
+            item.reply = rs.reply
+            item.replyinfo = rs.replyinfo
             //item.background = rs.act_later ? hush.cons.color_act_later : ""
         }
     }
@@ -2026,7 +2085,10 @@
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
                 <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
-                <div v-for="(row, idx) in msglist" :id="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" class="msg_body procMenu"  
+                <div v-for="(row, idx) in tempInfo">
+                    <div>{{ row.kind + '===' + row.msgid }}</div>
+                </div>
+                <div v-for="(row, idx) in msglist" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
                     :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                     @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
                     <div style="width:100%;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
