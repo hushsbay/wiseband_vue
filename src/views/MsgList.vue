@@ -255,24 +255,44 @@
                 }
                 for (let i = 0; i < len; i++) {
                     const row = arr[i]
-                    if (row.CUD == "U") { //U일 경우는 서버호출해서 데이터 가져와서 하나씩 업데이트하면 됨
+                    debugger
+                    if (row.CUD == "U") { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
+                        //그러나, polling이 아닌 소켓 적용시에는 getMsg()로 호출하기로 함
                         tempInfo.value.push({ kind: "U", msgid: row.MSGID })
+                        const parentMsgid = (row.REPLYTO != "" && row.REPLYTO != row.MSGID) ? row.REPLYTO : row.MSGID
+                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
+                        if (idx > -1) {
+                            if (row.REPLYTO != "" && row.REPLYTO != row.MSGID) {
+                                 //MSGID가 댓글 아이디임
+                            } else { //부모글
+                                refreshWithGetMsg(row.msgItem.data, null, idx)
+                            }
+                            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
+                            //await nextTick() //배열업데이트된 부분이므로 동기 처리 필요
+                        }
                     }
                 }
-                for (let i = 0; i < len; i++) { //C->U->D 순서로 처리하기 (타임라인이 만들고 삭제는 있을 수 있음. 만들고 업데이트하고 삭제도 있을 수 있음)
+                for (let i = 0; i < len; i++) { //C->U->D 순서로 처리하기 (타임라인 : 만들고 삭제는 있을 수 있음. 만들고 업데이트하고 삭제도 있을 수 있음)
                     const row = arr[i]
                     if (row.CUD == "D") { //서버 읽을 필요없이 바로 배열에서 제거하면 됨
                         tempInfo.value.push({ kind: "D", msgid: row.MSGID })
-                        const idx = gst.util.getKeyIndex(msgRow, row.MSGID) //처리한 화면에서는 이미 지워서 화면에 없을 것임 (-1)
-                        if (idx > -1) {
-                            msglist.value.splice(idx, 1) //const item = msglist.value[idx]
+                        const parentMsgid = (row.REPLYTO != "" && row.REPLYTO != row.MSGID) ? row.REPLYTO : row.MSGID
+                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
+                        if (idx > -1) { //처리한 화면에서는 이미 지워서 화면에 없을 것임 (-1)
+                            if (row.REPLYTO != "" && row.REPLYTO != row.MSGID) { //MSGID가 댓글 아이디임
+                                refreshWithGetMsg(row.msgItem.data, null, idx)
+                                if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                            } else { //부모글
+                                msglist.value.splice(idx, 1) //const item = msglist.value[idx]
+                                clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
+                            }
                             await nextTick() //배열삭제된 부분이므로 동기 처리 필요
                         }
                     }
                 }
             }
-            logdt = rs.data.logdt //오류 발생시 이 부분이 실행되면 안될 것임 /////////////////////////////////////////////////////
-            setTimeout(function() { chkDataLog() }, 1000 * 20)
+            logdt = rs.data.logdt //오류 발생시 이 부분이 실행되면 안될 것임!!!!!
+            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 20) //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -311,7 +331,7 @@
                     //} catch {}
                 }
             }
-            setTimeout(function() { chkDataLog() }, 1000 * 10)
+            setTimeout(function() { chkDataLog() }, 1000 * 20)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -659,24 +679,28 @@
         }
     }
 
-    function refreshWithGetMsg(rs, msgid) {
-        let item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (item) { 
-            item.BODY = rs.msgmst.BODY
-            item.UDT = rs.msgmst.UDT
+    function refreshWithGetMsg(rs, msgid, idx) {
+        try {
+            let item = msgid ? msglist.value.find(function(row) { return row.MSGID == msgid }) : msglist.value[idx]
+            if (item) { 
+                item.BODY = rs.msgmst.BODY
+                item.UDT = rs.msgmst.UDT
 
-            item.act_later = rs.act_later
-            item.act_fixed = rs.act_fixed
+                item.act_later = rs.act_later
+                item.act_fixed = rs.act_fixed
 
-            item.msgdtl = rs.msgdtl
-            item.msgdtlmention = rs.msgdtlmention
-            item.msgfile = rs.msgsub.msgfile
-            item.msgimg = rs.msgsub.msgimg
-            item.msglink = rs.msgsub.msglink
+                item.msgdtl = rs.msgdtl
+                item.msgdtlmention = rs.msgdtlmention
+                item.msgfile = rs.msgfile
+                item.msgimg = rs.msgimg
+                item.msglink = rs.msglink
 
-            item.reply = rs.reply
-            item.replyinfo = rs.replyinfo
-            //item.background = rs.act_later ? hush.cons.color_act_later : ""
+                item.reply = rs.reply
+                item.replyinfo = rs.replyinfo
+                //item.background = rs.act_later ? hush.cons.color_act_later : ""
+            }
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -1172,7 +1196,7 @@
                 evToPanel({ kind: "update", chanid: chanId, bodytext: bodytext })
                 //gst.dm.procFromBody("update", rq)
             }
-            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value })
+            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value }) //댓글창의 부모글 업데이트
             msgbody.value = ""            
             editMsgId.value = null
             if (appType == "dm" && showUserSearch.value) { //DM방 새로 만들기

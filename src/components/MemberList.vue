@@ -396,9 +396,7 @@
                                             <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
                                                 {{ row.KIND=='guest' ? '게스트' : '관리자' }}
                                             </span>
-                                            <span v-if="row.STATE=='C' || row.STATE=='W'" class="kind">
-                                                {{ row.STATE=='C' ? '초대필요' : '참여대기' }} 
-                                            </span>
+                                            <span v-if="row.STATE=='C'" class="kind">초대필요</span>
                                         </div>
                                     </div>
                                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
