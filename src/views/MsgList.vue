@@ -222,6 +222,16 @@
         })
         observerBottom.value.observe(observerBottomTarget.value)
     }
+
+    async function chkDataLog() {
+        try {
+            const res = await axios.post("/chanmsg/qryDataLog", { logdt : '', kind: "msg" })//////////////////////////////////////////@@@@@@@@@@@@
+            const rs = gst.util.chkAxiosCode(res.data, true)
+            
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
     
     onMounted(async () => { //HomePanel.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
@@ -256,6 +266,7 @@
                     //} catch {}
                 }
             }
+
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
