@@ -13,7 +13,7 @@
     let tab = ref(''), show = ref(false), chanid = '', channm = ref(''), chanimg = ref(null)
     let rdoOpt = ref('all')
     let frYm = ref(''), toYm = ref(''), authorNm = ref(''), searchText = ref(''), fileExt = ref('')
-    let savLastMsgMstCdt
+    let savPrevMsgMstCdt
 
     const scrollArea = ref(null), filelist = ref([]), imagelist = ref([]), msglist = ref([]) 
     let prevScrollY = 0 //Intersection Observer 오류(parameter 1 is not of type 'Element') 해결이 어려워 onScrollEnd에서 처리함
@@ -57,7 +57,7 @@
 
     async function procSearchMedia(refresh) {
         if (refresh) {
-            savLastMsgMstCdt = hush.cons.cdtAtLast
+            savPrevMsgMstCdt = hush.cons.cdtAtLast
             prevScrollY = 0
             if (tab.value == "file") {
                 filelist.value = []
@@ -66,7 +66,7 @@
             }
         }
         const param = { 
-            chanid: chanid, kind: tab.value, lastMsgMstCdt: savLastMsgMstCdt, rdoOpt: rdoOpt.value, 
+            chanid: chanid, kind: tab.value, prevMsgMstCdt: savPrevMsgMstCdt, rdoOpt: rdoOpt.value, 
             fileExt: fileExt.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
             authorNm: authorNm.value.trim(), searchText: searchText.value.trim()
         }
@@ -84,18 +84,18 @@
             } else if (tab.value == "file") {
                 filelist.value.push(row)
             }
-            if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+            if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
         }
     }
 
     async function procSearchMsg(refresh) {
         if (refresh) {
-            savLastMsgMstCdt = hush.cons.cdtAtLast
+            savPrevMsgMstCdt = hush.cons.cdtAtLast
             prevScrollY = 0
             msglist.value = []
         }
         const param = { 
-            chanid: chanid, kind: tab.value, lastMsgMstCdt: savLastMsgMstCdt, rdoOpt: rdoOpt.value, 
+            chanid: chanid, kind: tab.value, prevMsgMstCdt: savPrevMsgMstCdt, rdoOpt: rdoOpt.value, 
             frYm: frYm.value.trim(), toYm: toYm.value.trim(), authorNm: authorNm.value.trim(), searchText: searchText.value.trim()
         }
         const res = await axios.post("/chanmsg/searchMsg", param)
@@ -106,7 +106,7 @@
             row.chanImg = gst.util.getChanImg(row.TYP, row.STATE)
             gst.util.handleMsgSub(row)
             msglist.value.push(row)
-            if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+            if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
         }
     }
 

@@ -146,7 +146,7 @@
     let sideMenu, chanId, msgidInChan, STATE_NODATA = "nodata"
     let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
-    let msglist = ref([]), fetchByScrollEnd = ref(false)
+    let msglist = ref([])//, fetchByScrollEnd = ref(false)
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
     let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
@@ -322,10 +322,10 @@
                     showUserSearch.value = true
                 } else {
                     setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
-                    if (msgidInChan) {
+                    if (msgidInChan) { //예) 새창에서 열기하면서 메시지아이디가 붙어 있으면 atHome이 되는 것임
                         await getList({ msgid: msgidInChan, kind: "atHome" })
                     } else {
-                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt })                    
+                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt }) //기본적인 조회 패턴임                 
                     }
                     observerTopScroll()
                     observerBottomScroll()
@@ -434,7 +434,6 @@
         msglist.value = []
         if (kind == 'all') {
             savPrevMsgMstCdt = hush.cons.cdtAtLast
-            //console.log("listMsg-all")
             await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
         } else {
             await getList({ kind: kind })
@@ -474,9 +473,9 @@
     //1) prevMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) nextMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
     //3) nextMsgMstCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
-    //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
-    //5) msgid + kind(withReply) : 1. 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI 2. 나중에..내활동..에서 기본 클릭시 보여 주는 UI
-    //6) kind(notyet or unread)
+    //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..) : 조회후 스크롤링 위아래로 움직이는 무한스크롤 1), 2)를 지원함
+    //5) msgid + kind(withReply) : 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI : 조회하면 끝이며 무한스크롤 없음
+    //6) kind(all, notyet, unread, msg, file, image) : msgid 없음
     async function getList(addedParam) {
         try {
             if (onGoingGetList || pageData.value == STATE_NODATA) return
@@ -493,28 +492,13 @@
             }
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data) 
-            fetchByScrollEnd.value = false
+            //fetchByScrollEnd.value = false
             if (!rs) {
                 onGoingGetList = false                
                 return
             }            
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
             const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
-            // document.title = rs.data.chanmst.CHANNM + " [채널-" + temp + "]"
-            // grnm.value = rs.data.chanmst.GR_NM
-            // chanNm.value = rs.data.chanmst.CHANNM
-            // chanImg.value = gst.util.getChanImg(rs.data.chanmst.TYP, rs.data.chanmst.STATE)
-            // chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
-            // chanmemFullExceptMe.value = []
-            // const len = rs.data.chandtl.length
-            // for (let i = 0; i < len; i++) {
-            //     const row = rs.data.chandtl[i]    
-            //     row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-            //     chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
-            //     if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
-            //     if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
-            // }
-            // chandtl.value = rs.data.chandtl
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
             if (msgid && (kind == "atHome" || kind == "withReply")) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
             const msgArr = rs.data.msglist
@@ -526,7 +510,7 @@
             const msgidParent = rs.data.msgidParent //atHome만 사용함 (댓글인 경우는 부모 아이디)
             const msgidChild = rs.data.msgidChild //atHome만 사용함 (msgidParent와 다르면 이건 댓글의 msgid임)
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
-                const row = msgArr[i] //if (row.MSGID == '20250419095152486066082566') debugger
+                const row = msgArr[i]
                 if (kind == "withReply") {
                     if (i == 0) {
                         row.background = "beige"
@@ -549,50 +533,52 @@
                 }
                 if (replaced) row.BODY = tempBody
                 gst.util.handleMsgSub(row)
-                //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
+                //동일한 작성자가 1분이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장) - 구현하긴 했지만 과연 이게 더 깔끔하고 사용자 친화적인가 의문
+                //stickToPrev = 이전 메시지에 현재 메시지가 붙어 있는 모습 (1분이내 같은 사용자)
+                //hasSticker = 이전 메시지 입장에서 아래에 1분이내 같은 사용자가 붙어 있는 모습
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
                 if (nextMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
-                    if (i == 0) {
+                    if (i == 0) { //제일 오래된 메시지므로 false
                         row.stickToPrev = false
                     } else {
-                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 오래된 것임
+                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //현재 메시지의 작성자와 직전(더 오래된 i - 1)의 메시지 작성자가 다르면 false
                             row.stickToPrev = false
                         } else {
                             const prevCdt = msgArr[i - 1].CDT.substring(0, 19)
-                            row.stickToPrev = chkWithinTime(prevCdt, curCdt)
+                            row.stickToPrev = chkWithinTime(prevCdt, curCdt) //같은데 1분이내면 true
                         }
                     }
-                    if (i == msgArr.length - 1) {
+                    if (i == msgArr.length - 1) { //제일 최근 메시지이므로 false
                         row.hasSticker = false
                     } else {
-                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 최근임
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //현재 메시지의 작성자와 직후(더 최신인 i + 1)의 메시지 작성자가 다르면 false
                             row.hasSticker = false
                         } else {
                             const nextCdt = msgArr[i + 1].CDT.substring(0, 19)
-                            row.hasSticker = chkWithinTime(curCdt, nextCdt)
+                            row.hasSticker = chkWithinTime(curCdt, nextCdt) //같은데 1분이내면 true
                         }
                     } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [29일, 30일, 31일]
                     msglist.value.push(row) //기존 메시지리스트 맨 아래에 추가
-                } else {
-                    if (i == msgArr.length - 1) {
+                } else { //내림차순
+                    if (i == msgArr.length - 1) { //제일 오래된 메시지므로 false
                         row.stickToPrev = false
                     } else {
-                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //i보다 i + 1이 일시가 더 오래된 것임
+                        if (curAuthorId != msgArr[i + 1].AUTHORID) { //현재 메시지의 작성자와 직전(더 오래된 i + 1)의 메시지 작성자가 다르면 false
                             row.stickToPrev = false
                         } else {
                             const prevCdt = msgArr[i + 1].CDT.substring(0, 19)
-                            row.stickToPrev = chkWithinTime(prevCdt, curCdt)
+                            row.stickToPrev = chkWithinTime(prevCdt, curCdt) //같은데 1분이내면 true
                         }
                     }
                     if (i == 0) {
-                        row.hasSticker = false
+                        row.hasSticker = false //제일 최근 메시지이므로 false
                     } else {
-                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //i보다 i - 1이 일시가 더 최근임
+                        if (curAuthorId != msgArr[i - 1].AUTHORID) { //현재 메시지의 작성자와 직후(더 최신인 i - 1)의 메시지 작성자가 다르면 false
                             row.hasSticker = false
                         } else {
                             const nextCdt = msgArr[i - 1].CDT.substring(0, 19)
-                            row.hasSticker = chkWithinTime(curCdt, nextCdt)
+                            row.hasSticker = chkWithinTime(curCdt, nextCdt) //같은데 1분이내면 true
                         }
                     } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
                     msglist.value.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
@@ -601,12 +587,13 @@
                 if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
                 //msgRow.value[row.MSGID.toString()] = row.MSGID
                 if (row.CDT > perLastCdt) perLastCdt = row.CDT
-            } //###876
-            //1. perLastCdt(가져온 최근메시지CDT)와 realLastCdt(atHome에서처럼 가져오지 않았지만 실제 최근메시지CDT)를 비교해 같거나 perLastCdt가 크면 그 다음에 리얼타임으로 반영되는 추가분은 화면에 뿌려도 무방함
-            //2. realLastCdt가 더 크면 중간에 (서버에서 갖고 오지 않아서) 이빨 빠진 리스트 상태이므로 리얼타임으로 반영하려고 갖고 오더라도 화면에 반영하지 말고 사용자에게 보이게 정보만 쌓아두기로 함
-            //   - 그래서 그걸 클릭하면 그동안 쌓아 두었던 것을 가져 오든지 아니면 최근것부터 뿌리고 이전 스크롤하게 하기로 함
-            realLastCdt = rs.list.length > 0 ? rs.list[0].CDT : ""
-            logdt = rs.data.logdt
+            }
+            //1. perLastCdt(fetch 한번으로 가져온 최근메시지CDT)와 realLastCdt(atHome에서처럼, 가져오지 않았지만 실제 최근메시지CDT)를 비교해 
+            //   같거나 perLastCdt가 크면 (이빨 빠진 게 없으므로) 그 다음에 리얼타임으로 반영되는 추가분은 화면에 뿌려도 무방함
+            //2. realLastCdt가 더 크면 중간에 (서버에서 내리지 않아서) 이빨 빠진 리스트 상태이므로 리얼타임으로 반영시 화면에 바로 반영하지 말고 사용자에게 보이게 정보만 쌓아두기로 함
+            //   그리고 나서, 그걸 클릭하면 그동안 쌓아 두었던 것을 가져 오든지 아니면 아예 최근 것부터 뿌리고 이전 스크롤하게 하기로 함
+            realLastCdt = rs.list.length > 0 ? rs.list[0].CDT : "" //SELECT MSGID, CDT FROM S_MSGMST_TBL WHERE CHANID = ? AND REPLYTO = '' ORDER BY CDT DESC LIMIT 1
+            logdt = rs.data.logdt //서버에서 데이터를 가져온 시각
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
                 const blobUrl = hush.util.getImageBlobUrl(item.BUFFER.data)
@@ -634,18 +621,19 @@
                 if (msgRow.value[msgidParent]) { //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
                     msgRow.value[msgidParent].scrollIntoView()
                 }
-                if (msgidParent != msgidChild) { //atHome만 해당. 댓글에 '나중에'가 있어서 열어서 표시 필요
+                if (msgidParent != msgidChild) { //atHome만 해당. 예) 댓글에 '나중에'가 있어서 열어서 표시 필요
                     setTimeout(function() { openThread(msgidParent, msgidChild) }, 500) //setTimeout() 크게 문제되어 보이지 않음
                 }
             } else if (msgid && (kind == "withReply")) { //이미 openThread()되어 있는 상태
                 if (msgRow.value[props.data.msgidChild]) {
                     msgRow.value[props.data.msgidChild].scrollIntoView()
                 }
-            } else if (prevMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 1000개만 가져옴
-                scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
-            } else if (prevMsgMstCdt) {
-                if (msgArr.length > 0) { //스크롤이전에 prevScrollY + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop을 구하면 됨
-                    scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
+            } else if (prevMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 예를 들어, 1000개만 가져옴
+                scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+            } else if (prevMsgMstCdt) { //위로 스크롤링 할 때
+                if (msgArr.length > 0) { //스크롤이전에 prevScrollY + 새로 더해진 scrollHeight (scrollArea.value.scrollHeight - prevScrollHeight)을 더해서 scrollArea의 scrollTop을 구하면 됨
+                    //scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
+                    scrollArea.value.scrollTop = prevScrollY + (scrollArea.value.scrollHeight - prevScrollHeight)
                 } else {
                     //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
                 }
@@ -655,7 +643,7 @@
                 //그냥 두면 됨
             }
             setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
-                //방안: afterScrolled이 true이면 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 true아닐 경우만 호출하기로 함 : /chanmsg/updateWithNewKind 참조
+                //방안: afterScrolled이 true이면 이미 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 true가 아닐 경우(갯수가 작아 스크롤이 안되는 경우)만 호출하기로 함 : /chanmsg/updateWithNewKind
                 if (!afterScrolled.value) readMsgToBeSeen()
             }, 2000)
             onGoingGetList = false
@@ -2061,7 +2049,7 @@
                         <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
                         <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
                     </div>
-                    <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span> 
+                    <!-- <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span>  -->
                 </div>
                 <div class="chan_center_header_right">
                     <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
