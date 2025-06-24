@@ -18,8 +18,8 @@
     let keepAliveRef = ref(null)
     const msglistRef = ref(null)    
     let scrollArea = ref(null), listLater = ref([]), cntLater = ref(''), kindLater = ref('later'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
-    let mounting = true, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 최근 일시
-    let onGoingGetList = false
+    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
+    let mounting = true, onGoingGetList = false
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
     let chanSideWidth = ref(localStorage.wiseband_lastsel_latersidewidth ?? '300px') //localStorage 이름 유의
@@ -79,7 +79,7 @@
     }
 
     const onScrolling = () => {
-        if (!afterScrolled.value) afterScrolled.value = true
+        if (afterScrolled.value == false) afterScrolled.value = true //false 조건에 유의 (아니면 마지막 hide 안됨)
     }
 
     function procQuery(kind) {
@@ -94,26 +94,27 @@
             onGoingGetList = true
             if (refresh) {
                 listLater.value = []
-                savLastMsgMstCdt = hush.cons.cdtAtLast
+                savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
-            const lastMsgMstCdt = savLastMsgMstCdt
-            const res = await axios.post("/menu/qryPanel", { kind: kindLater.value, lastMsgMstCdt: lastMsgMstCdt })
+            const prevMsgMstCdt = savPrevMsgMstCdt
+            const res = await axios.post("/menu/qryPanel", { kind: kindLater.value, prevMsgMstCdt: prevMsgMstCdt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             if (!rs || rs.list.length == 0) {
                 onGoingGetList = false
-                afterScrolled.value = false
+                afterScrolled.value = null
                 return
             }
+            afterScrolled.value = false
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 listLater.value.push(row)
-                if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+                if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
             }
             await nextTick()
-            if (lastMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
+            if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
                 scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
-            } else if (lastMsgMstCdt) {
+            } else if (prevMsgMstCdt) {
                 //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
             }
             getCount() //진행중인 (나중에) 카운팅
@@ -184,7 +185,7 @@
         gst.ctx.data.header = ""
         const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID + "?appType=later"
         gst.ctx.menu = [
-            { nm: "새창에서 열기", func: async function(item, idx) {
+            { nm: "새창에서 열기", func: function(item, idx) {
                 window.open(url)
             }},
             { nm: "메시지 링크 복사", deli: true, func: function(item, idx) {
@@ -330,7 +331,7 @@
                     누르면 여기에 표시됩니다.
                 </div>
             </div>
-            <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget"></div>
+            <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget">{{ hush.cons.moreData }}</div>
         </div>
     </div>
     <resizer nm="later" @ev-from-resizer="handleFromResizer"></resizer>

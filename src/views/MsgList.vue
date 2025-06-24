@@ -153,7 +153,8 @@
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
-    let savFirstMsgMstCdt = hush.cons.cdtAtFirst, savLastMsgMstCdt = hush.cons.cdtAtLast //가장 오래된 일시와 최근 일시
+    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
+    let savNextMsgMstCdt = hush.cons.cdtAtFirst //가장 작은 일시(1111-11-11)로부터 시작해서 스크롤이 내려갈 때마다 점점 다음의 큰 일시가 저장됨   
     let onGoingGetList = false, prevScrollY, prevScrollHeight //, getAlsoWhenDown = ""
 
     const popupChanDmOn = ref(false), listPopupChanDm = ref([]), dataPopupChanDm = ref({})
@@ -207,7 +208,7 @@
     const observerTopScroll = () => { //위로 스크롤하는 경우
         observerTop.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {
-                await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+                await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
             } else {
                 return
             }
@@ -218,7 +219,7 @@
     const observerBottomScroll = () => { //아래로 스크롤하는 경우
         observerBottom.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {
-                await getList({ firstMsgMstCdt: savFirstMsgMstCdt })
+                await getList({ nextMsgMstCdt: savNextMsgMstCdt })
             } else {
                 return
             }
@@ -255,7 +256,6 @@
                 }
                 for (let i = 0; i < len; i++) {
                     const row = arr[i]
-                    debugger
                     if (row.CUD == "U") { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
                         //그러나, polling이 아닌 소켓 적용시에는 getMsg()로 호출하기로 함
                         tempInfo.value.push({ kind: "U", msgid: row.MSGID })
@@ -280,8 +280,11 @@
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
                         if (idx > -1) { //처리한 화면에서는 이미 지워서 화면에 없을 것임 (-1)
                             if (row.REPLYTO != "" && row.REPLYTO != row.MSGID) { //MSGID가 댓글 아이디임
-                                refreshWithGetMsg(row.msgItem.data, null, idx)
-                                if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                                refreshWithGetMsg(row.msgItem.data, null, idx) 
+                                if (msglistRef.value) {
+                                    msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                                    msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                                }
                             } else { //부모글
                                 msglist.value.splice(idx, 1) //const item = msglist.value[idx]
                                 clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
@@ -322,7 +325,7 @@
                     if (msgidInChan) {
                         await getList({ msgid: msgidInChan, kind: "atHome" })
                     } else {
-                        await getList({ lastMsgMstCdt: savLastMsgMstCdt })                    
+                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt })                    
                     }
                     observerTopScroll()
                     observerBottomScroll()
@@ -430,9 +433,9 @@
         listMsgSel.value = kind
         msglist.value = []
         if (kind == 'all') {
-            savLastMsgMstCdt = hush.cons.cdtAtLast
+            savPrevMsgMstCdt = hush.cons.cdtAtLast
             //console.log("listMsg-all")
-            await getList({ lastMsgMstCdt: savLastMsgMstCdt })
+            await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
         } else {
             await getList({ kind: kind })
         }        
@@ -468,10 +471,9 @@
         chandtl.value = chandtlParam
     }
 
-    //chanid는 기본 param
-    //1) lastMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
-    //2) firstMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
-    //3) firstMstMsgCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
+    //1) prevMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
+    //2) nextMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
+    //3) nextMsgMstCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함. (향후 소켓 적용시에도 수신인 입장에서 특정 메시지 아래 모두 읽어와 보여주기)
     //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..)
     //5) msgid + kind(withReply) : 1. 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI 2. 나중에..내활동..에서 기본 클릭시 보여 주는 UI
     //6) kind(notyet or unread)
@@ -479,15 +481,15 @@
         try {
             if (onGoingGetList || pageData.value == STATE_NODATA) return
             onGoingGetList = true
-            let param = { chanid: chanId }
+            let param = { chanid: chanId } //chanid는 기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            const lastMsgMstCdt = param.lastMsgMstCdt
-            const firstMsgMstCdt = param.firstMsgMstCdt
+            const prevMsgMstCdt = param.prevMsgMstCdt
+            const nextMsgMstCdt = param.nextMsgMstCdt
             const msgid = param.msgid
             const kind = param.kind
             if (msgid && (kind == "atHome" || kind == "withReply")) {
-                savFirstMsgMstCdt = hush.cons.cdtAtFirst
-                savLastMsgMstCdt = hush.cons.cdtAtLast
+                savNextMsgMstCdt = hush.cons.cdtAtFirst
+                savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data) 
@@ -518,9 +520,10 @@
             const msgArr = rs.data.msglist
             if (msgArr.length == 0) {
                 onGoingGetList = false
-                afterScrolled.value = false
+                afterScrolled.value = null //afterScrolled.value = false
                 return 
             }
+            afterScrolled.value = false
             const msgidParent = rs.data.msgidParent //atHome만 사용함 (댓글인 경우는 부모 아이디)
             const msgidChild = rs.data.msgidChild //atHome만 사용함 (msgidParent와 다르면 이건 댓글의 msgid임)
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
@@ -550,7 +553,7 @@
                 //동일한 작성자가 1분 이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장)
                 const curAuthorId = row.AUTHORID
                 const curCdt = row.CDT.substring(0, 19)
-                if (firstMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
+                if (nextMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
                     if (i == 0) {
                         row.stickToPrev = false
                     } else {
@@ -595,8 +598,8 @@
                     } //예) 기존 메시지리스트 = [26일데이터, 27일데이터, 28일데이터] / 새로 읽어온 리스트 = [25일, 24일, 23일]
                     msglist.value.splice(0, 0, row) //jQuery prepend와 동일 (메시지리스트 맨 위에 삽입)
                 }
-                if (row.CDT > savFirstMsgMstCdt) savFirstMsgMstCdt = row.CDT
-                if (row.CDT < savLastMsgMstCdt) savLastMsgMstCdt = row.CDT
+                if (row.CDT > savNextMsgMstCdt) savNextMsgMstCdt = row.CDT
+                if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
                 //msgRow.value[row.MSGID.toString()] = row.MSGID
                 if (row.CDT > perLastCdt) perLastCdt = row.CDT
             } //###876
@@ -639,22 +642,22 @@
                 if (msgRow.value[props.data.msgidChild]) {
                     msgRow.value[props.data.msgidChild].scrollIntoView()
                 }
-            } else if (lastMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 1000개만 가져옴
+            } else if (prevMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 1000개만 가져옴
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight }) //, behavior: 'smooth'
-            } else if (lastMsgMstCdt) {
+            } else if (prevMsgMstCdt) {
                 if (msgArr.length > 0) { //스크롤이전에 prevScrollY + 새로 더해진 scrollHeight을 더해서 scrollArea의 scrollTop을 구하면 됨
                     scrollArea.value.scrollTop = (scrollArea.value.scrollHeight - prevScrollHeight) + prevScrollY
                 } else {
                     //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
                 }
-            } else if (firstMsgMstCdt && kind == "scrollToBottom") { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
+            } else if (nextMsgMstCdt && kind == "scrollToBottom") { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
                 scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-            } else if (firstMsgMstCdt) {
+            } else if (nextMsgMstCdt) {
                 //그냥 두면 됨
             }
             setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
                 //방안: afterScrolled이 true이면 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 false일 경우만 호출하기로 함 : /chanmsg/updateWithNewKind 참조
-                if (!afterScrolled.value) readMsgToBeSeen()
+                if (afterScrolled.value == false) readMsgToBeSeen() //if (!afterScrolled.value) readMsgToBeSeen()
             }, 2000)
             onGoingGetList = false
         } catch (ex) {
@@ -795,9 +798,15 @@
             textRead = "읽음으로 처리"
             newKind = "read"
         }
+        const disableStr = (hasProp() && index == 0) ? true : false
+        const colorStr = (hasProp() && index == 0) ? "" : "red"
         gst.ctx.data.header = ""
         gst.ctx.menu = [
-            { nm: textRead, func: function(item, idx) {
+            { nm: "새창에서 열기", func: function(item, idx) {
+                const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=" + appType
+                window.open(url)
+            }},
+            { nm: textRead, disable: disableStr, func: function(item, idx) {
                 updateWithNewKind(row.MSGID, oldKind, newKind)
             }},
             // { nm: "리마인더 받기", child: [
@@ -813,13 +822,13 @@
             // ]},
             // { nm: "새 댓글시 알림 받기", func: function(item, idx) { //무조건 알림 받기가 기본
             // }},
-            { nm: "채널로 메시지 전달", func: function(item, idx) {
+            { nm: "채널로 메시지 전달", disable: disableStr, func: function(item, idx) {
                 forwardMsg("home", row.MSGID)
             }},
-            { nm: "DM으로 메시지 전달", func: function(item, idx) {
+            { nm: "DM으로 메시지 전달", disable: disableStr, func: function(item, idx) {
                 forwardMsg("dm", row.MSGID)
             }},
-            { nm: "메시지 링크로 복사", func: function(item, idx) {
+            { nm: "메시지 링크로 복사", disable: disableStr, func: function(item, idx) {
                 const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=home"
                 navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
                     gst.util.setToast("메시지 링크가 복사되었습니다.")
@@ -827,7 +836,7 @@
                     gst.util.setToast("복사 실패. 알 수 없는 문제가 발생했습니다.")
                 })
             }},
-            { nm: "메시지 편집", func: function(item, idx) {
+            { nm: "메시지 편집", disable: disableStr, func: function(item, idx) {
                 editMsgId.value = row.MSGID
                 prevEditData = document.getElementById(editorId).innerHTML
                 if (prevEditData.trim() != "") {
@@ -836,7 +845,7 @@
                 }
                 msgbody.value = row.BODY
             }},
-            { nm: "메시지 삭제", color: "red", func: async function(item, idx) {
+            { nm: "메시지 삭제", disable: disableStr, color: colorStr, func: async function(item, idx) {
                 try {
                     if (!window.confirm("삭제후 복구가 불가능합니다. 진행할까요?")) return
                     const res = await axios.post("/chanmsg/delMsg", { 
@@ -845,7 +854,7 @@
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
-                    if (hasProp()) { 
+                    if (hasProp()) { //댓글 삭제시 스레드의 부모글은 chkDataLog()에 의해 업데이트 될 것이므로 바로 아래에서는 굳이 처리 안함
                         evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                     } else { //이게 MsgList(부모) -> MsgList(자식)인 경우라면 필요없어 보임 (부모글 삭제시 자식에 댓글 있으면 안되고 댓글 없으면 굳이 화면에서 연동할 필요없음)
                         if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
@@ -880,7 +889,8 @@
     }
 
     const onScrolling = () => { 
-        if (!afterScrolled.value) afterScrolled.value = true
+        //if (!afterScrolled.value) afterScrolled.value = true
+        if (afterScrolled.value == false) afterScrolled.value = true //false 조건에 유의 (아니면 마지막 hide 안됨)
         if (!scrollArea.value) return //오류 만났을 때
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
@@ -1180,7 +1190,7 @@
                     scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
-                    await getList({ firstMsgMstCdt: savFirstMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
+                    await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //저장한 메시지 추가
                 }
             } else {
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
@@ -2108,7 +2118,7 @@
                 <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
-                <div v-show="afterScrolled" ref="observerTopTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+                <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget">{{ hush.cons.moreData }}</div>
                 <div v-for="(row, idx) in tempInfo">
                     <div>{{ row.kind + '===' + row.msgid }}</div>
                 </div>
@@ -2238,7 +2248,7 @@
                 <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
                 </div>
-                <div v-show="afterScrolled" ref="observerBottomTarget" style="width:100%;height:200px;display:flex;justify-content:center;align-items:center"></div>
+                <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget">{{ hush.cons.moreData }}</div>
             </div>
             <div class="chan_center_footer">
                 <div class="editor_header">

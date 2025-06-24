@@ -348,7 +348,6 @@
                                 <select v-model="stateSel" style="margin-right:10px;background:transparent;border:none" @change="changeStateSel">
                                     <option value="A">모두조회</option>
                                     <option value="C">초대필요</option>
-                                    <option value="W">참여대기</option>
                                 </select>
                                 <span style="font-weight:bold;margin-right:10px">{{ memberlist.length }}명</span>
                                 <img class="coImg24" :src="gst.html.getImageUrl('close.png')" style="margin-right:5px" @click="close" title="닫기">
