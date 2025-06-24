@@ -79,7 +79,7 @@
     }
 
     const onScrolling = () => {
-        if (afterScrolled.value == false) afterScrolled.value = true //false 조건에 유의 (아니면 마지막 hide 안됨)
+        if (afterScrolled.value == false) afterScrolled.value = true //false 조건에 유의 (아니면 마지막 hide 안됨 => 계속 onScrolling 반복되어버림)
     }
 
     function procChangedQuery() {

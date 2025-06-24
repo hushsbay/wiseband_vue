@@ -520,10 +520,9 @@
             const msgArr = rs.data.msglist
             if (msgArr.length == 0) {
                 onGoingGetList = false
-                afterScrolled.value = null //afterScrolled.value = false
+                afterScrolled.value = false
                 return 
             }
-            afterScrolled.value = false
             const msgidParent = rs.data.msgidParent //atHome만 사용함 (댓글인 경우는 부모 아이디)
             const msgidChild = rs.data.msgidChild //atHome만 사용함 (msgidParent와 다르면 이건 댓글의 msgid임)
             for (let i = 0; i < msgArr.length; i++) { //msgArr[0]가 가장 최근일시임 (CDT 내림차순 조회 결과)
@@ -656,8 +655,8 @@
                 //그냥 두면 됨
             }
             setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
-                //방안: afterScrolled이 true이면 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 false일 경우만 호출하기로 함 : /chanmsg/updateWithNewKind 참조
-                if (afterScrolled.value == false) readMsgToBeSeen() //if (!afterScrolled.value) readMsgToBeSeen()
+                //방안: afterScrolled이 true이면 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 true아닐 경우만 호출하기로 함 : /chanmsg/updateWithNewKind 참조
+                if (!afterScrolled.value) readMsgToBeSeen()
             }, 2000)
             onGoingGetList = false
         } catch (ex) {
@@ -888,9 +887,9 @@
         row.hover = false
     }
 
-    const onScrolling = () => { 
-        //if (!afterScrolled.value) afterScrolled.value = true
-        if (afterScrolled.value == false) afterScrolled.value = true //false 조건에 유의 (아니면 마지막 hide 안됨)
+    const onScrolling = () => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
+        //패널에서는 안내문구가 들어 갔는데 여기서는 안내문구 없음 (무한스크롤 위아래방향 모두 처리. 안내문구 들어 가면 나중에 hide안되는 등 꼬이게 되므로 넣지 말기)
+        if (!afterScrolled.value) afterScrolled.value = true
         if (!scrollArea.value) return //오류 만났을 때
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
@@ -2118,7 +2117,7 @@
                 <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
-                <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget">{{ hush.cons.moreData }}</div>
+                <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget"></div>
                 <div v-for="(row, idx) in tempInfo">
                     <div>{{ row.kind + '===' + row.msgid }}</div>
                 </div>
@@ -2248,7 +2247,7 @@
                 <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
                 </div>
-                <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget">{{ hush.cons.moreData }}</div>
+                <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget"></div>
             </div>
             <div class="chan_center_footer">
                 <div class="editor_header">

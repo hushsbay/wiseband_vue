@@ -85,8 +85,8 @@
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
+            observerBottomScroll()
         }
-        observerBottomScroll()
     })
 
     onUnmounted(() => {
