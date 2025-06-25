@@ -76,13 +76,13 @@
 
     function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
         if (hasProp()) return
-        if (thread.value.msgid) {
-            thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
-            setWidthForThread(null, "close")            
-        }
-        thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
-        thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
-        setWidthForThread()
+        if (thread.value.msgid) clickFromProp({ type: "close" })
+        setTimeout(function() {
+            thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
+            thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
+            setWidthForThread()
+        }, 100)
+        
     }
 
     async function clickFromProp(obj) { //부모에서만 사용. 자식에게서 전달받아 이벤트 처리하는 것임
@@ -655,7 +655,7 @@
                     msgRow.value[msgidParent].scrollIntoView()
                 }
                 if (msgidParent != msgidChild) { //atHome만 해당. 예) 댓글에 '나중에'가 있어서 열어서 표시 필요
-                    setTimeout(function() { openThread(msgidParent, msgidChild) }, 500) //setTimeout() 크게 문제되어 보이지 않음
+                    setTimeout(function() { openThread(msgidParent, msgidChild) }, 100) //setTimeout() 크게 문제되어 보이지 않음
                 }
             } else if (msgid && (kind == "withReply")) { //이미 openThread()되어 있는 상태
                 if (msgRow.value[props.data.msgidChild]) {
@@ -917,6 +917,11 @@
 
     function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = false
+    }
+
+    function rowClick(row) { //msglist가 크면 클수록 바쁘게 랜더링이 돌아갈텐데 단순 클릭으로 행 위치 알려 주는 정도인 아래 코딩에서는 부담없을 것임
+        msglist.value.forEach(item => item.background = '')
+        row.background = hush.cons.color_athome //setTimeout(function() { row.background = "" }, 1000) //1초후에 적용되지 않고 row.hover해서 렌더링한 후에 바로 적용됨
     }
 
     const onScrolling = () => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
@@ -2156,129 +2161,131 @@
                 <div v-for="(row, idx) in tempInfo">
                     <div>{{ row.kind + '===' + row.msgid }}</div>
                 </div>
-                <div v-for="(row, idx) in msglist" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
-                    :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
-                    @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)">
-                    <div style="width:100%;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
-                        <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
-                            class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
-                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
-                        <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
-                        <!-- <span v-if="vipStr.includes(row.AUTHORID)" 
-                            style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span> -->
-                        <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
-                        <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
-                        <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
-                        <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
-                            아직 안읽은 메시지입니다. {{ row.firstNotYet == "child" ? "(댓글)" : "" }}
-                        </span>
-                    </div>
-                    <div style="width:100%;display:flex;margin:10px 0">
-                        <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
-                            <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
-                            <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
-                            <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                <!-- <Transition name="fade"> -->
+                    <div v-for="(row, idx) in msglist" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
+                        :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
+                        @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)" @click="rowClick(row)">
+                        <div style="width:100%;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
+                            <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
+                                class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
+                            <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
+                            <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
+                            <!-- <span v-if="vipStr.includes(row.AUTHORID)" 
+                                style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span> -->
+                            <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
+                            <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
+                            <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
+                            <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
+                                아직 안읽은 메시지입니다. {{ row.firstNotYet == "child" ? "(댓글)" : "" }}
+                            </span>
                         </div>
-                        <div style="width:calc(100% - 40px);overflow-x:auto">
-                            <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
+                        <div style="width:100%;display:flex;margin:10px 0">
+                            <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
+                                <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
+                                <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
+                                <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                            </div>
+                            <div style="width:calc(100% - 40px);overflow-x:auto">
+                                <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div v-if="row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
-                    <div class="msg_body_sub"><!-- 반응, 댓글 -->
-                        <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                            <span style="margin-left:3px">{{ row1.CNT}}</span>
-                        </div> -->
-                        <div v-for="(row1, idx1) in row.msgdtl">
-                            <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                        <div v-if="row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
+                        <div class="msg_body_sub"><!-- 반응, 댓글 -->
+                            <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
                                 <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 <span style="margin-left:3px">{{ row1.CNT}}</span>
                             </div> -->
-                            <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
-                                <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                                <span style="margin-left:3px">{{ row1.CNT}}</span>
+                            <div v-for="(row1, idx1) in row.msgdtl">
+                                <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                                    <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                                    <span style="margin-left:3px">{{ row1.CNT}}</span>
+                                </div> -->
+                                <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                                    <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                                    <span style="margin-left:3px">{{ row1.CNT}}</span>
+                                </div>
+                            </div>
+                            <!-- <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
+                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
+                            </div>      -->
+                            <div v-if="row.reply.length > 0" class="replyAct" @click="openThread(row.MSGID)">
+                                <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center">
+                                    <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
+                                        class="coImg18" style="border-radius:9px">
+                                    <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
+                                </div>
+                                <div v-if="row.reply.length < row.replyinfo[0].CNT_BY_USER" style="display:flex;align-items:center;margin-left:2px">
+                                    ..{{ row.replyinfo[0].CNT_BY_USER }}명
+                                </div>
+                                <div style="margin:0 5px;display:flex;align-items:center">
+                                    <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
+                                    <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
+                                    <span style="margin:0 4px;color:dimgray">최근 :</span>
+                                    <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
+                                    <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
+                                </div>
                             </div>
                         </div>
-                        <!-- <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
-                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
-                        </div>      -->
-                        <div v-if="row.reply.length > 0" class="replyAct" @click="openThread(row.MSGID)">
-                            <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center">
-                                <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
-                                    class="coImg18" style="border-radius:9px">
-                                <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
-                            </div>
-                            <div v-if="row.reply.length < row.replyinfo[0].CNT_BY_USER" style="display:flex;align-items:center;margin-left:2px">
-                                ..{{ row.replyinfo[0].CNT_BY_USER }}명
-                            </div>
-                            <div style="margin:0 5px;display:flex;align-items:center">
-                                <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
-                                <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
-                                <span style="margin:0 4px;color:dimgray">최근 :</span>
-                                <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
-                                <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
+                        <div class="msg_body_sub"><!-- Mention -->
+                            <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
+                                <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
+                                @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
+                                    @{{ row1.USERNM }}
+                                </span>
                             </div>
                         </div>
-                    </div>
-                    <div class="msg_body_sub"><!-- Mention -->
-                        <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
-                            <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
-                            @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
-                                @{{ row1.USERNM }}
+                        <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
+                            <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
+                                @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
+                                <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
+                                <div v-show="row5.hover" class="msg_file_seemore">
+                                    <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                                </div>
+                            </div>                
+                        </div>
+                        <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
+                            <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
+                                @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)">
+                                <div style="height:100%;display:flex;align-items:center">
+                                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
+                                    <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
+                                </div>
+                                <div v-show="row5.hover" class="msg_file_seemore">
+                                    <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
+                            <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
+                                @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
+                                <div style="height:100%;display:flex;align-items:center">
+                                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
+                                    <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
+                                </div>
+                                <div v-show="row5.hover" class="msg_file_seemore">
+                                    <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                                </div>
+                            </div>
+                        </div>
+                        <div v-show="row.hover" class="msg_proc">
+                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watching')"></span>
+                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
+                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
+                            <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
+                            <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
+                            <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span> -->
+                            <span class="procAct">
+                                <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
                             </span>
+                            <span class="procAct">
+                                <img class="coImg18" :src="gst.html.getImageUrl(!row.act_fixed ? 'dimgray_fixed.png' : 'violet_fixed.png')" title="고정" @click="changeAction(row.MSGID, 'fixed')">
+                            </span>
+                            <span class="procAct">
+                                <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
+                            </span>                    
                         </div>
                     </div>
-                    <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
-                        <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
-                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
-                            <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
-                            <div v-show="row5.hover" class="msg_file_seemore">
-                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
-                            </div>
-                        </div>                
-                    </div>
-                    <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
-                        <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
-                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)">
-                            <div style="height:100%;display:flex;align-items:center">
-                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
-                                <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
-                            </div>
-                            <div v-show="row5.hover" class="msg_file_seemore">
-                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
-                            </div>
-                        </div>
-                    </div>
-                    <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
-                        <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
-                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
-                            <div style="height:100%;display:flex;align-items:center">
-                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
-                                <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
-                            </div>
-                            <div v-show="row5.hover" class="msg_file_seemore">
-                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
-                            </div>
-                        </div>
-                    </div>
-                    <div v-show="row.hover" class="msg_proc">
-                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watching')"></span>
-                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
-                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
-                        <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
-                        <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
-                        <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span> -->
-                        <span class="procAct">
-                            <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
-                        </span>
-                        <span class="procAct">
-                            <img class="coImg18" :src="gst.html.getImageUrl(!row.act_fixed ? 'dimgray_fixed.png' : 'violet_fixed.png')" title="고정" @click="changeAction(row.MSGID, 'fixed')">
-                        </span>
-                        <span class="procAct">
-                            <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
-                        </span>                    
-                    </div>
-                </div>
+                <!-- </Transition> -->
                 <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
                 </div>
