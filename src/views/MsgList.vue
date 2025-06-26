@@ -231,7 +231,7 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
-    let tempInfo = ref([])
+    //let tempInfo = ref([])
     async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
@@ -258,7 +258,7 @@
                         //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
                     }
                 }
-                const drr = arr.filter(item => (item.CUD == "U" && item.SUBKIND == "addreply")) //댓글 추가는 로깅 관점에서는 부모글에 업데이트이므로 U로 간주하면 됨 (chanmsg>saveMsg 참조)
+                const drr = arr.filter(item => (item.CUD == "U" && item.TYP == "addreply")) //댓글 추가는 로깅 관점에서는 부모글에 업데이트이므로 U로 간주하면 됨 (chanmsg>saveMsg 참조)
                 if (drr.length > 0) { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
                     const tmpArr = []
                     for (let i = 0; i < drr.length; i++) tmpArr.push(drr[i].MSGID)
@@ -269,7 +269,7 @@
                     const row = arr[i]
                     if (row.CUD == "U") { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
                         //그러나, polling이 아닌 소켓 적용시에는 getMsg()로 호출하기로 함
-                        tempInfo.value.push({ kind: "U", msgid: row.MSGID })                        
+                        //tempInfo.value.push({ kind: "U", msgid: row.MSGID })                        
                         const parentMsgid = (row.REPLYTO != "" && row.REPLYTO != row.MSGID) ? row.REPLYTO : row.MSGID
                         console.log(row.REPLYTO+"==="+row.MSGID+"==="+parentMsgid)
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
@@ -293,7 +293,7 @@
                 for (let i = 0; i < len; i++) { //C->U->D 순서로 처리하기 (타임라인 : 만들고 삭제는 있을 수 있음. 만들고 업데이트하고 삭제도 있을 수 있음)
                     const row = arr[i]
                     if (row.CUD == "D") { //서버 읽을 필요없이 바로 배열에서 제거하면 됨
-                        tempInfo.value.push({ kind: "D", msgid: row.MSGID })
+                        //tempInfo.value.push({ kind: "D", msgid: row.MSGID })
                         const parentMsgid = (row.REPLYTO != "" && row.REPLYTO != row.MSGID) ? row.REPLYTO : row.MSGID
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
                         if (idx > -1) { //처리한 화면에서는 이미 지워서 화면에 없을 것임 (-1)
@@ -943,7 +943,7 @@
         if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
     }
 
-    async function updateWithNewKind(msgid, oldKind, newKind) {
+    async function updateWithNewKind(msgid, oldKind, newKind) { //현재는 읽기 관련 처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
         try { //if (msgid == "20250529164700161926024750") debugger
             const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
@@ -980,7 +980,7 @@
         }
     }
 
-    async function updateAllWithNewKind(oldKind, newKind) {
+    async function updateAllWithNewKind(oldKind, newKind) { //현재는 읽기 관련 처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
         try {     
             const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
@@ -1714,11 +1714,11 @@
         }
     }
 
-    async function toggleAction(msgid, kind) { //toggleAction은 보안상 크게 문제없는 액션만 처리하기로 함
+    async function toggleReaction(msgid, kind) { //toggleReaction은 보안상 크게 문제없는 액션만 처리하기로 함
         try {
             if (kind == "notyet") return //react typ = checked, done, watching
             const rq = { chanid: chanId, msgid: msgid, kind: kind }
-            const res = await axios.post("/chanmsg/toggleAction", rq)
+            const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             await refreshMsgDtlWithQryAction(msgid)
@@ -2158,9 +2158,9 @@
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
                 <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget"></div>
-                <div v-for="(row, idx) in tempInfo">
+                <!-- <div v-for="(row, idx) in tempInfo">
                     <div>{{ row.kind + '===' + row.msgid }}</div>
-                </div>
+                </div> -->
                 <!-- <Transition name="fade"> -->
                     <div v-for="(row, idx) in msglist" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
                         :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
@@ -2191,16 +2191,16 @@
                         </div>
                         <div v-if="row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                         <div class="msg_body_sub"><!-- 반응, 댓글 -->
-                            <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                            <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
                                 <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 <span style="margin-left:3px">{{ row1.CNT}}</span>
                             </div> -->
                             <div v-for="(row1, idx1) in row.msgdtl">
-                                <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                                <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
                                     <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                     <span style="margin-left:3px">{{ row1.CNT}}</span>
                                 </div> -->
-                                <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleAction(row.MSGID, row1.KIND)">
+                                <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
                                     <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                     <span style="margin-left:3px">{{ row1.CNT}}</span>
                                 </div>
@@ -2268,9 +2268,9 @@
                             </div>
                         </div>
                         <div v-show="row.hover" class="msg_proc">
-                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleAction(row.MSGID, 'watching')"></span>
-                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleAction(row.MSGID, 'checked')"></span>
-                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleAction(row.MSGID, 'done')"></span>
+                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleReaction(row.MSGID, 'watching')"></span>
+                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleReaction(row.MSGID, 'checked')"></span>
+                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleReaction(row.MSGID, 'done')"></span>
                             <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
                             <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
                             <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span> -->
