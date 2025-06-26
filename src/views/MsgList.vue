@@ -232,7 +232,7 @@
     }
 
     //let tempInfo = ref([])
-    async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
+    /*async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
             const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt, chanid: chanId })
@@ -306,6 +306,85 @@
                                 clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
                             }
                             await nextTick() //배열삭제된 부분이므로 동기 처리 필요
+                        }
+                    }
+                }
+            }
+            logdt = rs.data.logdt //중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
+            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 10) //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 10)
+        }
+    }*/
+
+    async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
+        try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
+            //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
+            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt, chanid: chanId })
+            const rs = gst.util.chkAxiosCode(res.data, true)
+            const arr = rs.list
+            const len = arr.length
+            if (len > 0) {
+                for (let i = 0; i < len; i++) {
+                    const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 
+                    //부모로부터 업데이트 호출받을 때도 서버에서 읽어온 메시지정보없이 아이디만 넘겨서 스레드에서 서버 호출하므로 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음
+                    if (row.CUD == "U") { //메시지 수정
+                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                        if (idx > -1) { //굳이 await nextTick() 필요 없음
+                            if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                                refreshWithGetMsg(row.msgItem.data, null, idx)
+                            }
+                            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
+                        }
+                    } else if (row.CUD == "X") { //X(댓글 추가) : X는 로깅 관점에서는 부모메시지에 업데이트이므로 U와 유사 (chanmsg>saveMsg 참조)
+                        newChildAdded.value.push(row.MSGID) //댓글 추가되었다고 표시
+                        const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
+                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                        if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
+                            refreshWithGetMsg(rs, parentMsgid) //화면에 있는 부모메시지 업데이트
+                            if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
+                                msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                                msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
+                            }
+                        }
+                    } else if (row.CUD == "D") { 
+                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
+                        if (idx > -1) {
+                            if (row.REPLYTO == "") {
+                                msglist.value.splice(idx, 1) //const item = msglist.value[idx]
+                                clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
+                            } else { //삭제한 MSGID가 댓글일 경우
+                                refreshWithGetMsg(row.msgItem.data, null, idx) //row.msgItem.data에 부모메시지 정보 들어 있음
+                                if (msglistRef.value) {
+                                    msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                                    msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                                }
+                            }
+                            await nextTick() //배열삭제된 부분이므로 동기 처리 필요
+                        }
+                    } else if (row.CUD == "C") { //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
+                        //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
+                        if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
+                            newParentAdded.value.push(row.MSGID)
+                        } else if (perLastCdt > realLastCdt) {
+                            alert("여기로 오면 로직 오류임")
+                            debugger
+                        } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
+                            await getList({ nextMsgMstCdt: logdt, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 화면에 메시지 아이디가 있으면 중복체크하고 있음
+                            //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
+                            //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
+                        }
+                    } else if (row.CUD == "T") { //메시지 디테일정보만 업데이트
+                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                        if (idx > -1) { //굳이 await nextTick() 필요 없음
+                            if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                                refreshWithDtl(row.dtlItem.data, null, idx)
+                            }
+                            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
                         }
                     }
                 }
@@ -717,19 +796,29 @@
             if (item) { 
                 item.BODY = rs.msgmst ? rs.msgmst.BODY : rs.BODY
                 item.UDT = rs.msgmst ? rs.msgmst.UDT : rs.UDT
-
                 item.act_later = rs.act_later
                 item.act_fixed = rs.act_fixed
-
                 item.msgdtl = rs.msgdtl
                 item.msgdtlmention = rs.msgdtlmention
                 item.msgfile = rs.msgfile
                 item.msgimg = rs.msgimg
                 item.msglink = rs.msglink
-
                 item.reply = rs.reply
                 item.replyinfo = rs.replyinfo
-                //item.background = rs.act_later ? hush.cons.color_act_later : ""
+            }
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function refreshWithDtl(rs, msgid, idx) {
+        try {
+            let item = msgid ? msglist.value.find(function(row) { return row.MSGID == msgid }) : msglist.value[idx]
+            if (item) { 
+                item.act_later = rs.act_later
+                item.act_fixed = rs.act_fixed
+                item.msgdtl = rs.msgdtl
+                item.msgdtlmention = rs.msgdtlmention
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
