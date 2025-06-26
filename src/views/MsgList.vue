@@ -235,7 +235,7 @@
     async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
-            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt, kind: "msg", chanid: chanId })
+            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt, chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true)
             const arr = rs.list
             const len = arr.length
@@ -258,13 +258,12 @@
                         //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
                     }
                 }
-                const drr = arr.filter(item => (item.CUD == "U" && item.TYP == "addreply")) //댓글 추가는 로깅 관점에서는 부모글에 업데이트이므로 U로 간주하면 됨 (chanmsg>saveMsg 참조)
+                const drr = arr.filter(item => (item.CUD == "X")) //댓글 추가는 로깅 관점에서는 부모글에 업데이트로 특별히 X로 처리 (chanmsg>saveMsg 참조)
                 if (drr.length > 0) { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
                     const tmpArr = []
                     for (let i = 0; i < drr.length; i++) tmpArr.push(drr[i].MSGID)
                     if (tmpArr.length > 0) newChildAdded.value = [...newChildAdded.value, ...tmpArr]
                 }
-                //debugger
                 for (let i = 0; i < len; i++) {
                     const row = arr[i]
                     if (row.CUD == "U") { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
@@ -280,7 +279,6 @@
                                 refreshWithGetMsg(rs, parentMsgid)
                                 if (msglistRef.value) { //스레드에서 부모글은 업데이트 되고 자식글은 추가되어야 함
                                     msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                    console.log("######")
                                     msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID }) //여기서 스레드부모글이 변경되는 현상 발생 (2회)
                                 }
                             } else { //부모글
