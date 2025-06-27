@@ -135,7 +135,7 @@
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
     let afterScrolled = ref(false)
 
-    const MAX_PICTURE_CNT = 10, adminShowID = ref(false)
+    const MAX_PICTURE_CNT = 4, adminShowID = ref(false)
     const g_userid = gst.auth.getCookie("userid"), g_usernm = gst.auth.getCookie("usernm")
     let mounting = true, appType
     
@@ -1013,6 +1013,10 @@
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
+    }
+
+    async function addAllNew(strKind) {
+
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
@@ -2112,13 +2116,18 @@
                     <img class="coImg18" :src="gst.html.getImageUrl(chanImg)" style="margin-right:5px" @click="adminJob">
                     <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
                     <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
-                    <div v-else style="display:flex;align-items:center">                    
+                    <div v-else style="width:100%;display:flex;align-items:center">                    
                         <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
-                        <div v-else class="coDotDot">{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</div>
+                        <div v-else class="coDotDot"><span>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span></div>
                     </div>
                     <!-- <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span>  -->
                 </div>
                 <div class="chan_center_header_right">
+                    <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                        <span v-show="tempcolor=='red'" style="margin:0 5px 5px 5px;color:red;font-weight:bold">{{ logdt.substring(11) }}</span>
+                        <span v-show="tempcolor=='blue'"style="margin:0 5px 5px 5px;color:blue;font-weight:bold">{{ logdt.substring(11) }}</span>
+                        <!-- <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span> -->
+                    </div>
                     <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
                         <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
@@ -2146,15 +2155,15 @@
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_unread.png')">
                     <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
                 </div>
-                <div class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
+                <div v-show="!thread.msgid" class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_msg.png')">
                     <span style="margin-left:5px;font-weight:bold">검색</span> 
                 </div>
-                <div class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
+                <div v-show="!thread.msgid" class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_file.png')">
                     <span style="margin-left:5px;font-weight:bold">파일</span> 
                 </div>
-                <div class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
+                <div v-show="!thread.msgid" class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
                     <span style="margin-left:5px;font-weight:bold">이미지</span> 
                 </div>
@@ -2168,12 +2177,13 @@
                 </div>
                 <div v-show="listMsgSel == 'unread'" class="coImgBtn" @click="updateAllWithNewKind('unread', 'read')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">모두읽음처리</span>
+                </div> 
+                <div v-show="listMsgSel == 'all'" class="coImgBtn" @click="addAllNew('P')" style="margin:0 0 4px 12px">
+                    <span class="coImgSpn">신규 : {{ newParentAdded.length }}</span>
                 </div>
-                <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span>
-                <span style="margin:0 5px 5px 5px">신규 : {{ newParentAdded.length }}</span>
-                <span style="margin:0 5px 5px 5px">신규(댓글) : {{ newChildAdded.length }}</span>
-                <span v-show="tempcolor=='red'" style="margin:0 5px 5px 5px;color:red;font-weight:bold">logdt : {{ logdt }}</span>
-                <span v-show="tempcolor=='blue'"style="margin:0 5px 5px 5px;color:blue;font-weight:bold">logdt : {{ logdt }}</span>
+                <div v-show="listMsgSel == 'all'" class="coImgBtn" @click="addAllNew('C')" style="margin:0 0 4px 12px">
+                    <span class="coImgSpn">신규(댓글) : {{ newChildAdded.length }}</span>
+                </div>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
                 <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget"></div>
@@ -2411,11 +2421,11 @@
         width:100%;min-height:50px;display:flex;justify-content:space-between;overflow:hidden
     }
     .chan_center_header_left {
-        width:70%;height:100%;display:flex;align-items:center;
+        width:calc(100% - 320px);height:100%;display:flex;align-items:center;
         font-size:18px;font-weight:bold;cursor:pointer
     }
     .chan_center_header_right {
-        width:30%;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
+        width:320px;height:100%;display:flex;align-items:center;justify-content:flex-end;cursor:pointer
     }
     .chan_center_nav {
         width:100%;min-height:30px;display:flex;align-items:center;
