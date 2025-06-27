@@ -465,7 +465,7 @@ const GeneralStore = defineStore('General', () => {
 
         getUrlForOneMsgNotYet : async function(chanid) { //아래 goMsgList가 아닌 window.open(새창열기)에 사용됨
             let strMsgid = await util.qryOneMsgNotYet(chanid)
-            if (strMsgid != "0") strMsgid += "?notyet=true"
+            //if (strMsgid != "0") strMsgid += "?notyet=true"
             return "/body/msglist/" + chanid + "/" + strMsgid
         },
 
@@ -526,10 +526,10 @@ const GeneralStore = defineStore('General', () => {
                 let msgid = params.msgid
                 if (!msgid) params.msgid = await util.qryOneMsgNotYet(params.chanid)
                 let obj = { name : nm, params : params}
-                if (!msgid && params.msgid.length > 20) { //안읽은 메시지 아이디를 가지고 온 것임 : Panel중에 동일한 로직으로 처리하는 곳이 있음
-                    if (!obj.query) obj.query = {}
-                    obj.query.notyet = true                    
-                }
+                // if (!msgid && params.msgid.length > 20) { //안읽은 메시지 아이디를 가지고 온 것임 : Panel중에 동일한 로직으로 처리하는 곳이 있음
+                //     if (!obj.query) obj.query = {}
+                //     obj.query.notyet = true                    
+                // }
                 const ele = document.getElementById("chan_center_header") //chan_center_body
                 if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
                     await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
@@ -586,6 +586,28 @@ const GeneralStore = defineStore('General', () => {
                 util.setSnack("파일 다운로드 실패\n" + exception.toString(), true)
             })
         },
+
+        getTypeForMsgDtl : function(strKind) { //서버,클라언트 모두 동일
+            switch (strKind) { //break 안쓰고 바로 return
+                case 'later':
+                case 'stored':
+                case 'finished':
+                case 'fixed':
+                    return 'user'
+                case 'done':
+                case 'checked':
+                case 'watching':
+                    return 'react'
+                case 'notyet':
+                case 'read':
+                case 'unread':
+                    return 'read'
+                case 'msg':
+                    return 'msg'
+                default:
+                    return 'error'         
+            }
+        }
 
         //아래 함수는 main.js의 axios.defaults.baseURL로 해결했으므로 더 이상 사용하지 않아도 됨 (포트 3000으로의 호출시 쿠키 전송안되는것은 Cors Issue - nest/axios)
         //dev : "http://localhost:3000", ops : "https://hushsbay.com:446"

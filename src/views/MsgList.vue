@@ -43,10 +43,13 @@
             refreshWithGetMsg(rs, obj.msgid)
         } else if (kind == "deleteMsg") {
             const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
-            if (idx > -1) msglist.value.splice(idx, 1)
+            if (idx > -1) {
+                msglist.value.splice(idx, 1)
+                if (idx == 0) clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
+            }
         } else if (kind == "addChildFromBody") {
             await getList({ msgid: obj.msgid, kind: "withReply", msgidReply: obj.msgidReply })
-            scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+            if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
         } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
             const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
@@ -169,7 +172,7 @@
     let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
 
     //실시간 반영
-    let logdt = '', perLastCdt = '', realLastCdt = '' //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
+    let logdt = ref(''), perLastCdt = '', realLastCdt = '' //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -231,101 +234,16 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
-    //let tempInfo = ref([])
-    /*async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
-        try { //서버의 chanmsg/qry()를 읽을 때 logdt/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
-            //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
-            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt, chanid: chanId })
-            const rs = gst.util.chkAxiosCode(res.data, true)
-            const arr = rs.list
-            const len = arr.length
-            if (len > 0) {
-                const crr = arr.filter(item => (item.CUD == "C"))
-                if (crr.length > 0) { //C일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
-                    //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
-                    //debugger
-                    if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
-                        //await getNewCount(logdt) //getNewCount() 안에 nextTick() 있음
-                        const tmpArr = []
-                        for (let i = 0; i < crr.length; i++) tmpArr.push(crr[i].MSGID)
-                        if (tmpArr.length > 0) newParentAdded.value = [...newParentAdded.value, ...tmpArr]
-                    } else if (perLastCdt > realLastCdt) {
-                        alert("여기로 오면 로직 오류임. 재검토 필요")
-                        debugger
-                    } else { //qry()로 데이터 끝까지 읽어와서 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
-                        await getList({ nextMsgMstCdt: logdt, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 화면에 메시지 아이디가 있으면 중복체크하고 있음
-                        //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
-                        //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
-                    }
-                }
-                const drr = arr.filter(item => (item.CUD == "X")) //댓글 추가는 로깅 관점에서는 부모글에 업데이트로 특별히 X로 처리 (chanmsg>saveMsg 참조)
-                if (drr.length > 0) { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
-                    const tmpArr = []
-                    for (let i = 0; i < drr.length; i++) tmpArr.push(drr[i].MSGID)
-                    if (tmpArr.length > 0) newChildAdded.value = [...newChildAdded.value, ...tmpArr]
-                }
-                for (let i = 0; i < len; i++) {
-                    const row = arr[i]
-                    if (row.CUD == "U") { //U일 경우는 서버로부터 이미 업데이트된 데이터를 가져온 상태임 (row.msgItem)
-                        //그러나, polling이 아닌 소켓 적용시에는 getMsg()로 호출하기로 함
-                        //tempInfo.value.push({ kind: "U", msgid: row.MSGID })                        
-                        const parentMsgid = (row.REPLYTO != "" && row.REPLYTO != row.MSGID) ? row.REPLYTO : row.MSGID
-                        console.log(row.REPLYTO+"==="+row.MSGID+"==="+parentMsgid)
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
-                        if (idx > -1) {
-                            if (row.REPLYTO != "" && row.REPLYTO != row.MSGID) { //MSGID가 댓글 아이디임
-                                const rs = await getMsg({ msgid: parentMsgid }) //부모메시지를 업데이트 해야 함 (row.msgItem.data는 자식글임)
-                                if (rs == null) return
-                                refreshWithGetMsg(rs, parentMsgid)
-                                if (msglistRef.value) { //스레드에서 부모글은 업데이트 되고 자식글은 추가되어야 함
-                                    msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                    msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID }) //여기서 스레드부모글이 변경되는 현상 발생 (2회)
-                                }
-                            } else { //부모글
-                                refreshWithGetMsg(row.msgItem.data, null, idx)
-                            }
-                            //await nextTick() //배열업데이트된 부분이므로 동기 처리 필요
-                        }
-                    }
-                }
-                for (let i = 0; i < len; i++) { //C->U->D 순서로 처리하기 (타임라인 : 만들고 삭제는 있을 수 있음. 만들고 업데이트하고 삭제도 있을 수 있음)
-                    const row = arr[i]
-                    if (row.CUD == "D") { //서버 읽을 필요없이 바로 배열에서 제거하면 됨
-                        //tempInfo.value.push({ kind: "D", msgid: row.MSGID })
-                        const parentMsgid = (row.REPLYTO != "" && row.REPLYTO != row.MSGID) ? row.REPLYTO : row.MSGID
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
-                        if (idx > -1) { //처리한 화면에서는 이미 지워서 화면에 없을 것임 (-1)
-                            if (row.REPLYTO != "" && row.REPLYTO != row.MSGID) { //MSGID가 댓글 아이디임
-                                refreshWithGetMsg(row.msgItem.data, null, idx) 
-                                if (msglistRef.value) {
-                                    msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                    msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
-                                }
-                            } else { //부모글
-                                msglist.value.splice(idx, 1) //const item = msglist.value[idx]
-                                clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
-                            }
-                            await nextTick() //배열삭제된 부분이므로 동기 처리 필요
-                        }
-                    }
-                }
-            }
-            logdt = rs.data.logdt //중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
-            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 10) //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 10)
-        }
-    }*/
-
+    let tempcolor = ref('blue')
     async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
-            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt, chanid: chanId })
+            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt.value, chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true)
             const arr = rs.list
             const len = arr.length
-            if (len > 0) {
+            if (len > 0) { 
+                //debugger               
                 for (let i = 0; i < len; i++) {
                     const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 
                     //부모로부터 업데이트 호출받을 때도 서버에서 읽어온 메시지정보없이 아이디만 넘겨서 스레드에서 서버 호출하므로 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음
@@ -333,9 +251,9 @@
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) { //굳이 await nextTick() 필요 없음
-                            if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
-                                refreshWithGetMsg(row.msgItem.data, null, idx)
-                            }
+                            //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                                refreshWithGetMsg(row.msgItem.data, null, idx) //자식 수정시 안읽음으로 되고 안읽은갯수가 본붐네 업데이트되어 하므로 부모자식 구분없이 업데이트하기
+                            //}
                             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
                         }
                     } else if (row.CUD == "X") { //X(댓글 추가) : X는 로깅 관점에서는 부모메시지에 업데이트이므로 U와 유사 (chanmsg>saveMsg 참조)
@@ -343,19 +261,19 @@
                         const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
-                            refreshWithGetMsg(rs, parentMsgid) //화면에 있는 부모메시지 업데이트
+                            refreshWithGetMsg(row.msgItem.data, parentMsgid) //화면에 있는 부모메시지 업데이트
                             if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
                                 msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
                                 msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
                             }
                         }
                     } else if (row.CUD == "D") { 
+                        debugger
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
                         if (idx > -1) {
                             if (row.REPLYTO == "") {
                                 msglist.value.splice(idx, 1) //const item = msglist.value[idx]
-                                clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
                             } else { //삭제한 MSGID가 댓글일 경우
                                 refreshWithGetMsg(row.msgItem.data, null, idx) //row.msgItem.data에 부모메시지 정보 들어 있음
                                 if (msglistRef.value) {
@@ -373,7 +291,7 @@
                             alert("여기로 오면 로직 오류임")
                             debugger
                         } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
-                            await getList({ nextMsgMstCdt: logdt, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 화면에 메시지 아이디가 있으면 중복체크하고 있음
+                            await getList({ nextMsgMstCdt: logdt.value, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 화면에 메시지 아이디가 있으면 중복체크하고 있음
                             //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
                             //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
                         }
@@ -381,19 +299,21 @@
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) { //굳이 await nextTick() 필요 없음
-                            if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.dtlItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
-                                refreshWithDtl(row.dtlItem.data, null, idx)
-                            }
+                            //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItemWithoutSub.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                                //refreshWithDtl(row.msgItemWithoutSub.data, null, idx) //맨 위 U와 다른 점
+                                refreshWithGetMsg(row.msgItem.data, null, idx)
+                            //}
                             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
                         }
                     }
                 }
             }
-            logdt = rs.data.logdt //중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
-            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 10) //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
+            logdt.value = rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
+            tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
+            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 5) //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
         } catch (ex) {
             gst.util.showEx(ex, true)
-            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 10)
+            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 5)
         }
     }
     
@@ -429,12 +349,13 @@
                         inEditor.value.focus() 
                     //} catch {}
                 }
-            }
-            
+            }            
             if (!hasProp()) {
-                setTimeout(function() { chkDataLog() }, 1000 * 10)
-            } else {
-                //debugger
+                const res = await axios.post("/chanmsg/qryDbDt")
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+                if (logdt.value == "") logdt.value = rs.data.dbdt
+                setTimeout(function() { chkDataLog() }, 1000 * 5)
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -456,7 +377,9 @@
                 observerBottomScroll()      
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
-            if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+            if (gst.objSaved[key]) {
+                if (scrollArea.value) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+            }
             if (gst.routedToSamePanelFromMsgList) { //아래는 사이드 메뉴 같은 경우만 실행됨 : 사용자가 방내 범위내에서 노드를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 안바뀌고 해당 패널내에서 라우팅하는 경우
                 console.log("MsgList Activated selectRow..... " + appType + "==="+ chanId)
                 if (appType == "home" || appType == "dm") {
@@ -600,7 +523,7 @@
                 return
             }            
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
-            const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
+            //const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
             if (msgid && (kind == "atHome" || (kind == "withReply" && !msgidReply))) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
             const msgArr = rs.data.msglist
@@ -629,9 +552,9 @@
                         }
                     } else {
                         if (msgidParent && row.MSGID == msgidParent) {
-                            if (queryNotYetTrue) { //여기서부터 읽지 않은 메시지라고 안내해야 함
-                                row.firstNotYet = (msgidParent == msgidChild) ? "parent" : "child"
-                            }
+                            //if (queryNotYetTrue) { //여기서부터 읽지 않은 메시지라고 안내해야 함
+                            //    row.firstNotYet = (msgidParent == msgidChild) ? "parent" : "child"
+                            //}
                             row.background = hush.cons.color_athome
                         }
                     }
@@ -703,7 +626,6 @@
             //2. realLastCdt가 더 크면 중간에 (서버에서 내리지 않아서) 이빨 빠진 리스트 상태이므로 리얼타임으로 반영시 화면에 바로 반영하지 말고 사용자에게 보이게 정보만 쌓아두기로 함
             //   그리고 나서, 그걸 클릭하면 그동안 쌓아 두었던 것을 가져 오든지 아니면 아예 최근 것부터 뿌리고 이전 스크롤하게 하기로 함
             realLastCdt = rs.list.length > 0 ? rs.list[0].CDT : "" //SELECT MSGID, CDT FROM S_MSGMST_TBL WHERE CHANID = ? AND REPLYTO = '' ORDER BY CDT DESC LIMIT 1
-            if (!logdt) logdt = rs.data.logdt //최초에만 설정
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
                 const blobUrl = hush.util.getImageBlobUrl(item.BUFFER.data)
@@ -751,28 +673,16 @@
             } else if (nextMsgMstCdt) {
                 //그냥 두면 됨
             }
-            setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
-                //방안: afterScrolled이 true이면 이미 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 true가 아닐 경우(갯수가 작아 스크롤이 안되는 경우)만 호출하기로 함 : /chanmsg/updateWithNewKind
-                if (!afterScrolled.value) readMsgToBeSeen()
-            }, 2000)
+            // setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
+            //     //방안: afterScrolled이 true이면 이미 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 true가 아닐 경우(갯수가 작아 스크롤이 안되는 경우)만 호출하기로 함 : /chanmsg/updateWithNewKind
+            //     if (!afterScrolled.value) readMsgToBeSeen()
+            // }, 1000) => 처음엔 클릭해야 읽음 처리 (스크롤 없을 땐)
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
         }
     }
-
-    // async function getNewCount(logdtStr) {
-    //     try {
-    //         let param = { chanid: chanId, frdt: logdtStr }
-    //         const res = await axios.post("/chanmsg/qryNewCount", param)
-    //         const rs = gst.util.chkAxiosCode(res.data, true) 
-    //         if (!rs) return
-            
-    //     } catch (ex) {
-    //         gst.util.showEx(ex, true)
-    //     }
-    // }
 
     async function getMsg(addedParam, verbose) {
         try {
@@ -1009,6 +919,15 @@
     function rowClick(row) { //msglist가 크면 클수록 바쁘게 랜더링이 돌아갈텐데 단순 클릭으로 행 위치 알려 주는 정도인 아래 코딩에서는 부담없을 것임
         msglist.value.forEach(item => item.background = '')
         row.background = hush.cons.color_athome //setTimeout(function() { row.background = "" }, 1000) //1초후에 적용되지 않고 row.hover해서 렌더링한 후에 바로 적용됨
+        for (let i = 0; i < row.msgdtl.length; i++) {
+            const item = row.msgdtl[i]
+            if (item.KIND == 'notyet') { //스크롤 없을 때 읽음처리하기 => 내가 아직 안읽은 메시지라면 클릭하면 읽음 처리됨 (향후 대안 더 생각해보기)
+                if ((', ' + item.ID + ',').includes(', ' + g_userid + ',')) {
+                    updateWithNewKind(row.MSGID, "notyet", "read")
+                }
+                break
+            }
+        }
     }
 
     const onScrolling = () => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
@@ -1017,10 +936,12 @@
         if (!scrollArea.value) return //오류 만났을 때
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
-        readMsgToBeSeen()
-        //console.log("readMsgToBeSeen:"+"==="+prevScrollY+"==="+prevScrollHeight)
         if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
         saveCurScrollY(prevScrollY)
+    }
+
+    const onScrollEnd = () => {
+        readMsgToBeSeen() //사용자별 데이터지만 읽음 처리를 onScrolling에 두면 스크롤링하면서 초당 4~5회의 동일 데이터를 서버로 요청해서 업데이트를 시도하려 함 (table lock 체크 이전에 일단 스크롤종료시만 호출하는 것으로 변경함)
     }
 
     async function refreshMsgDtlWithQryAction(msgid) {
@@ -1090,6 +1011,7 @@
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
         if (showUserSearch.value) return //DM방 만들기에서는 무시
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
+        //debugger
         if (!eleTop) {
             return
         } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
@@ -1311,7 +1233,7 @@
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
                     //await getList({ msgid: props.data.msgid, kind: "withReply" })
                     await getList({ msgid: props.data.msgid, kind: "withReply", msgidReply: rs.data.msgid })
-                    scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+                    if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
                     await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴 1) 저장후 2) 리얼타임 반영
@@ -1803,7 +1725,8 @@
 
     async function toggleReaction(msgid, kind) { //toggleReaction은 보안상 크게 문제없는 액션만 처리하기로 함
         try {
-            if (kind == "notyet") return //react typ = checked, done, watching
+            const typ = gst.util.getTypeForMsgDtl(kind)
+            if (typ != "react") return //if (kind == "notyet") return //react typ = checked, done, watching
             const rq = { chanid: chanId, msgid: msgid, kind: kind }
             const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -2242,137 +2165,134 @@
                 <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span>
                 <span style="margin:0 5px 5px 5px">신규 : {{ newParentAdded.length }}</span>
                 <span style="margin:0 5px 5px 5px">신규(댓글) : {{ newChildAdded.length }}</span>
+                <span v-show="tempcolor=='red'" style="margin:0 5px 5px 5px;color:red;font-weight:bold">logdt : {{ logdt }}</span>
+                <span v-show="tempcolor=='blue'"style="margin:0 5px 5px 5px;color:blue;font-weight:bold">logdt : {{ logdt }}</span>
             </div> 
-            <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling">
+            <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
                 <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget"></div>
-                <!-- <div v-for="(row, idx) in tempInfo">
-                    <div>{{ row.kind + '===' + row.msgid }}</div>
-                </div> -->
-                <!-- <Transition name="fade"> -->
-                    <div v-for="(row, idx) in msglist" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
-                        :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
-                        @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)" @click="rowClick(row)">
-                        <div style="width:100%;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
-                            <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
-                                class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
-                            <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
-                            <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
-                            <!-- <span v-if="vipStr.includes(row.AUTHORID)" 
-                                style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span> -->
-                            <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
-                            <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
-                            <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
-                            <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">
-                                아직 안읽은 메시지입니다. {{ row.firstNotYet == "child" ? "(댓글)" : "" }}
-                            </span>
+                <!--바로 아래 id는 읽음처리(readMsgToBeSeen)에 필요한 부분이므로 제거하면 안됨-->
+                <div v-for="(row, idx) in msglist" :id="row.MSGID" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
+                    :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
+                    @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)" @click="rowClick(row)">
+                    <div style="width:100%;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
+                        <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
+                            class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
+                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
+                        <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
+                        <!-- <span v-if="vipStr.includes(row.AUTHORID)" 
+                            style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span> -->
+                        <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
+                        <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
+                        <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
+                        <!-- <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">아직 안읽음 {{ row.firstNotYet == "child" ? "(댓글)" : "" }}</span> -->
+                    </div>
+                    <div style="width:100%;display:flex;margin:10px 0">
+                        <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
+                            <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
+                            <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
+                            <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
                         </div>
-                        <div style="width:100%;display:flex;margin:10px 0">
-                            <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
-                                <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
-                                <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
-                                <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
-                            </div>
-                            <div style="width:calc(100% - 40px);overflow-x:auto">
-                                <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
-                            </div>
+                        <div style="width:calc(100% - 40px);overflow-x:auto">
+                            <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
                         </div>
-                        <div v-if="row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
-                        <div class="msg_body_sub"><!-- 반응, 댓글 -->
-                            <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
+                    </div>
+                    <div v-if="row.UDT && row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
+                    <div class="msg_body_sub"><!-- 반응, 댓글 -->
+                        <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
+                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                            <span style="margin-left:3px">{{ row1.CNT}}</span>
+                        </div> -->
+                        <div v-for="(row1, idx1) in row.msgdtl">
+                            <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
                                 <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 <span style="margin-left:3px">{{ row1.CNT}}</span>
                             </div> -->
-                            <div v-for="(row1, idx1) in row.msgdtl">
-                                <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
-                                    <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                                    <span style="margin-left:3px">{{ row1.CNT}}</span>
-                                </div> -->
-                                <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
-                                    <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                                    <span style="margin-left:3px">{{ row1.CNT}}</span>
-                                </div>
-                            </div>
-                            <!-- <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
-                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
-                            </div>      -->
-                            <div v-if="row.reply.length > 0" class="replyAct" @click="openThread(row.MSGID)">
-                                <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center">
-                                    <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
-                                        class="coImg18" style="border-radius:9px">
-                                    <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
-                                </div>
-                                <div v-if="row.reply.length < row.replyinfo[0].CNT_BY_USER" style="display:flex;align-items:center;margin-left:2px">
-                                    ..{{ row.replyinfo[0].CNT_BY_USER }}명
-                                </div>
-                                <div style="margin:0 5px;display:flex;align-items:center">
-                                    <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
-                                    <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
-                                    <span style="margin:0 4px;color:dimgray">최근 :</span>
-                                    <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
-                                    <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
-                                </div>
+                            <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
+                                <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                                <span v-if="row1.KIND == 'notyet' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" style="margin-left:3px;color:red;font-weight:bold">{{ row1.CNT}}</span>
+                                <span v-else style="margin-left:3px">{{ row1.CNT}}</span>
                             </div>
                         </div>
-                        <div class="msg_body_sub"><!-- Mention -->
-                            <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
-                                <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
-                                @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
-                                    @{{ row1.USERNM }}
-                                </span>
+                        <!-- <div v-if="row.msgdtl.length > 0" class="msg_body_sub1">
+                            <img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘">
+                        </div>      -->
+                        <div v-if="row.reply.length > 0" class="replyAct" @click="openThread(row.MSGID)">
+                            <div v-for="(row2, idx2) in row.reply" style="margin-right:0px;padding:0px;display:flex;align-items:center">
+                                <img v-if="chandtlObj[row2.AUTHORID] && chandtlObj[row2.AUTHORID].url" :src="chandtlObj[row2.AUTHORID].url" 
+                                    class="coImg18" style="border-radius:9px">
+                                <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg18">
                             </div>
-                        </div>
-                        <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
-                            <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
-                                @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
-                                <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
-                                <div v-show="row5.hover" class="msg_file_seemore">
-                                    <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
-                                </div>
-                            </div>                
-                        </div>
-                        <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
-                            <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
-                                @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)">
-                                <div style="height:100%;display:flex;align-items:center">
-                                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
-                                    <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
-                                </div>
-                                <div v-show="row5.hover" class="msg_file_seemore">
-                                    <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
-                                </div>
+                            <div v-if="row.reply.length < row.replyinfo[0].CNT_BY_USER" style="display:flex;align-items:center;margin-left:2px">
+                                ..{{ row.replyinfo[0].CNT_BY_USER }}명
                             </div>
-                        </div>
-                        <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
-                            <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
-                                @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
-                                <div style="height:100%;display:flex;align-items:center">
-                                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
-                                    <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
-                                </div>
-                                <div v-show="row5.hover" class="msg_file_seemore">
-                                    <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
-                                </div>
+                            <div style="margin:0 5px;display:flex;align-items:center">
+                                <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
+                                <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
+                                <span style="margin:0 4px;color:dimgray">최근 :</span>
+                                <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
+                                <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
                             </div>
-                        </div>
-                        <div v-show="row.hover" class="msg_proc">
-                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleReaction(row.MSGID, 'watching')"></span>
-                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleReaction(row.MSGID, 'checked')"></span>
-                            <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleReaction(row.MSGID, 'done')"></span>
-                            <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
-                            <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
-                            <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span> -->
-                            <span class="procAct">
-                                <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
-                            </span>
-                            <span class="procAct">
-                                <img class="coImg18" :src="gst.html.getImageUrl(!row.act_fixed ? 'dimgray_fixed.png' : 'violet_fixed.png')" title="고정" @click="changeAction(row.MSGID, 'fixed')">
-                            </span>
-                            <span class="procAct">
-                                <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
-                            </span>                    
                         </div>
                     </div>
-                <!-- </Transition> -->
+                    <div class="msg_body_sub"><!-- Mention -->
+                        <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
+                            <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
+                            @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
+                                @{{ row1.USERNM }}
+                            </span>
+                        </div>
+                    </div>
+                    <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
+                        <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
+                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
+                            <img :src="row5.url" style='width:100%;height:100%' @load="(e) => imgLoaded(e, row5)">
+                            <div v-show="row5.hover" class="msg_file_seemore">
+                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                            </div>
+                        </div>                
+                    </div>
+                    <div v-if="row.msgfile.length > 0" class="msg_body_sub"><!-- 파일 -->
+                        <div v-for="(row5, idx5) in row.msgfile" class="msg_file_each" 
+                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="downloadFile(row.MSGID, row5)">
+                            <div style="height:100%;display:flex;align-items:center">
+                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
+                                <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
+                            </div>
+                            <div v-show="row5.hover" class="msg_file_seemore">
+                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="row.msglink.length > 0" class="msg_body_sub"><!-- 링크 -->
+                        <div v-for="(row5, idx5) in row.msglink" class="msg_file_each"
+                            @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="openLink(row5.url)">
+                            <div style="height:100%;display:flex;align-items:center">
+                                <img class="coImg18" :src="gst.html.getImageUrl('dimgray_addlink.png')">
+                                <span style="margin:0 3px;color:#005192">{{ row5.text }}</span>
+                            </div>
+                            <div v-show="row5.hover" class="msg_file_seemore">
+                                <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">
+                            </div>
+                        </div>
+                    </div>
+                    <div v-show="row.hover" class="msg_proc">
+                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_watching.png')" title="알아보는중" @click="toggleReaction(row.MSGID, 'watching')"></span>
+                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_checked.png')" title="접수완료" @click="toggleReaction(row.MSGID, 'checked')"></span>
+                        <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleReaction(row.MSGID, 'done')"></span>
+                        <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
+                        <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
+                        <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span> -->
+                        <span class="procAct">
+                            <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
+                        </span>
+                        <span class="procAct">
+                            <img class="coImg18" :src="gst.html.getImageUrl(!row.act_fixed ? 'dimgray_fixed.png' : 'violet_fixed.png')" title="고정" @click="changeAction(row.MSGID, 'fixed')">
+                        </span>
+                        <span class="procAct">
+                            <img class="coImg18 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" title="더보기" @click="(e) => rowRight(e, row)">
+                        </span>                    
+                    </div>
+                </div>
                 <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
                 </div>
@@ -2500,7 +2420,7 @@
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
     .msg_body {
-        position:relative;width:calc(100% - 20px);display:flex;flex-direction:column;margin:5px 0 0 0; /*position:relative는 floating menu에 필요*/
+        position:relative;width:calc(100% - 20px);display:flex;flex-direction:column;margin:5px 0 0 0;cursor:pointer /*position:relative는 floating menu에 필요*/
     }
     .msg_body_sub {
         display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
