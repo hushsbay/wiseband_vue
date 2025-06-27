@@ -255,7 +255,7 @@
         if (!row.CHANID) {
             gst.ctx.menu = [
                 { nm: "채널 만들기", func: function(item, idx) {
-                    memberlistRef.value.open("chan", "new", row.GR_ID)
+                    memberlistRef.value.open("chan", row.GR_ID, "new")
                 }}
             ]
         } else {
@@ -278,7 +278,7 @@
                     window.open(url + "?appType=home")
                 }},
                 { nm: "채널 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
-                    memberlistRef.value.open("chan", row.CHANID, row.CHANNM, row.nodeImg)
+                    memberlistRef.value.open("chan", row.GR_ID, row.CHANID, row.CHANNM, row.nodeImg)
                 }},
                 { nm: "알림 " + notiStr, func: function(item, idx) { 
                     const job = (row.NOTI == "X") ? "" : "X"

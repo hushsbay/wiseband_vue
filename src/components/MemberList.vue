@@ -20,9 +20,10 @@
         emits("ev-from-member", chanId, kind)
     }
 
-    function open(strKind, strChanid, strChannm, strChanimg) {
+    function open(strKind, strGrid, strChanid, strChannm, strChanimg) {
         show.value = true
         appType = strKind //chan or dm
+        grId = strGrid //그룹 아이디
         chanId = strChanid //채널아이디 또는 new
         memberlist.value = []
         newMember()
@@ -30,7 +31,6 @@
         masternm.value = ""
         if (appType == "chan") {
             if (chanId == "new") {
-                grId = strChannm //그룹 아이디
                 state.value = false
             } else {
                 chanNm.value = strChannm //chan만 있음
@@ -499,7 +499,7 @@
                         </div>
                     </div>
                     <div class="chan_right" style="width:560px">
-                        <org-tree mode="mygroup" :kind="appType" ref="orgRef" @ev-click="applyToBody"></org-tree>
+                        <org-tree mode="mygroup" :kind="appType" :grid="grId" ref="orgRef" @ev-click="applyToBody"></org-tree>
                     </div>  
                 </div>
             </div>

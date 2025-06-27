@@ -7,7 +7,7 @@
     import MemberPiceach from "/src/components/MemberPiceach.vue"
 
     const gst = GeneralStore()
-    const props = defineProps({ mode: String, kind: String }) //kind=chan/dm
+    const props = defineProps({ mode: String, kind: String, grid: String }) //kind=chan/dm
     const emits = defineEmits(["ev-click"])
     
     defineExpose({ open, close, procFromParent })
@@ -95,6 +95,7 @@
         const res = await axios.post("/user/" + controller, { 
             myteam: (strMode == "tree" && myteam.value) ? gst.auth.getCookie("orgcd") : "",
             mycomp: (strMode == "tree" && mycomp.value) ? gst.auth.getCookie("toporgcd") : "",
+            grid: props.grid ? props.grid : "", //qryGroupWithUser 에만 해당
             toastMsg: true
         })
         const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 

@@ -268,7 +268,7 @@
                 window.open(url + "?appType=dm")
             }},
             { nm: "DM 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
-                memberlistRef.value.open("dm", row.CHANID)
+                memberlistRef.value.open("dm", null, row.CHANID)
             }},
             { nm: "알림 " + notiStr, func: function(item, idx) {
                 const job = (row.NOTI == "X") ? "" : "X"
@@ -295,7 +295,7 @@
 
     async function newDm(manage) {
         if (manage) {
-            memberlistRef.value.open("dm", "new")
+            memberlistRef.value.open("dm", null, "new")
         } else {
             listDm.value.forEach((item) => { //선택 해제
                 item.sel = false

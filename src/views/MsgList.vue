@@ -268,10 +268,9 @@
                             }
                         }
                     } else if (row.CUD == "D") { 
-                        debugger
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
-                        if (idx > -1) {
+                        if (idx > -1) {                            
                             if (row.REPLYTO == "") {
                                 msglist.value.splice(idx, 1) //const item = msglist.value[idx]
                             } else { //삭제한 MSGID가 댓글일 경우
@@ -282,6 +281,13 @@
                                 }
                             }
                             await nextTick() //배열삭제된 부분이므로 동기 처리 필요
+                        }
+                        if (row.REPLYTO == "") {
+                            const idxFound = newParentAdded.value.findIndex(item => item == parentMsgid)
+                            if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
+                        } else {
+                            const idxFound = newChildAdded.value.findIndex(item => item == row.MSGID)
+                            if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
                         }
                     } else if (row.CUD == "C") { //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
                         //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
@@ -573,7 +579,7 @@
                     const curCdt = row.CDT.substring(0, 19)
                     if (nextMsgMstCdt || kind == "withReply") { //오름차순으로 일부를 읽어옴
                         if (i == 0) { //제일 오래된 메시지므로 false
-                            row.stickToPrev = false
+                            row.stickToPrev = false //nextMsgMstCdt + scrollToBottom의 경우 한 행만 존재해서 항상 i == 0 여길 타게 되어 stickToPrev = false로 나타나나 새로고침하면 제대로 보일 것임 (일단 경미한 사안)
                         } else {
                             if (curAuthorId != msgArr[i - 1].AUTHORID) { //현재 메시지의 작성자와 직전(더 오래된 i - 1)의 메시지 작성자가 다르면 false
                                 row.stickToPrev = false
@@ -872,6 +878,7 @@
                     return
                 }
                 msgbody.value = row.BODY
+                inEditor.value.focus()
             }},
             { nm: "메시지 삭제", disable: disableStr, color: colorStr, func: async function(item, idx) {
                 try {
