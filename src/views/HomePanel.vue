@@ -328,6 +328,9 @@
             row.mynotyetCnt = rs.data.kindCnt
         } else if (param.kind == "refreshPanel") {  //방 나가기,삭제에서 사용
             refreshPanel()
+        } else if (param.kind == "getMsgListFromMsgid") { //리얼타임 반영으로 쌓인 중간에 이빨빠진 새 데이터 뿌리기
+            //MsgList의 newParentAdded, newChildAdded 관련임. 여기는 자식이 아닌 아예 부모메시지만 넘어옴
+            gst.util.goMsgList('home_body', { chanid: param.chanid, msgid: param.msgid }, true)
         /*} else if (param.kind == "forwardToSide") { //지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조
             evToSide(param.kind, param.menu) 향후 사용시 모든 패널에 evToSide 검토 필요 */
         }
