@@ -381,7 +381,7 @@
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) { //굳이 await nextTick() 필요 없음
-                            if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                            if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.dtlItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
                                 refreshWithDtl(row.dtlItem.data, null, idx)
                             }
                             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
