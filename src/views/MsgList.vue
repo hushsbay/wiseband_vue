@@ -243,9 +243,12 @@
             const arr = rs.list
             const len = arr.length
             if (len > 0) { 
-                //debugger               
+                //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
+                //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
+                let cdtAtFirst = hush.cons.cdtAtLast
                 for (let i = 0; i < len; i++) {
                     const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 
+                    if (row.SKIP) continue //서버 qryDataLog() 서비스 참조 (C->D/C->U)
                     //부모로부터 업데이트 호출받을 때도 서버에서 읽어온 메시지정보없이 아이디만 넘겨서 스레드에서 서버 호출하므로 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음
                     if (row.CUD == "U") { //메시지 수정
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
@@ -257,7 +260,7 @@
                             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
                         }
                     } else if (row.CUD == "X") { //X(댓글 추가) : X는 로깅 관점에서는 부모메시지에 업데이트이므로 U와 유사 (chanmsg>saveMsg 참조)
-                        newChildAdded.value.push(row.REPLYTO) //wktlrdkdlelrk dkslrh, 나중에 버튼 누를 때는 부모메시지 0번째 인덱스를 msgid로 넘김
+                        newChildAdded.value.push({ msgid: row.MSGID, replyto: row.REPLYTO, CDT: row.MAX_CDT })
                         const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
@@ -283,23 +286,28 @@
                             await nextTick() //배열삭제된 부분이므로 동기 처리 필요
                         }
                         if (row.REPLYTO == "") {
-                            const idxFound = newParentAdded.value.findIndex(item => item == parentMsgid)
+                            const idxFound = newParentAdded.value.findIndex(item => item.MSGID == row.MSGID)
                             if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
                         } else {
-                            const idxFound = newChildAdded.value.findIndex(item => item == parentMsgid) //자식의 부모아이디로 들어가 있음
+                            const idxFound = newChildAdded.value.findIndex(item => item.MSGID == row.MSGID)
                             if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
                         }
                     } else if (row.CUD == "C") { //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
                         //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
                         if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
-                            newParentAdded.value.push(row.MSGID)
+                            newParentAdded.value.push({ msgid: row.MSGID, replyto: row.REPLYTO, CDT: row.MAX_CDT })
                         } else if (perLastCdt > realLastCdt) {
                             alert("여기로 오면 로직 오류임")
                             debugger
                         } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
-                            await getList({ nextMsgMstCdt: logdt.value, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 화면에 메시지 아이디가 있으면 중복체크하고 있음
+                            //##00 서버 qryDataLog() 서비스 참조 : 바로 아래 getList는 여기서 처리시 문제 있으므로 막고 cdtAtFirst로 처리
+                            //await getList({ nextMsgMstCdt: row.CDT, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 혹시 화면에 메시지 아이디가 있으면 중복체크하고 있음
                             //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
                             //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
+                            if (row.MAX_CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                                cdtAtFirst = row.MAX_CDT
+                                msgidAtFirst = row.MSGID
+                            }
                         }
                     } else if (row.CUD == "T") { //메시지 디테일정보만 업데이트
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
@@ -312,6 +320,11 @@
                             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
                         }
                     }
+                }
+                if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
+                    chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
+                    //await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
+                    //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
                 }
             }
             logdt.value = rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
@@ -531,7 +544,11 @@
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
             //const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
-            if (msgid && (kind == "atHome" || (kind == "withReply" && !msgidReply))) msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
+            if (msgid && (kind == "atHome" || (kind == "withReply" && !msgidReply))) {
+                msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
+                //MsgList내에서 이 목록 배열을 초기화하면 고통이 따르는데 MsgList.vue가 onMounted() 된다는 것임 : 아직 동작 원리는 이해하지 못함
+                //따라서, 패널에서 호출한 경우가 아니면 MsgList에서 바로 배열 초기화하는 것은 극도로 유의해서 처리하기로 함
+            }
             const msgArr = rs.data.msglist
             if (msgArr.length == 0) {
                 onGoingGetList = false
@@ -1015,17 +1032,32 @@
         }
     }
 
-    async function addAllNew(strKind) { //home,dm에서만 버튼 보임
-        //newParentAdded.value.length == 0, newChildAdded.value.length == 0이면 버튼이 아예 안보일 것임
-        let msgid
-        if (strKind == "P") { //신규부모글
-            if (newParentAdded.value.length == 0) return
-            msgid = newParentAdded.value[0]
-        } else { //C(신규댓글)
-            if (newChildAdded.value.length == 0) return
-            msgid = newChildAdded.value[0]
+    async function chkProcScrollToBottom(cdtAtFirst, msgid) {
+        if (newParentAdded.value.length > hush.cons.scrollToBottomMaxCount || (appType != "home" && appType != "dm")) {
+            window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType)
+            //evToPanel({ kind: "getMsgListFromMsgid", chanid: chanId, msgid: msgid }, true) 
+            //HomePanel에 소스 참조. 지우지 말 것 (향후 사용가능성) 패널로부터 라우팅 처리보다는 위 방법(window.open)으로
+        } else { //home/dm이 아니면 scrollToBottom으로 처리시 순서 흐트러질 것임
+            await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
         }
-        evToPanel({ kind: "getMsgListFromMsgid", chanid: chanId, msgid: msgid })
+    }
+
+    async function addAllNew(strKind) { //home,dm에서만 버튼 보임
+        let msgid, cdtAtFirst
+        if (strKind == "P") { //신규 부모글
+            if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
+            msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
+            cdtAtFirst = newParentAdded.value[0].CDT
+            chkProcScrollToBottom(cdtAtFirst, msgid) //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
+        } else { //C : 신규 댓글
+            if (newChildAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
+            //가장 오래된 자식메시지의 부모아이디부터 조회하도록 해야 사용자가 안놓침
+            const arr = newChildAdded.value //그런데, 그게 인덱스 0가 아닐 수도 있으므로 아래처럼 처리하고자 함
+            arr.sort((a, b) => a.CDT.localeCompare(b.CDT)) //오름차순 정렬
+            msgid = arr[0].REPLYTO //자식의 부모아이디
+            cdtAtFirst = arr[0].CDT //여기선 msgid로 사용
+            window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
+        }
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
@@ -1256,7 +1288,13 @@
                     if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
-                    await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴 1) 저장후 2) 리얼타임 반영
+                    if (newParentAdded.value.length == 0) {
+                        await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
+                    } else {
+                        const strMsgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
+                        const cdtAtFirst = newParentAdded.value[0].CDT
+                        chkProcScrollToBottom(cdtAtFirst, strMsgid)
+                    }
                 }
             } else {
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
@@ -2187,10 +2225,10 @@
                 <div v-show="listMsgSel == 'unread'" class="coImgBtn" @click="updateAllWithNewKind('unread', 'read')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">모두읽음처리</span>
                 </div> 
-                <div v-show="listMsgSel == 'all'" class="coImgBtn" @click="addAllNew('P')" style="margin:0 0 4px 12px">
+                <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">신규 : {{ newParentAdded.length }}</span>
                 </div>
-                <div v-show="listMsgSel == 'all'" class="coImgBtn" @click="addAllNew('C')" style="margin:0 0 4px 12px">
+                <div v-show="listMsgSel == 'all' && newChildAdded.length > 0" class="coImgBtn" @click="addAllNew('C')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">신규(댓글) : {{ newChildAdded.length }}</span>
                 </div>
             </div> 

@@ -16,6 +16,7 @@ const hush = {
         deli : "$~$",
         cdtAtFirst : "1111-11-11",
         cdtAtLast : "9999-99-99",
+        scrollToBottomMaxCount : 3, //100개 정도로 시작해보기
         color_light : "whitesmoke_",
         color_dark : "violet_",
         color_athome : "#e6f2e6", //--hover-color in main.css //"lightsteelblue", //color_act_later : "lightsteelblue",
