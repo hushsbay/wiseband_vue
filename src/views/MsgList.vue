@@ -172,7 +172,7 @@
     let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
 
     //실시간 반영
-    let logdt = ref(''), perLastCdt = '', realLastCdt = '' //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
+    let logdt = ref(''), realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -245,7 +245,7 @@
             if (len > 0) { 
                 //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
                 //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
-                let cdtAtFirst = hush.cons.cdtAtLast
+                let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = ''
                 for (let i = 0; i < len; i++) {
                     const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 
                     if (row.SKIP) continue //서버 qryDataLog() 서비스 참조 (C->D/C->U)
@@ -260,7 +260,7 @@
                             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
                         }
                     } else if (row.CUD == "X") { //X(댓글 추가) : X는 로깅 관점에서는 부모메시지에 업데이트이므로 U와 유사 (chanmsg>saveMsg 참조)
-                        newChildAdded.value.push({ msgid: row.MSGID, replyto: row.REPLYTO, CDT: row.MAX_CDT })
+                        newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.MAX_CDT })
                         const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
@@ -294,9 +294,9 @@
                         }
                     } else if (row.CUD == "C") { //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
                         //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
-                        if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
-                            newParentAdded.value.push({ msgid: row.MSGID, replyto: row.REPLYTO, CDT: row.MAX_CDT })
-                        } else if (perLastCdt > realLastCdt) {
+                        if (savNextMsgMstCdt < realLastCdt) { //if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
+                            newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.MAX_CDT })
+                        } else if (savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
                             alert("여기로 오면 로직 오류임")
                             debugger
                         } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
@@ -642,7 +642,7 @@
                 }
                 if (row.CDT > savNextMsgMstCdt) savNextMsgMstCdt = row.CDT
                 if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
-                if (row.CDT > perLastCdt) perLastCdt = row.CDT
+                //if (row.CDT > perLastCdt) perLastCdt = row.CDT
             }
             //1. perLastCdt(fetch 한번으로 가져온 최근메시지CDT)와 realLastCdt(atHome에서처럼, 가져오지 않았지만 실제 최근메시지CDT)를 비교해 
             //   같거나 perLastCdt가 크면 (이빨 빠진 게 없으므로) 그 다음에 리얼타임으로 반영되는 추가분은 화면에 뿌려도 무방함
@@ -1032,14 +1032,21 @@
         }
     }
 
-    async function chkProcScrollToBottom(cdtAtFirst, msgid) {
+    async function chkProcScrollToBottom(cdtAtFirst, msgid) { //스레드(댓글) 아닌 부모글에만 사용함
+        /* 1안) 지우지 말 것 (향후 소스 참고)
         if (newParentAdded.value.length > hush.cons.scrollToBottomMaxCount || (appType != "home" && appType != "dm")) {
             window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType)
             //evToPanel({ kind: "getMsgListFromMsgid", chanid: chanId, msgid: msgid }, true) 
             //HomePanel에 소스 참조. 지우지 말 것 (향후 사용가능성) 패널로부터 라우팅 처리보다는 위 방법(window.open)으로
         } else { //home/dm이 아니면 scrollToBottom으로 처리시 순서 흐트러질 것임
-            await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
-        }
+            //원래 최초 개발시 savNextMsgMstCdt가 쓰였는데 savNextMsgMstCdt 다음부터 읽어오는 컨셉이었음
+            //따라서, 아래 cdtAtFirst로 추가개발한 것을 조회하면 cdtAtFirst보다 큰 걸 조회하므로 cdtAtFirst가 cdt인 것은 누락되므로
+            //cdtAtFirst보다 마이크로섹 작은 것으로 조회시 cdtAtFirst가 포함된 메시지는 누락안될 것임
+            const modifiedCdt = cdtAtFirst.substring(0, cdtAtFirst.length - 1)
+            console.log(modifiedCdt+"==="+cdtAtFirst)
+            await getList({ nextMsgMstCdt: modifiedCdt, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
+        } 아래는 2안) */
+        await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
     }
 
     async function addAllNew(strKind) { //home,dm에서만 버튼 보임
