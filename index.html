@@ -5,6 +5,16 @@
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WiSEBand</title>
+    <script>
+        sessionStorage.pageShown = 'Y'
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                sessionStorage.pageShown = 'N'
+            } else {
+                sessionStorage.pageShown = 'Y'
+            }
+        })
+    </script>
   </head>
   <body oncontextmenu="return false"><!-- 컨텍스트메뉴 만들어 사용하는데 .vue에서 .prevent가 안먹혀 여기서 일단 처리함 -->
     <div id="app"></div>

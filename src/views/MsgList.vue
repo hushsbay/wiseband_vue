@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onUnmounted } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated, onUnmounted } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
     
@@ -174,6 +174,8 @@
     //실시간 반영
     let logdt = ref(''), realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
+    let timerShort = true, timeoutShort, timeoutLong
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -234,15 +236,35 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
+    async function procTimerShort() { //vue-observe-visibility npm을 사용해야 할 듯...pageShown은 공유되므로 곤란
+        if (timerShort) await chkDataLog()
+        //onActivated와 onDeactivated에서는 굳이 처리하지 말기 (앱이 보일 때 MsgList가 안보이는 상황은 그리 많지 않아서 큰 효용없음)
+        //document.hidden(index.html참조) 여부로만 체크해도 충분해 보임
+        timerShort = (sessionStorage.pageShown == 'Y') ? true : false
+        timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT)
+    }
+
+    async function procTimerLong() {
+        if (!timerShort) await chkDataLog()
+        timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
+    }
+
     let tempcolor = ref('blue')
     async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
+            if (hasProp()) return //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
             const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt.value, chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true)
             const arr = rs.list
             const len = arr.length
-            if (len > 0) { 
+            if (len > 0) {
+                let cdtBottom
+                const eleBottom = getBottomMsgBody()
+                if (eleBottom) {
+                    const idxBottom = gst.util.getKeyIndex(msgRow, eleBottom.id)
+                    if (idxBottom > -1) cdtBottom = msglist.value[idxBottom].CDT
+                }
                 //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
                 //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
                 let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = ''
@@ -294,7 +316,9 @@
                         }
                     } else if (row.CUD == "C") { //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
                         //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
-                        if (savNextMsgMstCdt < realLastCdt) { //if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
+                        //if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
+                        if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt) { 
+                            //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
                             newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.MAX_CDT })
                         } else if (savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
                             alert("여기로 오면 로직 오류임")
@@ -329,10 +353,8 @@
             }
             logdt.value = rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
             tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
-            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 5) //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
         } catch (ex) {
             gst.util.showEx(ex, true)
-            if (!hasProp()) setTimeout(function() { chkDataLog() }, 1000 * 5)
         }
     }
     
@@ -374,7 +396,8 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 if (logdt.value == "") logdt.value = rs.data.dbdt
-                setTimeout(function() { chkDataLog() }, 1000 * 5)
+                procTimerShort()
+                procTimerLong()
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -386,7 +409,7 @@
         console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
         if (mounting) {
             mounting = false
-        } else {
+        } else {            
             subTitle = subTitle.replace("M", "A")
             if (hasProp()) {
                 setBasicInfoInProp()
@@ -407,7 +430,14 @@
                     evToPanel({ kind: "selectRow", msgid: msgidInChan })
                 }
             }
+            procTimerShort()
+            procTimerLong()
         }
+    })
+
+    onDeactivated(() => {
+        clearTimeout(timeoutShort)
+        clearTimeout(timeoutLong)
     })
 
     onUnmounted(() => {
@@ -436,7 +466,7 @@
         gst.objSaved[key].scrollY = posY
     }
 
-    function chanCtxMenu(e) {
+    function chanCtxMenu(e) {   
         gst.ctx.data.header = ""
         const disableStr = (chanMasterId.value == g_userid) ? false : true
         gst.ctx.menu = [
@@ -696,10 +726,10 @@
             } else if (nextMsgMstCdt) {
                 //그냥 두면 됨
             }
-            // setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
-            //     //방안: afterScrolled이 true이면 이미 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 true가 아닐 경우(갯수가 작아 스크롤이 안되는 경우)만 호출하기로 함 : /chanmsg/updateWithNewKind
-            //     if (!afterScrolled.value) readMsgToBeSeen()
-            // }, 1000) => 처음엔 클릭해야 읽음 처리 (스크롤 없을 땐)
+            setTimeout(function() { //초기데이터 말고는 getList + onScroll이 readMsgToBeSeen()을 두번 실행하게 하는데 이 경우 msgdtl에 read kind 필드값이 2개 이상 insert됨
+                //방안: afterScrolled이 true이면 이미 스크롤 된 것이므로 여기서 readMsgToBeSeen() 호출하지 말고 true가 아닐 경우(갯수가 작아 스크롤이 안되는 경우)만 호출하기로 함
+                if (!afterScrolled.value) readMsgToBeSeen()
+            }, 1000) //클릭해도 읽음 처리됨
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -1063,7 +1093,12 @@
             arr.sort((a, b) => a.CDT.localeCompare(b.CDT)) //오름차순 정렬
             msgid = arr[0].REPLYTO //자식의 부모아이디
             cdtAtFirst = arr[0].CDT //여기선 msgid로 사용
-            window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
+            const newWin = window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
+            newWin.onload = function() {
+                const arr = newWin.document.querySelectorAll(".chan_center_body")
+                //vue.js로 랜더링하는 바로 아래 class는 안읽혀서 vue.js 아녀도 바로 뿌려주는 class(chan_center_body)로 잡음
+                //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
+            }
         }
     }
 
@@ -1077,7 +1112,7 @@
             setTimeout(function() { readMsgToBeSeen() }, 500) //토스트를 bottomMsg로 대체해서 여기 올 경우는 없을 것이나 그대로 둠
         } else {
             const idTop = eleTop.id
-            let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
+            const idx = gst.util.getKeyIndex(msgRow, idTop) //let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
             if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
                 const len = msglist.value.length
                 const start = (idx - 10 < 0) ? 0 : idx - 10
@@ -1115,6 +1150,16 @@
         if (!rect) return null
         const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
         let yy = rect.top + 6
+        const ele = document.elementFromPoint(xx, yy)
+        return ele
+    }
+
+    const getBottomMsgBody = () => { //육안으로 보이는 맨 아래 MSGID의 div 찾기
+        if (hasProp()) return null
+        const rect = hush.util.getRect(".chan_center_footer")
+        if (!rect) return null
+        const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
+        let yy = rect.top - 10
         const ele = document.elementFromPoint(xx, yy)
         return ele
     }
@@ -2178,8 +2223,8 @@
                 </div>
                 <div class="chan_center_header_right">
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
-                        <span v-show="tempcolor=='red'" style="margin:0 5px 5px 5px;color:red;font-weight:bold">{{ logdt.substring(11) }}</span>
-                        <span v-show="tempcolor=='blue'"style="margin:0 5px 5px 5px;color:blue;font-weight:bold">{{ logdt.substring(11) }}</span>
+                        <span v-show="tempcolor=='red'" style="margin:0 5px 5px 5px;color:red;font-weight:bold">{{ logdt.substring(11) }} {{ newParentAdded.length }} {{ newChildAdded.length }}</span>
+                        <span v-show="tempcolor=='blue'"style="margin:0 5px 5px 5px;color:blue;font-weight:bold">{{ logdt.substring(11) }} {{ newParentAdded.length }} {{ newChildAdded.length }}</span>
                         <!-- <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span> -->
                     </div>
                     <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
@@ -2241,7 +2286,7 @@
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
                 <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget"></div>
-                <!--바로 아래 id는 읽음처리(readMsgToBeSeen)에 필요한 부분이므로 제거하면 안됨-->
+                <!--바로 아래 id는 읽음처리(readMsgToBeSeen)에 필요한 부분이므로 제거하면 안됨. 위 id(chan_center_body)도 그대로 두기-->
                 <div v-for="(row, idx) in msglist" :id="row.MSGID" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
                     :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                     @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)" @click="rowClick(row)">
