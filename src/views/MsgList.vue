@@ -236,16 +236,21 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
-    async function procTimerShort() { //vue-observe-visibility npm을 사용해야 할 듯...pageShown은 공유되므로 곤란
+    async function procTimerShort() { //MsgList는 각 채널이 열려 있는 것이고 이 timer의 목적은 해당 채널 데이터의 리얼타임 반영임
+        //요점 : 페이지가 보이면 최단시간 타이머 안보이면 타이머 갭을 늘리기. MsgList가 Deactived()되면 타이머 제거. Activated되면 다시 타이머 실행
+        //      => 하나의 window 객체에 MsgList의 timer가 돌아가는 것은 오직 1개만 가능하도록 함
+        //vue-observe-visibility npm 굳이 사용하지 않고도 pageShown으로 처리 가능
+        //sessionStorage.pageShown은 document.hidden(index.html) 참조. hot deploy시 타이머가 더 생기는지 체크 필요 (아래 .bind(this) 적용 테스트 더 해보기)
         if (timerShort) await chkDataLog()
-        //onActivated와 onDeactivated에서는 굳이 처리하지 말기 (앱이 보일 때 MsgList가 안보이는 상황은 그리 많지 않아서 큰 효용없음)
-        //document.hidden(index.html참조) 여부로만 체크해도 충분해 보임
         timerShort = (sessionStorage.pageShown == 'Y') ? true : false
+        //timeoutShort = setTimeout(function() { procTimerShort() }.bind(this), TIMERSEC_SHORT)
         timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT)
     }
 
     async function procTimerLong() {
+        //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
         if (!timerShort) await chkDataLog()
+        //timeoutLong = setTimeout(function() { procTimerLong() }.bind(this), TIMERSEC_LONG)             
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
     }
 
@@ -253,7 +258,7 @@
     async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
-            if (hasProp()) return //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
+            if (hasProp()) return //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함~~~~~~~~~~~~~~~~
             const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt.value, chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true)
             const arr = rs.list
@@ -390,15 +395,21 @@
                         inEditor.value.focus() 
                     //} catch {}
                 }
-            }            
-            if (!hasProp()) {
                 const res = await axios.post("/chanmsg/qryDbDt")
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 if (logdt.value == "") logdt.value = rs.data.dbdt
                 procTimerShort()
                 procTimerLong()
-            }
+            }            
+            // if (!hasProp()) {
+            //     const res = await axios.post("/chanmsg/qryDbDt")
+            //     const rs = gst.util.chkAxiosCode(res.data)
+            //     if (!rs) return
+            //     if (logdt.value == "") logdt.value = rs.data.dbdt
+            //     procTimerShort()
+            //     procTimerLong()
+            // }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -441,6 +452,8 @@
     })
 
     onUnmounted(() => {
+        clearTimeout(timeoutShort)
+        clearTimeout(timeoutLong)
         if (observerTop && observerTop.value) observerTop.value.disconnect()
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
     })
