@@ -71,7 +71,9 @@
                             refreshWithGetMsg(row.msgItem.data, parentMsgid) //화면에 있는 부모메시지 업데이트
                             if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
                                 msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
+                                //msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
+                                const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1)
+                                msglistRef.value.procFromParent("addChildFromBody", { msgidReply: parentMsgid, cdt: modifiedCdt })
                             }
                         }
                         panelUpdateNotyetCnt = true
@@ -107,7 +109,7 @@
                         //if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
                         if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
                             //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
-                            newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.MAX_CDT })
+                            newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
                         } else if (savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
                             //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸으로 내려올 수 있으므로 skip
                         } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
@@ -115,10 +117,12 @@
                             //await getList({ nextMsgMstCdt: row.CDT, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 혹시 화면에 메시지 아이디가 있으면 중복체크하고 있음
                             //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
                             //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
-                            if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
-                                cdtAtFirst = row.CDT
-                                msgidAtFirst = row.MSGID
-                            }
+//                            if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+//                                cdtAtFirst = row.CDT
+//                                msgidAtFirst = row.MSGID
+//                            }
+                            const modifiedCdt = row.CDT.substring(0, cdtAtFirst.length - 1)
+                            await getList({ nextMsgMstCdt: modifiedCdt, kind: "scrollToBottom" })
                         }
                         if (appType == "home") {
                             panelUpdateNotyetCnt = true
@@ -143,11 +147,11 @@
 
                 }
             }
-            if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
-                chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
+//            if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
+//                chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
                 //await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
                 //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
-            }
+//            }
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
             if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
             if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
@@ -181,8 +185,10 @@
                 if (idx == 0) clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
             }
         } else if (kind == "addChildFromBody") {
-            await getList({ msgid: obj.msgid, kind: "withReply", msgidReply: obj.msgidReply })
-            if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+            //await getList({ msgid: obj.msgid, kind: "withReply", msgidReply: obj.msgidReply })
+            //await getList({ msgid: obj.msgid, kind: "withReply", msgidReply: obj.msgidReply, cdt: cdt })
+            //if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+            await getList({ nextMsgMstCdt: obj.cdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
         } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
             const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
@@ -706,9 +712,10 @@
     //1) prevMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
     //2) nextMsgMstCdt : EndlessScroll 관련 (가장 최근 일시를 저장해서 그것보다 더 최근의 데이터를 가져 오기 위함. 화면에서 아래로 내려가는 경우임)
     //3) nextMsgMstCdt + kind(scrollToBottom) : 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함 (리얼타임 반영시에도 특정 싯점 아래 모두 읽어와 보여주는데 싯점이 여러가지 있음)
-    //4) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..) : 조회후 스크롤링 위아래로 움직이는 무한스크롤 1), 2)를 지원함
-    //5) msgid + kind(withReply) : 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI : 조회하면 끝이며 무한스크롤 없음
-    //6) kind(all, notyet, unread, msg, file, image) : msgid 없음
+    //4) nextMsgMstCdt + kind(scrollToBottom) + msgidReply : 스레드에서 발송 이후 작성자 입장에서는 맨 아래로 스크롤되어야 함 (리얼타임 반영시에도 특정 싯점 아래 모두 읽어와 보여줌)
+    //5) msgid + kind(atHome) : 홈메뉴에서 메시지 하나 전후로 가져와서 보여 주는 UI (from 나중에..내활동..) : 조회후 스크롤링 위아래로 움직이는 무한스크롤 1), 2)를 지원함
+    //6) msgid + kind(withReply) : 홈메뉴에서 댓글보기 누르면 오른쪽에 부모글+댓글 리스트로 보여 주는 UI : 조회하면 끝이며 무한스크롤 없음
+    //7) kind(all, notyet, unread, msg, file, image) : msgid 없음
     async function getList(addedParam) {
         try {
             if (onGoingGetList || pageData.value == STATE_NODATA) return
@@ -719,8 +726,8 @@
             const nextMsgMstCdt = param.nextMsgMstCdt
             const msgid = param.msgid
             const kind = param.kind
-            const msgidReply = param.msgidReply //읽어서 스레드에 댓글 추가 (리얼타임 반영)
-            if (msgid && (kind == "atHome" || (kind == "withReply" && !msgidReply))) {
+            const msgidReply = param.msgidReply //읽어서 스레드에 댓글 추가
+            if (msgid && (kind == "atHome" || kind == "withReply")) {
                 savNextMsgMstCdt = hush.cons.cdtAtFirst
                 savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
@@ -734,7 +741,7 @@
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
             //const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
-            if (msgid && (kind == "atHome" || (kind == "withReply" && !msgidReply))) {
+            if (msgid && (kind == "atHome" || kind == "withReply")) {
                 msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
                 //MsgList내에서 이 목록 배열을 초기화하면 고통이 따르는데 MsgList.vue가 onMounted() 된다는 것임 : 아직 동작 원리는 이해하지 못함
                 //따라서, 패널에서 호출한 경우가 아니면 MsgList에서 바로 배열 초기화하는 것은 극도로 유의해서 처리하기로 함
@@ -754,14 +761,10 @@
                     refreshWithGetMsg(row, null, idx)
                 } else {
                     if (kind == "withReply") {
-                        if (msgidReply) {
-                            //row.background = hush.cons.color_athome
-                        } else {
-                            if (i == 0) {
-                                row.background = "beige"
-                            } else if (row.MSGID == props.data.msgidChild) {
-                                row.background = hush.cons.color_athome
-                            }
+                        if (i == 0) {
+                            row.background = "beige"
+                        } else if (row.MSGID == props.data.msgidChild) {
+                            row.background = hush.cons.color_athome
                         }
                     } else {
                         if (msgidParent && row.MSGID == msgidParent) {
@@ -1496,8 +1499,10 @@
             if (crud == "C") {
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
                     //await getList({ msgid: props.data.msgid, kind: "withReply" })
-                    await getList({ msgid: props.data.msgid, kind: "withReply", msgidReply: rs.data.msgid })
-                    if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+                    //await getList({ msgid: props.data.msgid, kind: "withReply", msgidReply: rs.data.msgid })
+                    //if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+                    //debugger
+                    await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: rs.data.replyto })                    
                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
                     if (newParentAdded.value.length == 0) {

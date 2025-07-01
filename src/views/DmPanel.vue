@@ -17,7 +17,7 @@
     defineExpose({ procMainToMsglist })
 
     async function procMainToMsglist(kind, obj) { //단순 전달
-        //await msglistRef.value.procMainToMsglist(kind, obj)
+        await msglistRef.value.procMainToMsglist(kind, obj)
     }
 
     const props = defineProps({ fromPopupChanDm: String })
@@ -355,24 +355,13 @@
             let item = listDm.value[idx]
             listDm.value.splice(idx, 1)
             listDm.value.unshift(item)
-            item = listDm.value[0]
-            //debugger
-            item = row
-            item.sel = true
+            listDm.value[0] = row
+            listDm.value[0].sel = true
             scrollArea.value.scrollTo({ top: 0 })
         } else {
             listDm.value[idx] = row
             listDm.value[idx].sel = true
         }
-        // for (let i = 0; i < listDm.value.length; i++) {
-        //     if (listDm.value[i].CHANID == row.CHANID) {
-        //         listDm.value[i] = row
-        //         listDm.value[i].sel = true
-        //         //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 
-        //         //home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
-        //         break
-        //     }
-        // }
     }
 
     async function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
