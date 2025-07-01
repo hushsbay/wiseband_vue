@@ -4,7 +4,7 @@
 </script>
 
 <template>
-    <router-view /> <!-- .vue마다 :key 및 keep-alive가 달리 구현되어 있음 -->
+    <router-view />
     <snackbar></snackbar>
     <toast></toast>        
 </template>

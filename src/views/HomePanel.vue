@@ -13,6 +13,12 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    defineExpose({ procMainToMsglist })
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        //await msglistRef.value.procMainToMsglist(kind, obj)
+    }
+
     const props = defineProps({ fromPopupChanDm: String })
     const emits = defineEmits(["ev-click"]) //, "ev-to-side"])
 
@@ -326,6 +332,8 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             row.mynotyetCnt = rs.data.kindCnt
+        } else if (param.kind == "refreshRow") {
+            refreshPanel() //홈에서는 행 새로고침도 그냥 패널 전체 새로고침으로 처리하되 빈도가 높고 반복적인 곳은 사용하지 않기로 함 (향후 필요시 refreshRow 진짜 만들기)
         } else if (param.kind == "refreshPanel") {  //방 나가기,삭제에서 사용
             refreshPanel()
         /*} else if (param.kind == "getMsgListFromMsgid") { //지우지 말 것 (향후 사용가능성) 리얼타임 반영으로 쌓인 중간에 이빨빠진 새 데이터 뿌리기

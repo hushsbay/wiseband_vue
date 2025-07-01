@@ -20,6 +20,12 @@
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
 
+    defineExpose({ procMainToMsglist })
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        await msglistRef.value.procMainToMsglist(kind, obj)
+    }
+
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
     let chanSideWidth = ref(localStorage.wiseband_lastsel_activitysidewidth ?? '320px') //localStorage 이름 유의
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')
@@ -320,7 +326,7 @@
                         <div v-else>
                             <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
                         </div>
-                        <div style="color:white;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
+                        <div style="color:white;font-weight:bold;margin-left:5px">{{ row.USERNM }}</div>    
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray;margin-right:3px">
                         {{ hush.util.displayDt(row.CDT, false) }}

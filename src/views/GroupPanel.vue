@@ -15,6 +15,12 @@
     let listGroup = ref([]), groupRow = ref({}) //groupRow는 element를 동적으로 할당
     let mounting = true
 
+    defineExpose({ procMainToMsglist })
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        //await userlistRef.value.procMainToMsglist(kind, obj)
+    }
+
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
     let chanSideWidth = ref(localStorage.wiseband_lastsel_groupsidewidth ?? '300px') //localStorage 이름 유의
     let chanMainWidth = ref('calc(100% - ' + chanSideWidth.value + ')')

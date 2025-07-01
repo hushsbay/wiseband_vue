@@ -24,12 +24,57 @@
     let prevX, prevY
     let keepAliveRef = ref(null)
     let mediaPopupRef = ref(null), searchText = ref('')
+
+    //리얼타임 반영
+    let logdt = ref(''), panelRef = ref(null)
+    let timerShort = true, timeoutShort, timeoutLong
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
+
+    async function chkDataLogEach() {
+        try {
+            console.log(sessionStorage.logdt+"@@@@@")            
+            const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : sessionStorage.logdt })
+            const rs = gst.util.chkAxiosCode(res.data, true)
+            const arr = rs.list
+            if (arr.length > 0) {
+                await panelRef.value.procMainToMsglist("realtime", { list: arr, logdt: rs.data.logdt })
+            }
+            /*const len = arr.length
+            if (len > 0) {
+                for (let i = 0; i < len; i++) {
+                    await panelRef.value.procMainToMsglist("realtime", arr[i])
+                    //if (i > 30) break
+                }
+            }
+            logdt.value = rs.data.logdt*/
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function procTimerShort() {
+        //요점 : 페이지가 보이면 최단시간 타이머 안보이면 타이머 갭을 늘리기 : 하나의 window 객체에 Main.vue의 timer가 돌아가는 것은 오직 1개만 가능하도록 함
+        //vue-observe-visibility npm 굳이 사용하지 않고도 pageShown으로 처리 가능
+        //sessionStorage.pageShown은 document.hidden(index.html) 참조. hot deploy시 타이머가 더 생기는지 체크 필요 (아래 .bind(this) 적용 테스트 더 해보기)
+        if (timerShort) await chkDataLogEach()
+        timerShort = (sessionStorage.pageShown == 'Y') ? true : false
+        //timeoutShort = setTimeout(function() { procTimerShort() }.bind(this), TIMERSEC_SHORT)
+        timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT)
+    }
+
+    async function procTimerLong() {
+        //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
+        if (!timerShort) await chkDataLogEach()
+        //timeoutLong = setTimeout(function() { procTimerLong() }.bind(this), TIMERSEC_LONG)             
+        timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
+    }
     
     onMounted(async () => {
         try {
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return   
+            if (!rs) return
+            if (!sessionStorage.logdt) sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USERID != null)
             listUnSel.value = rs.list.filter(x => x.USERID == null)
@@ -47,6 +92,8 @@
             // const row = listSel.value[idxReal]
             // sideClick(lastSelMenu, row, true)
             sideClickOnLoop(null, true)
+            procTimerShort() 
+            procTimerLong()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -225,7 +272,7 @@
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
                     <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center">
-                        <img class="coImg32" src="/src/assets/images/color_slacklogo.png" style=""/>
+                        <img class="coImg32" src="/src/assets/images/color_slacklogo.png" @click="chkDataLogEach"/>
                     </div>
                     <div id="sideTop" class="sideTop">
                         <div v-for="(row, idx) in listSel" @click="sideClick(row.ID, row)" :id="row.ID + 'Target'" class="menu cntTarget">
@@ -258,7 +305,7 @@
                     </router-view> -->
                     <router-view v-slot="{ Component }">
                         <keep-alive ref="keepAliveRef">
-                            <component :is="Component" :key="$route.fullPath.split('/')[2]" />
+                            <component :is="Component" :key="$route.fullPath.split('/')[2]" ref="panelRef" />
                         </keep-alive>
                     </router-view>
                 </div>

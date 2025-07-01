@@ -14,6 +14,12 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    defineExpose({ procMainToMsglist })
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        //await msglistRef.value.procMainToMsglist(kind, obj)
+    }
+
     const props = defineProps({ fromPopupChanDm: String })
     const emits = defineEmits(["ev-click"]) //, "ev-to-side"])
 
@@ -313,14 +319,16 @@
     async function handleEvFromBody(param) { //MsgList.vue에서 실행
         if (param.kind == "selectRow") {
             dmClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
-        } else if (param.kind == "update") {
-            const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
-            if (idx == -1) return
-            const row = listDm.value[idx]
-            row.BODYTEXT = param.bodytext
-            if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
-            listDm.value.splice(idx, 1)
-            listDm.value.unshift(row)
+        // } else if (param.kind == "update") { //대신 아래 refreshRow 사용하기
+        //     const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
+        //     if (idx == -1) return
+        //     const row = listDm.value[idx]
+        //     row.BODYTEXT = param.bodytext
+        //     if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
+        //     listDm.value.splice(idx, 1)
+        //     listDm.value.unshift(row)
+        } else if (param.kind == "refreshRow") {
+            refreshRow(param.chanid, true)
         } else if (param.kind == "delete") {
             const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
             if (idx == -1) return
@@ -339,18 +347,37 @@
         }
     }
 
+    async function refreshRow(chanid, upToTop) {
+        const row = await getSingleDm(chanid)
+        const idx = listDm.value.findIndex((item) => item.CHANID == chanid)
+        if (idx == -1) return
+        if (idx != 0 && upToTop) { //행을 맨위로 올려서 업데이트
+            let item = listDm.value[idx]
+            listDm.value.splice(idx, 1)
+            listDm.value.unshift(item)
+            item = listDm.value[0]
+            //debugger
+            item = row
+            item.sel = true
+            scrollArea.value.scrollTo({ top: 0 })
+        } else {
+            listDm.value[idx] = row
+            listDm.value[idx].sel = true
+        }
+        // for (let i = 0; i < listDm.value.length; i++) {
+        //     if (listDm.value[i].CHANID == row.CHANID) {
+        //         listDm.value[i] = row
+        //         listDm.value[i].sel = true
+        //         //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 
+        //         //home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
+        //         break
+        //     }
+        // }
+    }
+
     async function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
         if (kind == "update") {
-            const row = await getSingleDm(chanid)
-            for (let i = 0; i < listDm.value.length; i++) {
-                if (listDm.value[i].CHANID == row.CHANID) {
-                    listDm.value[i] = row
-                    listDm.value[i].sel = true
-                    //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 
-                    //home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
-                    break
-                }
-            }
+            refreshRow(chanid)
         } else if (kind == "delete") {
             const idx = listDm.value.findIndex((item) => item.CHANID == chanid)
             if (idx == -1) return
