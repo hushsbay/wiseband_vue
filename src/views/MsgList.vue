@@ -288,7 +288,7 @@
     const mediaPopupRef = ref(null), popupChanDmRef = ref(null)
         
     let subTitle = ''
-    let sideMenu, chanId, msgidInChan, STATE_NODATA = "nodata"
+    let sideMenu, chanId, msgidInChan
     let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
     let msglist = ref([])//, fetchByScrollEnd = ref(false)
@@ -615,8 +615,8 @@
         sideMenu = gst.selSideMenu
         if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
         if (route.params.chanid) chanId = route.params.chanid
-        const pMsgid = route.params.msgid
-        if (pMsgid == STATE_NODATA) {
+        const pMsgid = route.params.msgid        
+        if (pMsgid == hush.cons.state_nodata) {
             pageData.value = pMsgid
         } else if (pMsgid == "0" || pMsgid == "nocache") { //현재 nocache는 사용처 없음
             //skip
@@ -718,7 +718,7 @@
     //7) kind(all, notyet, unread, msg, file, image) : msgid 없음
     async function getList(addedParam) {
         try {
-            if (onGoingGetList || pageData.value == STATE_NODATA) return
+            if (onGoingGetList || pageData.value == hush.cons.state_nodata) return
             onGoingGetList = true
             let param = { chanid: chanId } //chanid는 기본 param
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
@@ -2325,7 +2325,7 @@
 
 <template>
     <div class="chan_main">
-        <div v-if="!hasProp() && pageData==STATE_NODATA" 
+        <div v-if="!hasProp() && pageData==hush.cons.state_nodata" 
             style="top:0;left:0;width:100%;height:100%;margin-right:-10000px;padding:30px 0 0 30px;background:white;z-index:9999">
             <span>데이터가 없습니다.<br>왼쪽 패널에서 노드를 클릭하시기 바랍니다.</span>
         </div>

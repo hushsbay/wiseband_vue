@@ -14,6 +14,7 @@ const hush = {
         // PWD_MISMATCH : '-811',
         auth_err_prefix : "-8",
         deli : "$~$",
+        state_nodata : "nodata",
         cdtAtFirst : "1111-11-11",
         cdtAtLast : "9999-99-99",
         scrollToBottomMaxCount : 3, //100개 정도로 시작해보기
