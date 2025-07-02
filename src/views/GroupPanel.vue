@@ -169,11 +169,11 @@
                     </div>
                 </div>
             </div>
-            <div v-if="listGroup.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
+            <!-- <div v-if="listGroup.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
                 <div style="width:100%;word-break:break-all;color:white">
                     현재 내그룹 데이터가 없습니다.
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
     <resizer nm="group" @ev-from-resizer="handleFromResizer"></resizer>
