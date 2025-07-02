@@ -25,6 +25,8 @@ const hush = {
         toastSec : 2,
         toastMsg : "처리중..",
         moreData : "조회중..",
+        startOfData : "처음 데이터입니다.",
+        endOfData : "마지막 데이터입니다.",
         picCnt : 4, //picCnt명까지만 사진 등 보여주기 (4명까지만 가능. 서버도 동일 설정)
         //done : "처리 완료",
         //doneWithCnt : "처리 완료 : ",

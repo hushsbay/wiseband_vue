@@ -110,19 +110,20 @@
                         if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
                             //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
                             newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
-                        } else if (savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
-                            //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸으로 내려올 수 있으므로 skip
+                        } else if (realLastCdt && savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
+                            //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸이면 최초 생성 데이터이므로 여기로 오면 안되고 scrollToBottom으로 처리
                         } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
                             //##00 서버 qryDataLog() 서비스 참조 : 바로 아래 getList는 여기서 처리시 문제 있으므로 막고 cdtAtFirst로 처리
                             //await getList({ nextMsgMstCdt: row.CDT, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 혹시 화면에 메시지 아이디가 있으면 중복체크하고 있음
                             //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
                             //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
-//                            if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
-//                                cdtAtFirst = row.CDT
-//                                msgidAtFirst = row.MSGID
-//                            }
-                            const modifiedCdt = row.CDT.substring(0, cdtAtFirst.length - 1)
-                            await getList({ nextMsgMstCdt: modifiedCdt, kind: "scrollToBottom" })
+                           if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                               cdtAtFirst = row.CDT
+                               msgidAtFirst = row.MSGID
+                           }
+//debugger
+                            //const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1) //-1로는 안되고 더 정밀하게 빼야 함 (2군데) - 나중 처리
+                            //await getList({ nextMsgMstCdt: modifiedCdt, kind: "scrollToBottom" })
                         }
                         if (appType == "home") {
                             panelUpdateNotyetCnt = true
@@ -147,14 +148,16 @@
 
                 }
             }
-//            if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
-//                chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
+            if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
+                chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
                 //await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
                 //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
-//            }
+            }
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
             if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
             if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
+            console.log(obj.logdt+"@@@@@33")
+            sessionStorage.realtimeJobDone = 'Y'
             sessionStorage.logdt = obj.logdt
             logdt.value = obj.logdt //테스트용 //rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
             tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
@@ -272,7 +275,7 @@
     }
 
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
-    let afterScrolled = ref(false)
+    let afterScrolled = ref(false), showTopObserver = ref(true), showBottomObserver = ref(true), scrollDir
 
     const MAX_PICTURE_CNT = 4, adminShowID = ref(false)
     const g_userid = gst.auth.getCookie("userid"), g_usernm = gst.auth.getCookie("usernm")
@@ -300,7 +303,7 @@
 
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
     let savNextMsgMstCdt = hush.cons.cdtAtFirst //가장 작은 일시(1111-11-11)로부터 시작해서 스크롤이 내려갈 때마다 점점 다음의 큰 일시가 저장됨   
-    let onGoingGetList = false, prevScrollY, prevScrollHeight //, getAlsoWhenDown = ""
+    let onGoingGetList = false, prevScrollY = 0, prevScrollHeight //, getAlsoWhenDown = ""
 
     const popupChanDmOn = ref(false), listPopupChanDm = ref([]), dataPopupChanDm = ref({})
 
@@ -356,7 +359,11 @@
     const observerTopScroll = () => { //위로 스크롤하는 경우
         observerTop.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {
-                await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
+                showTopObserver.value = true
+                if (scrollDir == 'up') { 
+                    await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
+                }
+                setTimeout(function() { showTopObserver.value = false }, 500)
             } else {
                 return
             }
@@ -364,14 +371,21 @@
         observerTop.value.observe(observerTopTarget.value) //observerTopTarget 랜더링까지 실행이 되지 않아 발생하는 것일 수 있음
     }
 
-    const observerBottomScroll = () => { //아래로 스크롤하는 경우
+    const observerBottomScroll = () => { //아래로 스크롤하는 경우 : https://0422.tistory.com/349
         observerBottom.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) {
-                await getList({ nextMsgMstCdt: savNextMsgMstCdt })
+            if (entry[0].isIntersecting) {                
+                showBottomObserver.value = true
+                if (scrollDir == 'down') { //하단에서 위로 스크롤시 자꾸 getList()를 호출해서.. down일 떄만 호출하도록 체크하는 것임
+                    await getList({ nextMsgMstCdt: savNextMsgMstCdt })
+                }
+                setTimeout(function() { showBottomObserver.value = false }, 500)
             } else {
                 return
             }
-        })
+        }, /*{ 
+            threshold: 0, (default 0)
+            root: document.querySelector("#chan_center_body")
+        }*/) //처음 가져와서 데이터가 딱 아래까지만 찼을 때 맨 아래 스크롤시 계속 빠르게 깜빡임 : 바로 위 getList() 계속 실행함 => 상단/하단 무한 스크롤 있는 MsgList.vue에서만 나타나는 현상
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
@@ -635,7 +649,7 @@
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
         const disableStr = (chanMasterId.value == g_userid) ? false : true
-        gst.ctx.menu = [
+        gst.ctx.menu = [            
             { nm: "방 나가기", func: async function(item, idx) {
                 try {
                     if (!confirm("퇴장시 방 관리자의 초대가 없으면 다시 들어올 수 없습니다. 계속할까요?")) return
@@ -677,6 +691,18 @@
         } else {
             await getList({ kind: kind })
         }        
+    }
+
+    let test_idx = 0
+
+    async function stressTest(start) { //서버 chanmsg>qry 참조 : curdtObj.DT.replace('2025-', '1111-')
+        if (start) test_idx = 0
+        msgbody.value = test_idx.toString()
+        await nextTick()
+        await saveMsg()
+        test_idx++
+        if (test_idx >= 100) return
+        setTimeout(function() { stressTest() }, 1)
     }
 
     function openSearchInchan(tab) {
@@ -1147,10 +1173,18 @@
         }
     }
 
-    const onScrolling = () => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
+    const onScrolling = (e) => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
         //패널에서는 안내문구가 들어 갔는데 여기서는 안내문구 없음 (무한스크롤 위아래방향 모두 처리. 안내문구 들어 가면 나중에 hide안되는 등 꼬이게 되므로 넣지 말기)
-        if (!afterScrolled.value) afterScrolled.value = true
+        if (!afterScrolled.value) {
+            afterScrolled.value = true
+            showBottomObserver.value = true
+        }
         if (!scrollArea.value) return //오류 만났을 때
+        if (scrollArea.value.scrollTop > prevScrollY) {
+            scrollDir = 'down'
+        } else if (scrollArea.value.scrollTop < prevScrollY) {
+            scrollDir = 'up'
+        }
         prevScrollY = scrollArea.value.scrollTop //자식에서도 prevScrollY는 필요함
         prevScrollHeight = scrollArea.value.scrollHeight
         if (hasProp()) return //자식에서는 한번에 모든 데이터 가져오므로 EndlessScroll 필요없음
@@ -2431,6 +2465,9 @@
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
                     <span style="margin-left:5px;font-weight:bold">이미지</span> 
                 </div>
+                <div class="topMenu list_msg_unsel" @click="stressTest(true)">
+                    <span style="margin-left:5px;font-weight:bold">STest</span> 
+                </div>
                 <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
                 <!-- <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
                     style="padding:2px;margin-left:15px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span>
@@ -2450,7 +2487,7 @@
                 </div>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
-                <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget"></div>
+                <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget" :style="{ minHeight: showTopObserver ? '10px' : '0px', color:'transparent' }">{{ hush.cons.startOfData }}</div>
                 <!--바로 아래 id는 읽음처리(readMsgToBeSeen)에 필요한 부분이므로 제거하면 안됨. 위 id(chan_center_body)도 그대로 두기-->
                 <div v-for="(row, idx) in msglist" :id="row.MSGID" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
                     :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
@@ -2576,8 +2613,8 @@
                 </div>
                 <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
-                </div>
-                <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget"></div>
+                </div><!--observerBottomTarget은 color 및 minHeight 유의-->
+                <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" :style="{ minHeight: showBottomObserver ? '10px' : '0px', color:'transparent' }">{{ hush.cons.endOfData }}</div>
             </div>
             <div class="chan_center_footer">
                 <div class="editor_header">

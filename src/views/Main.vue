@@ -32,12 +32,21 @@
 
     async function chkDataLogEach() {
         try {
-            console.log(sessionStorage.logdt+"@@@@@")            
+            console.log(sessionStorage.realtimeJobDone+"#####00")
+            if (sessionStorage.realtimeJobDone != 'Y') return //gst.util.setSnack 참조
+            sessionStorage.realtimeJobDone = ''
+            console.log(sessionStorage.logdt+"@@@@@11")
             const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : sessionStorage.logdt })
             const rs = gst.util.chkAxiosCode(res.data, true)
-            const arr = rs.list
-            if (arr.length > 0) {
-                await panelRef.value.procMainToMsglist("realtime", { list: arr, logdt: rs.data.logdt })
+            if (!rs) {
+                sessionStorage.realtimeJobDone = 'Y'
+                return
+            }
+            if (rs.list.length > 0) {
+                console.log(rs.data.logdt+"@@@@@22"+rs.list[0].MSGID+"---"+rs.list[0].CDT)
+                await panelRef.value.procMainToMsglist("realtime", { list: rs.list, logdt: rs.data.logdt })
+            } else {
+                sessionStorage.realtimeJobDone = 'Y'
             }
             /*const len = arr.length
             if (len > 0) {
@@ -74,7 +83,10 @@
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            if (!sessionStorage.logdt) sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
+            sessionStorage.realtimeJobDone = 'Y' 
+            //if (!sessionStorage.logdt) { //9999-99-99로 잘못들어간 적이 있는데 변경할 밥업이 없음
+                sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
+            //}
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USERID != null)
             listUnSel.value = rs.list.filter(x => x.USERID == null)

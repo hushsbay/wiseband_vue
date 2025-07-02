@@ -375,6 +375,7 @@ const GeneralStore = defineStore('General', () => {
                 snackBar.value.msg = strMsg.replace(/\n/g, "<br>")
                 snackBar.value.where = arrStack[line]
             }
+            sessionStorage.realtimeJobDone = 'Y' //Main.vue+MsgList.vue 참조
         },
 
         setToast : function(ex, toastSec, close) {
