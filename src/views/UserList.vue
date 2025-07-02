@@ -37,7 +37,7 @@
         try {
             setBasicInfo()
             if (grId == "new") {
-                //gst.util.setSnack("그룹명을 입력후 '그룹저장'을 누르시면 됩니다.", true)
+                gst.util.setSnack("상단의 그룹명을 입력후 '그룹저장'을 누르시면 됩니다.", true)
             } else {
                 await getList()                    
             }            

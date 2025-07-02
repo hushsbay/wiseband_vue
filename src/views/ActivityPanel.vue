@@ -336,7 +336,7 @@
                     <div class="coDotDot" style="color:white">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
-            <div v-if="listActivity.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
+            <div v-if="listActivity.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
                 <div style="width:100%;word-break:break-all;color:white">
                     현재 내활동 데이터가 없습니다.<br><br>
                     채널이나 DM 메시지에서 내활동에 필요한<br>

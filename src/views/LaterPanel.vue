@@ -330,7 +330,7 @@
                     <div class="coDotDot" style="color:white;font-weight:bold">{{ row.BODYTEXT }}</div> 
                 </div>
             </div>
-            <div v-if="listLater.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
+            <div v-if="listLater.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
                 <div style="width:100%;word-break:break-all;color:white">
                     현재 '나중에' 데이터가 없습니다.<br><br>
                     채널이나 DM 메시지에서 '나중에' 처리를<br>

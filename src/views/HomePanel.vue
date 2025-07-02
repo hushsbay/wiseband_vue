@@ -117,7 +117,7 @@
 
     function chanClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
         const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
-        const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
+        let chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
         let foundIdx = -1
         listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
             if (arr) { //onMounted때만 해당
@@ -139,7 +139,8 @@
         if (foundIdx == -1) { //최초 실행시 그룹과 채널이 선택이 없는 경우 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 html로 안내하기)
             const len = listHome.value.length
             if (len == 0) { //패널에 데이터가 없음
-                gst.util.goMsgList('home_body', { chanid: chanid, msgid: "nodata" })
+                chanidToChk = chanidToChk ?? hush.cons.state_nodata
+                gst.util.goMsgList('home_body', { chanid: chanidToChk, msgid: hush.cons.state_nodata })
                 return
             }
             for (let i = 0; i < len; i++) {
@@ -391,7 +392,7 @@
                     </div>
                 </div>
             </div>
-            <div v-if="listHome.length == 0" style="width:100%;height:100%;margin-top:50px;padding:0 10px">
+            <div v-if="listHome.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
                 <div style="width:100%;word-break:break-all;color:white">
                     현재 그룹/채널 데이터가 없습니다.<br><br>
                     조직내 협의를 통해 그룹을 생성합니다.<br>
