@@ -490,7 +490,7 @@
                         if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
                             //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
                             newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.MAX_CDT })
-                        } else if (savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
+                        } else if (!realLastCdt && savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
                             //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸으로 내려올 수 있으므로 skip
                         } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
                             //##00 서버 qryDataLog() 서비스 참조 : 바로 아래 getList는 여기서 처리시 문제 있으므로 막고 cdtAtFirst로 처리
