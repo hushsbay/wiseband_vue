@@ -43,7 +43,7 @@
             }
             //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
             //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
-            let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = ''
+            let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = '', cdtAtFirstForChild = hush.cons.cdtAtLast, msgidAtFirstForChild = ''
             let panelUpdateNotyetCnt = false, panelRefreshRow = false
             for (let i = 0; i < len; i++) {
                 const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 
@@ -72,8 +72,12 @@
                             if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
                                 msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
                                 //msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
-                                const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1)
-                                msglistRef.value.procFromParent("addChildFromBody", { msgidReply: parentMsgid, cdt: modifiedCdt })
+                                //const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1)
+                                //msglistRef.value.procFromParent("addChildFromBody", { msgidReply: parentMsgid, cdt: modifiedCdt })
+                                if (row.CDT < cdtAtFirstForChild) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                                    cdtAtFirstForChild = row.CDT
+                                    msgidAtFirstForChild = parentMsgid
+                                }
                             }
                         }
                         panelUpdateNotyetCnt = true
@@ -153,6 +157,9 @@
                 //await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
                 //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
             }
+            if (cdtAtFirstForChild < hush.cons.cdtAtLast) {
+                msglistRef.value.procFromParent("addChildFromBody", { msgidReply: msgidAtFirstForChild })
+            }
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
             if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
             if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
@@ -191,7 +198,8 @@
             //await getList({ msgid: obj.msgid, kind: "withReply", msgidReply: obj.msgidReply })
             //await getList({ msgid: obj.msgid, kind: "withReply", msgidReply: obj.msgidReply, cdt: cdt })
             //if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-            await getList({ nextMsgMstCdt: obj.cdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
+            //await getList({ nextMsgMstCdt: obj.cdt, kind: "scrollToBottom", msgidReply: obj.msgidReply }) //스레드에 이런 식으로 조회시 몇개가 연속적으로 추가되면 배로 조회수가 늘어남. 한개씩 추가하는 방법을 찾아야 함
+            await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
         } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
             const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId })
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
@@ -408,7 +416,7 @@
     }
 
     let tempcolor = ref('blue')
-    async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
+/*    async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
             if (hasProp()) return //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
@@ -536,7 +544,7 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
-    }
+    }*/
 
     onMounted(async () => { //HomePanel.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
