@@ -70,15 +70,15 @@
                             if (appType == "home" || appType == "dm") { //DM패널에 안읽음 체크시 처리하는 것은 아래 evToPanel({ kind: "updateNotyetCnt", chanid: chanId })에서 전달받아 패널에서 처리
                                 panelUpdateNotyetCnt = true
                             } else if (appType == "activity") { //패널에 안읽음 체크시 처리하는 것은 패널에서 전달받아 처리
-                                evToPanel({ kind: "updateNotyetCnt", msgid: row.MSGID, replyto: row.REPLYTO }) 
+                                evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO }) 
                             } //나머지는 여기서 처리할 필요없음
                         } else if (row.TYP == "react") {
                             if (appType == "activity") {
-                                evToPanel({ kind: "updateReact", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
+                                evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
                             } //나머지는 여기서 처리할 필요없음
                         } else if (row.TYP == "user") {
                             if (appType == "later" || appType == "fixed") {
-                                evToPanel({ kind: "updateUserAct", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
+                                evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
                             } //나머지는 여기서 처리할 필요없음
                         }
                     } else if (row.TYP == "msg") {
@@ -153,9 +153,9 @@
                         } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
                             panelRefreshRow = true //본문이 수정되고 안읽음+1이 되므로 행 새로고침
                         } else if (appType == "activity") {
-                            evToPanel({ kind: "procActivity", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
+                            evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
                         } else if (appType == "later" || appType == "fixed") {
-                            evToPanel({ kind: "updateUserAct", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
+                            evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
                         }
                     }
                     // if (row.CUD == "U") { //메시지 수정
