@@ -26,25 +26,45 @@
     let mediaPopupRef = ref(null), searchText = ref('')
 
     //리얼타임 반영
-    let logdt = ref(''), panelRef = ref(null)
+    let panelRef = ref(null)
     let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
+    const TIMERSEC_SHORT = 10000, TIMERSEC_LONG = 10000
+    let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
 
     async function chkDataLogEach() {
         try {
+            //debugger
             console.log(sessionStorage.realtimeJobDone+"#####00")
             if (sessionStorage.realtimeJobDone != 'Y') return //gst.util.setSnack 참조
-            sessionStorage.realtimeJobDone = ''
-            console.log(sessionStorage.logdt+"@@@@@11")
+            sessionStorage.realtimeJobDone = ''            
+            console.log(sessionStorage.logdt+"@@@@@"+sessionStorage.realtimeJobDone)
+            logdt.value = sessionStorage.logdt //화면 표시용
+            logdtColor.value = logdtColor.value == 'yellow' ? 'red' : 'yellow'
+            cntChanActivted.value = 0
+            cntNotChanActivted.value = 0
             const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : sessionStorage.logdt })
             const rs = gst.util.chkAxiosCode(res.data, true)
             if (!rs) {
                 sessionStorage.realtimeJobDone = 'Y'
                 return
             }
-            if (rs.list.length > 0) {
-                console.log(rs.data.logdt+"@@@@@22"+rs.list[0].MSGID+"---"+rs.list[0].CDT)
-                await panelRef.value.procMainToMsglist("realtime", { list: rs.list, logdt: rs.data.logdt })
+            if (rs.list.length > 0) {                
+                const arrForChanActivted = (!gst.chanIdActivted)? [] : rs.list.filter(x => x.CHANID == gst.chanIdActivted)
+                const arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted)
+                cntChanActivted.value = arrForChanActivted.length //화면 표시용
+                cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
+                if (arrForNotChanActivted > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
+
+                }
+                if (arrForChanActivted.length > 0) {
+                    console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
+                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt })
+                } else {
+                    //바로 위 루틴에서 logdt를 sessionStorage.logdt으로부터 가져오는데 이게 그 위 if (arrForNotChanActivted > 0) 조건도 같이 체크해서 마지막으로 끝나는 싯점에 맞춰
+                    //sessionStorage.logdt = obj.logdt으로 처리해야 다음에 읽어올 logdt가 흐트러지지 않음
+                    sessionStorage.logdt = rs.data.logdt
+                    sessionStorage.realtimeJobDone = 'Y'
+                }
             } else {
                 sessionStorage.realtimeJobDone = 'Y'
             }
@@ -266,9 +286,17 @@
 <template>
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
-            <div style="display:flex;align-items:center">
-                <!-- <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
-                <div style="margin-left:5px;font-size:22px;color:whitesmoke;font-weight:bold;cursor:pointer"></div> -->
+            <div style="display:flex;align-items:center;color:white">
+                <span v-show="logdtColor=='yellow'">
+                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold;color:yellow">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
+                    <span style="margin-left:5px">[활성:</span><span style="font-weight:bold;color:yellow">{{ cntChanActivted }}</span><span>]</span>
+                    <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold;color:yellow">{{ cntNotChanActivted }}</span><span>]</span>
+                </span>
+                <span v-show="logdtColor=='red'">
+                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold;color:red">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
+                    <span style="margin-left:5px">[활성:</span><span style="font-weight:bold;color:red">{{ cntChanActivted }}</span><span>]</span>
+                    <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold;color:red">{{ cntNotChanActivted }}</span><span>]</span>
+                </span>
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>

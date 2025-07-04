@@ -33,6 +33,9 @@
     async function chkDataLogEach(obj) { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
+            //MsgList에서 이 chkDataLogEach()를 타이머로 돌리면 각 라우팅에 해당하는 현재 채널에 대해 모두 처리가 되므로 그게 장점보다는 백에 있는 채로 데이터를 계속 가져오는 모습이 되므로 바람직하지는 않을 것임
+            //대신에 Main.vue(타이머) > 각 패널.vue > MagList로 전달되는 흐름에서는 MsgList가 라우팅되어 백단으로 가더라도 타이머가 없으니 데이터가 전달되지 않고 현재 패널과 연결되어 있는 MsgList의 
+            //라우팅 채널으로만 (리얼타임반영 데이터가) 전달되므로 훨씬 효율적임 (onActivated/Deactivated에서 타이머를 끄고 켤 필요가 없음)
             const arr = obj.list
             const len = arr.length
             let cdtBottom
@@ -41,6 +44,7 @@
                 const idxBottom = gst.util.getKeyIndex(msgRow, eleBottom.id)
                 if (idxBottom > -1) cdtBottom = msglist.value[idxBottom].CDT
             }
+            //console.log(chanId+"$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
             //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
             //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
             let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = '', cdtAtFirstForChild = hush.cons.cdtAtLast, msgidAtFirstForChild = ''
@@ -149,7 +153,8 @@
                         }
                     }
                 } else { //채널이 다른 경우
-
+                    //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영은 Main.vue에서 처리되므로 여기로 들어오는 것은 로직 이상이 발생한 것임
+                    alert('로직 이상 : ' + row.CHANID + "/" + chanId)
                 }
             }
             if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
@@ -618,6 +623,7 @@
             }
             //procTimerShort()
             //procTimerLong()
+            gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
         }
     })
 
@@ -1152,15 +1158,6 @@
 
     function rowEnter(row) { //css만으로 처리가 힘들어 코딩으로 구현
         row.hover = true
-        // debugger
-        // const msgdtlArr = row.msgdtl
-        // const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
-        // const msgid = row.MSGID
-        // if (msgdtlRow) {
-        //     //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-        // } else {
-        //     updateWithNewKind(msgid, "notyet", "read")
-        // }
     }
 
     function rowLeave(row) { //css만으로 처리가 힘들어 코딩으로 구현
@@ -2474,7 +2471,7 @@
                     <span style="margin-left:5px;font-weight:bold">이미지</span> 
                 </div>
                 <div class="topMenu list_msg_unsel" @click="stressTest(true)">
-                    <span style="margin-left:5px;font-weight:bold">STest</span> 
+                    <span style="margin-left:5px;font-weight:bold">Stress</span> 
                 </div>
                 <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
                 <!-- <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"

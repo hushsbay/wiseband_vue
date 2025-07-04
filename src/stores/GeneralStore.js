@@ -13,7 +13,7 @@ const GeneralStore = defineStore('General', () => {
 
     let objSaved = ref({}) //현재는 MsgList에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
 
-    let selSideMenu = ref("")
+    let selSideMenu = ref(""), chanIdActivted = ref('')
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const bottomMsg = ref(''),  routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
@@ -324,6 +324,7 @@ const GeneralStore = defineStore('General', () => {
     const util = {
 
         chkOnMountedTwice : function(route, str) { //MsgList가 1초 이내 2번 mounted되는데 이 루틴으로 한번만 막으려 했으나 노드자동클릭 안되는 현상 발생해 모두 막아야 함
+            return true
             if (sessionStorage.mountedFullpath == route.fullPath) {
                 console.log(str + " - route.fullPath가 동일한데 onMounted() 재호출되어 막음 - 개발 Hot Deploy일 수도 있음 (운영에서 체크) - " + route.fullPath)
                 return false
@@ -639,7 +640,7 @@ const GeneralStore = defineStore('General', () => {
     
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-        objSaved, selSideMenu, 
+        objSaved, selSideMenu, chanIdActivted,
         snackBar, toast, bottomMsg, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, util,
         //home, listHome, //selChanHome,
