@@ -13,10 +13,15 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    defineExpose({ procMainToMsglist })
+    defineExpose({ procMainToMsglist, procMainToPanel })
 
     async function procMainToMsglist(kind, obj) { //단순 전달
         await msglistRef.value.procMainToMsglist(kind, obj)
+    }
+
+    async function procMainToPanel(obj) { //현재는 kind 쓰임새 없음
+        debugger
+        handleEvFromBody({ kind: "updateNotyetCnt", chanid: obj.CHANID })
     }
 
     const props = defineProps({ fromPopupChanDm: String })

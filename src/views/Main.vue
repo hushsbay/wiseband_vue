@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, watch } from 'vue' 
+    import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
@@ -28,18 +28,23 @@
     //리얼타임 반영
     let panelRef = ref(null)
     let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 10000, TIMERSEC_LONG = 10000
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
+
+    let bc //BroadcastChannel
+
+    function test() {
+        bc.postMessage({ aaa:"aaa", bbb:"bbb" })
+    }
 
     async function chkDataLogEach() {
         try {
-            //debugger
-            console.log(sessionStorage.realtimeJobDone+"#####00")
+            //console.log(sessionStorage.realtimeJobDone+"#####00")
             if (sessionStorage.realtimeJobDone != 'Y') return //gst.util.setSnack 참조
             sessionStorage.realtimeJobDone = ''            
-            console.log(sessionStorage.logdt+"@@@@@"+sessionStorage.realtimeJobDone)
+            //console.log(sessionStorage.logdt+"@@@@@"+sessionStorage.realtimeJobDone)
             logdt.value = sessionStorage.logdt //화면 표시용
-            logdtColor.value = logdtColor.value == 'yellow' ? 'red' : 'yellow'
+            logdtColor.value = logdtColor.value == 'yellow' ? 'lightgreen' : 'yellow' //화면 표시용
             cntChanActivted.value = 0
             cntNotChanActivted.value = 0
             const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : sessionStorage.logdt })
@@ -48,13 +53,27 @@
                 sessionStorage.realtimeJobDone = 'Y'
                 return
             }
-            if (rs.list.length > 0) {                
-                const arrForChanActivted = (!gst.chanIdActivted)? [] : rs.list.filter(x => x.CHANID == gst.chanIdActivted)
-                const arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted)
+            if (rs.list.length > 0) {
+                let arrForChanActivted = []
+                let arrForNotChanActivted = []
+                if (!panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 arrForChanActivted의 리얼타임 반영이 안되므로 arrForNotChanActivted로 돌려야 함
+                    //arrForChanActivted = []
+                    arrForNotChanActivted = rs.list
+                } else {
+                    arrForChanActivted = (!gst.chanIdActivted)? [] : rs.list.filter(x => x.CHANID == gst.chanIdActivted) //MsgList로 전달하는 것임
+                    arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위이므로 배열의 구조가 달라져야 함
+                }
                 cntChanActivted.value = arrForChanActivted.length //화면 표시용
                 cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
-                if (arrForNotChanActivted > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
-
+                if (arrForNotChanActivted.length > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
+                    const len = arrForNotChanActivted.length
+                    for (let i = 0; i < len; i++) {
+                        const row = arrForNotChanActivted[i]
+                        debugger
+                        if (gst.selSideMenu == "mnuHome") { //채널 단위                            
+                            await panelRef.value.procMainToPanel(row)
+                        }
+                    }
                 }
                 if (arrForChanActivted.length > 0) {
                     console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
@@ -97,9 +116,15 @@
         //timeoutLong = setTimeout(function() { procTimerLong() }.bind(this), TIMERSEC_LONG)             
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
     }
+
+    function getBroadcast(data) {
+        console.log(JSON.stringify(data))
+    }
     
     onMounted(async () => {
         try {
+            bc = new BroadcastChannel("wbRealtime")
+            bc.onmessage = (e) => { debugger; getBroadcast(e.data) }
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -129,6 +154,10 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    })
+
+    onUnmounted(async () => {
+        if (bc) bc.close()
     })
 
     function sideClickOnLoop(selMenu, onMounted) {
@@ -287,15 +316,10 @@
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;align-items:center;color:white">
-                <span v-show="logdtColor=='yellow'">
-                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold;color:yellow">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
-                    <span style="margin-left:5px">[활성:</span><span style="font-weight:bold;color:yellow">{{ cntChanActivted }}</span><span>]</span>
-                    <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold;color:yellow">{{ cntNotChanActivted }}</span><span>]</span>
-                </span>
-                <span v-show="logdtColor=='red'">
-                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold;color:red">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
-                    <span style="margin-left:5px">[활성:</span><span style="font-weight:bold;color:red">{{ cntChanActivted }}</span><span>]</span>
-                    <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold;color:red">{{ cntNotChanActivted }}</span><span>]</span>
+                <span>
+                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
+                    <span style="margin-left:5px">[활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
+                    <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>
                 </span>
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
@@ -312,7 +336,7 @@
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
                     <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center">
-                        <img class="coImg32" src="/src/assets/images/color_slacklogo.png" @click="chkDataLogEach"/>
+                        <img class="coImg32" src="/src/assets/images/color_slacklogo.png" @click="test"/>
                     </div>
                     <div id="sideTop" class="sideTop">
                         <div v-for="(row, idx) in listSel" @click="sideClick(row.ID, row)" :id="row.ID + 'Target'" class="menu cntTarget">

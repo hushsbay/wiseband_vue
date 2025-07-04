@@ -598,6 +598,7 @@
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
         if (!route.fullPath.includes("_body")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
         console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
+        gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
         if (mounting) {
             mounting = false
         } else {            
@@ -623,7 +624,6 @@
             }
             //procTimerShort()
             //procTimerLong()
-            gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
         }
     })
 
@@ -1091,7 +1091,11 @@
                 window.open(url)
             }},
             { nm: textRead, disable: disableStr, func: function(item, idx) {
-                updateWithNewKind(row.MSGID, oldKind, newKind)
+                if (oldKind == "notyet" && newKind == "read") {
+                    updateNotyetToRead(row.MSGID)
+                } else {
+                    updateWithNewKind(row.MSGID, oldKind, newKind)
+                }
             }},
             // { nm: "리마인더 받기", child: [
             //     { nm: "1시간 후", func: function(item, idx) { 
@@ -1171,7 +1175,7 @@
             const item = row.msgdtl[i]
             if (item.KIND == 'notyet') { //스크롤 없을 때 읽음처리하기 => 내가 아직 안읽은 메시지라면 클릭하면 읽음 처리됨 (향후 대안 더 생각해보기)
                 if ((', ' + item.ID + ',').includes(', ' + g_userid + ',')) {
-                    updateWithNewKind(row.MSGID, "notyet", "read")
+                    updateNotyetToRead(row.MSGID)
                 }
                 break
             }
@@ -1227,18 +1231,28 @@
                     const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
                     if (idx > -1) msglist.value.splice(idx, 1)
                 }
-                return //패널 업데이트 필요없음 (notyet은 변동없음)
             }
-            // if (appType == "home") { //if (route.fullPath.includes("/home_body/")) {
-            //     //gst.home.procFromBody("updateNotyetCnt", rq)
-            //     evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
-            // } else if (appType == "dm") { //} else if (route.fullPath.includes("/dm_body/")) {
-            //     //gst.dm.procFromBody("updateNotyetCnt", rq)
-            //     evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
-            // }
-            if (appType == "home" || appType == "dm") {
-                evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    async function updateNotyetToRead(msgid) { //읽음처리중 notyet -> read 처리 전용 (워낙 빈도수가 많으므로 별도 구현)
+        try {
+            const rq = { chanid: chanId, msgid: msgid, oldKind: "notyet", newKind: "read" }
+            const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
+            let rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            await refreshMsgDtlWithQryAction(msgid)
+            if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
+                evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
+                const rs = await getMsg({ msgid: props.data.msgid })
+                if (rs == null) return
+                refreshWithGetMsg(rs, props.data.msgid)
+            } else { 
+                //굳이 실행하지 않아도 될 듯
             }
+            if (appType == "home" || appType == "dm") evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1337,7 +1351,7 @@
                         if (ele) {
                             const rect = ele.getBoundingClientRect()
                             if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
-                                updateWithNewKind(msgid, "notyet", "read") //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
+                                updateNotyetToRead(msgid) //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
                             }
                         }
                     }
