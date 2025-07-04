@@ -14,10 +14,14 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    defineExpose({ procMainToMsglist })
+    defineExpose({ procMainToMsglist, procMainToPanel })
 
     async function procMainToMsglist(kind, obj) { //단순 전달
         await msglistRef.value.procMainToMsglist(kind, obj)
+    }
+
+    async function procMainToPanel(kind, obj) {
+        await handleEvFromBody({ kind: kind, chanid: obj.CHANID })
     }
 
     const props = defineProps({ fromPopupChanDm: String })
@@ -328,7 +332,7 @@
         //     listDm.value.splice(idx, 1)
         //     listDm.value.unshift(row)
         } else if (param.kind == "refreshRow") {
-            refreshRow(param.chanid, true)
+            await refreshRow(param.chanid, true)
         } else if (param.kind == "delete") {
             const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
             if (idx == -1) return
@@ -341,7 +345,7 @@
             if (!rs) return
             row.mynotyetCnt = rs.data.kindCnt
         } else if (param.kind == "refreshPanel") { //방 나가기,삭제에서 사용
-            refreshPanel()
+            await refreshPanel()
         /*} else if (param.kind == "forwardToSide") { //지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조            
             evToSide(param.kind, param.menu) 향후 사용시 모든 패널에 evToSide 검토 필요 */
         }

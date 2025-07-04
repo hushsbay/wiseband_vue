@@ -19,9 +19,8 @@
         await msglistRef.value.procMainToMsglist(kind, obj)
     }
 
-    async function procMainToPanel(obj) { //현재는 kind 쓰임새 없음
-        debugger
-        handleEvFromBody({ kind: "updateNotyetCnt", chanid: obj.CHANID })
+    async function procMainToPanel(obj) {
+        handleEvFromBody({ kind: kind, chanid: obj.CHANID })
     }
 
     const props = defineProps({ fromPopupChanDm: String })

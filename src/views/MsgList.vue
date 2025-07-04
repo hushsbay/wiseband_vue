@@ -50,108 +50,213 @@
             let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = '', cdtAtFirstForChild = hush.cons.cdtAtLast, msgidAtFirstForChild = ''
             let panelUpdateNotyetCnt = false, panelRefreshRow = false
             for (let i = 0; i < len; i++) {
-                const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 
+                const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음 (스레드로는 아이디만 넘겨서 서버 호출)
                 if (row.CHANID == chanId) {
-                    //부모로부터 업데이트 호출받을 때도 서버에서 읽어온 메시지정보없이 아이디만 넘겨서 스레드에서 서버 호출하므로 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음
-                    if (row.CUD == "U") { //메시지 수정
+                    if (row.TYP == "read" || row.TYP == "react" || row.TYP == "user") {
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
-                        if (idx > -1) { //굳이 await nextTick() 필요 없음
-                            //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
-                                refreshWithGetMsg(row.msgItem.data, null, idx) //자식 수정시 안읽음으로 되고 안읽은갯수가 본붐네 업데이트되어 하므로 부모자식 구분없이 업데이트하기
-                            //}
-                            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
+                        if (idx > -1) {
+                            refreshWithGetMsg(row.msgItem.data, null, idx) //부모 메시지
+                            if (msglistRef.value) {
+                                if (row.REPLYTO == "") { //유사코딩이 3개나 되지만 부모자식 헷갈리지 않게 코딩 축약하지 말고 이해하기 쉽게 쓰기
+                                    msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID }) //스레드 부모 메시지 업데이트
+                                } else {
+                                    msglistRef.value.procFromParent("refreshMsg", { msgid: row.REPLYTO }) //스레드 부모 메시지 업데이트
+                                    msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID }) //스레드 자식 메시지 업데이트
+                                }
+                            }
+                        } //아래는 패널 업데이트
+                        if (row.TYP == "read") {
+                            if (appType == "home" || appType == "dm") { //DM패널에 안읽음 체크시 처리하는 것은 아래 evToPanel({ kind: "updateNotyetCnt", chanid: chanId })에서 전달받아 패널에서 처리
+                                panelUpdateNotyetCnt = true
+                            } else if (appType == "activity") { //패널에 안읽음 체크시 처리하는 것은 패널에서 전달받아 처리
+                                evToPanel({ kind: "updateNotyetCnt", msgid: row.MSGID, replyto: row.REPLYTO }) 
+                            } //나머지는 여기서 처리할 필요없음
+                        } else if (row.TYP == "react") {
+                            if (appType == "activity") {
+                                evToPanel({ kind: "updateReact", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
+                            } //나머지는 여기서 처리할 필요없음
+                        } else if (row.TYP == "user") {
+                            if (appType == "later" || appType == "fixed") {
+                                evToPanel({ kind: "updateUserAct", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
+                            } //나머지는 여기서 처리할 필요없음
+                        }
+                    } else if (row.TYP == "msg") {
+                        if (row.CUD == "C") {
+                            if (row.KIND == "parent") { //서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
+                                //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
+                                if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
+                                    //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
+                                    newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                                } else if (realLastCdt && savNextMsgMstCdt > realLastCdt) {
+                                    //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸이면 최초 생성 데이터이므로 여기로 오면 안되고 scrollToBottom으로 처리
+                                } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
+                                    if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                                        cdtAtFirst = row.CDT
+                                        msgidAtFirst = row.MSGID
+                                    }
+                                }
+                            } else { //child
+                                newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                                const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
+                                const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                                if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
+                                    refreshWithGetMsg(row.msgItem.data, parentMsgid) //화면에 있는 부모메시지 업데이트
+                                    if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
+                                        msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                                        if (row.CDT < cdtAtFirstForChild) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                                            cdtAtFirstForChild = row.CDT
+                                            msgidAtFirstForChild = parentMsgid
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (row.CUD == "U") { //메시지 수정
+                            const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                            const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                            if (idx > -1) { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                                refreshWithGetMsg(row.msgItem.data, null, idx) //자식 수정시 안읽음으로 되고 안읽은갯수가 업데이트되어야 하므로 부모자식 구분없이 업데이트하기
+                                if (msglistRef.value) {
+                                    if (row.REPLYTO == "") { //유사코딩이 3개나 되지만 부모자식 헷갈리지 않게 코딩 축약하지 말고 이해하기 쉽게 쓰기
+                                        msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID }) //스레드 부모 메시지 업데이트
+                                    } else {
+                                        msglistRef.value.procFromParent("refreshMsg", { msgid: row.REPLYTO }) //스레드 부모 메시지 업데이트
+                                        msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID }) //스레드 자식 메시지 업데이트
+                                    }
+                                }
+                            }
+                        } else if (row.CUD == "D") { 
+                            const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                            const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
+                            if (idx > -1) {                            
+                                if (row.REPLYTO == "") {
+                                    msglist.value.splice(idx, 1) //const item = msglist.value[idx]
+                                } else { //삭제한 MSGID가 댓글일 경우
+                                    refreshWithGetMsg(row.msgItem.data, null, idx) //row.msgItem.data에 부모메시지 정보 들어 있음
+                                    if (msglistRef.value) {
+                                        msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                                        msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                                    }
+                                }
+                                await nextTick() //배열삭제된 부분이므로 동기 처리 필요
+                            }
+                            if (row.REPLYTO == "") {
+                                const idxFound = newParentAdded.value.findIndex(item => item.MSGID == row.MSGID)
+                                if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
+                            } else {
+                                const idxFound = newChildAdded.value.findIndex(item => item.MSGID == row.MSGID)
+                                if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
+                            }
                         }
                         if (appType == "home") {
                             panelUpdateNotyetCnt = true //안읽음+1이 되므로 안읽음+1
                         } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
                             panelRefreshRow = true //본문이 수정되고 안읽음+1이 되므로 행 새로고침
-                        }
-                    } else if (row.CUD == "X") { //X(댓글 추가) : X는 로깅 관점에서는 부모메시지에 업데이트이므로 U와 유사 (chanmsg>saveMsg 참조)
-                        newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
-                        const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
-                        if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
-                            refreshWithGetMsg(row.msgItem.data, parentMsgid) //화면에 있는 부모메시지 업데이트
-                            if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
-                                msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                //msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
-                                //const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1)
-                                //msglistRef.value.procFromParent("addChildFromBody", { msgidReply: parentMsgid, cdt: modifiedCdt })
-                                if (row.CDT < cdtAtFirstForChild) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
-                                    cdtAtFirstForChild = row.CDT
-                                    msgidAtFirstForChild = parentMsgid
-                                }
-                            }
-                        }
-                        panelUpdateNotyetCnt = true
-                    } else if (row.CUD == "D") { 
-                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
-                        if (idx > -1) {                            
-                            if (row.REPLYTO == "") {
-                                msglist.value.splice(idx, 1) //const item = msglist.value[idx]
-                            } else { //삭제한 MSGID가 댓글일 경우
-                                refreshWithGetMsg(row.msgItem.data, null, idx) //row.msgItem.data에 부모메시지 정보 들어 있음
-                                if (msglistRef.value) {
-                                    msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                    msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
-                                }
-                            }
-                            await nextTick() //배열삭제된 부분이므로 동기 처리 필요
-                        }
-                        if (row.REPLYTO == "") {
-                            const idxFound = newParentAdded.value.findIndex(item => item.MSGID == row.MSGID)
-                            if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
-                        } else {
-                            const idxFound = newChildAdded.value.findIndex(item => item.MSGID == row.MSGID)
-                            if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
-                        }
-                        if (appType == "home") {
-                            panelUpdateNotyetCnt = true
-                        } else if (appType == "dm") {
-                            panelRefreshRow = true
-                        }
-                    } else if (row.CUD == "C") { //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
-                        //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
-                        //if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
-                        if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
-                            //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
-                            newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
-                        } else if (realLastCdt && savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
-                            //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸이면 최초 생성 데이터이므로 여기로 오면 안되고 scrollToBottom으로 처리
-                        } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
-                            //##00 서버 qryDataLog() 서비스 참조 : 바로 아래 getList는 여기서 처리시 문제 있으므로 막고 cdtAtFirst로 처리
-                            //await getList({ nextMsgMstCdt: row.CDT, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 혹시 화면에 메시지 아이디가 있으면 중복체크하고 있음
-                            //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
-                            //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
-                           if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
-                               cdtAtFirst = row.CDT
-                               msgidAtFirst = row.MSGID
-                           }
-//debugger
-                            //const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1) //-1로는 안되고 더 정밀하게 빼야 함 (2군데) - 나중 처리
-                            //await getList({ nextMsgMstCdt: modifiedCdt, kind: "scrollToBottom" })
-                        }
-                        if (appType == "home") {
-                            panelUpdateNotyetCnt = true
-                        } else if (appType == "dm") {
-                            panelRefreshRow = true
-                        }
-                    } else if (row.CUD == "T") { //메시지 디테일정보만 업데이트
-                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
-                        if (idx > -1) { //굳이 await nextTick() 필요 없음
-                            //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItemWithoutSub.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
-                                //refreshWithDtl(row.msgItemWithoutSub.data, null, idx) //맨 위 U와 다른 점
-                                refreshWithGetMsg(row.msgItem.data, null, idx)
-                            //}
-                            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
-                        }
-                        if (appType == "home" || appType == "dm") {
-                            panelUpdateNotyetCnt = true //T로 처리되는 것은 안읽음 처리 포함됨
+                        } else if (appType == "activity") {
+                            evToPanel({ kind: "procActivity", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
+                        } else if (appType == "later" || appType == "fixed") {
+                            evToPanel({ kind: "updateUserAct", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
                         }
                     }
+                    // if (row.CUD == "U") { //메시지 수정
+                    //     const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                    //     const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                    //     if (idx > -1) { //굳이 await nextTick() 필요 없음
+                    //         //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                    //             refreshWithGetMsg(row.msgItem.data, null, idx) //자식 수정시 안읽음으로 되고 안읽은갯수가 본붐네 업데이트되어 하므로 부모자식 구분없이 업데이트하기
+                    //         //}
+                    //         if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
+                    //     }
+                    //     if (appType == "home") {
+                    //         panelUpdateNotyetCnt = true //안읽음+1이 되므로 안읽음+1
+                    //     } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
+                    //         panelRefreshRow = true //본문이 수정되고 안읽음+1이 되므로 행 새로고침
+                    //     // } else if (appType == "activity" || appType == "later" || appType == "fixed") {
+                    //     //     evToPanel({ kind: "update", msgid: row.MSGID, bodytext: row.BODYTEXT })
+                    //     }
+                    // } else if (row.CUD == "X") { //X(댓글 추가) : X는 로깅 관점에서는 부모메시지에 업데이트이므로 U와 유사 (chanmsg>saveMsg 참조) if (replyto && crud == 'C') => X
+                    //     newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                    //     const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
+                    //     const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                    //     if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
+                    //         refreshWithGetMsg(row.msgItem.data, parentMsgid) //화면에 있는 부모메시지 업데이트
+                    //         if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
+                    //             msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                    //             //msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
+                    //             //const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1)
+                    //             //msglistRef.value.procFromParent("addChildFromBody", { msgidReply: parentMsgid, cdt: modifiedCdt })
+                    //             if (row.CDT < cdtAtFirstForChild) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                    //                 cdtAtFirstForChild = row.CDT
+                    //                 msgidAtFirstForChild = parentMsgid
+                    //             }
+                    //         }
+                    //     }
+                    //     panelUpdateNotyetCnt = true
+                    // } else if (row.CUD == "D") { 
+                    //     const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                    //     const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
+                    //     if (idx > -1) {                            
+                    //         if (row.REPLYTO == "") {
+                    //             msglist.value.splice(idx, 1) //const item = msglist.value[idx]
+                    //         } else { //삭제한 MSGID가 댓글일 경우
+                    //             refreshWithGetMsg(row.msgItem.data, null, idx) //row.msgItem.data에 부모메시지 정보 들어 있음
+                    //             if (msglistRef.value) {
+                    //                 msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                    //                 msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                    //             }
+                    //         }
+                    //         await nextTick() //배열삭제된 부분이므로 동기 처리 필요
+                    //     }
+                    //     if (row.REPLYTO == "") {
+                    //         const idxFound = newParentAdded.value.findIndex(item => item.MSGID == row.MSGID)
+                    //         if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
+                    //     } else {
+                    //         const idxFound = newChildAdded.value.findIndex(item => item.MSGID == row.MSGID)
+                    //         if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
+                    //     }
+                    //     if (appType == "home") {
+                    //         panelUpdateNotyetCnt = true
+                    //     } else if (appType == "dm") {
+                    //         panelRefreshRow = true
+                    //     }
+                    // } else if (row.CUD == "C") { 
+                    //     //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
+                    //     //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
+                    //     //if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
+                    //     if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
+                    //         //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
+                    //         newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                    //     } else if (realLastCdt && savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
+                    //         //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸이면 최초 생성 데이터이므로 여기로 오면 안되고 scrollToBottom으로 처리
+                    //     } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
+                    //         //##00 서버 qryDataLog() 서비스 참조 : 바로 아래 getList는 여기서 처리시 문제 있으므로 막고 cdtAtFirst로 처리
+                    //         //await getList({ nextMsgMstCdt: row.CDT, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 혹시 화면에 메시지 아이디가 있으면 중복체크하고 있음
+                    //         //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
+                    //         //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
+                    //        if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                    //            cdtAtFirst = row.CDT
+                    //            msgidAtFirst = row.MSGID
+                    //        }
+                    //     }
+                    //     if (appType == "home") {
+                    //         panelUpdateNotyetCnt = true
+                    //     } else if (appType == "dm") {
+                    //         panelRefreshRow = true
+                    //     }
+                    // } else if (row.CUD == "T") { //메시지 디테일정보만 업데이트
+                    //     const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
+                    //     const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                    //     if (idx > -1) { //굳이 await nextTick() 필요 없음
+                    //         //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItemWithoutSub.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
+                    //             //refreshWithDtl(row.msgItemWithoutSub.data, null, idx) //맨 위 U와 다른 점
+                    //             refreshWithGetMsg(row.msgItem.data, null, idx)
+                    //         //}
+                    //         if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
+                    //     }
+                    //     if (appType == "home" || appType == "dm") {
+                    //         panelUpdateNotyetCnt = true //T로 처리되는 것은 읽음 처리
+                    //     }
+                    //}
                 } else { //채널이 다른 경우
                     //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영은 Main.vue에서 처리되므로 여기로 들어오는 것은 로직 이상이 발생한 것임
                     alert('로직 이상 : ' + row.CHANID + "/" + chanId)
@@ -1571,7 +1676,7 @@
                 if (rs == null) return
                 refreshWithGetMsg(rs, editMsgId.value)
             }            
-            if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
+            if (appType == "later" || appType == "fixed" || appType == "activity") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") {
                     //gst[appType].procFromBody("update", rq)
                     evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })

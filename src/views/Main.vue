@@ -53,48 +53,37 @@
                 sessionStorage.realtimeJobDone = 'Y'
                 return
             }
-            if (rs.list.length > 0) {
-                let arrForChanActivted = []
-                let arrForNotChanActivted = []
-                if (!panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 arrForChanActivted의 리얼타임 반영이 안되므로 arrForNotChanActivted로 돌려야 함
-                    //arrForChanActivted = []
-                    arrForNotChanActivted = rs.list
-                } else {
-                    arrForChanActivted = (!gst.chanIdActivted)? [] : rs.list.filter(x => x.CHANID == gst.chanIdActivted) //MsgList로 전달하는 것임
-                    arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위이므로 배열의 구조가 달라져야 함
-                }
+            if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
+                let arrForChanActivted = (!gst.chanIdActivted)? [] : rs.list.filter(x => x.CHANID == gst.chanIdActivted) //MsgList로 전달하는 것임
+                let arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
                 cntChanActivted.value = arrForChanActivted.length //화면 표시용
                 cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
                 if (arrForNotChanActivted.length > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
                     const len = arrForNotChanActivted.length
                     for (let i = 0; i < len; i++) {
                         const row = arrForNotChanActivted[i]
-                        debugger
-                        if (gst.selSideMenu == "mnuHome") { //채널 단위                            
-                            await panelRef.value.procMainToPanel(row)
+                        if (gst.selSideMenu == "mnuHome") { //채널 단위로 읽음처리 관련만 전달하면 됨
+                            await panelRef.value.procMainToPanel('updateNotyetCnt', row)
+                        } else if (gst.selSideMenu == "mnuDm") { //채널 단위로 
+                            if (row.CUD == 'T') { //notyet->read가 많음 (아닌 경우도 있으나 그냥 무시) 
+                                await panelRef.value.procMainToPanel('updateNotyetCnt', row)
+                            } else {
+                                await panelRef.value.procMainToPanel('refreshRow', row)
+                            }
                         }
                     }
                 }
                 if (arrForChanActivted.length > 0) {
                     console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
                     await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt })
-                } else {
-                    //바로 위 루틴에서 logdt를 sessionStorage.logdt으로부터 가져오는데 이게 그 위 if (arrForNotChanActivted > 0) 조건도 같이 체크해서 마지막으로 끝나는 싯점에 맞춰
-                    //sessionStorage.logdt = obj.logdt으로 처리해야 다음에 읽어올 logdt가 흐트러지지 않음
+                } else { //바로 위 루틴에서 logdt를 sessionStorage.logdt으로부터 가져오는데 이게 그 위 if (arrForNotChanActivted > 0) 조건도 같이 체크해서
+                    //마지막으로 끝나는 싯점에 맞춰 sessionStorage.logdt = obj.logdt으로 처리해야 다음에 읽어올 logdt가 흐트러지지 않음
                     sessionStorage.logdt = rs.data.logdt
                     sessionStorage.realtimeJobDone = 'Y'
                 }
             } else {
                 sessionStorage.realtimeJobDone = 'Y'
             }
-            /*const len = arr.length
-            if (len > 0) {
-                for (let i = 0; i < len; i++) {
-                    await panelRef.value.procMainToMsglist("realtime", arr[i])
-                    //if (i > 30) break
-                }
-            }
-            logdt.value = rs.data.logdt*/
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -124,7 +113,7 @@
     onMounted(async () => {
         try {
             bc = new BroadcastChannel("wbRealtime")
-            bc.onmessage = (e) => { debugger; getBroadcast(e.data) }
+            bc.onmessage = (e) => { getBroadcast(e.data) }
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
