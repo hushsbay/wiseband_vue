@@ -17,7 +17,9 @@
     defineExpose({ procMainToMsglist, procMainToPanel })
 
     async function procMainToMsglist(kind, obj) { //단순 전달
-        await msglistRef.value.procMainToMsglist(kind, obj)
+        if (msglistRef.value) {
+            await msglistRef.value.procMainToMsglist(kind, obj)
+        }        
     }
 
     async function procMainToPanel(kind, obj) {

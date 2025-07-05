@@ -276,7 +276,7 @@
             sessionStorage.realtimeJobDone = 'Y'
             sessionStorage.logdt = obj.logdt
             logdt.value = obj.logdt //테스트용 //rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
-            tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
+            //tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -524,7 +524,7 @@
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
     }
 
-    let tempcolor = ref('blue')
+    //let tempcolor = ref('blue')
 /*    async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
             //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
@@ -1330,7 +1330,7 @@
                 if (rs == null) return
                 refreshWithGetMsg(rs, props.data.msgid)
             } else { 
-                //굳이 실행하지 않아도 될 듯
+                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid }) ////////////////////////////////////////////////////////
             }
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
@@ -2549,8 +2549,6 @@
                 </div>
                 <div class="chan_center_header_right">
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
-                        <span v-show="tempcolor=='red'" style="margin:0 5px 5px 5px;color:red;font-weight:bold">{{ logdt.substring(11) }}</span>
-                        <span v-show="tempcolor=='blue'"style="margin:0 5px 5px 5px;color:blue;font-weight:bold">{{ logdt.substring(11) }}</span>
                         <!-- <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span> -->
                     </div>
                     <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
@@ -2602,7 +2600,7 @@
                     <span style="margin-left:5px;font-weight:bold">이미지</span> 
                 </div>
                 <div class="topMenu list_msg_unsel" @click="stressTest(true)">
-                    <span style="margin-left:5px;font-weight:bold">Stress</span> 
+                    <span style="margin-left:5px;font-weight:bold">StressTest</span> 
                 </div>
                 <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
                 <!-- <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
