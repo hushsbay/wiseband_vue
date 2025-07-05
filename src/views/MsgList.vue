@@ -95,23 +95,22 @@
                                         cdtAtFirst = row.CDT
                                         msgidAtFirst = row.MSGID
                                     }
-                                }
-                            } else { //child
+                                } //신규 부모메시지 생성시엔 스레드가 없는 상태이므로 스레드에 대한 리얼타임 반영은 필요없음
+                            } else { //child : 무조건 부모메시지(row.REPLYTO)로 아래 로직 처리되고 있음
                                 newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
-                                const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
-                                const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
+                                const idx = gst.util.getKeyIndex(msgRow, row.REPLYTO)
                                 if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
-                                    refreshWithGetMsg(row.msgItem.data, parentMsgid) //화면에 있는 부모메시지 업데이트
+                                    refreshWithGetMsg(row.msgItem.data, row.REPLYTO) //화면에 있는 부모메시지 업데이트
                                     if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
-                                        msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
+                                        msglistRef.value.procFromParent("refreshMsg", { msgid: row.REPLYTO })
                                         if (row.CDT < cdtAtFirstForChild) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
                                             cdtAtFirstForChild = row.CDT
-                                            msgidAtFirstForChild = parentMsgid
+                                            msgidAtFirstForChild = row.REPLYTO
                                         }
                                     }
                                 }
                             }
-                        } else if (row.CUD == "U") { //메시지 수정
+                        } else if (row.CUD == "U") { //메시지 수정 : 수정된 메시지는 새로운 메시지가 아닌 안읽은 메시지로만 정의함
                             const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                             const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                             if (idx > -1) { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
@@ -149,7 +148,7 @@
                             }
                         }
                         if (appType == "home") {
-                            panelUpdateNotyetCnt = true //안읽음+1이 되므로 안읽음+1
+                            panelUpdateNotyetCnt = true
                         } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
                             panelRefreshRow = true //본문이 수정되고 안읽음+1이 되므로 행 새로고침
                         } else if (appType == "activity") {
@@ -185,10 +184,10 @@
                     //             //msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
                     //             //const modifiedCdt = row.CDT.substring(0, row.CDT.length - 1)
                     //             //msglistRef.value.procFromParent("addChildFromBody", { msgidReply: parentMsgid, cdt: modifiedCdt })
-                    //             if (row.CDT < cdtAtFirstForChild) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
-                    //                 cdtAtFirstForChild = row.CDT
-                    //                 msgidAtFirstForChild = parentMsgid
-                    //             }
+                                // if (row.CDT < cdtAtFirstForChild) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
+                                //     cdtAtFirstForChild = row.CDT
+                                //     msgidAtFirstForChild = parentMsgid
+                                // }
                     //         }
                     //     }
                     //     panelUpdateNotyetCnt = true
@@ -412,7 +411,7 @@
     let sideMenu, chanId, msgidInChan
     let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
-    let msglist = ref([])//, fetchByScrollEnd = ref(false)
+    let msglist = ref([]), threadReply = ref({}) //, fetchByScrollEnd = ref(false)
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
     let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
@@ -1021,6 +1020,8 @@
                 if (msgRow.value[props.data.msgidChild]) {
                     msgRow.value[props.data.msgidChild].scrollIntoView()
                 }
+                threadReply.value = msglist.value[0]
+                debugger
             } else if (prevMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 예를 들어, 1000개만 가져옴
                 if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
             } else if (prevMsgMstCdt) { //위로 스크롤링 할 때
@@ -1029,7 +1030,7 @@
                 } else {
                     //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
                 }
-            } else if (nextMsgMstCdt && kind == "scrollToBottom") { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
+            } else if (nextMsgMstCdt && kind == "scrollToBottom" && !msgidReply) { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
                 if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
             } else if (nextMsgMstCdt) {
                 //그냥 두면 됨
@@ -1660,7 +1661,8 @@
                     //await getList({ msgid: props.data.msgid, kind: "withReply", msgidReply: rs.data.msgid })
                     //if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
                     //debugger
-                    await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: rs.data.replyto })                    
+                    await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: rs.data.replyto })
+                    if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })                  
                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
                     if (newParentAdded.value.length == 0) {
@@ -2543,6 +2545,7 @@
                         <div v-else class="coDotDot"><span>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span></div>
                     </div>
                     <!-- <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span>  -->
+                    
                 </div>
                 <div class="chan_center_header_right">
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
@@ -2559,7 +2562,16 @@
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                         <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
                     </div>
-                    <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
+                    <div v-if="hasProp() && threadReply.replyinfo && threadReply.replyinfo[0].CDT_MAX" class="replyAct" style="font-size:13px">
+                        <div style="margin:0 5px;display:flex;align-items:center">
+                            <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
+                            <span style="color:steelblue;font-weight:bold">{{ threadReply.replyinfo[0].CNT_EACH }}개</span>
+                            <span style="margin:0 4px;color:dimgray">최근:</span>
+                            <span style="color:dimgray">{{ hush.util.displayDt(threadReply.replyinfo[0].CDT_MAX) }}</span>
+                            <span v-show="threadReply.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ threadReply.replyinfo[0].MYNOTYETCNT }}</span>
+                        </div>
+                    </div>
+                    <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:0px">
                         <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => evClick({ type: 'close' })">
                     </div>
                 </div>
@@ -2670,7 +2682,7 @@
                             <div style="margin:0 5px;display:flex;align-items:center">
                                 <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
                                 <span style="color:steelblue;font-weight:bold">{{ row.replyinfo[0].CNT_EACH }}개</span>
-                                <span style="margin:0 4px;color:dimgray">최근 :</span>
+                                <span style="margin:0 4px;color:dimgray">최근:</span>
                                 <span style="color:dimgray">{{ hush.util.displayDt(row.replyinfo[0].CDT_MAX) }}</span>
                                 <span v-show="row.replyinfo[0].MYNOTYETCNT > 0" class="mynotyet">{{ row.replyinfo[0].MYNOTYETCNT }}</span>
                             </div>

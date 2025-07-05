@@ -40,6 +40,7 @@
     let notyetChk = ref(false), searchWord = ref('') //msglistRef = ref(null), 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all'), msglistRef = ref(null)
+    let newRoomJustCreated = ref(false)
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
 
@@ -316,8 +317,9 @@
     }
 
     async function refreshPanel() {
-        await getList(true) //true시 listDm이 초기화되었다 다시 추가되므로 MsgList의 onMounted()가 실행됨을 유의 ?!?!
+        await getList(true) //true시 listDm이 초기화되었다 다시 추가되므로 MsgList의 onMounted()가 실행됨을 유의
         dmClickOnLoop(true)
+        newRoomJustCreated.value = false
     }
 
     async function handleEvFromBody(param) { //MsgList.vue에서 실행
@@ -354,17 +356,24 @@
     async function refreshRow(chanid, upToTop) {
         const row = await getSingleDm(chanid)
         const idx = listDm.value.findIndex((item) => item.CHANID == chanid)
-        if (idx == -1) return
-        if (idx != 0 && upToTop) { //행을 맨위로 올려서 업데이트
-            let item = listDm.value[idx]
-            listDm.value.splice(idx, 1)
-            listDm.value.unshift(item)
-            listDm.value[0] = row
-            listDm.value[0].sel = true
-            scrollArea.value.scrollTo({ top: 0 })
-        } else {
-            listDm.value[idx] = row
-            listDm.value[idx].sel = true
+        if (idx > -1) {
+            if (idx != 0 && upToTop) { //행을 맨위로 올려서 업데이트
+                let item = listDm.value[idx]
+                listDm.value.splice(idx, 1)
+                listDm.value.unshift(item)
+                listDm.value[0] = row
+                if (listDm.value[0].CHANID == localStorage.wiseband_lastsel_dmchanid) {
+                    listDm.value[0].sel = true
+                    scrollArea.value.scrollTo({ top: 0 })
+                }
+            } else {
+                listDm.value[idx] = row
+                if (listDm.value[0].CHANID == localStorage.wiseband_lastsel_dmchanid) {
+                    listDm.value[idx].sel = true
+                }
+            }
+        } else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
+            newRoomJustCreated.value = true
         }
     }
 
@@ -407,11 +416,14 @@
                 </div>
             </div>
         </div>
-        <div style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:whitesmoke;border-bottom:1px solid lightgray;cursor:pointer">
+        <div v-if="newRoomJustCreated" @click="refreshPanel" style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:yellow;border-bottom:1px solid lightgray;cursor:pointer">
+            <span style="margin-right:10px;font-weight:bold">새 DM방 생성됨</span>
+        </div>
+        <div v-else style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:whitesmoke;border-bottom:1px solid lightgray;cursor:pointer">
             <span style="margin-right:10px" @click="newDm()">신규</span>
             <span style="margin-right:10px">|</span>
             <span style="margin-right:10px" @click="newDm(true)">신규(관리)</span>
-        </div>
+        </div>        
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }" :keyidx="idx"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']"

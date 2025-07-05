@@ -28,7 +28,7 @@
     //리얼타임 반영
     let panelRef = ref(null)
     let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
 
     let bc //BroadcastChannel
@@ -54,6 +54,7 @@
                 return
             }
             if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
+                debugger
                 let arrForChanActivted = (!gst.chanIdActivted)? [] : rs.list.filter(x => x.CHANID == gst.chanIdActivted) //MsgList로 전달하는 것임
                 let arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
                 cntChanActivted.value = arrForChanActivted.length //화면 표시용

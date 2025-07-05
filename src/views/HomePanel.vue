@@ -19,7 +19,7 @@
         await msglistRef.value.procMainToMsglist(kind, obj)
     }
 
-    async function procMainToPanel(obj) {
+    async function procMainToPanel(kind, obj) {
         handleEvFromBody({ kind: kind, chanid: obj.CHANID })
     }
 
@@ -45,6 +45,7 @@
     let keepAliveRef = ref(null)
     let listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null), msglistRef = ref(null) //, clearCacheUrl = ref('')
+    let newRoomJustCreated = ref(false)
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -325,22 +326,27 @@
     async function refreshPanel() {
         await getList()
         chanClickOnLoop(true)
+        newRoomJustCreated.value = false
     }
 
     async function handleEvFromBody(param) { //MsgList에서 실행
         if (param.kind == "selectRow") {
             chanClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
+            debugger
             const row = listHome.value.find((item) => item.CHANID == param.chanid)
-            if (!row) return
-            const res = await axios.post("/menu/qryKindCnt", { chanid: param.chanid, kind: "notyet" })
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            row.mynotyetCnt = rs.data.kindCnt
-        } else if (param.kind == "refreshRow") {
-            refreshPanel() //홈에서는 행 새로고침도 그냥 패널 전체 새로고침으로 처리하되 빈도가 높고 반복적인 곳은 사용하지 않기로 함 (향후 필요시 refreshRow 진짜 만들기)
+            if (row) {
+                const res = await axios.post("/menu/qryKindCnt", { chanid: param.chanid, kind: "notyet" })
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+                row.mynotyetCnt = rs.data.kindCnt
+            } else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
+                newRoomJustCreated.value = true
+            }
+        //} else if (param.kind == "refreshRow") { //현재까지는 updateNotyetCnt만으로도 잘 처리해 옴
+        //    await refreshPanel() //홈에서는 행 새로고침도 그냥 패널 전체 새로고침으로 처리하되 빈도가 높고 반복적인 곳은 사용하지 않기로 함 (향후 필요시 refreshRow 진짜 만들기)
         } else if (param.kind == "refreshPanel") {  //방 나가기,삭제에서 사용
-            refreshPanel()
+            await refreshPanel()
         /*} else if (param.kind == "getMsgListFromMsgid") { //지우지 말 것 (향후 사용가능성) 리얼타임 반영으로 쌓인 중간에 이빨빠진 새 데이터 뿌리기
             //MsgList의 newParentAdded, newChildAdded 관련임. 여기는 자식이 아닌 아예 부모메시지만 넘어옴. 여기 풀려면 모든 패널에 추가해야 함
             gst.util.goMsgList('home_body', { chanid: param.chanid, msgid: param.msgid })*/
@@ -349,11 +355,11 @@
         }
     }
 
-    function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
+    async function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
         if (kind == "forwardToBody") {
-            msglistRef.value.procFromParent(kind)
+            await msglistRef.value.procFromParent(kind)
         } else {
-            refreshPanel()
+            await refreshPanel()
         }
     }
 </script>
@@ -368,7 +374,11 @@
                     <option value="all">모든 채널</option>
                 </select>
             </div>
-            <div class="chan_side_top_right">
+            <div v-if="newRoomJustCreated" @click="refreshPanel" class="chan_side_top_right"
+                style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:yellow;cursor:pointer">
+                <span style="margin-right:10px;font-weight:bold">새 DM방 생성됨</span>
+            </div>
+            <div v-else class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px" @click="refreshPanel">
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침">
                 </div>
