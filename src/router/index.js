@@ -28,14 +28,10 @@ const router = createRouter({
             component: Login
         },
         {
-            path: '/body/msglist/:chanid/:msgid', //새창에서 열기 (사이드 및 패널 없음)
+            path: '/body/msglist/:chanid/:msgid', //새창에서 열기 (사이드 및 패널 없음. msgid=msgidd,0,notyet,unread)
             name: 'msglist',
             component: MsgList
         },
-        // {
-        //     path: '/nocache_panel/:panel/:panel_body/:chanid/:msgid',
-        //     redirect: '/main/:panel/:panel_body/:chanid/:msgid'   
-        // },
         { //path와 param는 같이 사용하지 못함. name 이용해야 함
             path: '/main',
             name: 'main',

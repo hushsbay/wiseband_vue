@@ -333,7 +333,6 @@
         if (param.kind == "selectRow") {
             chanClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
-            debugger
             const row = listHome.value.find((item) => item.CHANID == param.chanid)
             if (row) {
                 const res = await axios.post("/menu/qryKindCnt", { chanid: param.chanid, kind: "notyet" })

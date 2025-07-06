@@ -189,7 +189,8 @@
 
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
-        const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID + "?appType=later"
+        //const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID + "?appType=later"
+        const url = gst.util.openWinForBodyList(row.CHANID, row.MSGID, "later")
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {
                 window.open(url)

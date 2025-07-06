@@ -557,6 +557,13 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
+        getUrlForBodyListNewWin : function(chanid, msgid, appType) {
+            //const url = location.protocol + "//" + location.host + "/body/msglist/" + chanid + "/" + msgid + "?appType=" + appType
+            let url = "/body/msglist/" + chanid + "/" + msgid
+            if (appType) url += "?appType=" + appType
+            return url
+        },
+
         downloadBlob : function(kind, msgid, chanid, cdt, name) {
             const query = "?msgid=" + msgid + "&chanid=" + chanid + "&kind=" + kind + "&cdt=" + cdt //+ "&name=" + row.name
             axios.get("/chanmsg/readBlob" + query, { 

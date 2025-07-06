@@ -52,7 +52,19 @@
             for (let i = 0; i < len; i++) {
                 const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음 (스레드로는 아이디만 넘겨서 서버 호출)
                 if (row.CHANID == chanId) {
-                    if (row.TYP == "read" || row.TYP == "react" || row.TYP == "user") {
+                    if (row.BODYTEXT == 'readall') { //서버 chanmsg>updateAllWithNewKind() 참조
+                        newParentAdded.value = []
+                        newChildAdded.value = []
+                        const len = msglist.value.length                        
+                        for (let i = 0; i < len; i++) {
+                            const item = msglist.value[i]
+                            await refreshMsgDtlWithQryAction(item.MSGID)
+                            item.replyinfo[0].MYNOTYETCNT = 0
+                        }
+                        if (appType == "home" || appType == "dm") {
+                            panelUpdateNotyetCnt = true
+                        }
+                    } else if (row.TYP == "read" || row.TYP == "react" || row.TYP == "user") {
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) {
@@ -139,13 +151,14 @@
                                 }
                                 await nextTick() //배열삭제된 부분이므로 동기 처리 필요
                             }
-                            if (row.REPLYTO == "") {
-                                const idxFound = newParentAdded.value.findIndex(item => item.MSGID == row.MSGID)
-                                if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
-                            } else {
-                                const idxFound = newChildAdded.value.findIndex(item => item.MSGID == row.MSGID)
-                                if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
-                            }
+                            // if (row.REPLYTO == "") {
+                            //     const idxFound = newParentAdded.value.findIndex(item => item.MSGID == row.MSGID)
+                            //     if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
+                            // } else {
+                            //     const idxFound = newChildAdded.value.findIndex(item => item.MSGID == row.MSGID)
+                            //     if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
+                            // }
+                            deleteFromNewAdded(row)
                         }
                         if (appType == "home") {
                             panelUpdateNotyetCnt = true
@@ -411,7 +424,7 @@
     let sideMenu, chanId, msgidInChan
     let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
-    let msglist = ref([]), threadReply = ref({}) //, fetchByScrollEnd = ref(false)
+    let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('') //, fetchByScrollEnd = ref(false)
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
     let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
@@ -678,13 +691,17 @@
                     setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
                     if (msgidInChan) { //예) 새창에서 열기하면서 메시지아이디가 붙어 있으면 atHome이 되는 것임
                         await getList({ msgid: msgidInChan, kind: "atHome" })
+                        inEditor.value.focus() 
+                    } else if (tabForNewWin.value != "") {
+                        listMsg(tabForNewWin.value)
                     } else {
-                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt }) //기본적인 조회 패턴임                 
+                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt }) //기본적인 조회 패턴임   
+                        inEditor.value.focus()               
                     }
                     observerTopScroll()
                     observerBottomScroll()
                     //try { 
-                        inEditor.value.focus() 
+                        
                     //} catch {}
                 }
                 //const res = await axios.post("/chanmsg/qryDbDt")
@@ -750,6 +767,8 @@
         const pMsgid = route.params.msgid        
         if (pMsgid == hush.cons.state_nodata) {
             pageData.value = pMsgid
+        } else if (pMsgid == "notyet" || pMsgid == "unread") { //스레드에서는 미사용
+            tabForNewWin.value = pMsgid //현재 열린 MsgList.vue에서 처리시 다시 메시지 탭을 누르면 처음부터 조회되는 등 문제가 많아 별도 창으로 분리
         } else if (pMsgid == "0" || pMsgid == "nocache") { //현재 nocache는 사용처 없음
             //skip
         } else if (pMsgid) {
@@ -766,9 +785,14 @@
 
     function chanCtxMenu(e) {
         gst.ctx.data.header = ""
-        const disableStr = (chanMasterId.value == g_userid) ? false : true
+        let disableStr1 = false
+        let disableStr2 = (chanMasterId.value == g_userid) ? false : true
+        if (route.fullPath.includes('/body/msglist')) {
+            disableStr1 = true
+            disableStr2 = true
+        }
         gst.ctx.menu = [            
-            { nm: "방 나가기", func: async function(item, idx) {
+            { nm: "방 나가기", disable: disableStr1, func: async function(item, idx) {
                 try {
                     if (!confirm("퇴장시 방 관리자의 초대가 없으면 다시 들어올 수 없습니다. 계속할까요?")) return
                     const rq = { CHANID: chanId, USERID: g_userid }
@@ -782,7 +806,7 @@
                     gst.util.showEx(ex, true)
                 }
             }},
-            { nm: "방 삭제", disable: disableStr, func: async function(item, idx) {
+            { nm: "방 삭제", disable: disableStr2, func: async function(item, idx) {
                 try {
                     if (!confirm("방 전체 삭제를 진행합니다. 계속할까요?")) return
                     const rq = { CHANID: chanId }
@@ -801,14 +825,19 @@
     }
 
     async function listMsg(kind) {
-        listMsgSel.value = kind
-        msglist.value = []
-        if (kind == 'all') {
-            savPrevMsgMstCdt = hush.cons.cdtAtLast
-            await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
-        } else {
-            await getList({ kind: kind })
-        }        
+        listMsgSel.value = 'all' //kind
+        //msglist.value = []
+        if (kind == 'all') { //kind == unread일 경우 현재 막아 두었는데 향후 필요시 사용하게 될 수도 있음
+            //savPrevMsgMstCdt = hush.cons.cdtAtLast
+            //await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
+        } else { //아래는 새창에서 수행됨을 유의. setBasicInfo()dml tabForNewWin 설명 참조
+            if (tabForNewWin.value != '') { //if (route.fullPath.includes('/body/msglist')) { //체크 안하면 윈도우 오픈 (무한)
+                await getList({ kind: kind })
+            } else {
+                const url = gst.util.getUrlForBodyListNewWin(chanId, kind)
+                window.open(url)
+            }
+        }
     }
 
     let test_idx = 0
@@ -1021,7 +1050,6 @@
                     msgRow.value[props.data.msgidChild].scrollIntoView()
                 }
                 threadReply.value = msglist.value[0]
-                debugger
             } else if (prevMsgMstCdt == hush.cons.cdtAtLast || kind == "notyet" || kind == "unread") { //notyet, unreadsms 내림차순으로 예를 들어, 1000개만 가져옴
                 if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
             } else if (prevMsgMstCdt) { //위로 스크롤링 할 때
@@ -1097,19 +1125,6 @@
         }
     }
 
-    async function qryAction(addedParam) {
-        try {
-            let param = { chanid: chanId } //기본 param
-            if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            const res = await axios.post("/chanmsg/qryAction", param)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return null
-            return rs.data
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
-
     async function qryActionForUser(addedParam) {
         try {
             let param = { chanid: chanId } //기본 param
@@ -1173,6 +1188,7 @@
 
     function rowRight(e, row, index) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         let textRead, oldKind, newKind
+        const url = gst.util.getUrlForBodyListNewWin(chanId, row.MSGID, appType)
         const msgdtlRow = row.msgdtl.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
         if (msgdtlRow) {
             oldKind = msgdtlRow.KIND
@@ -1193,7 +1209,8 @@
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {
-                const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=" + appType
+                //const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=" + appType
+                //window.open(url)
                 window.open(url)
             }},
             { nm: textRead, disable: disableStr, func: function(item, idx) {
@@ -1223,7 +1240,7 @@
                 forwardMsg("dm", row.MSGID)
             }},
             { nm: "메시지 링크로 복사", disable: disableStr, func: function(item, idx) {
-                const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=home"
+                //const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=home"
                 navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
                     gst.util.setToast("메시지 링크가 복사되었습니다.")
                 }).catch(() => {
@@ -1310,11 +1327,35 @@
         readMsgToBeSeen() //사용자별 데이터지만 읽음 처리를 onScrolling에 두면 스크롤링하면서 초당 4~5회의 동일 데이터를 서버로 요청해서 업데이트를 시도하려 함 (table lock 체크 이전에 일단 스크롤종료시만 호출하는 것으로 변경함)
     }
 
-    async function refreshMsgDtlWithQryAction(msgid) {
-        let rs = await qryAction({ msgid: msgid }) //1개가 아닌 모든 kind 목록을 가져옴
-        if (rs == null) return //rs = [{ KIND, CNT, NM }..] //NM은 이상병, 정일영 등으로 복수
+    function deleteFromNewAdded(row, parentMsgid, childMsgid) {
+        let isParent, msgidToProc
+        if (row) {
+            isParent = (row.REPLYTO == "") ? true : false
+            msgidToProc = row.MSGID
+        } else {
+            isParent = parentMsgid ? true : false
+            msgidToProc = parentMsgid ? parentMsgid : childMsgid
+        }
+        if (isParent) { //부모메시지
+            const idxFound = newParentAdded.value.findIndex(item => item.MSGID == msgidToProc)
+            if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
+        } else { //자식메시지
+            const idxFound = newChildAdded.value.findIndex(item => item.MSGID == msgidToProc)
+            if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
+        }
+    }
+
+    async function refreshMsgDtlWithQryAction(msgid, msgdtl) { //msgdtl 없으면 서버호출하는 것임
         const item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (item) item.msgdtl = rs //해당 msgid 찾아 msgdtl을 통째로 업데이트함
+        if (!item) return
+        if (msgdtl) { //굳이 서버호출없어도 됨
+            item.msgdtl = msgdtl //해당 msgid 찾아 msgdtl을 통째로 업데이트
+        } else {
+            const res = await axios.post("/chanmsg/qryAction", { msgid: msgid, chanid: chanId })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return null
+            item.msgdtl = rs.list //해당 msgid 찾아 msgdtl을 통째로 업데이트
+        }
     }
 
     async function updateWithNewKind(msgid, oldKind, newKind) { //현재는 읽기 관련 처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
@@ -1323,14 +1364,14 @@
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid)
+            await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
-                const rs = await getMsg({ msgid: props.data.msgid })
-                if (rs == null) return
-                refreshWithGetMsg(rs, props.data.msgid)
+                // const rs = await getMsg({ msgid: props.data.msgid })
+                // if (rs == null) return
+                // refreshWithGetMsg(rs, props.data.msgid)
             } else { 
-                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid }) ////////////////////////////////////////////////////////
+                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
@@ -1349,14 +1390,16 @@
             const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid)
+            await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)            
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
+                deleteFromNewAdded(null, null, msgid)
                 evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
-                const rs = await getMsg({ msgid: props.data.msgid })
-                if (rs == null) return
-                refreshWithGetMsg(rs, props.data.msgid)
+                //const rs = await getMsg({ msgid: props.data.msgid })
+                //if (rs == null) return
+                //refreshWithGetMsg(rs, props.data.msgid)
             } else { 
-                //굳이 실행하지 않아도 될 듯
+                deleteFromNewAdded(null, msgid, null)
+                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (appType == "home" || appType == "dm") evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
         } catch (ex) { 
@@ -1365,7 +1408,7 @@
     }
 
     async function updateAllWithNewKind(oldKind, newKind) { //현재는 읽기 관련 처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
-        try {     
+        try { //새창에서 수행되고 있음 
             const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
@@ -1378,7 +1421,8 @@
             if (appType == "home" || appType == "dm") {
                 evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
             }
-            listMsg('notyet')
+            await listMsg('notyet')
+            window.close()
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1415,7 +1459,9 @@
             arr.sort((a, b) => a.CDT.localeCompare(b.CDT)) //오름차순 정렬
             msgid = arr[0].REPLYTO //자식의 부모아이디
             cdtAtFirst = arr[0].CDT //여기선 msgid로 사용
-            const newWin = window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
+            //const newWin = window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
+            const url = gst.util.getUrlForBodyListNewWin(chanId, row.MSGID, appType)
+            const newWin = window.open(url)
             newWin.onload = function() {
                 const arr = newWin.document.querySelectorAll(".chan_center_body")
                 //vue.js로 랜더링하는 바로 아래 class는 안읽혀서 vue.js 아녀도 바로 뿌려주는 class(chan_center_body)로 잡음
@@ -1425,9 +1471,9 @@
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
+        //debugger
         if (showUserSearch.value) return //DM방 만들기에서는 무시
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
-        //debugger
         if (!eleTop) {
             return
         } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
@@ -2166,7 +2212,7 @@
             const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid)
+            await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -2178,7 +2224,9 @@
         const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
         let rs = gst.util.chkAxiosCode(res.data)
         if (!rs) return
-        window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=" + kind)
+        //window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=" + kind)
+        const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
+        window.open(url)
         /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)
            다만 슬랙은 새창을 띄우지 않아서 아래 2안으로 노력했는데 2안시 마지막 단계인 MsgList의 캐시제거가 살짝 구현이 안되었음. 필요시 2안으로 노력을 더 기울여도 되나 각 패널에 추가해야 하는 것이 번거로울 것임
         if (kind == appType) {
@@ -2475,7 +2523,9 @@
 
     function openDmRoom(chanid, newWin) {
         if (newWin) {
-            window.open("/body/msglist/" + chanid + "/0?appType=dm")
+            //window.open("/body/msglist/" + chanid + "/0?appType=dm")
+            const url = gst.util.getUrlForBodyListNewWin(chanid, "0", "dm")
+            window.open(url)
         } else {
             let obj = { name : "dm_body", params : { chanid: chanid, msgid: "0" }} //DM 패널이 아니라면 MsgList Mounted 반복되는 문제 발생
             router.push(obj)
@@ -2575,49 +2625,36 @@
                 </div>
             </div>
             <div v-if="!hasProp() && !showUserSearch" class="chan_center_nav" id="chan_center_nav">
-                <div class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
+                <div v-if="tabForNewWin==''" class="topMenu" :class="listMsgSel == 'all' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('all')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg.png')">
                     <span style="margin-left:5px;font-weight:bold">메시지</span> 
-                </div>
-                <div class="topMenu" :class="listMsgSel == 'notyet' ? 'list_msg_sel' : 'list_msg_unsel'" @click="listMsg('notyet')">
-                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_notyet.png')">
-                    <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
-                </div>
-                <div class="topMenu" :class="listMsgSel == 'unread' ? 'list_msg_sel' : 'list_msg_unsel'"  @click="listMsg('unread')">
+                </div>                
+                <!-- <div v-if="tabForNewWin=='' || tabForNewWin=='unread'" class="topMenu" :class="listMsgSel == 'unread' ? 'list_msg_sel' : 'list_msg_unsel'"  @click="listMsg('unread')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_unread.png')">
                     <span style="margin-left:5px;font-weight:bold">다시안읽음</span> 
-                </div>
-                <div v-show="!thread.msgid" class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
+                </div> -->
+                <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu" :class="listMsgSel == 'msg' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('msg')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_msg.png')">
-                    <span style="margin-left:5px;font-weight:bold">검색</span> 
+                    <span style="margin-left:5px;font-weight:bold">검색</span>
                 </div>
-                <div v-show="!thread.msgid" class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
+                <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu" :class="listMsgSel == 'file' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('file')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_file.png')">
                     <span style="margin-left:5px;font-weight:bold">파일</span> 
                 </div>
-                <div v-show="!thread.msgid" class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
+                <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu" :class="listMsgSel == 'image' ? 'list_msg_sel' : 'list_msg_unsel'" @click="openSearchInchan('image')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
                     <span style="margin-left:5px;font-weight:bold">이미지</span> 
                 </div>
-                <div class="topMenu list_msg_unsel" @click="stressTest(true)">
+                <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu list_msg_unsel" @click="stressTest(true)">
                     <span style="margin-left:5px;font-weight:bold">StressTest</span> 
                 </div>
                 <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
-                <!-- <span v-show="listMsgSel == 'notyet'" @click="updateAllWithNewKind('notyet', 'read')"
-                    style="padding:2px;margin-left:15px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span>
-                <span v-show="listMsgSel == 'unread'" @click="updateAllWithNewKind('unread', 'read')"
-                    style="padding:2px;margin-left:15px;background:beige;border:1px solid dimgray;border-radius:5px;cursor:pointer">모두읽음처리</span> -->
+                <div v-if="tabForNewWin=='' || tabForNewWin=='notyet'" class="topMenu list_msg_unsel" @click="listMsg('notyet')">
+                    <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_notyet.png')">
+                    <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
+                </div>
                 <div v-show="listMsgSel == 'notyet'" class="coImgBtn" @click="updateAllWithNewKind('notyet', 'read')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">모두읽음처리</span>
-                </div>
-                <div v-show="listMsgSel == 'unread'" class="coImgBtn" @click="updateAllWithNewKind('unread', 'read')" style="margin:0 0 4px 12px">
-                    <span class="coImgSpn">모두읽음처리</span>
-                </div> 
-                <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')" style="margin:0 0 4px 12px">
-                    <span class="coImgSpn">신규 : {{ newParentAdded.length }}</span>
-                </div>
-                <div v-show="listMsgSel == 'all' && newChildAdded.length > 0" class="coImgBtn" @click="addAllNew('C')" style="margin:0 0 4px 12px">
-                    <span class="coImgSpn">신규(댓글) : {{ newChildAdded.length }}</span>
                 </div>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
@@ -2750,40 +2787,52 @@
                 </div><!--observerBottomTarget은 color 및 minHeight 유의-->
                 <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" :style="{ minHeight: showBottomObserver ? '10px' : '0px', color:'transparent' }">{{ hush.cons.endOfData }}</div>
             </div>
-            <div class="chan_center_footer">
-                <div class="editor_header">
-                    <div v-if="editMsgId" style="margin-left:10px;display:flex;align-items:center">
-                        <div class="btn" @click="saveMsg" style="margin-right:10px">저장</div>
-                        <div class="btn" @click="cancelMsg">취소</div>
+            <div v-if="tabForNewWin==''" class="chan_center_footer">
+                <div style="width:100%;height:40px;display:flex;overflow-x:hidden;background:whitesmoke">
+                    <div style="width:300px;height:100%;display:flex;align-items:center">
+                        <div v-if="editMsgId" style="margin-left:10px;display:flex;align-items:center">
+                            <div class="btn" @click="saveMsg" style="margin-right:10px">저장</div>
+                            <div class="btn" @click="cancelMsg">취소</div>
+                        </div>
+                        <div v-else class="saveMenu" @click="saveMsg">
+                            <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
+                        </div>
+                        <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_addlink.png')" 
+                            title="링크추가" @click="uploadLink('addlink')">
+                        <span v-if="hasProp()">
+                            <input v-if="!editMsgId" id="file_upload_prop" type=file multiple hidden @change="uploadFile" />
+                            <label v-if="!editMsgId" for="file_upload_prop">
+                                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
+                            </label>
+                        </span>
+                        <span v-else>
+                            <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
+                            <label v-if="!editMsgId" for="file_upload">
+                                <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
+                            </label>
+                        </span>
+                        <div style="width:8px;height:20px;margin-left:12px;border-left:1px solid dimgray"></div>
+                        <!-- <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" 
+                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="addEmoti()"> -->
+                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_makelink.png')" title="링크로변환"
+                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="makeLink()">
+                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게"
+                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('B')">
+                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
+                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('S')">
+                        <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
+                            @click="htmlView()"><!--개발자사용-->
                     </div>
-                    <div v-else class="saveMenu" @click="saveMsg">
-                        <img class="coImg20" :src="gst.html.getImageUrl('white_send.png')" title="발송">
+                    <div style="height:100%;display:flex;align-items:center">
+                        <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')">
+                            <span class="coImgSpn">메시지 도착</span>
+                            <span class="mynotyet">{{ newParentAdded.length }}</span> 
+                        </div>
+                        <div v-show="listMsgSel == 'all' && newChildAdded.length > 0" class="coImgBtn" @click="addAllNew('C')">
+                            <span class="coImgSpn">댓글 도착</span>
+                            <span class="mynotyet">{{ newChildAdded.length }}</span>
+                        </div>
                     </div>
-                    <img v-if="!editMsgId" class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_addlink.png')" 
-                        title="링크추가" @click="uploadLink('addlink')">
-                    <span v-if="hasProp()">
-                        <input v-if="!editMsgId" id="file_upload_prop" type=file multiple hidden @change="uploadFile" />
-                        <label v-if="!editMsgId" for="file_upload_prop">
-                            <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
-                        </label>
-                    </span>
-                    <span v-else>
-                        <input v-if="!editMsgId" id="file_upload" type=file multiple hidden @change="uploadFile" />
-                        <label v-if="!editMsgId" for="file_upload">
-                            <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_file.png')" title="파일추가">
-                        </label>
-                    </span>
-                    <div style="width:8px;height:20px;margin-left:12px;border-left:1px solid dimgray"></div>
-                    <!-- <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘추가" 
-                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="addEmoti()"> -->
-                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_makelink.png')" title="링크로변환"
-                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="makeLink()">
-                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게"
-                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('B')">
-                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
-                        :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('S')">
-                    <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
-                        @click="htmlView()"><!--개발자사용-->
                 </div>
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
                     @paste="pasteData" @keydown.enter.prevent="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
@@ -2866,8 +2915,8 @@
         width:100%;min-height:30px;display:flex;align-items:center;
         border-bottom:1px solid dimgray;overflow:hidden
     }
-    .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black }
-    .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white; }
+    .list_msg_sel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid black;cursor:pointer }
+    .list_msg_unsel { display:flex;align-items:center;padding:5px 8px;border-bottom:3px solid white;cursor:pointer }
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;flex:1;overflow-y:auto;
     }
@@ -2912,9 +2961,6 @@
         width:100%;margin:auto 0 10px 0;
         display:flex;flex-direction:column;
         border:1px solid lightgray;border-radius:5px;
-    }
-    .editor_header {
-        width:100%;height:40px;display:flex;align-items:center;overflow-x:hidden;background:whitesmoke;
     }
     .editor_body {
         width:calc(100% - 10px);min-height:40px;max-height:300px;padding:5px;overflow-y:scroll
