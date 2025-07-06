@@ -77,7 +77,9 @@
                                     msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID }) //스레드 자식 메시지 업데이트
                                 }
                             }
-                        } //아래는 패널 업데이트
+                        }
+                        if (row.TYP == "read" && row.CUD == "D") deleteFromNewAdded(row) 
+                        //아래는 패널 업데이트
                         if (row.TYP == "read") {
                             if (appType == "home" || appType == "dm") { //DM패널에 안읽음 체크시 처리하는 것은 아래 evToPanel({ kind: "updateNotyetCnt", chanid: chanId })에서 전달받아 패널에서 처리
                                 panelUpdateNotyetCnt = true
@@ -99,7 +101,9 @@
                                 //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
                                 if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
                                     //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
-                                    newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                                    if (row.USERID != g_userid) {
+                                        newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                                    }
                                 } else if (realLastCdt && savNextMsgMstCdt > realLastCdt) {
                                     //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸이면 최초 생성 데이터이므로 여기로 오면 안되고 scrollToBottom으로 처리
                                 } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
@@ -109,7 +113,9 @@
                                     }
                                 } //신규 부모메시지 생성시엔 스레드가 없는 상태이므로 스레드에 대한 리얼타임 반영은 필요없음
                             } else { //child : 무조건 부모메시지(row.REPLYTO)로 아래 로직 처리되고 있음
-                                newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                                if (row.USERID != g_userid) {
+                                    newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
+                                }
                                 const idx = gst.util.getKeyIndex(msgRow, row.REPLYTO)
                                 if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
                                     refreshWithGetMsg(row.msgItem.data, row.REPLYTO) //화면에 있는 부모메시지 업데이트
@@ -1058,8 +1064,9 @@
                 } else {
                     //스크롤 위치는 그대로임 //scrollArea.value.scrollTop = prevScrollY
                 }
-            } else if (nextMsgMstCdt && kind == "scrollToBottom" && !msgidReply) { //작성자 입장에서 발송이후 스크롤 맨 아래로 위치
+            } else if (nextMsgMstCdt && kind == "scrollToBottom" && !msgidReply) { //스크롤 맨 아래로 위치
                 if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
+                readMsgToBeSeen() //스크롤 이벤트와 충돌 날수도..하지만 맨 아래 데이터 가져와서 읽음 처리 안되는 경우가 생겨 추가한 것임
             } else if (nextMsgMstCdt) {
                 //그냥 두면 됨
             }
@@ -1447,12 +1454,12 @@
 
     async function addAllNew(strKind) { //home,dm에서만 버튼 보임
         let msgid, cdtAtFirst
-        if (strKind == "P") { //신규 부모글
+        if (strKind == "P") { //Parent : 신규 부모글
             if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
             msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
             cdtAtFirst = newParentAdded.value[0].CDT
             chkProcScrollToBottom(cdtAtFirst, msgid) //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
-        } else { //C : 신규 댓글
+        } else { //Child : 신규 댓글
             if (newChildAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
             //가장 오래된 자식메시지의 부모아이디부터 조회하도록 해야 사용자가 안놓침
             const arr = newChildAdded.value //그런데, 그게 인덱스 0가 아닐 수도 있으므로 아래처럼 처리하고자 함
@@ -1460,7 +1467,7 @@
             msgid = arr[0].REPLYTO //자식의 부모아이디
             cdtAtFirst = arr[0].CDT //여기선 msgid로 사용
             //const newWin = window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
-            const url = gst.util.getUrlForBodyListNewWin(chanId, row.MSGID, appType)
+            const url = gst.util.getUrlForBodyListNewWin(chanId, msgid, appType)
             const newWin = window.open(url)
             newWin.onload = function() {
                 const arr = newWin.document.querySelectorAll(".chan_center_body")
@@ -1471,7 +1478,6 @@
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
-        //debugger
         if (showUserSearch.value) return //DM방 만들기에서는 무시
         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
         if (!eleTop) {
