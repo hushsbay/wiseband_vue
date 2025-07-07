@@ -435,10 +435,11 @@
                         <span>{{ row.memcnt }}명</span>
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
-                        <span style="margin-right:5px;color:darkgray">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
-                        <img v-if="row.notioffImg" class="coImg14" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off" style="margin-right:5px">
-                        <img v-if="row.bookmarkImg" class="coImg14" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크" style="margin-right:5px">
-                        {{ hush.util.displayDt(row.LASTMSGDT, false) }}
+                        <!-- <span style="margin-right:5px;color:darkgray">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span> -->
+                        <span :class="row.mynotyetCnt == 0 ? '' : 'coMyNotYet'">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
+                        <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
+                        <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
+                        <span style="margin-left:5px">{{ hush.util.displayDt(row.LASTMSGDT, false) }}</span>
                     </div>
                 </div>
                 <div class="nodeMiddle">

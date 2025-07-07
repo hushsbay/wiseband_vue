@@ -30,6 +30,7 @@
     let timerShort = true, timeoutShort, timeoutLong
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
+    let notyetCntHome = ref(0), notyetCntDm = ref(0)
 
     let bc //BroadcastChannel
 
@@ -55,6 +56,18 @@
                 sessionStorage.realtimeJobDone = 'Y'
                 return
             }
+            let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
+            const listByMenu = rs.data.listByMenu //GS와 WS의 notyet count 배열임
+            for (let i = 0; i < listByMenu.length; i++) {
+                const row = listByMenu[i]
+                if (row.TYP == "WS") { //홈
+                    notyetCntHomeTmp = row.SUM
+                } else { //GS (DM)
+                    notyetCntDmTmp = row.SUM
+                }
+            }
+            if (notyetCntHomeTmp != notyetCntHome.value) notyetCntHome.value = notyetCntHomeTmp
+            if (notyetCntDmTmp != notyetCntDm.value) notyetCntDm.value = notyetCntDmTmp
             if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
                 if (gst.chanIdActivted) arrForChanActivted = rs.list.filter(x => x.CHANID == gst.chanIdActivted) //MsgList로 전달하는 것임
                 arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
@@ -335,6 +348,8 @@
                                 <img :class="['coMenuImg', row.sel ? 'coMenuImgSel' : '']" :src="gst.html.getImageUrl(row.IMG)">
                             </div>
                             <div class="coMenuText">{{ row.NM }}</div>
+                            <div v-show="row.ID=='mnuHome'&&notyetCntHome>0" class="myNotYet" style="position:absolute;top:-2px;left:34px">{{ notyetCntHome > 99 ? '99!' : notyetCntHome }}</div>
+                            <div v-show="row.ID=='mnuDm'&&notyetCntDm>0" class="coMenuText" style="position:absolute;top:-2px;left:34px">{{ notyetCntDm > 99 ? '99!' : notyetCntDm }}</div>
                         </div>                      
                     </div>
                     <div v-show="seeMore" class="sideBottom"><!--sideTop안에 sideBottom에 들어 있으며 바로 아래는 sideTop과 sibling으로 sideBottom이 있음을 유의-->
@@ -418,10 +433,14 @@
         background:var(-primary-color);color:whitesmoke
     }
     .menu { 
-        width:55px;min-height:55px;margin:8px 0; 
+        position:relative;width:55px;min-height:55px;margin:8px 0; 
         display:flex;flex-direction:column;justify-content:center;align-items:center;
         color:white;cursor:pointer; 
     }
     .menu32 { width:32px;height:32px; }
     .menu32:hover { width:36px;height:36px; }
+    .myNotYet { 
+        width:13px;height:13px;padding:1px 2px 2px 2px;
+        display:flex;align-items:center;justify-content:center;border-radius:12px;background-color:var(--active-color);color:black;font-size:10px
+    }
 </style>
