@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue' 
+    import { ref, onMounted, nextTick, watch } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
@@ -30,20 +30,13 @@
     let timerShort = true, timeoutShort, timeoutLong
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
-    let notyetCntHome = ref(0), notyetCntDm = ref(0)
-
-    let bc //BroadcastChannel
-
-    function test() {
-        bc.postMessage({ aaa:"aaa", bbb:"bbb" })
-    }
+    let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref('')
 
     async function chkDataLogEach() {
         try {
-            //console.log(sessionStorage.realtimeJobDone+"#####00")
+            if (winnerId.value != sessionStorage.winId) winnerId.value = sessionStorage.winId
             if (sessionStorage.realtimeJobDone != 'Y') return //gst.util.setSnack 참조
             sessionStorage.realtimeJobDone = ''            
-            //console.log(sessionStorage.logdt+"@@@@@"+sessionStorage.realtimeJobDone)
             logdt.value = sessionStorage.logdt //화면 표시용
             logdtColor.value = logdtColor.value == 'yellow' ? 'lightgreen' : 'yellow' //화면 표시용
             let arrForChanActivted = []
@@ -124,14 +117,10 @@
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
     }
 
-    function getBroadcast(data) {
-        console.log(JSON.stringify(data))
-    }
-    
     onMounted(async () => {
-        try {
-            bc = new BroadcastChannel("wbRealtime")
-            bc.onmessage = (e) => { getBroadcast(e.data) }
+        try {            
+            const tag = document.querySelector("#winid") //변하지 않는 값
+            winId = (tag) ? tag.innerText : 'error'
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -161,10 +150,6 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
-    })
-
-    onUnmounted(async () => {
-        if (bc) bc.close()
     })
 
     function sideClickOnLoop(selMenu, onMounted) {
@@ -327,6 +312,8 @@
                     <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
                     <span style="margin-left:5px">[활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
                     <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>
+                    <span style="margin-left:5px">winner : {{ winnerId }}</span>
+                    <span style="margin-left:5px">this tab : {{ winId }}</span>
                 </span>
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
@@ -343,7 +330,7 @@
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
                     <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center">
-                        <img class="coImg32" src="/src/assets/images/color_slacklogo.png" @click="test"/>
+                        <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
                     </div>
                     <div id="sideTop" class="sideTop">
                         <div v-for="(row, idx) in listSel" @click="sideClick(row.ID, row)" :id="row.ID + 'Target'" class="menu cntTarget">

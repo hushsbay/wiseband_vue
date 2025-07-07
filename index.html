@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WiSEBand</title>
     <script>
+        let bc, winId
+
         const start = new Promise(async (resolve, reject) => {
             if (!window.Notification) reject('이 브라우저가 window.Notification을 지원하지 않습니다.') //window.Notification || window.mozNotification || window.webkitNotification
             const permission = await window.Notification.requestPermission()
@@ -13,7 +15,28 @@
             resolve() //html5 notification은 https만 지원 (localhost에서는 http도 지원 - 크롬 테스트 OK)
         })
 
+        function getBroadcast(data) {
+            console.log(JSON.stringify(data))
+            if (data.code == "dead") {
+                if (!sessionStorage.winId) {
+                    sessionStorage.winId = winId //떠 있는 누군가는 위너가 될 것임
+                } else {
+                    //이미 다른 탭이 위너로 자리잡고 있음
+                }
+            }
+        }
+
         start.then(() => {
+            bc = new BroadcastChannel("wbRealtime")
+            bc.onmessage = (e) => { getBroadcast(e.data) }
+            winId = Math.floor(Math.random() * (999999 - 100000)) + 100000
+            const tag = document.querySelector("#winid")
+            tag.innerText = winId
+            if (!sessionStorage.winId) {
+               sessionStorage.winId = winId
+            } else {
+                //이미 다른 탭이 위너로 자리잡고 있음
+            }
             sessionStorage.pageShown = 'Y'
             document.addEventListener("visibilitychange", () => {
                 if (document.hidden) {
@@ -25,10 +48,21 @@
         }).catch(error => {
             alert(error)
         }) //.finally(() => {})
+
+        window.addEventListener("beforeunload", (e) => { 
+            if (!bc) return
+            if (sessionStorage.winId == winId) {
+                console.log("beforeunload@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@") //OK
+                sessionStorage.winId = '' //내가 위너면 내가 죽을 때 위너 자리 내놓음
+                bc.postMessage({ code: "dead" }) //winner is dead
+            } //내가 위너가 아니면 죽을 때 알릴 필요없음
+            bc.close()
+        })
     </script>
   </head>
   <body oncontextmenu="return false"><!-- 컨텍스트메뉴 만들어 사용하는데 .vue에서 .prevent가 안먹혀 여기서 일단 처리함 -->
     <div id="app"></div>
+    <div id="winid" style="display:none"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
