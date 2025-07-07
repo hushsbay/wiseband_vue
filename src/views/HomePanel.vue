@@ -456,10 +456,10 @@
         width:100%;height:50px;display:flex;justify-content:space-between;
     }
     .chan_side_top_left {
-        width:50%;height:100%;padding-left:10px;display:flex;align-items:center;
+        width:40%;height:100%;padding-left:10px;display:flex;align-items:center;
     }
     .chan_side_top_right {
-        width:50%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
+        width:60%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
     }
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;  

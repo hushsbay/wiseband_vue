@@ -12,7 +12,6 @@ const GeneralStore = defineStore('General', () => {
     const $cookie = inject('$cookies')
 
     let objSaved = ref({}) //현재는 MsgList에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
-
     let selSideMenu = ref(""), chanIdActivted = ref('')
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
@@ -133,6 +132,36 @@ const GeneralStore = defineStore('General', () => {
 
         getImageUrl : function(strFile) { //<template>의 <img>에서 사용
             return new URL('/src/assets/images/' + strFile, import.meta.url).href //예) import.meta.url => http://localhost:5173/src/views/current.vue?t=1730165570470
+        }
+
+    }
+
+    const noti = {
+
+        procNoti : async function(row) { //알림바는 tag(=채널단위)로 groupby되어 show
+            if (!hush.noti.rooms[row.CHANID]) {
+                const res = await axios.post("/chanmsg/qryMsg", { chanid: row.CHANID, msgid: row.MSGID })
+                const rs = util.chkAxiosCode(res.data, true)
+                if (rs) hush.noti.rooms[row.CHANID] = rs.data
+            }
+            const room = hush.noti.rooms[row.CHANID] //오로지 CHANNM 가져오려고 서버 호출하는 것임
+            const title = '[' + (room ? room.chanmst.CHANNM : hush.cons.appName) + ']'
+            const author = '작성자 : ' + row.USERNM + '\n'
+            const body = author + row.BODYTEXT //나중에 사용자 옵션에 따라 작성자와 본문을 보여줄지 말지 구현
+            const objNoti = new window.Notification(title, {
+                body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : '/src/assets/images/color_slacklogo.png', requireInteraction : true 
+            }) //아래 2행은 예비용 (향후 필요시 사용)           
+            //objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
+            //objNoti.chanid = row.CHANID
+            objNoti.onclick = function () {
+                if (!hush.noti.winForNoti.closed) {                                                
+                    hush.noti.winForNoti.focus()
+                    objNoti.close()
+                } else {
+                    alert("closed") //여기로 오는 경우는 없음 (해당 탭을 닫아도 다시 shown. 브라우저 닫아도 여기로 안옴)
+                }
+            }
+            if (!hush.noti.winForNoti) hush.noti.winForNoti = window
         }
 
     }
@@ -649,7 +678,7 @@ const GeneralStore = defineStore('General', () => {
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, chanIdActivted,
         snackBar, toast, bottomMsg, routeFrom, routeTo, routedToSamePanelFromMsgList,
-        auth, ctx, html, util,
+        auth, ctx, html, noti, util,
         //home, listHome, //selChanHome,
         //dm, listDm, kindDm,
         //listActivity, kindActivity, //cntActivity, 

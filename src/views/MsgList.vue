@@ -128,6 +128,9 @@
                                     }
                                 }
                             }
+                            if (sessionStorage.pageShown != 'Y') { //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
+                                gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
+                            }
                         } else if (row.CUD == "U") { //메시지 수정 : 수정된 메시지는 새로운 메시지가 아닌 안읽은 메시지로만 정의함
                             const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                             const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
@@ -1319,11 +1322,11 @@
             // } else if (appType == "dm") { 
             //     gst.dm.procFromBody("updateNotyetCnt", rq)
             // }
-            if (appType == "home" || appType == "dm") {
+            /*if (appType == "home" || appType == "dm") {
                 evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
-            }
+            }*/
             await listMsg('notyet')
-            window.close()
+            setTimeout(function() { window.close() }, 1000)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -2545,16 +2548,16 @@
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_search_image.png')">
                     <span style="margin-left:5px;font-weight:bold">이미지</span> 
                 </div>
-                <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu list_msg_unsel" @click="stressTest(true)">
-                    <span style="margin-left:5px;font-weight:bold">StressTest</span> 
-                </div>
                 <span v-if="adminShowID" style="color:darkblue;font-weight:bold;margin-left:20px">{{ msglist.length }}개</span>
                 <div v-if="tabForNewWin=='' || tabForNewWin=='notyet'" class="topMenu list_msg_unsel" @click="listMsg('notyet')">
                     <img class="coImg18" :src="gst.html.getImageUrl('dimgray_msg_notyet.png')">
                     <span style="margin-left:5px;font-weight:bold">아직안읽음</span> 
                 </div>
-                <div v-show="listMsgSel == 'notyet'" class="coImgBtn" @click="updateAllWithNewKind('notyet', 'read')" style="margin:0 0 4px 12px">
+                <div v-if="tabForNewWin=='notyet'"class="coImgBtn" @click="updateAllWithNewKind('notyet', 'read')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">모두읽음처리</span>
+                </div>
+                <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu list_msg_unsel" @click="stressTest(true)">
+                    <span style="margin-left:5px;font-weight:bold">StressTest</span> 
                 </div>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">

@@ -75,7 +75,7 @@
                 cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
                 if (arrForNotChanActivted.length > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
                     const len = arrForNotChanActivted.length
-                    for (let i = 0; i < len; i++) {
+                    for (let i = 0; i < len; i++) {                        
                         const row = arrForNotChanActivted[i]
                         if (gst.selSideMenu == "mnuHome") { //채널 단위로 읽음처리 관련만 전달하면 됨
                             await panelRef.value.procMainToPanel('updateNotyetCnt', row)
@@ -85,6 +85,9 @@
                             } else {
                                 await panelRef.value.procMainToPanel('refreshRow', row)
                             }
+                        }
+                        if (row.TYP == 'msg' && row.CUD == "C" && sessionStorage.pageShown != 'Y') {
+                            gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
                         }
                     }
                 }
@@ -349,7 +352,7 @@
                             </div>
                             <div class="coMenuText">{{ row.NM }}</div>
                             <div v-show="row.ID=='mnuHome'&&notyetCntHome>0" class="myNotYet" style="position:absolute;top:-2px;left:34px">{{ notyetCntHome > 99 ? '99!' : notyetCntHome }}</div>
-                            <div v-show="row.ID=='mnuDm'&&notyetCntDm>0" class="coMenuText" style="position:absolute;top:-2px;left:34px">{{ notyetCntDm > 99 ? '99!' : notyetCntDm }}</div>
+                            <div v-show="row.ID=='mnuDm'&&notyetCntDm>0" class="myNotYet" style="position:absolute;top:-2px;left:34px">{{ notyetCntDm > 99 ? '99!' : notyetCntDm }}</div>
                         </div>                      
                     </div>
                     <div v-show="seeMore" class="sideBottom"><!--sideTop안에 sideBottom에 들어 있으며 바로 아래는 sideTop과 sibling으로 sideBottom이 있음을 유의-->
@@ -362,8 +365,8 @@
                     </div>
                 </div>
                 <div class="sideBottom">
-                    <div class="menu" style="margin:0"><img class="menu32" :src="gst.html.getImageUrl('plus.png')"></div>
-                    <div class="menu" style="margin:0 0 8px 0"><img class="menu32" :src="gst.html.getImageUrl('user.png')"></div>
+                    <!-- <div class="menu" style="margin:0"><img class="menu32" :src="gst.html.getImageUrl('plus.png')"></div> -->
+                    <div class="menu" style="margin:0 0 16px 0"><img class="menu32" :src="gst.html.getImageUrl('user.png')"></div>
                 </div>
             </div>
             <div class="main">
