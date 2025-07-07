@@ -28,13 +28,44 @@
     //리얼타임 반영
     let panelRef = ref(null)
     let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 3000, TIMERSEC_WINNER = 10 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
+    //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
+    //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
+    //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
     let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref('')
+    let bc
 
-    async function chkDataLogEach() {
-        try {
-            if (winnerId.value != sessionStorage.winId) winnerId.value = sessionStorage.winId
+    //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
+    //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
+    //2개의 조합으로도 불안하므로 브라우저 강제종료 등의 예외 대비해 procLocalStorage 타이머로 체크 추가
+    //ckarhfh, Main.vue가 들어가는 탭은 사용자가 다른 탭에서 url을 치거나 복사해야 가능 (새창에서 열기 메뉴는 main.vue가 없는 MsgList.vue만 존재하므로 무시)
+    function procLocalStorage() {
+        if (!winId) return
+        let shouldSetNewWinId = false
+        if (!localStorage.winId) {
+            shouldSetNewWinId = true
+        } else { //이미 다른 탭이 위너로 자리잡고 있다고 봐야 하나 (자기자신이나 다른 탭이) 비정상적인 브라우저 종료로 미처 delete 안되었을 경우도 고려
+            if (localStorage.winId == winId) {
+                localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
+            } else {
+                const winDt = localStorage.winDt //localStorage.winId가 있으면 localStorage.winDt도 무조건 있다고 보기
+                const dtPrev = hush.util.getDateTimeStamp(winDt)
+                const sec = parseInt(((new Date()) - dtPrev) / 1000) //return seconds
+                if (sec > TIMERSEC_WINNER) shouldSetNewWinId = true //5초 지나면 위너가 업데이트 안하고 있는 것인데 (위너가 비정상 종료되어) 새로 위너에 도전하기
+            }
+        }
+        if (shouldSetNewWinId) {
+            localStorage.winId = winId
+            localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
+        }
+        if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
+        setTimeout(function() { procLocalStorage() }, TIMERSEC_SHORT)
+    }
+
+    async function chkDataLogEach() { //sessionStorage는 브라우저 탭 단위로 다름 (child window는 부모에 종속되는지 테스트 필요)
+        try { //어차피, sessionStorage의 realtimeJobDone/logdt/pageShown은 타이머에 속하고 타이머는 단 하나의 탭에서만 실행되므로 맞게 쓰이고 있음
+            if (localStorage.winId != winId) return
             if (sessionStorage.realtimeJobDone != 'Y') return //gst.util.setSnack 참조
             sessionStorage.realtimeJobDone = ''            
             logdt.value = sessionStorage.logdt //화면 표시용
@@ -95,6 +126,7 @@
             } else {
                 sessionStorage.realtimeJobDone = 'Y'
             }
+            bc.postMessage({ aaa:"111", bbb:"222" })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -117,10 +149,17 @@
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
     }
 
+    function getBroadcast(data) {
+        console.log(JSON.stringify(data))
+        
+    }
+
     onMounted(async () => {
-        try {            
+        try {   
+            bc = new BroadcastChannel("wbRealtime02")     
+            bc.onmessage = (e) => { getBroadcast(e.data) }    
             const tag = document.querySelector("#winid") //변하지 않는 값
-            winId = (tag) ? tag.innerText : 'error'
+            winId = (tag) ? tag.innerText : ''
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -147,6 +186,7 @@
             sideClickOnLoop(null, true)
             procTimerShort() 
             procTimerLong()
+            procLocalStorage() 
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -308,7 +348,7 @@
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;align-items:center;color:white">
-                <span>
+                <span v-show="winnerId == winId">
                     <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
                     <span style="margin-left:5px">[활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
                     <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>

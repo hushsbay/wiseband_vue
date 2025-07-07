@@ -53,6 +53,21 @@ const hush = {
             const maxInt = (!max && max != 0) ? 999999 : max
             return Math.floor(Math.random() * (maxInt - minInt)) + minInt //return min(inclusive) ~ max(exclusive) Integer only 
         },
+        getCurDateTimeStr : (deli, millisec) => {
+            const now = new Date()
+            let ret, _dot
+            if (deli) {
+                ret = now.getFullYear().toString() + "-" + (now.getMonth() + 1).toString().padStart(2, "0") + "-" + now.getDate().toString().padStart(2, "0") + " " + 
+                        now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0") + ":" + now.getSeconds().toString().padStart(2, "0")
+                _dot = "."      
+            } else {
+                ret = now.getFullYear().toString() + (now.getMonth() + 1).toString().padStart(2, "0") + now.getDate().toString().padStart(2, "0") + 
+                        now.getHours().toString().padStart(2, "0") + now.getMinutes().toString().padStart(2, "0") + now.getSeconds().toString().padStart(2, "0")
+                _dot = ""
+            }
+            if (millisec) ret += _dot + now.getMilliseconds().toString().padEnd(6, "0")
+            return ret
+        },
         getDateTimeStamp : (str) => { //str = 2012-08-02 14:12:04 (일자형식 체크해야 하나 일단 표준대로 들어온다는 전체하에 사용하기로 함)
             if (str.length != 19) return null
             const d = str.match(/\d+/g) //extract date parts
