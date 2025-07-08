@@ -174,8 +174,8 @@
                         }
                     }
                 } else { //채널이 다른 경우
-                    //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영은 Main.vue에서 처리되므로 여기로 들어오는 것은 로직 이상이 발생한 것임
-                    alert('로직 이상 : ' + row.CHANID + "/" + chanId)
+                    //1) 위너에서는 MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영은 Main.vue에서 처리되므로 여기로 들어오는 일은 없음
+                    //2) 그러나, 새창에서 열린 MsgList 단독에서는 해당 채널 데이터든 아니든 여기로 모두 들어오므로 자기 채널이 아닌 것은 여기서 그냥 skip하면 됨
                 }
             }
             if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
@@ -184,7 +184,7 @@
                 //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
             }
             if (cdtAtFirstForChild < hush.cons.cdtAtLast) {
-                msglistRef.value.procFromParent("addChildFromBody", { msgidReply: msgidAtFirstForChild })
+                if (msglistRef.value) msglistRef.value.procFromParent("addChildFromBody", { msgidReply: msgidAtFirstForChild })
             }
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
             if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
@@ -305,6 +305,7 @@
     /////////////////////////////////////////////////////////////////////////////////////
     
     function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
+        if (route.fullPath.includes('/body/msglist')) return //패널이 없는 경우임
         emits("ev-to-panel", param)
     }
 
@@ -353,6 +354,7 @@
     let newParentAdded = ref([]), newChildAdded = ref([])
     let timerShort = true, timeoutShort, timeoutLong, pageShown = 'Y'
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
+    let bc2, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -555,6 +557,32 @@
         }
     }*/
 
+    async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
+        try {
+            if (fifo.length > 0) {
+                const rsObj = { list: fifo[0] }
+                await chkDataLogEach(rsObj)
+                fifo.splice(0, 1)
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        } finally {
+            setTimeout(function() {
+                procRsObj()
+            }, 100)
+        }
+    }
+
+    function getBroadcast2(data) {
+        //console.log(JSON.stringify(data))
+        if (data.code == 'pollingToMsgList') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
+            //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
+            //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
+            fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
+            fifoLen.value = fifo.length
+        }
+    }
+
     onMounted(async () => { //HomePanel.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
         //그러나, 부모단에서 keepalive의 key를 잘못 설정하면 자식단에서 문제가 발생함 (심지어 onMounted가 2회 이상 발생)
         //예) Main.vue에서 <component :is="Component" :key="route.fullPath.split('/')[2]" />로 key 설정시 
@@ -617,6 +645,9 @@
                     //     pageShown = 'N' //sessionStorage.pageShown = 'N'
                     //     console.log("2222222222")
                     // }, false)
+                    bc2 = new BroadcastChannel("wbRealtime2")     
+                    bc2.onmessage = (e) => { getBroadcast2(e.data) }
+                    procRsObj()
                 }
             }
         } catch (ex) {
@@ -1357,6 +1388,7 @@
     async function addAllNew(strKind) { //home,dm에서만 버튼 보임
         let msgid, cdtAtFirst
         if (strKind == "P") { //Parent : 신규 부모글
+            debugger
             if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
             msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
             cdtAtFirst = newParentAdded.value[0].CDT
@@ -2564,6 +2596,9 @@
                 <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu list_msg_unsel" @click="stressTest(true)">
                     <span style="margin-left:5px;font-weight:bold">StressTest</span> 
                 </div>
+                <span v-show="route.fullPath.includes('/body/msglist')">
+                    <span>fifoLen : {{ fifoLen }}</span>
+                </span>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
                 <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget" :style="{ minHeight: showTopObserver ? '10px' : '0px', color:'transparent' }">{{ hush.cons.startOfData }}</div>

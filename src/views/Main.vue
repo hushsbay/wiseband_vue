@@ -35,7 +35,8 @@
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
     let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
     let realtimeJobDone, pageShown = 'Y'
-    let bc, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
+    let bc1, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
+    let bc2
 
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
     //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
@@ -81,7 +82,7 @@
             cntNotChanActivted.value = 0
             let rs
             if (rsObj) {
-                rs = rsObj
+                rs = rsObj //바로 아래 else에서 bc1.postMessage() 한 것을 위너가 아닌 탭에서 받은 것임
             } else {
                 const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt.value }) //sessionStorage.logdt })
                 rs = gst.util.chkAxiosCode(res.data, true)
@@ -89,7 +90,10 @@
                     realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y'
                     return
                 }
-                bc.postMessage({ code: 'polling', obj: rs })
+                bc1.postMessage({ code: 'polling', obj: rs })
+                if (rs.list.length > 0) {
+                    bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
+                }
             }
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
             const listByMenu = rs.data.listByMenu //GS와 WS의 notyet count 배열임
@@ -188,7 +192,7 @@
         }
     }
 
-    function getBroadcast(data) {
+    function getBroadcast1(data) {
         //console.log(JSON.stringify(data))
         if (data.code == 'polling') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
             //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
@@ -200,8 +204,9 @@
 
     onMounted(async () => {
         try {   
-            bc = new BroadcastChannel("wbRealtime02")     
-            bc.onmessage = (e) => { getBroadcast(e.data) }    
+            bc1 = new BroadcastChannel("wbRealtime1")     
+            bc1.onmessage = (e) => { getBroadcast1(e.data) } 
+            bc2 = new BroadcastChannel("wbRealtime2") //bc2.onmessage는 필요없음
             const tag = document.querySelector("#winid") //변하지 않는 값
             winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
             const res = await axios.post("/menu/qry", { kind : "side" })

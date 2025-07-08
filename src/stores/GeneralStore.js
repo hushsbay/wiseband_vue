@@ -12,6 +12,7 @@ const GeneralStore = defineStore('General', () => {
     const $cookie = inject('$cookies')
 
     let objSaved = ref({}) //현재는 MsgList에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
+    //let objNewOpenWin = ref({}) //새창으로 연 채널/DM방은 원래 열었던 Main.vue가 있는 화면에서는 화면이 뒤로 가도 알림이 안 울려야 함 (새창이 알림 관장)
     let selSideMenu = ref(""), chanIdActivted = ref('')
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
