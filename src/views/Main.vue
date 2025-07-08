@@ -33,8 +33,9 @@
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
     //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
-    let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref('')
-    let bc
+    let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
+    let realtimeJobDone
+    let bc, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
 
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
     //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
@@ -48,7 +49,7 @@
         } else { //이미 다른 탭이 위너로 자리잡고 있다고 봐야 하나 (자기자신이나 다른 탭이) 비정상적인 브라우저 종료로 미처 delete 안되었을 경우도 고려
             if (localStorage.winId == winId) {
                 localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
-            } else {
+            } else { //내가 위너가 아니면 위너의 widDt 체크해서 업데이트안되고 있다고 파악되면 여기 winId로 그자리 바로 차지해서 위너되기 (디버깅은 넘어가도 alert는 다른 서버호출도 중지시키므로 문제가 됨)
                 const winDt = localStorage.winDt //localStorage.winId가 있으면 localStorage.winDt도 무조건 있다고 보기
                 const dtPrev = hush.util.getDateTimeStamp(winDt)
                 const sec = parseInt(((new Date()) - dtPrev) / 1000) //return seconds
@@ -59,26 +60,36 @@
             localStorage.winId = winId
             localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
         }
+        if (localStorage.winId == winId) {
+            isWinner = true
+        } else {
+            isWinner = false
+        }
         if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
         setTimeout(function() { procLocalStorage() }, TIMERSEC_SHORT)
     }
 
-    async function chkDataLogEach() { //sessionStorage는 브라우저 탭 단위로 다름 (child window는 부모에 종속되는지 테스트 필요)
-        try { //어차피, sessionStorage의 realtimeJobDone/logdt/pageShown은 타이머에 속하고 타이머는 단 하나의 탭에서만 실행되므로 맞게 쓰이고 있음
-            if (localStorage.winId != winId) return
-            if (sessionStorage.realtimeJobDone != 'Y') return //gst.util.setSnack 참조
-            sessionStorage.realtimeJobDone = ''            
-            logdt.value = sessionStorage.logdt //화면 표시용
+    async function chkDataLogEach(rsObj) {
+        try {
+            if (realtimeJobDone != 'Y') return //if (sessionStorage.realtimeJobDone != 'Y') return
+            realtimeJobDone = '' //sessionStorage.realtimeJobDone = ''
+            //logdt.value = sessionStorage.logdt //화면 표시용
             logdtColor.value = logdtColor.value == 'yellow' ? 'lightgreen' : 'yellow' //화면 표시용
             let arrForChanActivted = []
             let arrForNotChanActivted = []
             cntChanActivted.value = 0
             cntNotChanActivted.value = 0
-            const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : sessionStorage.logdt })
-            const rs = gst.util.chkAxiosCode(res.data, true)
-            if (!rs) {
-                sessionStorage.realtimeJobDone = 'Y'
-                return
+            let rs
+            if (rsObj) {
+                rs = rsObj
+            } else {
+                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt.value }) //sessionStorage.logdt })
+                rs = gst.util.chkAxiosCode(res.data, true)
+                if (!rs) {
+                    realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y'
+                    return
+                }
+                bc.postMessage({ code: 'polling', obj: rs })
             }
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
             const listByMenu = rs.data.listByMenu //GS와 WS의 notyet count 배열임
@@ -116,17 +127,21 @@
                     }
                 }
                 if (arrForChanActivted.length > 0) {
-                    console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
-                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt })
+                    //console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
+                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async/await 동작함 (동기화 가능)
+                    //위 실행하여 MsgList.vue까지 가서 처리후 console.log 찍고 여기 아래 console.log 찍으면 순서바뀌지 않고 제대로 찍힘
+                    //따라서, sessionStorage.logdt는 그냥 여기 변수로 logdt로 잡고 sessionStorage.realtimeJobDone은 제거해도 되나 일단 막아두기만 함
+                    //console.log("logdt444444==="+rs.data.logdt)
                 } else { //바로 위 루틴에서 logdt를 sessionStorage.logdt으로부터 가져오는데 이게 그 위 if (arrForNotChanActivted > 0) 조건도 같이 체크해서
                     //마지막으로 끝나는 싯점에 맞춰 sessionStorage.logdt = obj.logdt으로 처리해야 다음에 읽어올 logdt가 흐트러지지 않음
-                    sessionStorage.logdt = rs.data.logdt
-                    sessionStorage.realtimeJobDone = 'Y'
+                    //sessionStorage.logdt = rs.data.logdt
+                    //sessionStorage.realtimeJobDone = 'Y'
                 }
+                logdt.value = rs.data.logdt
             } else {
-                sessionStorage.realtimeJobDone = 'Y'
+                //sessionStorage.realtimeJobDone = 'Y'
             }
-            bc.postMessage({ aaa:"111", bbb:"222" })
+            realtimeJobDone = 'Y' //추가
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -136,7 +151,11 @@
         //요점 : 페이지가 보이면 최단시간 타이머 안보이면 타이머 갭을 늘리기 : 하나의 window 객체에 Main.vue의 timer가 돌아가는 것은 오직 1개만 가능하도록 함
         //vue-observe-visibility npm 굳이 사용하지 않고도 pageShown으로 처리 가능
         //sessionStorage.pageShown은 document.hidden(index.html) 참조. hot deploy시 타이머가 더 생기는지 체크 필요 (아래 .bind(this) 적용 테스트 더 해보기)
-        if (timerShort) await chkDataLogEach()
+        if (timerShort) {
+            if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
+                await chkDataLogEach()
+            }
+        }
         timerShort = (sessionStorage.pageShown == 'Y') ? true : false
         //timeoutShort = setTimeout(function() { procTimerShort() }.bind(this), TIMERSEC_SHORT)
         timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT)
@@ -144,14 +163,39 @@
 
     async function procTimerLong() {
         //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
-        if (!timerShort) await chkDataLogEach()
+        if (!timerShort) {
+            if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
+                await chkDataLogEach()
+            }
+        }
         //timeoutLong = setTimeout(function() { procTimerLong() }.bind(this), TIMERSEC_LONG)             
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
     }
 
+    async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
+        try {
+            if (fifo.length > 0) {
+                const rsObj = fifo[0] //if (rsObj.list.length)
+                await chkDataLogEach(rsObj)
+                fifo.splice(0, 1)
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        } finally {
+            setTimeout(function() {
+                procRsObj()
+            }, 100)
+        }
+    }
+
     function getBroadcast(data) {
-        console.log(JSON.stringify(data))
-        
+        //console.log(JSON.stringify(data))
+        if (data.code == 'polling') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
+            //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
+            //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
+            fifo.push(data.obj)
+            fifoLen.value = fifo.length
+        }
     }
 
     onMounted(async () => {
@@ -159,13 +203,13 @@
             bc = new BroadcastChannel("wbRealtime02")     
             bc.onmessage = (e) => { getBroadcast(e.data) }    
             const tag = document.querySelector("#winid") //변하지 않는 값
-            winId = (tag) ? tag.innerText : ''
+            winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            sessionStorage.realtimeJobDone = 'Y' 
+            realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y' 
             //if (!sessionStorage.logdt) { //9999-99-99로 잘못들어간 적이 있는데 변경할 밥업이 없음
-                sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
+                logdt.value = rs.data.dbdt //sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
             //}
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USERID != null)
@@ -184,9 +228,29 @@
             // const row = listSel.value[idxReal]
             // sideClick(lastSelMenu, row, true)
             sideClickOnLoop(null, true)
+            procLocalStorage() 
             procTimerShort() 
             procTimerLong()
-            procLocalStorage() 
+            procRsObj()
+            document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
+                //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
+                if (document.hidden) {
+                    //sessionStorage.pageShown = 'N'
+                    console.log("33333333333")
+                } else {
+                    //sessionStorage.pageShown = 'Y'
+                    console.log("44444444444")
+                }
+            })
+            //임시로 막음. 테스트 마치면 풀기
+            window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
+                //sessionStorage.pageShown = 'Y'
+                console.log("111111111")
+            }, false)
+            window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
+                //sessionStorage.pageShown = 'N'
+                console.log("2222222222")
+            }, false)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -342,6 +406,10 @@
         ka.delete(menu) //const appType = route.fullPath.split("/")[2] //arr[2] = home,dm 등..
         sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
     }
+
+    function test() {
+        alert("11111")
+    }
 </script>
 
 <template>
@@ -349,11 +417,15 @@
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;align-items:center;color:white">
                 <span v-show="winnerId == winId">
-                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdt.substring(11, 19) }}</span><span>{{ logdt.substring(19) }}]</span>
+                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdt ? logdt.substring(11, 19) : '' }}</span>
+                    <span>{{ logdt ? logdt.substring(19) : '' }}]</span>
                     <span style="margin-left:5px">[활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
                     <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>
                     <span style="margin-left:5px">winner : {{ winnerId }}</span>
                     <span style="margin-left:5px">this tab : {{ winId }}</span>
+                </span>
+                <span v-show="winnerId != winId">
+                    <span>fifoLen : {{ fifoLen }}</span>
                 </span>
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
@@ -369,7 +441,7 @@
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
-                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center">
+                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center" @click="test">
                         <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
                     </div>
                     <div id="sideTop" class="sideTop">

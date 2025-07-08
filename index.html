@@ -11,7 +11,7 @@
         function getCurDateTimeStr() {
             const now = new Date()
             let ret = now.getFullYear().toString() + "-" + (now.getMonth() + 1).toString().padStart(2, "0") + "-" + now.getDate().toString().padStart(2, "0") + " " + 
-                        now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0") + ":" + now.getSeconds().toString().padStart(2, "0")
+                      now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0") + ":" + now.getSeconds().toString().padStart(2, "0")
             return ret
         }
 
@@ -57,18 +57,11 @@
             tag.innerText = winId //Main.vue에 전달
             procLocalStorage()
             sessionStorage.pageShown = 'Y'
-            document.addEventListener("visibilitychange", () => {
-                if (document.hidden) {
-                    sessionStorage.pageShown = 'N'
-                } else {
-                    sessionStorage.pageShown = 'Y'
-                }
-            })
         }).catch(error => {
             alert(error)
         }) //.finally(() => {})
 
-        window.addEventListener("beforeunload", (e) => { 
+        window.addEventListener("beforeunload", (e) => { //Main.vue에서는 구현 어려워 여기서 locaStorage로 각 탭의 Main.vue와 통신함
             if (!bc) return
             if (localStorage.winId == winId) { //console.log("beforeunload") //OK
                 delete localStorage.winId //내가 위너면 내가 죽을 때 위너 자리 내놓음

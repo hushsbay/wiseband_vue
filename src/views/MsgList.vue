@@ -188,10 +188,10 @@
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
             if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
             if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
-            console.log(obj.logdt+"@@@@@33")
-            sessionStorage.realtimeJobDone = 'Y'
-            sessionStorage.logdt = obj.logdt
-            logdt.value = obj.logdt //테스트용 //rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
+            //console.log("@@@@@33")
+//            sessionStorage.realtimeJobDone = 'Y'
+//            sessionStorage.logdt = obj.logdt
+//            logdt.value = obj.logdt //테스트용 //rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
             //tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -347,7 +347,8 @@
     let searchUser = '', searchText = ref('') //keyup 이벤트의 한글 문제때문에 searchuser 사용(현재는 keyup마다 axios호출안함). searchText는 procClearSearch에만 사용
 
     //실시간 반영
-    let logdt = ref(''), realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
+    //let logdt = ref(''), 
+    let realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
     let timerShort = true, timeoutShort, timeoutLong
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
@@ -420,24 +421,6 @@
             root: document.querySelector("#chan_center_body")
         }*/) //처음 가져와서 데이터가 딱 아래까지만 찼을 때 맨 아래 스크롤시 계속 빠르게 깜빡임 : 바로 위 getList() 계속 실행함 => 상단/하단 무한 스크롤 있는 MsgList.vue에서만 나타나는 현상
         observerBottom.value.observe(observerBottomTarget.value)
-    }
-
-    async function procTimerShort() { //MsgList는 각 채널이 열려 있는 것이고 이 timer의 목적은 해당 채널 데이터의 리얼타임 반영임
-        //요점 : 페이지가 보이면 최단시간 타이머 안보이면 타이머 갭을 늘리기. MsgList가 Deactived()되면 타이머 제거. Activated되면 다시 타이머 실행
-        //      => 하나의 window 객체에 MsgList의 timer가 돌아가는 것은 오직 1개만 가능하도록 함
-        //vue-observe-visibility npm 굳이 사용하지 않고도 pageShown으로 처리 가능
-        //sessionStorage.pageShown은 document.hidden(index.html) 참조. hot deploy시 타이머가 더 생기는지 체크 필요 (아래 .bind(this) 적용 테스트 더 해보기)
-        if (timerShort) await chkDataLog()
-        timerShort = (sessionStorage.pageShown == 'Y') ? true : false
-        //timeoutShort = setTimeout(function() { procTimerShort() }.bind(this), TIMERSEC_SHORT)
-        timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT)
-    }
-
-    async function procTimerLong() {
-        //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
-        if (!timerShort) await chkDataLog()
-        //timeoutLong = setTimeout(function() { procTimerLong() }.bind(this), TIMERSEC_LONG)             
-        timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
     }
 
     //let tempcolor = ref('blue')
@@ -613,6 +596,27 @@
                 //if (logdt.value == "") logdt.value = rs.data.dbdt
                 //procTimerShort()
                 //procTimerLong()
+                if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가
+                    document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
+                        //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
+                        if (document.hidden) {
+                            //sessionStorage.pageShown = 'N'
+                            console.log("33333333333")
+                        } else {
+                            //sessionStorage.pageShown = 'Y'
+                            console.log("44444444444")
+                        }
+                    })
+                    //임시로 막음. 테스트 마치면 풀기
+                    window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
+                        //sessionStorage.pageShown = 'Y'
+                        console.log("111111111")
+                    }, false)
+                    window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
+                        //sessionStorage.pageShown = 'N'
+                        console.log("2222222222")
+                    }, false)
+                }
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
