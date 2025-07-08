@@ -37,6 +37,7 @@
             //대신에 Main.vue(타이머) > 각 패널.vue > MagList로 전달되는 흐름에서는 MsgList가 라우팅되어 백단으로 가더라도 타이머가 없으니 데이터가 전달되지 않고 현재 패널과 연결되어 있는 MsgList의 
             //라우팅 채널으로만 (리얼타임반영 데이터가) 전달되므로 훨씬 효율적임 (onActivated/Deactivated에서 타이머를 끄고 켤 필요가 없음)
             const arr = obj.list
+            const isPageShown = obj.pageShown ? obj.pageShown : pageShown
             const len = arr.length
             let cdtBottom
             const eleBottom = getBottomMsgBody()
@@ -99,7 +100,7 @@
                         if (row.CUD == "C") {
                             if (row.KIND == "parent") { //서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
                                 //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
-                                if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
+                                if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || isPageShown != 'Y') {  //sessionStorage.pageShown != 'Y') { 
                                     //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
                                     if (row.USERID != g_userid) {
                                         newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
@@ -128,7 +129,7 @@
                                     }
                                 }
                             }
-                            if (sessionStorage.pageShown != 'Y') { //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
+                            if (isPageShown != 'Y') { //if (sessionStorage.pageShown != 'Y') { //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
                                 gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
                             }
                         } else if (row.CUD == "U") { //메시지 수정 : 수정된 메시지는 새로운 메시지가 아닌 안읽은 메시지로만 정의함
@@ -350,7 +351,7 @@
     //let logdt = ref(''), 
     let realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
-    let timerShort = true, timeoutShort, timeoutLong
+    let timerShort = true, timeoutShort, timeoutLong, pageShown = 'Y'
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -600,22 +601,22 @@
                     document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                         //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                         if (document.hidden) {
-                            //sessionStorage.pageShown = 'N'
-                            console.log("33333333333")
+                            pageShown = 'N' //sessionStorage.pageShown = 'N'
+                            console.log("33333333333MsgList")
                         } else {
-                            //sessionStorage.pageShown = 'Y'
-                            console.log("44444444444")
+                            pageShown = 'Y' //sessionStorage.pageShown = 'Y'
+                            console.log("44444444444MsgList")
                         }
                     })
                     //임시로 막음. 테스트 마치면 풀기
-                    window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
-                        //sessionStorage.pageShown = 'Y'
-                        console.log("111111111")
-                    }, false)
-                    window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
-                        //sessionStorage.pageShown = 'N'
-                        console.log("2222222222")
-                    }, false)
+                    // window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
+                    //     pageShown = 'Y' //sessionStorage.pageShown = 'Y'
+                    //     console.log("111111111")
+                    // }, false)
+                    // window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
+                    //     pageShown = 'N' //sessionStorage.pageShown = 'N'
+                    //     console.log("2222222222")
+                    // }, false)
                 }
             }
         } catch (ex) {

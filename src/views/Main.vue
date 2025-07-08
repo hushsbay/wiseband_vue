@@ -28,13 +28,13 @@
     //리얼타임 반영
     let panelRef = ref(null)
     let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 3000, TIMERSEC_WINNER = 10 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000, TIMERSEC_WINNER = 10 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
     //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
     //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
     let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
     let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
-    let realtimeJobDone
+    let realtimeJobDone, pageShown = 'Y'
     let bc, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
 
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
@@ -121,14 +121,14 @@
                                 await panelRef.value.procMainToPanel('refreshRow', row)
                             }
                         }
-                        if (row.TYP == 'msg' && row.CUD == "C" && sessionStorage.pageShown != 'Y') {
+                        if (row.TYP == 'msg' && row.CUD == "C" && pageShown != 'Y') { //sessionStorage.pageShown != 'Y') {
                             gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
                         }
                     }
                 }
                 if (arrForChanActivted.length > 0) {
                     //console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
-                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async/await 동작함 (동기화 가능)
+                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt, pageShown: pageShown }) //async/await 동작함 (동기화 가능)
                     //위 실행하여 MsgList.vue까지 가서 처리후 console.log 찍고 여기 아래 console.log 찍으면 순서바뀌지 않고 제대로 찍힘
                     //따라서, sessionStorage.logdt는 그냥 여기 변수로 logdt로 잡고 sessionStorage.realtimeJobDone은 제거해도 되나 일단 막아두기만 함
                     //console.log("logdt444444==="+rs.data.logdt)
@@ -156,7 +156,7 @@
                 await chkDataLogEach()
             }
         }
-        timerShort = (sessionStorage.pageShown == 'Y') ? true : false
+        timerShort = (pageShown == 'Y') ? true : false //timerShort = (sessionStorage.pageShown == 'Y') ? true : false
         //timeoutShort = setTimeout(function() { procTimerShort() }.bind(this), TIMERSEC_SHORT)
         timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT)
     }
@@ -235,22 +235,22 @@
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                 if (document.hidden) {
-                    //sessionStorage.pageShown = 'N'
-                    console.log("33333333333")
+                    pageShown = 'N' //sessionStorage.pageShown = 'N'
+                    console.log("Main1111111111")
                 } else {
-                    //sessionStorage.pageShown = 'Y'
-                    console.log("44444444444")
+                    pageShown = 'Y' //sessionStorage.pageShown = 'Y'
+                    console.log("Main2222222222222")
                 }
             })
             //임시로 막음. 테스트 마치면 풀기
-            window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
-                //sessionStorage.pageShown = 'Y'
-                console.log("111111111")
-            }, false)
-            window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
-                //sessionStorage.pageShown = 'N'
-                console.log("2222222222")
-            }, false)
+            // window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
+            //     pageShown = 'Y' //sessionStorage.pageShown = 'Y'
+            //     console.log("111111111")
+            // }, false)
+            // window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
+            //     pageShown = 'N' //sessionStorage.pageShown = 'N'
+            //     console.log("2222222222")
+            // }, false)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
