@@ -13,7 +13,7 @@ const GeneralStore = defineStore('General', () => {
 
     let objSaved = ref({}) //현재는 MsgList에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
     //let objNewOpenWin = ref({}) //새창으로 연 채널/DM방은 원래 열었던 Main.vue가 있는 화면에서는 화면이 뒤로 가도 알림이 안 울려야 함 (새창이 알림 관장)
-    let selSideMenu = ref(""), chanIdActivted = ref('')
+    let selSideMenu = ref(""), chanIdActivted = ref(''), objByChanId = ref({})
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const bottomMsg = ref(''),  routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
@@ -587,7 +587,7 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
-        getUrlForBodyListNewWin : function(chanid, msgid, appType) {
+        getUrlForBodyListNewWin : function(chanid, msgid, appType) { //새창열기시 사이드메뉴,패널도 모두 보여주려면 홈에서는 가능한데 DM등에서는 무한스크롤후 가져온 메시지는 패널에 해당 데이터를 가져오기 난해함
             //const url = location.protocol + "//" + location.host + "/body/msglist/" + chanid + "/" + msgid + "?appType=" + appType
             let url = "/body/msglist/" + chanid + "/" + msgid
             if (appType) url += "?appType=" + appType
@@ -677,7 +677,7 @@ const GeneralStore = defineStore('General', () => {
     
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-        objSaved, selSideMenu, chanIdActivted,
+        objSaved, selSideMenu, chanIdActivted, objByChanId, //objByChanId는 Main.vue에서만 추가/삭제 가능하면 다른데에서는 읽기만 하기
         snackBar, toast, bottomMsg, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, noti, util,
         //home, listHome, //selChanHome,

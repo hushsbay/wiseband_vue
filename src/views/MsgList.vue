@@ -37,7 +37,7 @@
             //대신에 Main.vue(타이머) > 각 패널.vue > MagList로 전달되는 흐름에서는 MsgList가 라우팅되어 백단으로 가더라도 타이머가 없으니 데이터가 전달되지 않고 현재 패널과 연결되어 있는 MsgList의 
             //라우팅 채널으로만 (리얼타임반영 데이터가) 전달되므로 훨씬 효율적임 (onActivated/Deactivated에서 타이머를 끄고 켤 필요가 없음)
             const arr = obj.list
-            const isPageShown = obj.pageShown ? obj.pageShown : pageShown
+            const isPageShown = (fakeShown == 'Y') ? fakeShown : pageShown
             const len = arr.length
             let cdtBottom
             const eleBottom = getBottomMsgBody()
@@ -128,7 +128,7 @@
                                         }
                                     }
                                 }
-                            }
+                            }                            
                             if (isPageShown != 'Y') { //if (sessionStorage.pageShown != 'Y') { //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
                                 gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
                             }
@@ -352,7 +352,7 @@
     //let logdt = ref(''), 
     let realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
-    let timerShort = true, timeoutShort, timeoutLong, pageShown = 'Y'
+    let timerShort = true, timeoutShort, timeoutLong, pageShown = 'Y', fakeShown = 'N'
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
     let bc2, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
 
@@ -573,13 +573,25 @@
         }
     }
 
-    function getBroadcast2(data) {
-        //console.log(JSON.stringify(data))
+    function setFakeShown() { //pageShown일 때, 혹시 hidden으로 있을 MsgList만의 새창이 여기 Main과 같은 chanid를 가지면 그것도 (눈에는 보이지 않겠지만) fakeShown=Y로 설정해서 
+        //알림 등으로 처리하지 말고 데이터를 실시간으로 받아야 여기 chanid가 같은 창과 데이터 동기화가 이루어짐 (그쪽에서도 반대의 경우로 코딩 필요)
+        bc2.postMessage({ code: 'setFakeShown', value: pageShown, chanid: chanId })
+    }
+
+    function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
         if (data.code == 'pollingToMsgList') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
             //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
             //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
             fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
             fifoLen.value = fifo.length
+        } else if (data.code == 'setFakeShown') { //Main.vue의 bc2 참조
+            if (data.chanid == chanId) { //fakeShown = data.value //MsgList.vue도 같은 chanid로 여러개가 떠 있을 수 있어 충돌날 것임
+                if (!gst.objByChanId[gst.chanIdActivted]) {
+                    gst.objByChanId[gst.chanIdActivted] = { fakeShown : data.value }
+                } else {
+                    gst.objByChanId[gst.chanIdActivted].fakeShown = data.value
+                }
+            }
         }
     }
 
@@ -629,23 +641,21 @@
                     document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                         //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                         if (document.hidden) {
-                            pageShown = 'N' //sessionStorage.pageShown = 'N'
-                            console.log("33333333333MsgList")
+                            pageShown = 'N'
                         } else {
-                            pageShown = 'Y' //sessionStorage.pageShown = 'Y'
-                            console.log("44444444444MsgList")
+                            pageShown = 'Y'
                         }
-                    })
-                    //임시로 막음. 테스트 마치면 풀기
-                    // window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
-                    //     pageShown = 'Y' //sessionStorage.pageShown = 'Y'
-                    //     console.log("111111111")
-                    // }, false)
-                    // window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
-                    //     pageShown = 'N' //sessionStorage.pageShown = 'N'
-                    //     console.log("2222222222")
-                    // }, false)
-                    bc2 = new BroadcastChannel("wbRealtime2")     
+                        setFakeShown()
+                    }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
+                    window.addEventListener('focus', function() {
+                        pageShown = 'Y' 
+                        setFakeShown()
+                    }, false)
+                    window.addEventListener('blur', function() {
+                        pageShown = 'N' 
+                        setFakeShown()
+                    }, false)
+                    bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
                     bc2.onmessage = (e) => { getBroadcast2(e.data) }
                     procRsObj()
                 }
@@ -1150,7 +1160,6 @@
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {
                 //const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=" + appType
-                //window.open(url)
                 window.open(url)
             }},
             { nm: textRead, disable: disableStr, func: function(item, idx) {
@@ -2508,7 +2517,7 @@
                     </div>
                     <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom(dmChanIdAlready, true)">
                         <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
-                        <span class="coImgSpn">기존 DM방 새창으로 열기 </span>
+                        <span class="coImgSpn">기존 DM방 새창으로 열기</span>
                     </div>
                 </div>
                 <div style="margin-top:20px">1. DM방을 새로 만듭니다.</div>

@@ -50,7 +50,7 @@
         }
 
         start.then(() => {
-            bc = new BroadcastChannel("wbRealtime") //index.html간의 통신
+            bc = new BroadcastChannel("wbRealtime") //각탭의 index.html <=> index.html
             bc.onmessage = (e) => { getBroadcast(e.data) }
             winId = Math.floor(Math.random() * (999999 - 100000)) + 100000
             const tag = document.querySelector("#winid")

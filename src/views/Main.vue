@@ -32,9 +32,9 @@
     //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
     //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
-    let logdt = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
+    let logdt = '', logdtDisp = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
     let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
-    let realtimeJobDone, pageShown = 'Y'
+    let realtimeJobDone, pageShown = 'Y', fakeShown = 'N'
     let bc1, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
     let bc2
 
@@ -70,11 +70,28 @@
         setTimeout(function() { procLocalStorage() }, TIMERSEC_SHORT)
     }
 
+    /* 
+       리얼타임 반영은 폴링으로 일단 처리되고 있고, 여러 개의 창에 Main.vue가 있는 것과 MagList.vue만 있는 것이 복수로 혼재되어 있는 구조인데
+       이 경우, 동일한 채널이 각각 창에 2-3개 있을 경우는 그 중에 하나만 사용자 육안으로 보일 경우는 나머지도 pageShown으로 정의해야 알림이 안오게 됨 (알림이 오면 사용자 불편)
+       이를 구현하기 위해 아래와 같이 방안을 마련함 (예를 들어, A,B,C,D 창이 있고 A,B,C가 같은 채널일 때)
+       1. 먼저 A의 이벤트에서 pageShown 값이 변경되면 단순 변경됨이라고 방송(BroadCast)함 : pageShownChanged(파라미터 필요없음)로 B,C,D로 방송
+       2. 받은 B,C,D는 현재 채널아이디와 pageShown 값을 A,B,C,D로 방송 : informCurPageShown(파라미터 = chanid and Y/N)
+       3. 본인 값과 받은 값을 합해서 채널별로 그 중에 하나라도 pageShown 값이 Y이면 Y로 정해서 gst.objChanId(공유객체-채널별관리)에 정리,저장함
+       4. 나중에 리얼타임 반영시 알림 여부 결정할 때 gst.objChanId의 pageShown 값이 Y이면 (여러개중 하나라도 Y이면) 알림을 표시하지 않기로 함
+       ** 다만, bc1은 각탭의 Main.vue <=> Main.vue 통신이고 bc2는 각탭의 Main.vue <=> MsgList.vue 이므로 이 두개의 bc를 함께 사용해야 하는 불편은 있음
+       ** 또한, 방송후 피드백(onmessage callback)을 PromiseAll로 구현해야 그 싯점에 정리가능한데 당장 쉽지 않아서 일단 타이머 0.5초이후 정리하기로 함 (그 안에 오는 알림이 표시안되면 좋은데 되는 불편 살짝..)
+    */
+
+    function setFakeShown(val) { //pageShown일 때, 혹시 hidden으로 있을 MsgList만의 새창이 여기 Main과 같은 chanid를 가지면 그것도 (눈에는 보이지 않겠지만) fakeShown=Y로 설정해서 
+        //알림 등으로 처리하지 말고 데이터를 실시간으로 받아야 여기 chanid가 같은 창과 데이터 동기화가 이루어짐 (그쪽에서도 반대의 경우로 코딩 필요)
+        bc2.postMessage({ code: 'setFakeShown', value: val, chanid: gst.chanIdActivted })
+    }
+
     async function chkDataLogEach(rsObj) {
         try {
             if (realtimeJobDone != 'Y') return //if (sessionStorage.realtimeJobDone != 'Y') return
             realtimeJobDone = '' //sessionStorage.realtimeJobDone = ''
-            //logdt.value = sessionStorage.logdt //화면 표시용
+            logdtDisp.value = logdt //logdt.value = sessionStorage.logdt //화면 표시용
             logdtColor.value = logdtColor.value == 'yellow' ? 'lightgreen' : 'yellow' //화면 표시용
             let arrForChanActivted = []
             let arrForNotChanActivted = []
@@ -84,7 +101,7 @@
             if (rsObj) {
                 rs = rsObj //바로 아래 else에서 bc1.postMessage() 한 것을 위너가 아닌 탭에서 받은 것임
             } else {
-                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt.value }) //sessionStorage.logdt })
+                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt }) //sessionStorage.logdt })
                 rs = gst.util.chkAxiosCode(res.data, true)
                 if (!rs) {
                     realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y'
@@ -125,14 +142,14 @@
                                 await panelRef.value.procMainToPanel('refreshRow', row)
                             }
                         }
-                        if (row.TYP == 'msg' && row.CUD == "C" && pageShown != 'Y') { //sessionStorage.pageShown != 'Y') {
+                        if (row.TYP == 'msg' && row.CUD == "C" && pageShown != 'Y') {
                             gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
                         }
                     }
                 }
                 if (arrForChanActivted.length > 0) {
                     //console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
-                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt, pageShown: pageShown }) //async/await 동작함 (동기화 가능)
+                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async/await 동작함 (동기화 가능)
                     //위 실행하여 MsgList.vue까지 가서 처리후 console.log 찍고 여기 아래 console.log 찍으면 순서바뀌지 않고 제대로 찍힘
                     //따라서, sessionStorage.logdt는 그냥 여기 변수로 logdt로 잡고 sessionStorage.realtimeJobDone은 제거해도 되나 일단 막아두기만 함
                     //console.log("logdt444444==="+rs.data.logdt)
@@ -141,7 +158,7 @@
                     //sessionStorage.logdt = rs.data.logdt
                     //sessionStorage.realtimeJobDone = 'Y'
                 }
-                logdt.value = rs.data.logdt
+                logdt = rs.data.logdt
             } else {
                 //sessionStorage.realtimeJobDone = 'Y'
             }
@@ -202,11 +219,24 @@
         }
     }
 
+    function getBroadcast2(data) {
+        if (data.code == 'setFakeShown') { //Main.vue의 bc2 참조
+            if (data.chanid == gst.chanIdActivted ) { //fakeShown = data.value //각 MsgList.vue에서 보내오는 것이므로 여러개가 충돌날 것임
+                if (!gst.objByChanId[gst.chanIdActivted]) {
+                    gst.objByChanId[gst.chanIdActivted] = { fakeShown : data.value }
+                } else {
+                    gst.objByChanId[gst.chanIdActivted].fakeShown = data.value
+                }
+            }
+        }
+    }
+
     onMounted(async () => {
         try {   
-            bc1 = new BroadcastChannel("wbRealtime1")     
-            bc1.onmessage = (e) => { getBroadcast1(e.data) } 
-            bc2 = new BroadcastChannel("wbRealtime2") //bc2.onmessage는 필요없음
+            bc1 = new BroadcastChannel("wbRealtime1") //각탭의 Main.vue <=> Main.vue
+            bc1.onmessage = (e) => { getBroadcast1(e.data) }
+            bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue
+            bc2.onmessage = (e) => { getBroadcast2(e.data) }
             const tag = document.querySelector("#winid") //변하지 않는 값
             winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
             const res = await axios.post("/menu/qry", { kind : "side" })
@@ -214,7 +244,7 @@
             if (!rs) return
             realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y' 
             //if (!sessionStorage.logdt) { //9999-99-99로 잘못들어간 적이 있는데 변경할 밥업이 없음
-                logdt.value = rs.data.dbdt //sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
+                logdt = rs.data.dbdt //sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
             //}
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USERID != null)
@@ -240,22 +270,23 @@
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                 if (document.hidden) {
-                    pageShown = 'N' //sessionStorage.pageShown = 'N'
-                    console.log("Main1111111111")
+                    pageShown = 'N'                    
                 } else {
-                    pageShown = 'Y' //sessionStorage.pageShown = 'Y'
-                    console.log("Main2222222222222")
+                    pageShown = 'Y'                    
                 }
-            })
-            //임시로 막음. 테스트 마치면 풀기
-            // window.addEventListener('focus', function() { //이 두개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임
-            //     pageShown = 'Y' //sessionStorage.pageShown = 'Y'
-            //     console.log("111111111")
-            // }, false)
-            // window.addEventListener('blur', function() { //제대로 테스트하려면 2대를 놓고 해야 함
-            //     pageShown = 'N' //sessionStorage.pageShown = 'N'
-            //     console.log("2222222222")
-            // }, false)
+                setFakeShown(pageShown)
+                console.log("pageShown")
+            }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
+            window.addEventListener('focus', function() {
+                pageShown = 'Y'
+                setFakeShown(pageShown)
+                console.log("focus")
+            }, false)
+            window.addEventListener('blur', function() {
+                pageShown = 'N'
+                setFakeShown(pageShown)
+                console.log("blur")
+            }, false)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -422,8 +453,8 @@
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;align-items:center;color:white">
                 <span v-show="winnerId == winId">
-                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdt ? logdt.substring(11, 19) : '' }}</span>
-                    <span>{{ logdt ? logdt.substring(19) : '' }}]</span>
+                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdtDisp ? logdtDisp.substring(11, 19) : '' }}</span>
+                    <span>{{ logdtDisp ? logdtDisp.substring(19) : '' }}]</span>
                     <span style="margin-left:5px">[활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
                     <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>
                     <span style="margin-left:5px">winner : {{ winnerId }}</span>
