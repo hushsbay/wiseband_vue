@@ -106,7 +106,6 @@
                 bc1.postMessage({ code: 'polling', obj: rs })
                 if (rs.list.length > 0) {
                     bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
-                    debugger
                 }
             }
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
@@ -283,7 +282,7 @@
                 gst.objByChanId[item.chanid].realShown = item.pageShown
             }
         } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
-        console.log("####"+gst.objByChanId["20250705111453478357041152"].realShown)
+        if (gst.objByChanId["20250705111453478357041152"]) console.log("####"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
 
     onMounted(async () => {

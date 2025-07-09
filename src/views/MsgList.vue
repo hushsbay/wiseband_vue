@@ -1354,16 +1354,16 @@
         if (isParent) { //부모메시지
             const idxFound = newParentAdded.value.findIndex(item => item.MSGID == msgidToProc)
             if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
+            //아래는 원래 없었는데 다음과 같은 문제해결을 위해 추가된 것임. 창이 2개 이상 같은 채널이 열려 있을 때 하나만이라도 pageShown일 경우는 다른 창이 숨겨져 있어도 pageShown=Y로 보기로 함
+            //그렇지 않으면, '도착 메세지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
+            //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
+            //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
+            if (newParentAdded.value.length == 0) {
+                await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
+            }
         } else { //자식메시지
             const idxFound = newChildAdded.value.findIndex(item => item.MSGID == msgidToProc)
             if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
-        }
-        //아래는 원래 없었는데 다음과 같은 문제해결을 위해 추가된 것임. 창이 2개 이상 같은 채널이 열려 있을 때 하나만이라도 pageShown일 경우는 다른 창이 숨겨져 있어도 pageShown=Y로 보기로 함
-        //그렇지 않으면, '도착 메세지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
-        //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
-        //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
-        if (newParentAdded.value.length == 0) {
-            await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
         }
     }
 
