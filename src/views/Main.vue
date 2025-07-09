@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, watch } from 'vue' 
+    import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
 
@@ -34,9 +34,9 @@
     //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
     let logdt = '', logdtDisp = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
     let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
-    let realtimeJobDone, pageShown = 'Y', fakeShown = 'N'
+    let realtimeJobDone, pageShown = 'Y'
     let bc1, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
-    let bc2
+    let bc2, arrCurPageShown = []
 
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
     //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
@@ -78,14 +78,10 @@
        2. 받은 B,C,D는 현재 채널아이디와 pageShown 값을 A,B,C,D로 방송 : informCurPageShown(파라미터 = chanid and Y/N)
        3. 본인 값과 받은 값을 합해서 채널별로 그 중에 하나라도 pageShown 값이 Y이면 Y로 정해서 gst.objChanId(공유객체-채널별관리)에 정리,저장함
        4. 나중에 리얼타임 반영시 알림 여부 결정할 때 gst.objChanId의 pageShown 값이 Y이면 (여러개중 하나라도 Y이면) 알림을 표시하지 않기로 함
-       ** 다만, bc1은 각탭의 Main.vue <=> Main.vue 통신이고 bc2는 각탭의 Main.vue <=> MsgList.vue 이므로 이 두개의 bc를 함께 사용해야 하는 불편은 있음
+       ** bc1은 각탭의 Main.vue <=> Main.vue 통신이고 bc2는 각탭의 Main.vue <=> MsgList.vue 이므로 bc2를 사용해야 함
        ** 또한, 방송후 피드백(onmessage callback)을 PromiseAll로 구현해야 그 싯점에 정리가능한데 당장 쉽지 않아서 일단 타이머 0.5초이후 정리하기로 함 (그 안에 오는 알림이 표시안되면 좋은데 되는 불편 살짝..)
+       ** pageShownChanged()가 들어갈 이벤트 : visibilityChange, focus, blur, onMounted, OnUnmounted, onActivated, onDeactivated
     */
-
-    function setFakeShown(val) { //pageShown일 때, 혹시 hidden으로 있을 MsgList만의 새창이 여기 Main과 같은 chanid를 가지면 그것도 (눈에는 보이지 않겠지만) fakeShown=Y로 설정해서 
-        //알림 등으로 처리하지 말고 데이터를 실시간으로 받아야 여기 chanid가 같은 창과 데이터 동기화가 이루어짐 (그쪽에서도 반대의 경우로 코딩 필요)
-        bc2.postMessage({ code: 'setFakeShown', value: val, chanid: gst.chanIdActivted })
-    }
 
     async function chkDataLogEach(rsObj) {
         try {
@@ -110,6 +106,7 @@
                 bc1.postMessage({ code: 'polling', obj: rs })
                 if (rs.list.length > 0) {
                     bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
+                    debugger
                 }
             }
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
@@ -130,6 +127,17 @@
                 cntChanActivted.value = arrForChanActivted.length //화면 표시용
                 cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
                 if (arrForNotChanActivted.length > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
+                    let realShown
+                    const objChanid = gst.objByChanId[gst.chanIdActivted]
+                    if (!objChanid) {
+                        realShown = pageShown
+                    } else {
+                        if (objChanid && objChanid.realShown == 'Y') {
+                            realShown = 'Y'
+                        } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
+                            realShown = 'N'
+                        }
+                    }
                     const len = arrForNotChanActivted.length
                     for (let i = 0; i < len; i++) {                        
                         const row = arrForNotChanActivted[i]
@@ -142,8 +150,19 @@
                                 await panelRef.value.procMainToPanel('refreshRow', row)
                             }
                         }
-                        if (row.TYP == 'msg' && row.CUD == "C" && pageShown != 'Y') {
-                            gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
+                        if (row.TYP == 'msg' && row.CUD == "C" && gst.chanIdActivted != '') {
+                            // const objChanid = gst.objByChanId[gst.chanIdActivted]
+                            // if (!objChanid) {
+                            //     if (pageShown != 'Y') gst.noti.procNoti(row)
+                            // } else {
+                            //     if (objChanid && objChanid.realShown == 'Y') {
+                            //     } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
+                            //         gst.noti.procNoti(row)
+                            //     }
+                            // }
+                            if (realShown != 'Y') {
+                                gst.noti.procNoti(row)
+                            }
                         }
                     }
                 }
@@ -209,8 +228,11 @@
         }
     }
 
+    function pageShownChanged() {
+        bc2.postMessage({ code: 'pageShownChanged' })
+    }
+
     function getBroadcast1(data) {
-        //console.log(JSON.stringify(data))
         if (data.code == 'polling') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
             //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
             //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
@@ -219,16 +241,55 @@
         }
     }
 
-    function getBroadcast2(data) {
-        if (data.code == 'setFakeShown') { //Main.vue의 bc2 참조
-            if (data.chanid == gst.chanIdActivted ) { //fakeShown = data.value //각 MsgList.vue에서 보내오는 것이므로 여러개가 충돌날 것임
-                if (!gst.objByChanId[gst.chanIdActivted]) {
-                    gst.objByChanId[gst.chanIdActivted] = { fakeShown : data.value }
-                } else {
-                    gst.objByChanId[gst.chanIdActivted].fakeShown = data.value
-                }
-            }
+    function getBroadcast2(e) {
+        //console.log("#################################"+JSON.stringify(e.data))
+        if (data.code == 'pageShownChanged') {
+            console.log("####pageShownChanged")
+            bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
+        } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
+            arrCurPageShown.push({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
+            arrCurPageShown.push(data)
+            setTimeout(function() { procObjByChanid() }, 500)
         }
+    }
+
+    function procObjByChanid() {
+        const tmpArr = []
+        const len = arrCurPageShown.length
+        if (len > 0) {
+            for (let i = 0; i < len; i++) {
+                const item = arrCurPageShown[i]
+                console.log("####--"+item.pageShown)
+                if (tmpArr.length == 0) {
+                    tmpArr.push(item)
+                } else {
+                    let modified = false
+                    for (let j = 0; j < tmpArr.length; j++) {
+                        if (tmpArr[j].chanid == item.chanid) {
+                            if (tmpArr[j].pageShown == 'Y') { 
+                                //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
+                            } else {
+                                if (item.pageShown == 'Y') {
+                                    tmpArr[j] = item
+                                }
+                            }
+                            modified = true
+                        }
+                    }
+                    if (!modified) tmpArr.push(item)
+                }
+            } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
+            arrCurPageShown.splice(0, len)
+        }
+        for (let i = 0; i < tmpArr.length; i++) {
+            const item = tmpArr[i]
+            if (!gst.objByChanId[item.chanid]) {
+                gst.objByChanId[item.chanid] = { realShown : item.pageShown }
+            } else {
+                gst.objByChanId[item.chanid].realShown = item.pageShown
+            }
+        } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
+        console.log("####"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
 
     onMounted(async () => {
@@ -236,7 +297,8 @@
             bc1 = new BroadcastChannel("wbRealtime1") //각탭의 Main.vue <=> Main.vue
             bc1.onmessage = (e) => { getBroadcast1(e.data) }
             bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue
-            bc2.onmessage = (e) => { getBroadcast2(e.data) }
+            bc2.onmessage = (e) => { getBroadcast2(e) }
+            pageShownChanged()
             const tag = document.querySelector("#winid") //변하지 않는 값
             winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
             const res = await axios.post("/menu/qry", { kind : "side" })
@@ -267,29 +329,33 @@
             procTimerShort() 
             procTimerLong()
             procRsObj()
+            //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
-                //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                 if (document.hidden) {
                     pageShown = 'N'                    
                 } else {
                     pageShown = 'Y'                    
                 }
-                setFakeShown(pageShown)
+                pageShownChanged()
                 console.log("pageShown")
             }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
-            window.addEventListener('focus', function() {
-                pageShown = 'Y'
-                setFakeShown(pageShown)
-                console.log("focus")
-            }, false)
-            window.addEventListener('blur', function() {
-                pageShown = 'N'
-                setFakeShown(pageShown)
-                console.log("blur")
-            }, false)
+            // window.addEventListener('focus', function() {
+            //     pageShown = 'Y'
+            //     pageShownChanged()
+            //     console.log("focus")
+            // }, false)
+            // window.addEventListener('blur', function() {
+            //     pageShown = 'N'
+            //     pageShownChanged()
+            //     console.log("blur")
+            // }, false)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    })
+
+    onUnmounted(() => {
+        pageShownChanged()
     })
 
     function sideClickOnLoop(selMenu, onMounted) {
@@ -306,7 +372,6 @@
     }
 
     watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
-        //debugger
         console.log("Main gst.selSideMenu..... " + gst.selSideMenu)
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
     })

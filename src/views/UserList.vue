@@ -47,6 +47,7 @@
     })
 
     onActivated(async () => {
+        gst.chanIdActivted = ""
         if (mounting) {
             mounting = false
         } else {

@@ -37,13 +37,24 @@
             //대신에 Main.vue(타이머) > 각 패널.vue > MagList로 전달되는 흐름에서는 MsgList가 라우팅되어 백단으로 가더라도 타이머가 없으니 데이터가 전달되지 않고 현재 패널과 연결되어 있는 MsgList의 
             //라우팅 채널으로만 (리얼타임반영 데이터가) 전달되므로 훨씬 효율적임 (onActivated/Deactivated에서 타이머를 끄고 켤 필요가 없음)
             const arr = obj.list
-            const isPageShown = (fakeShown == 'Y') ? fakeShown : pageShown
             const len = arr.length
             let cdtBottom
             const eleBottom = getBottomMsgBody()
             if (eleBottom) {
                 const idxBottom = gst.util.getKeyIndex(msgRow, eleBottom.id)
                 if (idxBottom > -1) cdtBottom = msglist.value[idxBottom].CDT
+            }
+            ////////////////////////////////////////////////////////////////
+            let realShown
+            const objChanid = gst.objByChanId[chanId]
+            if (!objChanid) {
+                realShown = pageShown
+            } else {
+                if (objChanid && objChanid.realShown == 'Y') {
+                    realShown = 'Y'
+                } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
+                    realShown = 'N'
+                }
             }
             //console.log(chanId+"$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
             //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
@@ -100,17 +111,23 @@
                         if (row.CUD == "C") {
                             if (row.KIND == "parent") { //서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
                                 //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
-                                if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || isPageShown != 'Y') {  //sessionStorage.pageShown != 'Y') { 
+                                console.log(row.BODYTEXT+"==="+savNextMsgMstCdt+"==="+realLastCdt+"==="+cdtBottom+"==="+realLastCdt+"==="+realShown )
+                                if (savNextMsgMstCdt < realLastCdt || (cdtBottom && cdtBottom < realLastCdt) || realShown != 'Y') {
                                     //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
                                     if (row.USERID != g_userid) {
                                         newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.CDT })
                                     }
+                                    console.log("aaa")
                                 } else if (realLastCdt && savNextMsgMstCdt > realLastCdt) {
                                     //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸이면 최초 생성 데이터이므로 여기로 오면 안되고 scrollToBottom으로 처리
+                                    console.log("bbb")
                                 } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
                                     if (row.CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
                                         cdtAtFirst = row.CDT
                                         msgidAtFirst = row.MSGID
+                                        console.log("ccc")
+                                    } else {
+                                        console.log(row.CDT+" ddd "+cdtAtFirst)
                                     }
                                 } //신규 부모메시지 생성시엔 스레드가 없는 상태이므로 스레드에 대한 리얼타임 반영은 필요없음
                             } else { //child : 무조건 부모메시지(row.REPLYTO)로 아래 로직 처리되고 있음
@@ -128,9 +145,18 @@
                                         }
                                     }
                                 }
-                            }                            
-                            if (isPageShown != 'Y') { //if (sessionStorage.pageShown != 'Y') { //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
-                                gst.noti.procNoti(row) //스크롤이 중간에 가 있어도 페이지가 보이면 알림은 주지말기 => 화면이 안보일 때만 알림주기
+                            }
+                            // const objChanid = gst.objByChanId[chanId]
+                            // if (!objChanid) {
+                            //     if (pageShown != 'Y') gst.noti.procNoti(row)
+                            // } else {
+                            //     if (objChanid && objChanid.realShown == 'Y') {
+                            //     } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
+                            //         gst.noti.procNoti(row)
+                            //     }
+                            // }
+                            if (realShown != 'Y') {
+                                gst.noti.procNoti(row)
                             }
                         } else if (row.CUD == "U") { //메시지 수정 : 수정된 메시지는 새로운 메시지가 아닌 안읽은 메시지로만 정의함
                             const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
@@ -179,6 +205,7 @@
                 }
             }
             if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
+                console.log(cdtAtFirst+"%%%%"+msgidAtFirst )
                 chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
                 //await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
                 //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
@@ -352,9 +379,9 @@
     //let logdt = ref(''), 
     let realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
-    let timerShort = true, timeoutShort, timeoutLong, pageShown = 'Y', fakeShown = 'N'
+    let timerShort = true, timeoutShort, timeoutLong, pageShown = 'Y'
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
-    let bc2, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
+    let bc2, arrCurPageShown = [], fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -558,9 +585,10 @@
     }*/
 
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
-        try {
+        try {            
             if (fifo.length > 0) {
                 const rsObj = { list: fifo[0] }
+                console.log(JSON.stringify(fifo[0]), "@@@@@@@@") //여기까진 넘어옴
                 await chkDataLogEach(rsObj)
                 fifo.splice(0, 1)
             }
@@ -573,26 +601,64 @@
         }
     }
 
-    function setFakeShown() { //pageShown일 때, 혹시 hidden으로 있을 MsgList만의 새창이 여기 Main과 같은 chanid를 가지면 그것도 (눈에는 보이지 않겠지만) fakeShown=Y로 설정해서 
-        //알림 등으로 처리하지 말고 데이터를 실시간으로 받아야 여기 chanid가 같은 창과 데이터 동기화가 이루어짐 (그쪽에서도 반대의 경우로 코딩 필요)
-        bc2.postMessage({ code: 'setFakeShown', value: pageShown, chanid: chanId })
+    function pageShownChanged() {
+        bc2.postMessage({ code: 'pageShownChanged' })
     }
 
-    function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
+    function getBroadcast2(e) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
+        //console.log("@@@@@@@@@@@@@@@@@@@@@@"+JSON.stringify(e.data))
         if (data.code == 'pollingToMsgList') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
             //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
             //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
             fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
             fifoLen.value = fifo.length
-        } else if (data.code == 'setFakeShown') { //Main.vue의 bc2 참조
-            if (data.chanid == chanId) { //fakeShown = data.value //MsgList.vue도 같은 chanid로 여러개가 떠 있을 수 있어 충돌날 것임
-                if (!gst.objByChanId[gst.chanIdActivted]) {
-                    gst.objByChanId[gst.chanIdActivted] = { fakeShown : data.value }
-                } else {
-                    gst.objByChanId[gst.chanIdActivted].fakeShown = data.value
-                }
-            }
+        } else if (data.code == 'pageShownChanged') {
+            console.log("@@@@pageShownChanged")
+            bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
+        } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
+            arrCurPageShown.push({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
+            arrCurPageShown.push(data)
+            setTimeout(function() { procObjByChanid() }, 500)
         }
+    }
+
+    function procObjByChanid() {
+        const tmpArr = []
+        const len = arrCurPageShown.length
+        if (len > 0) {
+            for (let i = 0; i < len; i++) {
+                const item = arrCurPageShown[i]
+                console.log("@@@@--"+item.pageShown)
+                if (tmpArr.length == 0) {
+                    tmpArr.push(item)
+                } else {
+                    let modified = false
+                    for (let j = 0; j < tmpArr.length; j++) {
+                        if (tmpArr[j].chanid == item.chanid) {
+                            if (tmpArr[j].pageShown == 'Y') { 
+                                //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
+                            } else {
+                                if (item.pageShown == 'Y') {
+                                    tmpArr[j] = item
+                                }
+                            }
+                            modified = true
+                        }
+                    }
+                    if (!modified) tmpArr.push(item)
+                }
+            } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
+            arrCurPageShown.splice(0, len)
+        }
+        for (let i = 0; i < tmpArr.length; i++) {
+            const item = tmpArr[i]
+            if (!gst.objByChanId[item.chanid]) {
+                gst.objByChanId[item.chanid] = { realShown : item.pageShown }
+            } else {
+                gst.objByChanId[item.chanid].realShown = item.pageShown
+            }
+        } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
+        console.log("@@@@"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
 
     onMounted(async () => { //HomePanel.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
@@ -638,25 +704,26 @@
                 //procTimerShort()
                 //procTimerLong()
                 if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가
+                    //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                     document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
-                        //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                         if (document.hidden) {
                             pageShown = 'N'
                         } else {
                             pageShown = 'Y'
                         }
-                        setFakeShown()
+                        pageShownChanged()
                     }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
-                    window.addEventListener('focus', function() {
-                        pageShown = 'Y' 
-                        setFakeShown()
-                    }, false)
-                    window.addEventListener('blur', function() {
-                        pageShown = 'N' 
-                        setFakeShown()
-                    }, false)
+                    // window.addEventListener('focus', function() {
+                    //     pageShown = 'Y' 
+                    //     pageShownChanged()
+                    // }, false)
+                    // window.addEventListener('blur', function() {
+                    //     pageShown = 'N' 
+                    //     pageShownChanged()
+                    // }, false)
                     bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
-                    bc2.onmessage = (e) => { getBroadcast2(e.data) }
+                    bc2.onmessage = (e) => { getBroadcast2(e) }
+                    pageShownChanged()
                     procRsObj()
                 }
             }
@@ -678,7 +745,8 @@
             } else {
                 setBasicInfo()
                 observerTopScroll()
-                observerBottomScroll()      
+                observerBottomScroll()
+                pageShownChanged()      
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) {
@@ -700,6 +768,7 @@
     onDeactivated(() => {
         clearTimeout(timeoutShort)
         clearTimeout(timeoutLong)
+        pageShownChanged()
     })
 
     onUnmounted(() => {
@@ -707,6 +776,7 @@
         clearTimeout(timeoutLong)
         if (observerTop && observerTop.value) observerTop.value.disconnect()
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
+        pageShownChanged()
     })
 
     function setBasicInfo() {
@@ -1292,6 +1362,7 @@
             const idxFound = newChildAdded.value.findIndex(item => item.MSGID == msgidToProc)
             if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
         }
+        
     }
 
     async function refreshMsgDtlWithQryAction(msgid, msgdtl) { //msgdtl 없으면 서버호출하는 것임
@@ -1397,7 +1468,6 @@
     async function addAllNew(strKind) { //home,dm에서만 버튼 보임
         let msgid, cdtAtFirst
         if (strKind == "P") { //Parent : 신규 부모글
-            debugger
             if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
             msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
             cdtAtFirst = newParentAdded.value[0].CDT
@@ -2776,7 +2846,7 @@
                             @click="htmlView()"><!--개발자사용-->
                     </div>
                     <div style="height:100%;display:flex;align-items:center">
-                        <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')">
+                        <div v-show="listMsgSel == 'all' && newParentAdded.length >= 0" class="coImgBtn" @click="addAllNew('P')">
                             <span class="coImgSpn">메시지 도착</span>
                             <span class="coMyNotYet">{{ newParentAdded.length }}</span> 
                         </div>
