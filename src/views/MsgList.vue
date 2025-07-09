@@ -39,7 +39,7 @@
             const arr = obj.list
             const len = arr.length
             let cdtBottom
-            const eleBottom = getBottomMsgBody()
+            const eleBottom = getBottomMsgBody() //화면이 뒤로 가 있으면 undefined
             if (eleBottom) {
                 const idxBottom = gst.util.getKeyIndex(msgRow, eleBottom.id)
                 if (idxBottom > -1) cdtBottom = msglist.value[idxBottom].CDT
@@ -146,15 +146,6 @@
                                     }
                                 }
                             }
-                            // const objChanid = gst.objByChanId[chanId]
-                            // if (!objChanid) {
-                            //     if (pageShown != 'Y') gst.noti.procNoti(row)
-                            // } else {
-                            //     if (objChanid && objChanid.realShown == 'Y') {
-                            //     } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
-                            //         gst.noti.procNoti(row)
-                            //     }
-                            // }
                             if (realShown != 'Y') {
                                 gst.noti.procNoti(row)
                             }
@@ -602,18 +593,21 @@
     }
 
     function pageShownChanged() {
-        bc2.postMessage({ code: 'pageShownChanged' })
+        if (bc2) bc2.postMessage({ code: 'pageShownChanged' })
     }
 
-    function getBroadcast2(e) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
-        //console.log("@@@@@@@@@@@@@@@@@@@@@@"+JSON.stringify(e.data))
+    function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
         if (data.code == 'pollingToMsgList') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
             //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
             //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
             fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
             fifoLen.value = fifo.length
-        } else if (data.code == 'pageShownChanged') {
-            console.log("@@@@pageShownChanged")
+        } else if (data.code == 'pageShownChanged') {            
+            //console.log("@@@@pageShownChanged")
+            bc2.postMessage({ code: 'pageShownChanged1' }) //pageShownChanged으로 처리시 pageShownChanged를 받는 탭은 정작 informCurPageShown으로 들어오는 정보를 못받아서 다시 한번 보내 받게 해줌
+            bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
+        }else if (data.code == 'pageShownChanged1') {
+            //console.log("@@@@pageShownChanged1")
             bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
         } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
             arrCurPageShown.push({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
@@ -628,7 +622,7 @@
         if (len > 0) {
             for (let i = 0; i < len; i++) {
                 const item = arrCurPageShown[i]
-                console.log("@@@@--"+item.pageShown)
+                //console.log("@@@@--"+item.pageShown)
                 if (tmpArr.length == 0) {
                     tmpArr.push(item)
                 } else {
@@ -708,8 +702,10 @@
                     document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                         if (document.hidden) {
                             pageShown = 'N'
+                            console.log("pageHidden@@@@")    
                         } else {
                             pageShown = 'Y'
+                            console.log("pageShown@@@@")    
                         }
                         pageShownChanged()
                     }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
@@ -722,7 +718,7 @@
                     //     pageShownChanged()
                     // }, false)
                     bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
-                    bc2.onmessage = (e) => { getBroadcast2(e) }
+                    bc2.onmessage = (e) => { getBroadcast2(e.data) }
                     pageShownChanged()
                     procRsObj()
                 }
@@ -1346,7 +1342,7 @@
         readMsgToBeSeen() //사용자별 데이터지만 읽음 처리를 onScrolling에 두면 스크롤링하면서 초당 4~5회의 동일 데이터를 서버로 요청해서 업데이트를 시도하려 함 (table lock 체크 이전에 일단 스크롤종료시만 호출하는 것으로 변경함)
     }
 
-    function deleteFromNewAdded(row, parentMsgid, childMsgid) {
+    async function deleteFromNewAdded(row, parentMsgid, childMsgid) {
         let isParent, msgidToProc
         if (row) {
             isParent = (row.REPLYTO == "") ? true : false
@@ -1362,7 +1358,13 @@
             const idxFound = newChildAdded.value.findIndex(item => item.MSGID == msgidToProc)
             if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
         }
-        
+        //아래는 원래 없었는데 다음과 같은 문제해결을 위해 추가된 것임. 창이 2개 이상 같은 채널이 열려 있을 때 하나만이라도 pageShown일 경우는 다른 창이 숨겨져 있어도 pageShown=Y로 보기로 함
+        //그렇지 않으면, '도착 메세지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
+        //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
+        //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
+        if (newParentAdded.value.length == 0) {
+            await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
+        }
     }
 
     async function refreshMsgDtlWithQryAction(msgid, msgdtl) { //msgdtl 없으면 서버호출하는 것임
@@ -2846,7 +2848,7 @@
                             @click="htmlView()"><!--개발자사용-->
                     </div>
                     <div style="height:100%;display:flex;align-items:center">
-                        <div v-show="listMsgSel == 'all' && newParentAdded.length >= 0" class="coImgBtn" @click="addAllNew('P')">
+                        <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')">
                             <span class="coImgSpn">메시지 도착</span>
                             <span class="coMyNotYet">{{ newParentAdded.length }}</span> 
                         </div>

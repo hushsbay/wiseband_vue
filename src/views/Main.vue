@@ -151,15 +151,6 @@
                             }
                         }
                         if (row.TYP == 'msg' && row.CUD == "C" && gst.chanIdActivted != '') {
-                            // const objChanid = gst.objByChanId[gst.chanIdActivted]
-                            // if (!objChanid) {
-                            //     if (pageShown != 'Y') gst.noti.procNoti(row)
-                            // } else {
-                            //     if (objChanid && objChanid.realShown == 'Y') {
-                            //     } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
-                            //         gst.noti.procNoti(row)
-                            //     }
-                            // }
                             if (realShown != 'Y') {
                                 gst.noti.procNoti(row)
                             }
@@ -241,10 +232,13 @@
         }
     }
 
-    function getBroadcast2(e) {
-        //console.log("#################################"+JSON.stringify(e.data))
+    function getBroadcast2(data) {
         if (data.code == 'pageShownChanged') {
-            console.log("####pageShownChanged")
+            //console.log("####pageShownChanged")
+            bc2.postMessage({ code: 'pageShownChanged1' })
+            bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
+        }else if (data.code == 'pageShownChanged1') {
+            //console.log("####pageShownChanged1")
             bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
         } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
             arrCurPageShown.push({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
@@ -259,7 +253,7 @@
         if (len > 0) {
             for (let i = 0; i < len; i++) {
                 const item = arrCurPageShown[i]
-                console.log("####--"+item.pageShown)
+                //console.log("####--"+item.pageShown)
                 if (tmpArr.length == 0) {
                     tmpArr.push(item)
                 } else {
@@ -297,7 +291,7 @@
             bc1 = new BroadcastChannel("wbRealtime1") //각탭의 Main.vue <=> Main.vue
             bc1.onmessage = (e) => { getBroadcast1(e.data) }
             bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue
-            bc2.onmessage = (e) => { getBroadcast2(e) }
+            bc2.onmessage = (e) => { getBroadcast2(e.data) }
             pageShownChanged()
             const tag = document.querySelector("#winid") //변하지 않는 값
             winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
@@ -332,12 +326,13 @@
             //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 if (document.hidden) {
-                    pageShown = 'N'                    
+                    pageShown = 'N' 
+                    console.log("pageHidden####")                     
                 } else {
-                    pageShown = 'Y'                    
+                    pageShown = 'Y'         
+                    console.log("pageShown####")           
                 }
-                pageShownChanged()
-                console.log("pageShown")
+                pageShownChanged()                
             }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
             // window.addEventListener('focus', function() {
             //     pageShown = 'Y'
