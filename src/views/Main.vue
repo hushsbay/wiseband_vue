@@ -27,7 +27,7 @@
 
     //리얼타임 반영
     let panelRef = ref(null)
-    let timerShort = true //, timeoutShort, timeoutLong
+    let timerShort = true, timeoutShort, timeoutLong
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000, TIMERSEC_WINNER = 10 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
     //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
@@ -151,7 +151,7 @@
                         }
                         if (row.TYP == 'msg' && row.CUD == "C" && gst.chanIdActivted != '') {
                             if (realShown != 'Y') {
-                                gst.noti.procNoti(row)
+                                gst.realtime.procNoti(row)
                             }
                         }
                     }
@@ -207,7 +207,8 @@
         }
     }
 
-    function pageShownChanged() {
+    function pageShownChanged(ps) { //ps=pageShown
+        if (gst.chanIdActivted) gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", ps)
         bc2.postMessage({ code: 'pageShownChanged' })
     }
 
@@ -265,11 +266,12 @@
         }
         for (let i = 0; i < tmpArr.length; i++) {
             const item = tmpArr[i]
-            if (!gst.objByChanId[item.chanid]) {
-                gst.objByChanId[item.chanid] = { realShown : item.pageShown }
-            } else {
-                gst.objByChanId[item.chanid].realShown = item.pageShown
-            }
+            // if (!gst.objByChanId[item.chanid]) {
+            //     gst.objByChanId[item.chanid] = { realShown : item.pageShown }
+            // } else {
+            //     gst.objByChanId[item.chanid].realShown = item.pageShown
+            // }
+            gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", item.pageShown)
         } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
         //if (gst.objByChanId["20250705111453478357041152"]) console.log("####"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
@@ -280,7 +282,7 @@
             bc1.onmessage = (e) => { getBroadcast1(e.data) }
             bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue
             bc2.onmessage = (e) => { getBroadcast2(e.data) }
-            pageShownChanged()
+            pageShownChanged(pageShown)
             const tag = document.querySelector("#winid") //변하지 않는 값
             winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
             const res = await axios.post("/menu/qry", { kind : "side" })
@@ -300,7 +302,7 @@
             procLocalStorage() 
             procTimerShort() 
             procTimerLong()
-            procRsObj()
+            if (!route.fullPath.includes('/body/msglist') && !route.fullPath.includes('/notyet')) procRsObj() //아직안읽음에서는 리얼타임 반영하지 않음
             //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 if (document.hidden) {
@@ -310,25 +312,35 @@
                     pageShown = 'Y'         
                     console.log("pageShown####")           
                 }
-                pageShownChanged()                
+                pageShownChanged(pageShown)                
             }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
-            // window.addEventListener('focus', function() {
-            //     pageShown = 'Y'
-            //     pageShownChanged()
-            //     console.log("focus")
-            // }, false)
+            window.addEventListener('focus', async function() {
+                pageShown = 'Y'
+                pageShownChanged(pageShown)
+                console.log("focus")
+                if (sessionStorage.chanidFromNoti) { //알림(noti)바를 클릭한 경우임 - GeneralStore.js의 procNoti() 참조
+                    //await router.push({ name : "home_body", params : { chanid: sessionStorage.chanidFromNoti, msgid: sessionStorage.msgidFromNoti }}) //다른 채널이라도 메시지가 추가됨 (사용금지)
+                    const nm = (sessionStorage.subkindFromNoti == "GS") ? "dm" : "home"
+                    await goRoute({ name: nm }) //home or dm
+                    sessionStorage.chanidFromNoti = ''
+                    //sessionStorage.msgidFromNoti = '' //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
+                    sessionStorage.subkindFromNoti = ''
+                }
+            })
             // window.addEventListener('blur', function() {
             //     pageShown = 'N'
-            //     pageShownChanged()
+            //     pageShownChanged(pageShown)
             //     console.log("blur")
-            // }, false)
+            // })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
     onUnmounted(() => {
-        pageShownChanged()
+        pageShownChanged('N')
+        clearTimeout(timeoutShort)
+        clearTimeout(timeoutLong)
     })
 
     function sideClickOnLoop(selMenu, onMounted) {
@@ -450,7 +462,7 @@
     }
 
     const procMenu = {
-        ["mnuHome"] : async (row, onMounted) => { await goRoute({ path: '/main/home' }, onMounted) },        
+        ["mnuHome"] : async (row, onMounted) => { await goRoute({ name: 'home' }, onMounted) }, //path: '/main/home'       
         ["mnuDm"] : async (row, onMounted) => { await goRoute({ name: 'dm' }, onMounted) },
         ["mnuActivity"] : async (row, onMounted) => { await goRoute({ name: 'activity' }, onMounted) },
         ["mnuLater"] : async (row, onMounted) => { await goRoute({ name: 'later' }, onMounted) },

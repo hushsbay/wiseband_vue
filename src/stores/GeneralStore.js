@@ -126,7 +126,54 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    const noti = {
+    // const noti = {
+
+    //     procNoti : async function(row) { //알림바는 tag(=채널단위)로 groupby되어 show
+    //         if (!hush.noti.rooms[row.CHANID]) {
+    //             const res = await axios.post("/chanmsg/qryMsg", { chanid: row.CHANID, msgid: row.MSGID })
+    //             const rs = util.chkAxiosCode(res.data, true)
+    //             if (rs) hush.noti.rooms[row.CHANID] = rs.data
+    //         }
+    //         const room = hush.noti.rooms[row.CHANID] //오로지 CHANNM 가져오려고 서버 호출하는 것임
+    //         const title = '[' + (room ? room.chanmst.CHANNM : hush.cons.appName) + ']'
+    //         const author = '작성자 : ' + row.USERNM + '\n'
+    //         const body = author + row.BODYTEXT //나중에 사용자 옵션에 따라 작성자와 본문을 보여줄지 말지 구현
+    //         const objNoti = new window.Notification(title, {
+    //             body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : '/src/assets/images/color_slacklogo.png', requireInteraction : true 
+    //         }) //아래 2행은 예비용 (향후 필요시 사용)           
+    //         objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
+    //         objNoti.chanid = row.CHANID
+    //         objNoti.subkind = row.SUBKIND
+    //         objNoti.isNewWin = route.fullPath.includes('/body/msglist') ? true : false
+    //         objNoti.onclick = function () {
+    //             if (!hush.noti.winForNoti.closed) {
+    //                 if (objNoti.isNewWin) { //새창에서 알림을 받았으니 클릭하면 바로 그 창으로 열어 줘야 함
+    //                     ///const url = util.getUrlForBodyListNewWin(objNoti.chanid, objNoti.msgid); window.open(url, '_blank')
+    //                     hush.noti.winForNoti.focus() //바로 위와 같이 처리하면 기존 창이 열려 있더라도 새창이 열리게 되므로 focus()만 주면 됨
+    //                 } else { //기본적으로는 메인창에 아래와 같이 focus()를 주면 Main.vue의 focus()에서 인지해서 router.push()하도록 함
+    //                     //여기서 사용자가 알림 클릭시마다 선택할 수 있으면 좋은데 html5 notification bar에서 이벤트를 나누기 못찾음
+    //                     //sessionStorage.msgidFromNoti = objNoti.msgid //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
+    //                     sessionStorage.chanidFromNoti = objNoti.chanid
+    //                     sessionStorage.subkindFromNoti = objNoti.subkind
+    //                     hush.noti.winForNoti.focus()
+    //                 }
+    //                 setTimeout(function() { objNoti.close() }, 500)
+    //             } else {
+    //                 alert("closed") //여기로 오는 경우는 없음 (해당 탭을 닫아도 다시 shown. 브라우저 닫아도 여기로 안옴)
+    //             }
+    //         }
+    //         if (!hush.noti.winForNoti) hush.noti.winForNoti = window
+    //         gst.realtime.setObjToChan(row.CHANID, "noti", objNoti) //나중에 창이 열리게 되면 사용자가 클릭안해도 알림바가 닫히게 하려는 용도임
+    //     }
+
+    // }
+
+    const realtime = {
+
+        setObjToChan : function(chanid, key, val) {
+            if (!objByChanId.value[chanid]) objByChanId.value[chanid] = {}
+            objByChanId.value[chanid][key] = val
+        },
 
         procNoti : async function(row) { //알림바는 tag(=채널단위)로 groupby되어 show
             if (!hush.noti.rooms[row.CHANID]) {
@@ -142,17 +189,61 @@ const GeneralStore = defineStore('General', () => {
                 body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : '/src/assets/images/color_slacklogo.png', requireInteraction : true 
             }) //아래 2행은 예비용 (향후 필요시 사용)           
             //objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
-            //objNoti.chanid = row.CHANID
+            objNoti.chanid = row.CHANID
+            objNoti.subkind = row.SUBKIND
+            //objNoti.isNewWin = route.fullPath.includes('/body/msglist') ? true : false
             objNoti.onclick = function () {
-                if (!hush.noti.winForNoti.closed) {                                                
+                if (!hush.noti.winForNoti.closed) {
+                    sessionStorage.chanidFromNoti = objNoti.chanid
+                    sessionStorage.subkindFromNoti = objNoti.subkind
                     hush.noti.winForNoti.focus()
-                    objNoti.close()
+                    // if (objNoti.isNewWin) { //새창에서 알림을 받았으니 클릭하면 바로 그 창으로 열어 줘야 함
+                    //     ///const url = util.getUrlForBodyListNewWin(objNoti.chanid, objNoti.msgid); window.open(url, '_blank')
+                    //     hush.noti.winForNoti.focus() //바로 위와 같이 처리하면 기존 창이 열려 있더라도 새창이 열리게 되므로 focus()만 주면 됨
+                    // } else { //기본적으로는 메인창에 아래와 같이 focus()를 주면 Main.vue의 focus()에서 인지해서 router.push()하도록 함
+                    //     //여기서 사용자가 알림 클릭시마다 선택할 수 있으면 좋은데 html5 notification bar에서 이벤트를 나누기 못찾음
+                    //     //sessionStorage.msgidFromNoti = objNoti.msgid //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
+                    //     sessionStorage.chanidFromNoti = objNoti.chanid
+                    //     sessionStorage.subkindFromNoti = objNoti.subkind
+                    //     hush.noti.winForNoti.focus()
+                    // }
+                    setTimeout(function() { objNoti.close() }, 500)
                 } else {
                     alert("closed") //여기로 오는 경우는 없음 (해당 탭을 닫아도 다시 shown. 브라우저 닫아도 여기로 안옴)
                 }
             }
             if (!hush.noti.winForNoti) hush.noti.winForNoti = window
+            realtime.setObjToChan(row.CHANID, "noti", objNoti) //나중에 창이 열리게 되면 사용자가 클릭안해도 알림바가 닫히게 하려는 용도임
+        },
+        
+        closeNoti : function(chanid) {
+            if (!objByChanId.value[chanid]) return
+            if (objByChanId.value[chanid].noti) objByChanId.value[chanid].noti.close()
         }
+
+        // setRealShown : function(chanid, pageShown) {
+        //     setObjToChan(chanid, "realShown", pageShown)
+        // },
+
+        // setNoti : function(chanid, notiObj) {
+        //     setObjToChan(chanid, "noti", notiObj)
+        // }
+
+        // setRealShown : function(chanid, pageShown) {
+        //     if (!objByChanId.value[chanid]) {
+        //         objByChanId.value[chanid] = { realShown : pageShown }
+        //     } else {
+        //         objByChanId.value[chanid].realShown = pageShown
+        //     }
+        // },
+
+        // setNoti : function(chanid, notiObj) {
+        //     if (!objByChanId.value[chanid]) {
+        //         objByChanId.value[chanid] = { noti : notiObj }
+        //     } else {
+        //         objByChanId.value[chanid].noti = notiObj
+        //     }
+        // }
 
     }
     
@@ -472,9 +563,9 @@ const GeneralStore = defineStore('General', () => {
     
     return { 
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
-        objSaved, selSideMenu, chanIdActivted, objByChanId, //objByChanId는 Main.vue에서만 추가/삭제 가능하면 다른데에서는 읽기만 하기
+        objSaved, selSideMenu, chanIdActivted, objByChanId,
         snackBar, toast, bottomMsg, routeFrom, routeTo, routedToSamePanelFromMsgList,
-        auth, ctx, html, noti, util,
+        auth, ctx, html, realtime, util,
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

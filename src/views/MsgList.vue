@@ -26,8 +26,10 @@
 
     defineExpose({ procFromParent, procMainToMsglist })
 
-    async function procMainToMsglist(kind, obj) { //현재는 kind=realtime만 존재
-        chkDataLogEach(obj)
+    async function procMainToMsglist(kind, obj) {
+        if (kind == "realtime") {
+            chkDataLogEach(obj)
+        }
     }
 
     async function chkDataLogEach(obj) { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
@@ -147,7 +149,7 @@
                                 }
                             }
                             if (realShown != 'Y') {
-                                gst.noti.procNoti(row)
+                                gst.realtime.procNoti(row)
                             }
                         } else if (row.CUD == "U") { //메시지 수정 : 수정된 메시지는 새로운 메시지가 아닌 안읽은 메시지로만 정의함
                             const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
@@ -456,8 +458,9 @@
         }
     }
 
-    function pageShownChanged() {
-        if (bc2) bc2.postMessage({ code: 'pageShownChanged' })
+    function pageShownChanged(ps) { //ps=pageShown
+        if (chanId) gst.realtime.setObjToChan(chanId, "realShown", ps)
+        if (bc2) bc2.postMessage({ code: 'pageShownChanged' })        
     }
 
     function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
@@ -486,7 +489,7 @@
         if (len > 0) {
             for (let i = 0; i < len; i++) {
                 const item = arrCurPageShown[i]
-                //console.log("@@@@--"+item.pageShown)
+                console.log("@@@@--"+item.pageShown)
                 if (tmpArr.length == 0) {
                     tmpArr.push(item)
                 } else {
@@ -510,11 +513,12 @@
         }
         for (let i = 0; i < tmpArr.length; i++) {
             const item = tmpArr[i]
-            if (!gst.objByChanId[item.chanid]) {
-                gst.objByChanId[item.chanid] = { realShown : item.pageShown }
-            } else {
-                gst.objByChanId[item.chanid].realShown = item.pageShown
-            }
+            // if (!gst.objByChanId[item.chanid]) {
+            //     gst.objByChanId[item.chanid] = { realShown : item.pageShown }
+            // } else {
+            //     gst.objByChanId[item.chanid].realShown = item.pageShown
+            // }
+            gst.realtime.setObjToChan(item.chanid, "realShown", item.pageShown)
         } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
         //console.log("@@@@"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
@@ -552,7 +556,7 @@
                     observerTopScroll()
                     observerBottomScroll()
                 }
-                if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가
+                if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가 (onMounted만 발생하고 onActivated는 없음)
                     //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                     document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                         if (document.hidden) {
@@ -562,19 +566,19 @@
                             pageShown = 'Y'
                             console.log("pageShown@@@@")    
                         }
-                        pageShownChanged()
+                        pageShownChanged(pageShown)
                     }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
-                    // window.addEventListener('focus', function() {
-                    //     pageShown = 'Y' 
-                    //     pageShownChanged()
-                    // }, false)
+                    window.addEventListener('focus', function() {
+                        pageShown = 'Y' 
+                        pageShownChanged(pageShown)                        
+                    })
                     // window.addEventListener('blur', function() {
                     //     pageShown = 'N' 
-                    //     pageShownChanged()
-                    // }, false)
+                    //     pageShownChanged(pageShown)
+                    //})
                     bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
                     bc2.onmessage = (e) => { getBroadcast2(e.data) }
-                    pageShownChanged()
+                    pageShownChanged(pageShown)
                     procRsObj()
                 }
             }
@@ -597,7 +601,7 @@
                 setBasicInfo()
                 observerTopScroll()
                 observerBottomScroll()
-                pageShownChanged()      
+                pageShownChanged('Y')      
             }
             const key = msgidInChan ? msgidInChan : sideMenu + chanId
             if (gst.objSaved[key]) {
@@ -617,7 +621,7 @@
     onDeactivated(() => {
         //clearTimeout(timeoutShort)
         //clearTimeout(timeoutLong)
-        pageShownChanged()
+        pageShownChanged('N')
     })
 
     onUnmounted(() => {
@@ -625,7 +629,7 @@
         //clearTimeout(timeoutLong)
         if (observerTop && observerTop.value) observerTop.value.disconnect()
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
-        pageShownChanged()
+        pageShownChanged('N')
     })
 
     function setBasicInfo() {
@@ -1169,6 +1173,7 @@
                 break
             }
         }
+        gst.realtime.closeNoti(chanId)
     }
 
     const onScrolling = (e) => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
@@ -1325,6 +1330,7 @@
             msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
             cdtAtFirst = newParentAdded.value[0].CDT
             chkProcScrollToBottom(cdtAtFirst, msgid) //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
+            gst.realtime.closeNoti(chanId)
         } else { //Child : 신규 댓글
             if (newChildAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
             //가장 오래된 자식메시지의 부모아이디부터 조회하도록 해야 사용자가 안놓침
@@ -2512,7 +2518,7 @@
                     <span style="margin-left:5px;font-weight:bold">StressTest</span> 
                 </div>
                 <span v-show="route.fullPath.includes('/body/msglist')">
-                    <span>fifoLen : {{ fifoLen }}</span>
+                    <span style="margin-left:20px">fifoLen : {{ fifoLen }}</span>
                 </span>
             </div> 
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
