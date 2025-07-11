@@ -18,7 +18,7 @@
     let keepAliveRef = ref(null)
     const msglistRef = ref(null)    
     let scrollArea = ref(null), listFixed = ref([]), cntFixed = ref(0), msgRow = ref({}) //msgRow는 element를 동적으로 할당
-    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
+    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
 
     defineExpose({ procMainToMsglist })

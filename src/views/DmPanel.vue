@@ -23,7 +23,11 @@
     }
 
     async function procMainToPanel(kind, obj) {
-        await handleEvFromBody({ kind: kind, chanid: obj.CHANID })
+        if (kind == "procRows") {
+            await procRows()
+        } else {
+            await handleEvFromBody({ kind: kind, chanid: obj.CHANID })
+        }
     }
 
     const props = defineProps({ fromPopupChanDm: String })
@@ -43,7 +47,7 @@
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all'), msglistRef = ref(null)
     let newRoomJustCreated = ref(false)
-    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
+    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -99,10 +103,7 @@
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
             observerBottomScroll()
-            if (listDm.value.length > 0) {
-                const row = listDm.value[listDm.value.length - 1]
-                await getList(null, row.LASTMSGDT) //가장 오래된 메시지 일시로 패널내 모든 데이터를 읽어와서 기존과 비교하고자 함
-            }
+            await procRows()
         }
     })
 
@@ -135,6 +136,15 @@
     function procSearchQuery() {
         getList(true)
     }
+
+    async function procRows() {
+        if (listDm.value.length > 0) {
+            const row = listDm.value[listDm.value.length - 1]
+            await getList(null, row.LASTMSGDT) //가장 오래된 메시지 일시로 패널내 모든 데이터를 읽어와서 기존과 비교하고자 함
+        } else { 
+            await getList(null, hush.cons.cdtAtFirst)
+        }
+    }
     
     async function getList(refresh, oldestMsgDt) {
         try {
@@ -158,13 +168,14 @@
                 afterScrolled.value = false
                 for (let i = 0; i < rs.list.length; i++) {
                     const row = rs.list[i]
-                    for (let i = 0; i < row.picture.length; i++) {
-                        if (row.picture[i] == null) {
-                            row.url[i] = null
-                        } else {
-                            row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
-                        }
-                    }                
+                    // for (let j = 0; j < row.picture.length; i++) {
+                        // if (row.picture[i] == null) {
+                        //     row.url[i] = null
+                        // } else {
+                        //     row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
+                        // }
+                    // }          
+                    setRowPicture(row)      
                     procChanRowImg(row)
                     listDm.value.push(row)
                     if (row.LASTMSGDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
@@ -185,18 +196,22 @@
                     if (idx > -1) {
                         const item = arr[idx]
                         if (row.LASTMSGDT != item.LASTMSGDT || row.CHANDTL_UDT != item.CHANDTL_UDT || row.CHANMST_UDT != item.CHANMST_UDT || row.mynotyetCnt != item.mynotyetCnt) {
-                            listDm.value[i] = item
+                            setRowPicture(item)
+                            listDm.value[i] = item //MsgList에 반영되어야 함
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        listDm.value.splice(i, 1)
+                        debugger
+                        listDm.value.splice(i, 1) //MsgList에 해당 목록이 있다면 그것도 제거되어야 함
                     }
                 }
                 len = arr.length
                 for (let i = len - 1; i >= 0; i--) {
                     const item = arr[i]
                     if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
-                        listDm.value.unshift(item)
+                        debugger
+                        setRowPicture(item)
+                        listDm.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함
                     }
                 }
             }
@@ -204,6 +219,16 @@
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
+        }
+    }
+
+    function setRowPicture(row) {
+        for (let i = 0; i < row.picture.length; i++) {
+            if (row.picture[i] == null) {
+                row.url[i] = null
+            } else {
+                row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
+            }
         }
     }
 
@@ -218,13 +243,14 @@
                 return
             }
             const row = rs.list[0]
-            for (let i = 0; i < row.picture.length; i++) {
-                if (row.picture[i] == null) {
-                    row.url[i] = null
-                } else {
-                    row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
-                }
-            }                
+            // for (let i = 0; i < row.picture.length; i++) {
+                // if (row.picture[i] == null) {
+                //     row.url[i] = null
+                // } else {
+                //     row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
+                // }
+            // }                
+            setRowPicture(row)
             procChanRowImg(row)            
             onGoingGetList = false
             return row
@@ -347,6 +373,8 @@
             await router.push({ name: "dm_body_new" })
         }
     }
+
+
 
     async function refreshPanel() {
         await getList(true) //true시 listDm이 초기화되었다 다시 추가되므로 MsgList의 onMounted()가 실행됨을 유의

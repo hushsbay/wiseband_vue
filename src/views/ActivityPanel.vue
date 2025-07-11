@@ -17,7 +17,7 @@
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     const msglistRef = ref(null), notyetChk = ref(false)
     let scrollArea = ref(null), listActivity = ref([]), kindActivity = ref('all'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
-    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
+    let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
 
     defineExpose({ procMainToMsglist })

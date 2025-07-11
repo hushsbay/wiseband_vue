@@ -121,8 +121,13 @@
             if (notyetCntHomeTmp != notyetCntHome.value) notyetCntHome.value = notyetCntHomeTmp
             if (notyetCntDmTmp != notyetCntDm.value) notyetCntDm.value = notyetCntDmTmp
             if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
-                if (gst.chanIdActivted) arrForChanActivted = rs.list.filter(x => x.CHANID == gst.chanIdActivted) //MsgList로 전달하는 것임
-                arrForNotChanActivted = rs.list.filter(x => x.CHANID != gst.chanIdActivted) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
+                debugger
+                if (gst.chanIdActivted) arrForChanActivted = rs.list.filter(x => {
+                    return (x.CHANID == gst.chanIdActivted && x.TYP != 'chan') //chan은 채널이 같더라도 MsgList로 보내지 않고 Main에서 처리
+                }) //MsgList로 전달하는 것임
+                arrForNotChanActivted = rs.list.filter(x => {
+                    return (x.CHANID != gst.chanIdActivted || x.TYP == 'chan')
+                }) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
                 cntChanActivted.value = arrForChanActivted.length //화면 표시용
                 cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
                 if (arrForNotChanActivted.length > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
@@ -137,6 +142,7 @@
                             realShown = 'N'
                         }
                     }
+                    debugger
                     const len = arrForNotChanActivted.length
                     for (let i = 0; i < len; i++) {                        
                         const row = arrForNotChanActivted[i]
@@ -145,6 +151,9 @@
                         } else if (gst.selSideMenu == "mnuDm") { //채널 단위로 
                             if (row.CUD == 'T') { //notyet->read가 많음 (아닌 경우도 있으나 그냥 무시) 
                                 await panelRef.value.procMainToPanel('updateNotyetCnt', row)
+                            } else if (row.TYP == 'chan') {
+                                debugger
+                                await panelRef.value.procMainToPanel('procRows')
                             } else {
                                 await panelRef.value.procMainToPanel('refreshRow', row)
                             }
