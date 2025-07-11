@@ -66,7 +66,7 @@
             for (let i = 0; i < len; i++) {
                 const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음 (스레드로는 아이디만 넘겨서 서버 호출)
                 if (row.CHANID == chanId) {
-                    if (row.BODYTEXT == 'readall') { //서버 chanmsg>updateAllWithNewKind() 참조
+                    if (row.SUBKINDD == 'readall') { //서버 chanmsg>updateAllWithNewKind() 참조
                         newParentAdded.value = []
                         newChildAdded.value = []
                         const len = msglist.value.length                        
@@ -148,7 +148,7 @@
                                     }
                                 }
                             }
-                            if (realShown != 'Y') {
+                            if (realShown != 'Y' && row.USERID != g_userid) {
                                 gst.realtime.procNoti(row)
                             }
                         } else if (row.CUD == "U") { //메시지 수정 : 수정된 메시지는 새로운 메시지가 아닌 안읽은 메시지로만 정의함
@@ -190,6 +190,12 @@
                         //    evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
                         //} else if (appType == "later" || appType == "fixed") {
                         //    evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
+                        }
+                    } else if (row.TYP == "chan") { //이미 모든 패널에는 Main.vue에서 처리하므로 여기선 MsgList 상단 채널명과 멤버이미지만 처리하면 됨
+                        if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
+                            pageData.value = hush.cons.state_nodata
+                        } else {
+                            setChanMstDtl(row.chanmst, row.chandtl)
                         }
                     }
                 } else { //채널이 다른 경우
@@ -1596,17 +1602,24 @@
                     evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
                 }
             } else if (appType == "dm") {
-                evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType }) //evToPanel({ kind: "update", chanid: chanId, bodytext: bodytext })
+                if (showUserSearch.value) { //DM방 새로 만들기
+                    dmChanIdAlready.value = ""
+                    userAdded.value = []
+                    dmChanIdAlready.value = false                
+                    evToPanel({ kind: "refreshPanel" })
+                } else {
+                    evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType })
+                }
             }
             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value }) //댓글창의 부모글 업데이트
             msgbody.value = ""            
             editMsgId.value = null
-            if (appType == "dm" && showUserSearch.value) { //DM방 새로 만들기
-                dmChanIdAlready.value = ""
-                userAdded.value = []
-                dmChanIdAlready.value = false                
-                evToPanel({ kind: "refreshPanel" })
-            }
+            // if (appType == "dm" && showUserSearch.value) { //DM방 새로 만들기
+            //     dmChanIdAlready.value = ""
+            //     userAdded.value = []
+            //     dmChanIdAlready.value = false                
+            //     evToPanel({ kind: "refreshPanel" })
+            // }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

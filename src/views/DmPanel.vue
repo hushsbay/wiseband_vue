@@ -187,6 +187,7 @@
                     //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
                 }
             } else {
+                //debugger
                 let len = listDm.value.length
                 const arr = rs.list //새로 읽어온 데이터                
                 for (let i = 0; i < len; i++) {
@@ -197,21 +198,22 @@
                         const item = arr[idx]
                         if (row.LASTMSGDT != item.LASTMSGDT || row.CHANDTL_UDT != item.CHANDTL_UDT || row.CHANMST_UDT != item.CHANMST_UDT || row.mynotyetCnt != item.mynotyetCnt) {
                             setRowPicture(item)
-                            listDm.value[i] = item //MsgList에 반영되어야 함
+                            listDm.value[i] = item //MsgList에 반영되어야 함 OK
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        debugger
-                        listDm.value.splice(i, 1) //MsgList에 해당 목록이 있다면 그것도 제거되어야 함
+                        //debugger
+                        listDm.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
                     }
                 }
+                //debugger
                 len = arr.length
                 for (let i = len - 1; i >= 0; i--) {
                     const item = arr[i]
                     if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
-                        debugger
                         setRowPicture(item)
-                        listDm.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함
+                        listDm.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
+                        //dmClickOnLoop(true, item.CHANID) //알림에서도 방을 자동으로 클릭하지는 않음
                     }
                 }
             }

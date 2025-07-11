@@ -380,7 +380,7 @@ const GeneralStore = defineStore('General', () => {
 
         scrollIntoView : function(rowRef, rowValue, opt) {
             let optReal = opt ? opt : { behavior: "smooth", block: "nearest" }
-            rowRef.value[rowValue].scrollIntoView(optReal)
+            if (rowRef.value && rowRef.value[rowValue]) rowRef.value[rowValue].scrollIntoView(optReal)
         },
 
         qryOneMsgNotYet : async function(chanid) {

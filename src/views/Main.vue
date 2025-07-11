@@ -12,6 +12,8 @@
     const router = useRouter()
     const route = useRoute()
 
+    const g_userid = gst.auth.getCookie("userid")
+
     const POPUPHEIGHT = 300
     const popupMenuOn = ref(false) //바로 아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top만 결정하면 됨) 
     const popupMenuPos = ref({ top: '0px', bottom: '0px', height: POPUPHEIGHT + 'px' })
@@ -118,14 +120,18 @@
                     notyetCntDmTmp = row.SUM
                 }
             }
+            debugger
             if (notyetCntHomeTmp != notyetCntHome.value) notyetCntHome.value = notyetCntHomeTmp
             if (notyetCntDmTmp != notyetCntDm.value) notyetCntDm.value = notyetCntDmTmp
             if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
                 debugger
+                //활성/비활성배열 개념은 원래 메시지처리에 대한 개념에서 시작했는데 나중에 채널마스터/디테일처리인 'chan' TYP도 포함됨
+                //'chan' TYP는 패널의 각 행에 대한 CUD처리를 위한 목적지인 Main(arrForNotChanActivted)에서도 해야 하고 
+                //MsgList 상단의 채널명/멤버이미지를 위해서도 (새창으로도) 열려 있는 MsgList(arrForChanActivted)로도 보내져야 함
                 if (gst.chanIdActivted) arrForChanActivted = rs.list.filter(x => {
-                    return (x.CHANID == gst.chanIdActivted && x.TYP != 'chan') //chan은 채널이 같더라도 MsgList로 보내지 않고 Main에서 처리
+                    return (x.CHANID == gst.chanIdActivted)
                 }) //MsgList로 전달하는 것임
-                arrForNotChanActivted = rs.list.filter(x => {
+                arrForNotChanActivted = rs.list.filter(x => { 
                     return (x.CHANID != gst.chanIdActivted || x.TYP == 'chan')
                 }) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
                 cntChanActivted.value = arrForChanActivted.length //화면 표시용
@@ -159,7 +165,7 @@
                             }
                         }
                         if (row.TYP == 'msg' && row.CUD == "C" && gst.chanIdActivted != '') {
-                            if (realShown != 'Y') {
+                            if (realShown != 'Y' && row.USERID != g_userid) {
                                 gst.realtime.procNoti(row)
                             }
                         }
