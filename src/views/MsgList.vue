@@ -184,10 +184,10 @@
                             panelUpdateNotyetCnt = true
                         } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
                             panelRefreshRow = true //본문이 수정되고 안읽음+1이 되므로 행 새로고침
-                        } else if (appType == "activity") {
-                            evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
-                        } else if (appType == "later" || appType == "fixed") {
-                            evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
+                        //} else if (appType == "activity") { //home,dm만 일단 리얼타임 반영
+                        //    evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
+                        //} else if (appType == "later" || appType == "fixed") {
+                        //    evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
                         }
                     }
                 } else { //채널이 다른 경우
@@ -196,7 +196,7 @@
                 }
             }
             if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
-                console.log(cdtAtFirst+"%%%%"+msgidAtFirst )
+                //console.log(cdtAtFirst+"%%%%"+msgidAtFirst )
                 chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
                 //await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
                 //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
@@ -207,11 +207,6 @@
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
             if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
             if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
-            //console.log("@@@@@33")
-//            sessionStorage.realtimeJobDone = 'Y'
-//            sessionStorage.logdt = obj.logdt
-//            logdt.value = obj.logdt //테스트용 //rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
-            //tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -347,7 +342,7 @@
     let sideMenu, chanId, msgidInChan
     let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
-    let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('') //, fetchByScrollEnd = ref(false)
+    let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
     let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
@@ -358,7 +353,7 @@
     let savNextMsgMstCdt = hush.cons.cdtAtFirst //가장 작은 일시(1111-11-11)로부터 시작해서 스크롤이 내려갈 때마다 점점 다음의 큰 일시가 저장됨   
     let onGoingGetList = false, prevScrollY = 0, prevScrollHeight //, getAlsoWhenDown = ""
 
-    const popupChanDmOn = ref(false), listPopupChanDm = ref([]), dataPopupChanDm = ref({})
+    //const popupChanDmOn = ref(false), listPopupChanDm = ref([]), dataPopupChanDm = ref({})
 
     //dm 보내기 (신규)
     let showUserSearch = ref(false), userSearchedRef = useTemplateRef('userSearchedRef')
@@ -370,8 +365,8 @@
     //let logdt = ref(''), 
     let realLastCdt = '' //perLastCdt = '',  //logdt는 말그대로 로그테이블 읽는 시각이고 perLastCdt/realLastCdt는 메시지마스터 테이블 읽은 시각임
     let newParentAdded = ref([]), newChildAdded = ref([])
-    let timerShort = true, timeoutShort, timeoutLong, pageShown = 'Y'
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
+    let pageShown = 'Y' //timeoutShort, timeoutLong, timerShort = true, 
+    //const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000
     let bc2, arrCurPageShown = [], fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -444,142 +439,11 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
-    //let tempcolor = ref('blue')
-/*    async function chkDataLog() { //전제조건은 logdt/perLastCdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
-        try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/perLastCdt/realLastCdt가 동시에 정해지므로 아래에서 이 3개를 사용해도 로직에 문제가 없을 것임
-            //perLastCdt 대신에 logdt을 쓰는 이유는 1) 삭제된 데이터도 리얼타임에 반영해야 하고 2) qry()가 읽어 오는 데이터가 마지막까지 항상 읽어오지 않고 중간 데이터만 읽어 오는 상황이 있기 때문임
-            if (hasProp()) return //스레드에서는 polling 없음. 부모창에서 스레드로 리얼타임 반영함
-            const res = await axios.post("/chanmsg/qryDataLog", { logdt : logdt.value, chanid: chanId })
-            const rs = gst.util.chkAxiosCode(res.data, true)
-            const arr = rs.list
-            const len = arr.length
-            if (len > 0) {
-                let cdtBottom
-                const eleBottom = getBottomMsgBody()
-                if (eleBottom) {
-                    const idxBottom = gst.util.getKeyIndex(msgRow, eleBottom.id)
-                    if (idxBottom > -1) cdtBottom = msglist.value[idxBottom].CDT
-                }
-                //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
-                //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
-                let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = ''
-                let panelUpdateNotyetCnt = false, panelRefreshRow = false
-                for (let i = 0; i < len; i++) {
-                    const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 
-                    if (row.SKIP) continue //서버 qryDataLog() 서비스 참조 (C->D/C->U)
-                    //부모로부터 업데이트 호출받을 때도 서버에서 읽어온 메시지정보없이 아이디만 넘겨서 스레드에서 서버 호출하므로 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음
-                    if (row.CUD == "U") { //메시지 수정
-                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
-                        if (idx > -1) { //굳이 await nextTick() 필요 없음
-                            //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItem.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
-                                refreshWithGetMsg(row.msgItem.data, null, idx) //자식 수정시 안읽음으로 되고 안읽은갯수가 본붐네 업데이트되어 하므로 부모자식 구분없이 업데이트하기
-                            //}
-                            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
-                        }
-                        if (appType == "home") {
-                            panelUpdateNotyetCnt = true //안읽음+1이 되므로 안읽음+1
-                        } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
-                            panelRefreshRow = true //본문이 수정되고 안읽음+1이 되므로 행 새로고침
-                        }
-                    } else if (row.CUD == "X") { //X(댓글 추가) : X는 로깅 관점에서는 부모메시지에 업데이트이므로 U와 유사 (chanmsg>saveMsg 참조)
-                        newChildAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.MAX_CDT })
-                        const parentMsgid = row.REPLYTO //화면에서 무조건 부모메시지부터 찾아야 함
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
-                        if (idx > -1) { //이미 내려받은 부모메시지 정보인 row.msgItem.data가 있으므로 서버 호출안해도 됨
-                            refreshWithGetMsg(row.msgItem.data, parentMsgid) //화면에 있는 부모메시지 업데이트
-                            if (msglistRef.value) { //스레드 열려 있으면 (다른 스레드일 수도 있지만 찾으면) 부모메시지 업데이트하고 자식메시지는 추가함
-                                msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                msglistRef.value.procFromParent("addChildFromBody", { msgid: parentMsgid, msgidReply: row.MSGID })
-                            }
-                        }
-                        panelUpdateNotyetCnt = true
-                    } else if (row.CUD == "D") { 
-                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
-                        if (idx > -1) {                            
-                            if (row.REPLYTO == "") {
-                                msglist.value.splice(idx, 1) //const item = msglist.value[idx]
-                            } else { //삭제한 MSGID가 댓글일 경우
-                                refreshWithGetMsg(row.msgItem.data, null, idx) //row.msgItem.data에 부모메시지 정보 들어 있음
-                                if (msglistRef.value) {
-                                    msglistRef.value.procFromParent("refreshMsg", { msgid: parentMsgid })
-                                    msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
-                                }
-                            }
-                            await nextTick() //배열삭제된 부분이므로 동기 처리 필요
-                        }
-                        if (row.REPLYTO == "") {
-                            const idxFound = newParentAdded.value.findIndex(item => item.MSGID == row.MSGID)
-                            if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
-                        } else {
-                            const idxFound = newChildAdded.value.findIndex(item => item.MSGID == row.MSGID)
-                            if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
-                        }
-                        if (appType == "home") {
-                            panelUpdateNotyetCnt = true
-                        } else if (appType == "dm") {
-                            panelRefreshRow = true
-                        }
-                    } else if (row.CUD == "C") { //댓글 추가는 X로 위에서 처리하므로 여긴 부모메시지 추가임. 서버로부터 이미 업데이트된 데이터를 가져온 상태가 아님 (row.msgItem 없음)
-                        //중간에 이빨 빠진 메시지가 있는 상태에서 새로운 메시지가 오면 사용자 입장에서는 무조건 자동으로 화면에 뿌리지 말고 표시만 하다가 사용자가 누르면 표시하기
-                        //if (perLastCdt < realLastCdt) { //perLastCdt가 realLastCdt보다 작거나 같을 수는 있지만 더 클 수는 없음. logdt는 realLastCdt보다 큰 상태로 계속 갈 수 있음
-                        if (savNextMsgMstCdt < realLastCdt || cdtBottom < realLastCdt || sessionStorage.pageShown != 'Y') { 
-                            //맨 마지막까지 읽어온 경우라도 사용자가 내용보려고 위로 스크롤링 했을 때도 새로운 메시지 온다고 해서 내리면 불편하므로 여기로 와야 함
-                            newParentAdded.value.push({ MSGID: row.MSGID, REPLYTO: row.REPLYTO, CDT: row.MAX_CDT })
-                        } else if (!realLastCdt && savNextMsgMstCdt > realLastCdt) { //} else if (perLastCdt > realLastCdt) { 
-                            //savNextMsgMstCdt은 1111-11-11이고 realLastCdt은 빈칸으로 내려올 수 있으므로 skip
-                        } else { //qry()로 데이터 끝까지 읽어온 상태이므로 리얼타임으로 화면에 바로 반영해도 됨 (배열에 추가)
-                            //##00 서버 qryDataLog() 서비스 참조 : 바로 아래 getList는 여기서 처리시 문제 있으므로 막고 cdtAtFirst로 처리
-                            //await getList({ nextMsgMstCdt: row.CDT, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음. 혹시 화면에 메시지 아이디가 있으면 중복체크하고 있음
-                            //여기서는 결과적으로 perLastCdt와 realLastCdt가 계속 같아지는 상태가 되다가 
-                            //화면이 다른 곳으로 넘어가거나 창이 비활성화된 상태에서 메시지가 발생하면 다시 perLastCdt < realLastCdt 상태로 바뀌게 될 것임
-                            if (row.MAX_CDT < cdtAtFirst) { //건건이 뿌리는 것이 아닌 한번에 처리하기 위함
-                                cdtAtFirst = row.MAX_CDT
-                                msgidAtFirst = row.MSGID
-                            }
-                        }
-                        if (appType == "home") {
-                            panelUpdateNotyetCnt = true
-                        } else if (appType == "dm") {
-                            panelRefreshRow = true
-                        }
-                    } else if (row.CUD == "T") { //메시지 디테일정보만 업데이트
-                        const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
-                        const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
-                        if (idx > -1) { //굳이 await nextTick() 필요 없음
-                            //if (row.REPLYTO == "") { //자식메시지 아닌 부모메시지는 이미 row.msgItemWithoutSub.data에 업데이트된 정보가 있으므로 그걸 바로 적용하면 됨
-                                //refreshWithDtl(row.msgItemWithoutSub.data, null, idx) //맨 위 U와 다른 점
-                                refreshWithGetMsg(row.msgItem.data, null, idx)
-                            //}
-                            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: row.MSGID })
-                        }
-                        if (appType == "home" || appType == "dm") {
-                            panelUpdateNotyetCnt = true //T로 처리되는 것은 안읽음 처리 포함됨
-                        }
-                    }
-                }
-                if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
-                    chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
-                    //await getList({ nextMsgMstCdt: cdtAtFirst, kind: "scrollToBottom" }) //getList() 안에 nextTick() 있음
-                    //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
-                }
-                //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
-                if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
-                if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
-            }
-            logdt.value = rs.data.logdt //로그가 추가되지 않으면 logdt는 이전 일시 그대로 내려옴. 중간 오류 발생시 이 부분이 실행되지 않으므로 다시 같은 일시로 가져올 것임
-            tempcolor.value = tempcolor.value == 'blue' ? 'red' : 'blue'
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }*/
-
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
         try {            
             if (fifo.length > 0) {
                 const rsObj = { list: fifo[0] }
-                console.log(JSON.stringify(fifo[0]), "@@@@@@@@") //여기까진 넘어옴
+                //console.log(JSON.stringify(fifo[0]), "@@@@@@@@") //여기까진 넘어옴
                 await chkDataLogEach(rsObj)
                 fifo.splice(0, 1)
             }
@@ -652,7 +516,7 @@
                 gst.objByChanId[item.chanid].realShown = item.pageShown
             }
         } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
-        console.log("@@@@"+gst.objByChanId["20250705111453478357041152"].realShown)
+        //console.log("@@@@"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
 
     onMounted(async () => { //HomePanel.vue에서 keepalive를 통해 호출되므로 처음 마운트시에만 1회 실행됨
@@ -687,16 +551,7 @@
                     }
                     observerTopScroll()
                     observerBottomScroll()
-                    //try { 
-                        
-                    //} catch {}
                 }
-                //const res = await axios.post("/chanmsg/qryDbDt")
-                //const rs = gst.util.chkAxiosCode(res.data)
-                //if (!rs) return
-                //if (logdt.value == "") logdt.value = rs.data.dbdt
-                //procTimerShort()
-                //procTimerLong()
                 if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가
                     //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                     document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
@@ -756,20 +611,18 @@
                     evToPanel({ kind: "selectRow", msgid: msgidInChan })
                 }
             }
-            //procTimerShort()
-            //procTimerLong()
         }
     })
 
     onDeactivated(() => {
-        clearTimeout(timeoutShort)
-        clearTimeout(timeoutLong)
+        //clearTimeout(timeoutShort)
+        //clearTimeout(timeoutLong)
         pageShownChanged()
     })
 
     onUnmounted(() => {
-        clearTimeout(timeoutShort)
-        clearTimeout(timeoutLong)
+        //clearTimeout(timeoutShort)
+        //clearTimeout(timeoutLong)
         if (observerTop && observerTop.value) observerTop.value.disconnect()
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
         pageShownChanged()
@@ -921,7 +774,6 @@
             }
             const res = await axios.post("/chanmsg/qry", param)
             const rs = gst.util.chkAxiosCode(res.data) 
-            //fetchByScrollEnd.value = false
             if (!rs) {
                 onGoingGetList = false                
                 return
@@ -1127,19 +979,19 @@
         }
     }
 
-    function refreshWithDtl(rs, msgid, idx) {
-        try {
-            let item = msgid ? msglist.value.find(function(row) { return row.MSGID == msgid }) : msglist.value[idx]
-            if (item) { 
-                item.act_later = rs.act_later
-                item.act_fixed = rs.act_fixed
-                item.msgdtl = rs.msgdtl
-                item.msgdtlmention = rs.msgdtlmention
-            }
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // function refreshWithDtl(rs, msgid, idx) {
+    //     try {
+    //         let item = msgid ? msglist.value.find(function(row) { return row.MSGID == msgid }) : msglist.value[idx]
+    //         if (item) { 
+    //             item.act_later = rs.act_later
+    //             item.act_fixed = rs.act_fixed
+    //             item.msgdtl = rs.msgdtl
+    //             item.msgdtlmention = rs.msgdtlmention
+    //         }
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     async function qryActionForUser(addedParam) {
         try {
@@ -1225,7 +1077,6 @@
         gst.ctx.data.header = ""
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {
-                //const url = location.protocol + "//" + location.host + "/body/msglist/" + chanId + "/" + row.MSGID + "?appType=" + appType
                 window.open(url)
             }},
             { nm: textRead, disable: disableStr, func: function(item, idx) {
@@ -1358,7 +1209,7 @@
             //그렇지 않으면, '도착 메세지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
             //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
             //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
-            if (newParentAdded.value.length == 0) {
+            if (newParentAdded.value.length == 0) { //이 방안은 개선이 필요함
                 await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
             }
         } else { //자식메시지
@@ -1664,15 +1515,7 @@
         }
     }
 
-    // function keyUpEnter(e) {
-    //     if (e.ctrlKey) {
-    //         //saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
-    //     } else {
-    //         saveMsg() //일단 줄바꿈으로 동작하게 하기
-    //     }
-    // }
-
-    function keyDownEnter(e) {
+    function keyDownEnter(e) { //keyUpEnter가 아님
         if (e.ctrlKey) {
             //saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
         } else {
@@ -1724,10 +1567,6 @@
             if (!rs) return
             if (crud == "C") {
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
-                    //await getList({ msgid: props.data.msgid, kind: "withReply" })
-                    //await getList({ msgid: props.data.msgid, kind: "withReply", msgidReply: rs.data.msgid })
-                    //if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-                    //debugger
                     await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: rs.data.replyto })
                     if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })                  
                     evClick({ type: "refreshFromReply", msgid: props.data.msgid })
@@ -1747,12 +1586,10 @@
             }            
             if (appType == "later" || appType == "fixed" || appType == "activity") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") {
-                    //gst[appType].procFromBody("update", rq)
                     evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
                 }
             } else if (appType == "dm") {
                 evToPanel({ kind: "refreshRow", chanid: chanId }) //evToPanel({ kind: "update", chanid: chanId, bodytext: bodytext })
-                //gst.dm.procFromBody("update", rq)
             }
             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value }) //댓글창의 부모글 업데이트
             msgbody.value = ""            
@@ -2544,7 +2381,6 @@
 
     function openDmRoom(chanid, newWin) {
         if (newWin) {
-            //window.open("/body/msglist/" + chanid + "/0?appType=dm")
             const url = gst.util.getUrlForBodyListNewWin(chanid, "0", "dm")
             window.open(url)
         } else {
@@ -2615,8 +2451,6 @@
                         <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
                         <div v-else class="coDotDot"><span>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span></div>
                     </div>
-                    <!-- <span v-show="fetchByScrollEnd" style="color:darkblue;margin-left:10px">data by scrolling</span>  -->
-                    
                 </div>
                 <div class="chan_center_header_right">
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
@@ -2692,8 +2526,6 @@
                             class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
                         <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
                         <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
-                        <!-- <span v-if="vipStr.includes(row.AUTHORID)" 
-                            style="margin-left:8px;padding:1px;font-size:12px;background:black;color:white;border-radius:5px">VIP</span> -->
                         <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
                         <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                         <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
@@ -2794,7 +2626,6 @@
                         <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('emo_done.png')" title="완료" @click="toggleReaction(row.MSGID, 'done')"></span>
                         <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_emoti.png')" title="이모티콘" @click="openEmoti(row.MSGID)"></span> -->
                         <span v-if="!hasProp()" class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_thread.png')" title="스레드열기" @click="openThread(row.MSGID)"></span>
-                        <!-- <span class="procAct"><img class="coImg18" :src="gst.html.getImageUrl('dimgray_forward.png')" title="전달" @click="forwardMsg(row.MSGID)"></span> -->
                         <span class="procAct">
                             <img class="coImg18" :src="gst.html.getImageUrl(!row.act_later ? 'dimgray_later.png' : 'violet_later.png')" title="나중에" @click="changeAction(row.MSGID, 'later')">
                         </span>
@@ -2909,7 +2740,6 @@
         <div style="display:flex;flex-direction:column">
             <input v-model="linkText" style="width:300px;height:24px;border:1px solid dimgray" placeholder="표시 텍스트" />
             <input v-model="linkUrl" style="width:300px;height:24px;margin-top:15px;border:1px solid dimgray" placeholder="링크 http(s)://" />
-            <!-- <span style="margin-top:10px;color:dimgray">링크를 한 필드에만 넣어도 됩니다.</span> -->
         </div>
     </popup-common>
     <popup-chan-dm ref="popupChanDmRef" @ev-click-chandm="okChanDmPopup"></popup-chan-dm> 

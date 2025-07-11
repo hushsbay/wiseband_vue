@@ -94,18 +94,6 @@
         width:100%;height:100%;overflow:hidden;
         display:flex;flex-direction:column;border:0 solid dimgray
     }
-    .chan_center_header {
-        width:100%;min-height:60px;
-        display:flex;align-items:center;justify-content:space-between;
-        background:whitesmoke;border-bottom:1px solid dimgray;overflow:hidden
-    }
-    .chan_center_header_left {
-        width:99%;height:100%;padding:20px;display:flex;align-items:center;
-        font-size:18px;
-    }
-    .chan_center_header_right {
-        width:1%;height:100%;padding:20px;display:flex;align-items:center;justify-content:flex-end;
-    }
     .chan_center_body {
         width:100%;height:100%;margin-bottom:5px;display:flex;flex-direction:column;background:var(--second-color)
     }
@@ -113,29 +101,8 @@
         margin-top:10px;padding:8px;display:flex;justify-content:center;align-items:center;border-radius:5px;cursor:pointer;
         background:#510143;color:white 
     }
-    .file_body {
-        width:100%;display:flex;flex-direction:column;border-bottom:1px solid lightgray;cursor:pointer
-    }
-    .file_body:hover { background:var(--hover-color) }
-    .image_body {	
-        padding:5px;
-        display:grid;grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));grid-auto-rows:150px; gap:5px; 
-    }
-    .item {  				
+    /* .item {  				
         padding:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1px solid lightgray
     }
-    .item:hover { background:var(--hover-color) }
-    .msg_body_sub {
-        display:flex;margin-bottom:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
-    }
-    .msg_file_each {
-        position:relative;min-width:100px;height:30px;margin:10px 10px 0 0;padding:0 5px;display:flex;align-items:center;border:1px solid lightgray;border-radius:3px;cursor:pointer
-    }
-    .msg_image_each {
-        position:relative;width:80px;height:80px;margin:10px 10px 0 0;border:1px solid lightgray;border-radius:3px;cursor:pointer
-    }
-    .div_cdt { width:160px;height:36px;padding:0 10px;display:flex;align-items:center }
-    .div_authornm { width:160px;height:36px;padding:0 10px;display:flex;justify-content:space-between;align-items:center }
-    .div_newwin { padding:3px;border-radius:5px;background:var(--primary-btn-color);color:white;cursor:pointer }
-    .div_bodytext { width:calc(100% - 180px);height:36px;display:flex;align-items:center }
+    .item:hover { background:var(--hover-color) } */
 </style>

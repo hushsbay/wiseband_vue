@@ -15,23 +15,10 @@
             return ret
         }
 
-        // function getDateTimeStamp(str) { //str = 2012-08-02 14:12:04
-        //     const d = str.match(/\d+/g) //extract date parts
-        //     return new Date(d[0], d[1] - 1, d[2], d[3], d[4], d[5])
-        // }
-
-        function procLocalStorage() { //Main.vue에도 거의 동일한 로직이 있는데 둘 다 공통으로 모듈화하기가 쉽지 않아 일단 중복 코딩 (5초는 Main.vue에도 있음을 유의)
+        function procLocalStorage() {
             if (!localStorage.winId) {
                localStorage.winId = winId
                localStorage.winDt = getCurDateTimeStr()
-            // } else { //이미 다른 탭이 위너로 자리잡고 있다고 봐야 하나 (자기자신이나 다른 탭이) 비정상적인 브라우저 종료로 미처 delete 안되었을 경우도 고려
-            //     const winDt = localStorage.winDt //localStorage.winId가 있으면 localStorage.winDt도 무조건 있다고 보기
-            //     const dtPrev = getDateTimeStamp(winDt)
-            //     const sec = parseInt(((new Date()) - dtPrev) / 1000) //return seconds
-            //     if (sec > 5) { //5초 지나면 새로 위너에 도전하기
-            //         localStorage.winId = winId
-            //         localStorage.winDt = getCurDateTimeStr()
-            //     }
             }
         }
 
@@ -52,11 +39,10 @@
         start.then(() => {
             bc = new BroadcastChannel("wbRealtime") //각탭의 index.html <=> index.html
             bc.onmessage = (e) => { getBroadcast(e.data) }
-            winId = Math.floor(Math.random() * (999999 - 100000)) + 100000
+            winId = Math.floor(Math.random() * (99999999 - 10000000)) + 10000000
             const tag = document.querySelector("#winid")
             tag.innerText = winId //Main.vue에 전달
             procLocalStorage()
-            //sessionStorage.pageShown = 'Y'
         }).catch(error => {
             alert(error)
         }) //.finally(() => {})

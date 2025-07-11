@@ -327,14 +327,6 @@
     async function handleEvFromBody(param) { //MsgList.vue에서 실행
         if (param.kind == "selectRow") {
             dmClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
-        // } else if (param.kind == "update") { //대신 아래 refreshRow 사용하기
-        //     const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
-        //     if (idx == -1) return
-        //     const row = listDm.value[idx]
-        //     row.BODYTEXT = param.bodytext
-        //     if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
-        //     listDm.value.splice(idx, 1)
-        //     listDm.value.unshift(row)
         } else if (param.kind == "refreshRow") {
             await refreshRow(param.chanid, true)
         } else if (param.kind == "delete") {
@@ -391,8 +383,7 @@
             } else { //패널에 데이터가 없음
                 gst.util.goMsgList('dm_body', { chanid: chanid, msgid: "nodata" })
             }
-            //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 
-            //home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
+            //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
         } else if (kind == "create") {
             const row = await getSingleDm(chanid)
             listDm.value.unshift(row)
@@ -414,7 +405,6 @@
                     <input type="search" v-model="searchWord" @keyup.enter="procSearchQuery" @input="procClearSearch" style="width:100px;margin-right:8px" placeholder="멤버" />
                     <input type="checkbox" id="checkbox" v-model="notyetChk" @change="procChangedQuery" /><label for="checkbox" style="margin-right:12px;color:whitesmoke">안읽음</label>
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:0px" @click="refreshPanel">
-                    <!-- <img v-if="!props.fromPopupChanDm" class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="DM방 만들기" @click="newDm()"> -->
                 </div>
             </div>
         </div>
@@ -424,7 +414,7 @@
         <div v-else style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:whitesmoke;border-bottom:1px solid lightgray;cursor:pointer">
             <span style="margin-right:10px" @click="newDm()">신규</span>
             <span style="margin-right:10px">|</span>
-            <span style="margin-right:10px" @click="newDm(true)">신규(관리)</span>
+            <span style="margin-right:10px" @click="newDm(true)">신규(관리용)</span>
         </div>        
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
             <div v-for="(row, idx) in listDm" :key="row.CHANID" :id="row.CHANID" :ref="(ele) => { chanRow[row.CHANID] = ele }" :keyidx="idx"
@@ -435,7 +425,6 @@
                         <span>{{ row.memcnt }}명</span>
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
-                        <!-- <span style="margin-right:5px;color:darkgray">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span> -->
                         <span :class="row.mynotyetCnt == 0 ? '' : 'coMyNotYet'">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
                         <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
                         <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">

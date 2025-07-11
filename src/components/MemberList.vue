@@ -515,7 +515,7 @@
     input { height:28px;margin-right:8px;border:1px solid dimgray;border-radius:0px }
     input[type=text]:focus { outline:2px solid lightgreen }
     .popup {
-        position:fixed;width:90%;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;z-index:1000;background:white;
+        position:fixed;width:90%;min-width:1200px;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;z-index:1000;background:white;
         display:flex;flex-direction:column;border-radius:10px
     }
     .overlay {

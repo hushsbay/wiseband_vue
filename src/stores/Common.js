@@ -7,12 +7,6 @@ const hush = {
         OK : '0',
         NOT_OK : '-1',
         NOT_FOUND : '-100',
-        // BLANK_DATA : '-101',
-        // JWT_NONE : '-801',
-        // JWT_MISMATCH : '-802',
-        // JWT_EXPIRED : '-803',
-        // JWT_ETC : '-809',
-        // PWD_MISMATCH : '-811',
         auth_err_prefix : "-8",
         deli : "$~$",
         state_nodata : "nodata",
@@ -30,9 +24,6 @@ const hush = {
         startOfData : "처음 데이터입니다.",
         endOfData : "마지막 데이터입니다.",
         picCnt : 4, //picCnt명까지만 사진 등 보여주기 (4명까지만 가능. 서버도 동일 설정)
-        //done : "처리 완료",
-        //doneWithCnt : "처리 완료 : ",
-        //askDel : "삭제하시겠습니까?",
     },
 
     noti : {

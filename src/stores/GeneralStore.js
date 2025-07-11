@@ -12,7 +12,6 @@ const GeneralStore = defineStore('General', () => {
     const $cookie = inject('$cookies')
 
     let objSaved = ref({}) //현재는 MsgList에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
-    //let objNewOpenWin = ref({}) //새창으로 연 채널/DM방은 원래 열었던 Main.vue가 있는 화면에서는 화면이 뒤로 가도 알림이 안 울려야 함 (새창이 알림 관장)
     let selSideMenu = ref(""), chanIdActivted = ref(''), objByChanId = ref({})
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
@@ -45,16 +44,6 @@ const GeneralStore = defineStore('General', () => {
        6) 처럼 (MsgList간의 통신에 한해서) 자식이 부모에게 전달하고자 할 때 : MsgList(스레드댓글)->MsgList
          - emits 사용하기
     */
-    
-    ///////////////////////////////////////////////////////////////////////
-    //let listHome = ref([]) //, selChanHome = ref('')
-    //let listDm = ref([]), kindDm = ref('all')
-    //let listActivity = ref([]), kindActivity = ref('all')
-    //let listLater = ref([]), cntLater = ref(''), kindLater = ref('later')
-    //let listFixed = ref([]), cntFixed = ref('')
-    //let chanItems = ref([]), dmItems = ref([]), kindChanDm = ref('chan'), selChanDm = ref('')
-    //let listGroup = ref([]), kindGroup = ref('my'), selGroup = ref('')
-    ///////////////////////////////////////////////////////////////////////
     
     const auth = {
 
@@ -167,200 +156,15 @@ const GeneralStore = defineStore('General', () => {
 
     }
     
-    ///////////////////////////////////////////////////////////////////////////////////
-    // const home = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
-
-    //     procFromBody : async function(type, obj) {
-    //         // if (type == "recall") {
-    //         //     selChanHome.value = obj.chanid
-    //         // } else 
-    //         if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
-    //             const row = listHome.value.find((item) => item.CHANID == obj.chanid)
-    //             if (!row) return
-    //             const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
-    //             const rs = util.chkAxiosCode(res.data)
-    //             if (!rs) return
-    //             row.mynotyetCnt = rs.data.kindCnt
-    //         }
-    //     }
-
-    // }
-
-    // const dm = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
-
-    //     procFromBody : async function(type, obj) {
-    //         if (type == "update") {
-    //             const idx = listDm.value.findIndex((item) => item.CHANID == obj.chanid)
-    //             if (idx == -1) return
-    //             const row = listDm.value[idx]
-    //             row.BODYTEXT = obj.bodytext
-    //             if (idx == 0) return //아래는 해당 배열항목이 맨 위가 아닐 때 맨 위로 올리는 것임
-    //             listDm.value.splice(idx, 1)
-    //             listDm.value.unshift(row)
-    //         } else if (type == "updateUnreadCnt") { //사용자가 읽고 나서 갯수 새로 고침
-    //             const row = listDm.value.find((item) => item.CHANID == obj.chanid)
-    //             if (!row) return
-    //             const res = await axios.post("/menu/qryKindCnt", { chanid: obj.chanid, kind: "notyet" })
-    //             const rs = util.chkAxiosCode(res.data)
-    //             if (!rs) return
-    //             row.mynotyetCnt = rs.data.mynotyetCnt
-    //         }
-    //     }
-
-    // }
-
-    // const later = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
-
-    //     procFromBody : async function(type, obj) {
-    //         if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
-    //             const row = listLater.value.find((item) => item.MSGID == obj.msgid)
-    //             if (row) row.BODYTEXT = obj.bodytext
-    //         } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
-    //             if (obj.work == "delete") { 
-    //                 const idx = listLater.value.findIndex((item) => item.MSGID == obj.msgid)
-    //                 if (idx > -1) listLater.value.splice(idx, 1)
-    //             } else { //create (화면에 없는 걸 보이게 하는 것임)
-    //                 if (kindLater.value == "later") { //'나중에' 패널에서 진행중(later)탭이 아니면 추가된 행 화면업뎃할 일 없음
-    //                     const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
-    //                     const rs = util.chkAxiosCode(res.data)
-    //                     if (!rs || rs.list.length == 0) return
-    //                     const row = rs.list[0]
-    //                     row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-    //                     let added = false
-    //                     const len = listLater.value.length
-    //                     for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-    //                         if (obj.msgid > listLater.value[i].MSGID) {
-    //                             listLater.value.splice(i, 0, row)
-    //                             added = true
-    //                             break
-    //                         }
-    //                     }
-    //                     if (!added) listLater.value.push(row)
-    //                 }
-    //             }
-    //             later.getCount() //화면에 갯수 업데이트
-    //         }
-    //     },
-
-    //     getCount : async function() {
-    //         try {
-    //             const res = await axios.post("/menu/qryPanelCount", { kind: "later" })
-    //             const rs = util.chkAxiosCode(res.data)
-    //             if (!rs) return
-    //             cntLater.value = rs.list[0].CNT
-    //         } catch (ex) {
-    //             util.showEx(ex, true)
-    //         }
-    //     }
-
-    // }
-
-    // const activity = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
-
-    //     procFromBody : async function(type, obj) {
-    //         if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
-    //             const row = listActivity.value.find((item) => item.MSGID == obj.msgid)
-    //             if (row) row.BODYTEXT = obj.bodytext
-    //         } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
-    //             if (obj.work == "delete") { 
-    //                 const idx = listActivity.value.findIndex((item) => item.MSGID == obj.msgid)
-    //                 if (idx > -1) listActivity.value.splice(idx, 1)
-    //             } else { //create (화면에 없는 걸 보이게 하는 것임)
-    //                 if (kindActivity.value != "") {
-    //                     const res = await axios.post("/menu/qryActivity", { msgid: obj.msgid })
-    //                     const rs = util.chkAxiosCode(res.data)
-    //                     if (!rs || rs.list.length == 0) return
-    //                     const row = rs.list[0]
-    //                     row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-    //                     let added = false
-    //                     const len = listActivity.value.length
-    //                     for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-    //                         if (obj.msgid > listActivity.value[i].MSGID) {
-    //                             listActivity.value.splice(i, 0, row)
-    //                             added = true
-    //                             break
-    //                         }
-    //                     }
-    //                     if (!added) listActivity.value.push(row)
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    // }
-
-    // const fixed = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
-
-    //     procFromBody : async function(type, obj) {
-    //         if (type == "update") { //MsgList.vue의 saveMsg() 참조 : rq
-    //             const row = listFixed.value.find((item) => item.MSGID == obj.msgid)
-    //             if (row) row.BODYTEXT = obj.bodytext
-    //         } else if (type == "work") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, work: work }
-    //             if (obj.work == "delete") { 
-    //                 const idx = listFixed.value.findIndex((item) => item.MSGID == obj.msgid)
-    //                 if (idx > -1) listFixed.value.splice(idx, 1)
-    //             } else { //create (화면에 없는 걸 보이게 하는 것임)
-    //                 const res = await axios.post("/menu/qryPanel", { msgid: obj.msgid })
-    //                 const rs = util.chkAxiosCode(res.data)
-    //                 if (!rs || rs.list.length == 0) return
-    //                 const row = rs.list[0]
-    //                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-    //                 let added = false
-    //                 const len = listFixed.value.length
-    //                 for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-    //                     if (obj.msgid > listFixed.value[i].MSGID) {
-    //                         listFixed.value.splice(i, 0, row)
-    //                         added = true
-    //                         break
-    //                     }
-    //                 }
-    //                 if (!added) listFixed.value.push(row)
-    //             }
-    //             fixed.getCount() //화면에 갯수 업데이트
-    //         }
-    //     },
-
-    //     getCount : async function() {
-    //         try {
-    //             const res = await axios.post("/menu/qryPanelCount", { kind: "fixed" })
-    //             const rs = util.chkAxiosCode(res.data)
-    //             if (!rs) return
-    //             cntFixed.value = rs.list[0].CNT
-    //         } catch (ex) {
-    //             util.showEx(ex, true)
-    //         }
-    //     }
-
-    // }
-
-    // const group = { //맨 위 설명 3),4) 참조. MsgList.vue에서 호출해 패널 화면 업데이트하는 것임
-
-    //     procFromBody : async function(type, obj) {
-    //         if (type == "recall") {
-    //             selGroup.value = obj.grid
-    //         } else if (type == "update00000000000000UnreadCnt") {
-    //             const row = listGroup.value.find((item) => item.GR_ID == obj.grid)
-    //             if (!row) return
-    //             const res = await axios.post("/menu/qryKindCnt", { grid: obj.grid, kind: "000000000000000000" })
-    //             const rs = util.chkAxiosCode(res.data)
-    //             if (!rs) return
-    //             //row.mynotyetCnt = rs.data.kindCnt
-    //         }
-    //     }
-
-    // }
-    ///////////////////////////////////////////////////////////////////////////////////
-
     const util = {
 
         chkOnMountedTwice : function(route, str) { //MsgList가 1초 이내 2번 mounted되는데 이 루틴으로 한번만 막으려 했으나 노드자동클릭 안되는 현상 발생해 모두 막아야 함
-            return true
-            if (sessionStorage.mountedFullpath == route.fullPath) {
-                console.log(str + " - route.fullPath가 동일한데 onMounted() 재호출되어 막음 - 개발 Hot Deploy일 수도 있음 (운영에서 체크) - " + route.fullPath)
-                return false
-            }
-            sessionStorage.mountedFullpath = route.fullPath
-            setTimeout(function() { sessionStorage.mountedFullpath = '' }, 1000)
+            // if (sessionStorage.mountedFullpath == route.fullPath) {
+            //     console.log(str + " - route.fullPath가 동일한데 onMounted() 재호출되어 막음 - 개발 Hot Deploy일 수도 있음 (운영에서 체크) - " + route.fullPath)
+            //     return false
+            // }
+            // sessionStorage.mountedFullpath = route.fullPath
+            // setTimeout(function() { sessionStorage.mountedFullpath = '' }, 1000)
             return true
         }, 
 
@@ -406,7 +210,6 @@ const GeneralStore = defineStore('General', () => {
                 snackBar.value.msg = strMsg.replace(/\n/g, "<br>")
                 snackBar.value.where = arrStack[line]
             }
-//            sessionStorage.realtimeJobDone = 'Y' //Main.vue+MsgList.vue 참조
         },
 
         setToast : function(ex, toastSec, close) {
@@ -497,7 +300,6 @@ const GeneralStore = defineStore('General', () => {
 
         getUrlForOneMsgNotYet : async function(chanid) { //아래 goMsgList가 아닌 window.open(새창열기)에 사용됨
             let strMsgid = await util.qryOneMsgNotYet(chanid)
-            //if (strMsgid != "0") strMsgid += "?notyet=true"
             return "/body/msglist/" + chanid + "/" + strMsgid
         },
 
@@ -512,9 +314,6 @@ const GeneralStore = defineStore('General', () => {
         handleMsgSub : function(row) {
             for (let item of row.msgimg) {
                 if (!item.BUFFER) continue //잘못 insert된 것임
-                // const uInt8Array = new Uint8Array(item.BUFFER.data)
-                // const blob = new Blob([uInt8Array], { type: "image/png" })
-                // const blobUrl = URL.createObjectURL(blob)
                 item.url = hush.util.getImageBlobUrl(item.BUFFER.data)
                 item.hover = false
                 item.cdt = item.CDT
@@ -558,10 +357,6 @@ const GeneralStore = defineStore('General', () => {
                 let msgid = params.msgid
                 if (!msgid) params.msgid = await util.qryOneMsgNotYet(params.chanid)
                 let obj = { name : nm, params : params}
-                // if (!msgid && params.msgid.length > 20) { //안읽은 메시지 아이디를 가지고 온 것임 : Panel중에 동일한 로직으로 처리하는 곳이 있음
-                //     if (!obj.query) obj.query = {}
-                //     obj.query.notyet = true                    
-                // }
                 const ele = document.getElementById("chan_center_header") //chan_center_body
                 if (refresh || !ele || ele.innerHTML == "") { //MsgList.vue에 있는 chan_center_header이 없다는 것은 빈페이지로 열려 있다는 것이므로 히스토리에서 지워야 back()할 때 빈공간 안나타남
                     await router.replace(obj) //히스토리에서 지워야 back()할 때 빈공간 안나타남
@@ -680,12 +475,6 @@ const GeneralStore = defineStore('General', () => {
         objSaved, selSideMenu, chanIdActivted, objByChanId, //objByChanId는 Main.vue에서만 추가/삭제 가능하면 다른데에서는 읽기만 하기
         snackBar, toast, bottomMsg, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, noti, util,
-        //home, listHome, //selChanHome,
-        //dm, listDm, kindDm,
-        //listActivity, kindActivity, //cntActivity, 
-        //later, listLater, cntLater, kindLater,
-        //fixed, listFixed, cntFixed,
-        //group, listGroup, kindGroup, selGroup,
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

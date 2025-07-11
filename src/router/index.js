@@ -142,8 +142,7 @@ const router = createRouter({
             ]
         }        
     ],
-    //scrollBehavior는 overflow:hidden 빼면 가능하다고 하나 입맛대로 구현이 어려워
-    //keepalive + onscrollend + onActivated hook에서 더 자유도 높게 해결함
+    //scrollBehavior는 overflow:hidden 빼면 가능하다고 하나 입맛대로 구현이 어려워 keepalive + onscrollend + onActivated hook에서 더 자유도 높게 해결함
 })
 
 router.beforeEach((to, from) => {
@@ -162,7 +161,6 @@ router.beforeEach((to, from) => {
             const arr = from.path.split("/") //예) /main/dm/dm_body/20250428084532918913033115/0"
             const fromPath2 = "/" + arr[1] + "/" + arr[2] //예) /main/dm
             if (to.path == fromPath2) {
-                //debugger
                 console.log('body -> panel (새로고침 등으로 body에서 panel을 호출하는 것은 막음)')
                 return false
             }

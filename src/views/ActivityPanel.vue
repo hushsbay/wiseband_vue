@@ -23,7 +23,7 @@
     defineExpose({ procMainToMsglist })
 
     async function procMainToMsglist(kind, obj) { //단순 전달
-        await msglistRef.value.procMainToMsglist(kind, obj)
+        //await msglistRef.value.procMainToMsglist(kind, obj)
     }
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -186,23 +186,6 @@
             gst.util.showEx(ex, true)
         }
     }
-
-    // async function changeAction(kind, row) { //?????????????????????????????????????????
-    //     try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
-    //         const msgid = row.MSGID
-    //         const rq = { chanid: row.CHANID, msgid: msgid, kind: kindActivity.value, job: kind } //kind는 현재 상태, job은 바꿀 상태
-    //         const res = await axios.post("/chanmsg/changeAction", rq)
-    //         let rs = gst.util.chkAxiosCode(res.data)
-    //         if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Activity 패널 탭에서는 제거해야 함
-    //         const idx = listActivity.value.findIndex((item) => item.MSGID == msgid)
-    //         if (idx > -1) listActivity.value.splice(idx, 1)
-    //         if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
-    //         const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
-    //         msglistRef.value.procFromParent("activity", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
-    //     } catch (ex) { 
-    //         gst.util.showEx(ex, true)
-    //     }
-    // }
 
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""

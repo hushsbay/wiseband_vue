@@ -71,7 +71,7 @@
     }
 
     function groupClickOnLoop(clickNode, grid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. grid는 명시적으로 해당 노드를 지정해서 처리하는 것임
-        const gridToChk = grid ? grid : localStorage.wiseband_lastsel_grid
+        //const gridToChk = grid ? grid : localStorage.wiseband_lastsel_grid
         let foundIdx = -1
         listGroup.value.forEach((item, index) => {
             procgroupRowImg(item)

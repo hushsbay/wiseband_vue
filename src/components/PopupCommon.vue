@@ -1,9 +1,6 @@
 <script setup>
     import { ref } from 'vue' 
 
-    //import GeneralStore from '/src/stores/GeneralStore.js'
-
-    //const gst = GeneralStore()
     const props = defineProps({ kind: String })
     const emits = defineEmits(["ev-click"])
     defineExpose({ open, close })

@@ -38,7 +38,7 @@ select { height:28px; }
 /* 레이아웃 : 기본 (시작) : 그리드 메뉴처럼 좌우 윈도우사이즈를 달리해도 항상 가운데 위치하도록 함 (with #app) */
 
 .coMain {
-  width:100%;height:100%;
+  width:100%;min-width:1400px;height:100%;
   display:flex;flex-direction:column;
 }
 

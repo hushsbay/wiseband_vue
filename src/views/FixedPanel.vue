@@ -87,10 +87,6 @@
         if (afterScrolled.value == false) afterScrolled.value = true //false 조건에 유의 (아니면 마지막 hide 안됨)
     }
 
-    function procQuery() {
-        getList(true)
-    }
-
     async function getList(refresh) {
         try {
             if (onGoingGetList) return
@@ -186,7 +182,6 @@
 
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
-        //const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/" + row.MSGID + "?appType=fixed"
         const url = gst.util.openWinForBodyList(row.CHANID, row.MSGID, "fixed")
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {

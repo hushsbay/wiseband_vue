@@ -6,7 +6,7 @@
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import MemberPiceach from "/src/components/MemberPiceach.vue"
-    import ContextMenu from "/src/components/ContextMenu.vue"
+    //import ContextMenu from "/src/components/ContextMenu.vue"
     import OrgTree from "/src/components/OrgTree.vue"
             
     const router = useRouter()
@@ -21,7 +21,7 @@
 
     const orgRef = ref(null) //UserList(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
 
-    const g_userid = gst.auth.getCookie("userid")
+    //const g_userid = gst.auth.getCookie("userid")
     let mounting = true, sideMenu = "mnuGroup", grId
     
     const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
@@ -368,12 +368,6 @@
                             <!-- <div style="display:flex;align-items:center">
                                 <span style="margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
                                 <span>{{ row.JOB }}</span>
-                            </div>
-                            <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">
-                                <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">
-                                    {{ row.KIND=='guest' ? '게스트' : '관리자' }}
-                                </span>
-                                <span v-if="row.SYNC != 'Y'" class="kind">입력</span>
                             </div> -->
                             <div style="width:calc(100% - 100px);display:flex;align-items:center">
                                 <div class="coDotDot">
@@ -432,7 +426,6 @@
                         <span class="coImgSpn">삭제</span>
                     </div>
                     <span style="margin-right:5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
-                    <!-- <span style="color:darkblue">신규 : 조직도에 없는 멤버 추가시</span> -->
                 </div>
                 <div style="display:flex;align-items:center;cursor:pointer">
                     <table>
@@ -452,7 +445,6 @@
                                 <td class="tdValue" colspan="2">
                                     <input type="radio" id="member" value="member" v-model="rowKind"><label for="member">Member</label>
                                     <input type="radio" id="admin" value="admin" v-model="rowKind"><label for="admin">Admin</label>
-                                    <!-- <input type="radio" id="guest" value="guest" v-model="rowKind"><label for="guest">Guest</label> -->
                                 </td>
                             </tr>
                             <tr>

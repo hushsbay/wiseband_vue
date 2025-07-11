@@ -27,7 +27,7 @@
 
     //리얼타임 반영
     let panelRef = ref(null)
-    let timerShort = true, timeoutShort, timeoutLong
+    let timerShort = true //, timeoutShort, timeoutLong
     const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000, TIMERSEC_WINNER = 10 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
     //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
@@ -85,9 +85,9 @@
 
     async function chkDataLogEach(rsObj) {
         try {
-            if (realtimeJobDone != 'Y') return //if (sessionStorage.realtimeJobDone != 'Y') return
-            realtimeJobDone = '' //sessionStorage.realtimeJobDone = ''
-            logdtDisp.value = logdt //logdt.value = sessionStorage.logdt //화면 표시용
+            if (realtimeJobDone != 'Y') return
+            realtimeJobDone = ''
+            logdtDisp.value = logdt //화면 표시용
             logdtColor.value = logdtColor.value == 'yellow' ? 'lightgreen' : 'yellow' //화면 표시용
             let arrForChanActivted = []
             let arrForNotChanActivted = []
@@ -100,7 +100,7 @@
                 const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt }) //sessionStorage.logdt })
                 rs = gst.util.chkAxiosCode(res.data, true)
                 if (!rs) {
-                    realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y'
+                    realtimeJobDone = 'Y'
                     return
                 }
                 bc1.postMessage({ code: 'polling', obj: rs })
@@ -157,19 +157,11 @@
                     }
                 }
                 if (arrForChanActivted.length > 0) {
-                    //console.log(rs.data.logdt+"@@@@@22"+arrForChanActivted[0].MSGID+"---"+arrForChanActivted[0].CDT)
                     await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async/await 동작함 (동기화 가능)
                     //위 실행하여 MsgList.vue까지 가서 처리후 console.log 찍고 여기 아래 console.log 찍으면 순서바뀌지 않고 제대로 찍힘
                     //따라서, sessionStorage.logdt는 그냥 여기 변수로 logdt로 잡고 sessionStorage.realtimeJobDone은 제거해도 되나 일단 막아두기만 함
-                    //console.log("logdt444444==="+rs.data.logdt)
-                } else { //바로 위 루틴에서 logdt를 sessionStorage.logdt으로부터 가져오는데 이게 그 위 if (arrForNotChanActivted > 0) 조건도 같이 체크해서
-                    //마지막으로 끝나는 싯점에 맞춰 sessionStorage.logdt = obj.logdt으로 처리해야 다음에 읽어올 logdt가 흐트러지지 않음
-                    //sessionStorage.logdt = rs.data.logdt
-                    //sessionStorage.realtimeJobDone = 'Y'
                 }
                 logdt = rs.data.logdt
-            } else {
-                //sessionStorage.realtimeJobDone = 'Y'
             }
             realtimeJobDone = 'Y' //추가
         } catch (ex) {
@@ -186,20 +178,17 @@
                 await chkDataLogEach()
             }
         }
-        timerShort = (pageShown == 'Y') ? true : false //timerShort = (sessionStorage.pageShown == 'Y') ? true : false
-        //timeoutShort = setTimeout(function() { procTimerShort() }.bind(this), TIMERSEC_SHORT)
-        timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT)
+        timerShort = (pageShown == 'Y') ? true : false
+        timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT) //procTimerShort() }.bind(this)
     }
 
-    async function procTimerLong() {
-        //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
+    async function procTimerLong() { //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
         if (!timerShort) {
             if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
                 await chkDataLogEach()
             }
         }
-        //timeoutLong = setTimeout(function() { procTimerLong() }.bind(this), TIMERSEC_LONG)             
-        timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG)
+        timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG) //procTimerLong() }.bind(this)
     }
 
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
@@ -282,7 +271,7 @@
                 gst.objByChanId[item.chanid].realShown = item.pageShown
             }
         } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
-        if (gst.objByChanId["20250705111453478357041152"]) console.log("####"+gst.objByChanId["20250705111453478357041152"].realShown)
+        //if (gst.objByChanId["20250705111453478357041152"]) console.log("####"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
 
     onMounted(async () => {
@@ -298,8 +287,8 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y' 
-            //if (!sessionStorage.logdt) { //9999-99-99로 잘못들어간 적이 있는데 변경할 밥업이 없음
-                logdt = rs.data.dbdt //sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
+            //if (!sessionStorage.logdt) { //9999-99-99로 잘못들어간 적이 있는데 변경할 방법이 없어 막음
+            logdt = rs.data.dbdt //sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
             //}
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USERID != null)
@@ -307,16 +296,6 @@
             window.addEventListener('resize', () => { decideSeeMore() })
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
-            // let idx = -1    
-            // let lastSelMenu = localStorage.wiseband_lastsel_menu
-            // if (lastSelMenu) {
-            //     idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
-            // } else {
-            //     lastSelMenu = "mnuHome"
-            // }
-            // const idxReal = (idx == -1) ? 0 : idx
-            // const row = listSel.value[idxReal]
-            // sideClick(lastSelMenu, row, true)
             sideClickOnLoop(null, true)
             procLocalStorage() 
             procTimerShort() 
@@ -393,32 +372,30 @@
     }
 
     function mouseEnter(e) {
-        //setTimeout(function() {
-            prevX = e.pageX
-            prevY = e.pageY
-            const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
-            if (menuDiv.id == "mnuSeeMore") {
-                listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value] //위 ## 주석 참조
-            } else {
-                return //더보기 말고 팝업표시하는 것은 육안으로는 화면이 더 복잡해져서 오히려 불편함을 느낌 (주관적) : 향후 필요시 return 빼고 팝업 메뉴 추가하면 됨 (일단은 더보기에 대해서만 팝업 지원)
-                const found = listAll.value.find((item) => item.ID == menuDiv.id)
-                if (!found || found.POPUP != "Y") {
-                    popupMenuOn.value = false //혹시 떠 있을 팝업 제거
-                    return
-                }
-                listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
+        prevX = e.pageX
+        prevY = e.pageY
+        const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
+        if (menuDiv.id == "mnuSeeMore") {
+            listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value] //위 ## 주석 참조
+        } else {
+            return //더보기 말고 팝업표시하는 것은 육안으로는 화면이 더 복잡해져서 오히려 불편함을 느낌 (주관적) : 향후 필요시 return 빼고 아래 팝업 메뉴 추가하면 됨 (일단은 더보기에 대해서만 팝업 지원)
+            const found = listAll.value.find((item) => item.ID == menuDiv.id)
+            if (!found || found.POPUP != "Y") {
+                popupMenuOn.value = false //혹시 떠 있을 팝업 제거
+                return
             }
-            popupMenuOn.value = true
-            const docHeight = document.documentElement.offsetHeight
-            if (menuDiv.offsetTop + POPUPHEIGHT > docHeight) {
-                popupMenuPos.value.top = null
-                popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 100) + "px"
-            } else { //100은 사이드메뉴아이템 높이인데 이 화면의 로직에서는 대략 산정해도 무리없음
-                popupMenuPos.value.top = (menuDiv.offsetTop - 100) + "px"
-                popupMenuPos.value.bottom = null
-            }
-            popupData.value.id = menuDiv.id
-        //}, 500)
+            listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
+        }
+        popupMenuOn.value = true
+        const docHeight = document.documentElement.offsetHeight
+        if (menuDiv.offsetTop + POPUPHEIGHT > docHeight) {
+            popupMenuPos.value.top = null
+            popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 100) + "px"
+        } else { //100은 사이드메뉴아이템 높이인데 이 화면의 로직에서는 대략 산정해도 무리없음
+            popupMenuPos.value.top = (menuDiv.offsetTop - 100) + "px"
+            popupMenuPos.value.bottom = null
+        }
+        popupData.value.id = menuDiv.id
     }
 
     function mouseLeave(e) {
@@ -501,10 +478,6 @@
         ka.delete(menu) //const appType = route.fullPath.split("/")[2] //arr[2] = home,dm 등..
         sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
     }
-
-    function test() {
-        alert("11111")
-    }
 </script>
 
 <template>
@@ -512,12 +485,11 @@
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;align-items:center;color:white">
                 <span v-show="winnerId == winId">
-                    <span>[logdt:</span><span style="margin-left:3px;font-weight:bold" :style="{ color: logdtColor }">{{ logdtDisp ? logdtDisp.substring(11, 19) : '' }}</span>
+                    <span>[</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ logdtDisp ? logdtDisp.substring(11, 19) : '' }}</span>
                     <span>{{ logdtDisp ? logdtDisp.substring(19) : '' }}]</span>
-                    <span style="margin-left:5px">[활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
-                    <span style="margin-left:5px">[비활성:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>
-                    <span style="margin-left:5px">winner : {{ winnerId }}</span>
-                    <span style="margin-left:5px">this tab : {{ winId }}</span>
+                    <span style="margin-left:5px">[A:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
+                    <span style="margin-left:5px">[D:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>
+                    <span style="margin-left:5px">{{ winnerId }}/{{ winId }}</span>
                 </span>
                 <span v-show="winnerId != winId">
                     <span>fifoLen : {{ fifoLen }}</span>
@@ -536,7 +508,7 @@
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
-                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center" @click="test">
+                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center">
                         <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
                     </div>
                     <div id="sideTop" class="sideTop">
@@ -559,17 +531,11 @@
                     </div>
                 </div>
                 <div class="sideBottom">
-                    <!-- <div class="menu" style="margin:0"><img class="menu32" :src="gst.html.getImageUrl('plus.png')"></div> -->
                     <div class="menu" style="margin:0 0 16px 0"><img class="menu32" :src="gst.html.getImageUrl('user.png')"></div>
                 </div>
             </div>
             <div class="main">
-                <div class="content"><!-- <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList의 $route.fullPath이므로 unique하지 않아 onMounted가 수회 발생 or 무한루프(예:홈 메뉴)-->
-                    <!-- <router-view v-slot="{ Component }">
-                        <keep-alive ref="keepAliveRef">
-                            <component :is="Component" :key="$route.fullPath.split('/')[2]" @ev-to-side="handleEvFromPanel" fromPopupChanDm="" />
-                        </keep-alive>
-                    </router-view> -->
+                <div class="content"><!-- <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList의 $route.fullPath이므로 unique하지 않음. @ev-to-side="handleEvFromPanel"-->
                     <router-view v-slot="{ Component }">
                         <keep-alive ref="keepAliveRef">
                             <component :is="Component" :key="$route.fullPath.split('/')[2]" ref="panelRef" />

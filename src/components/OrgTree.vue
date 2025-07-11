@@ -18,8 +18,8 @@
 
     const scrollArea = ref(null), orglist = ref([]), orgRow = ref({}) //orgRow는 element를 동적으로 할당
 
-    const g_toporgcd = gst.auth.getCookie("toporgcd")
-    const g_orgcd = gst.auth.getCookie("orgcd")
+    //const g_toporgcd = gst.auth.getCookie("toporgcd")
+    //const g_orgcd = gst.auth.getCookie("orgcd")
 
     onMounted(async () => {
         try {
@@ -130,7 +130,6 @@
                     const row = orglist.value[i]
                     if (row.nodekind == "G") { //console.log(myOrgArr[j].ORG_CD+"============"+row.ORG_CD+"============"+i)
                         if (row.ORG_CD == myOrgArr[j].ORG_CD) { //console.log(myOrgArr[j].ORG_CD+"============"+i)
-                            //if (!row.exploded) 
                             clickNode(null, row, i)
                             k = i + 1
                             break
@@ -431,10 +430,6 @@
                             <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>                            
                             <!-- <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div> -->
                         </div>
-                        <!-- <div v-if="mode == 'mygroup' || row.USERID" style="height:40px;margin-right:5px;display:flex;justify-content:flex-end;align-items:center">
-                            <span v-if="row.KIND=='guest' || row.KIND=='admin'" class="kind">{{ row.KIND=='guest' ? '게스트' : '관리자' }}</span>
-                            <span v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" class="kind">입력</span>
-                        </div> -->
                         <div v-if="(mode == 'mygroup' || row.USERID) && (row.KIND=='guest' || row.KIND=='admin')" 
                             style="min-width:36px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">
                             <span class="kind">{{ row.KIND=='guest' ? '외부인' : '관리자' }}</span>
@@ -457,9 +452,6 @@
                             <div style="margin-left:5px">{{ row.TOP_ORG_NM }}</div>
                             <div style="margin-left:5px">{{ row.ORG_NM }}</div>
                             <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>
-                            
-                            <!-- <div style="margin-left:5px;color:dimgray">{{ row.TELNO }}</div>
-                            <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div> -->
                         </div>
                     </div>
                 </div>
