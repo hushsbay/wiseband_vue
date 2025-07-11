@@ -572,14 +572,15 @@
                         pageShown = 'Y' 
                         pageShownChanged(pageShown)                        
                     })
-                    // window.addEventListener('blur', function() {
-                    //     pageShown = 'N' 
-                    //     pageShownChanged(pageShown)
-                    //})
+                    window.addEventListener('blur', function() {
+                        pageShown = 'N' 
+                        pageShownChanged(pageShown)
+                    })
                     bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
                     bc2.onmessage = (e) => { getBroadcast2(e.data) }
                     pageShownChanged(pageShown)
                     procRsObj()
+                    window.focus() //focus()해야 blur()도 발생함
                 }
             }
         } catch (ex) {
@@ -1173,7 +1174,7 @@
                 break
             }
         }
-        gst.realtime.closeNoti(chanId)
+        gst.realtime.closeNoti(chanId) //일단 여기만 처리했는데 사실 채널별로 처리하지 않고 모든 노티 지워도 무방하므로 코딩 개선이 필요함
     }
 
     const onScrolling = (e) => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음

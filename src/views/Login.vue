@@ -22,17 +22,21 @@
     })
 
     async function goLogin() {
-        if (uid.value == "") return
-        if (uid.value.includes("@")) { //이메일 OTP 인증 진행 (해당 이메일로 6자리 숫자 발송)
-            const res = await axios.post("/auth/setOtp", { uid : uid.value })
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-        } else {
-            //goLoginNext() 호출
+        try {
+            if (uid.value == "") return
+            if (uid.value.includes("@")) { //이메일 OTP 인증 진행 (해당 이메일로 6자리 숫자 발송)
+                const res = await axios.post("/auth/setOtp", { uid : uid.value })
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+            } else {
+                //goLoginNext() 호출
+            }
+            nextOk.value = true
+            await nextTick()
+            pwdRef.value.focus()
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        nextOk.value = true
-        await nextTick()
-        pwdRef.value.focus()
     }
 
     async function goLoginNext() {
