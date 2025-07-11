@@ -99,6 +99,10 @@
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
             observerBottomScroll()
+            if (listDm.value.length > 0) {
+                const row = listDm.value[listDm.value.length - 1]
+                await getList(null, row.LASTMSGDT) //가장 오래된 메시지 일시로 패널내 모든 데이터를 읽어와서 기존과 비교하고자 함
+            }
         }
     })
 
@@ -132,7 +136,7 @@
         getList(true)
     }
     
-    async function getList(refresh) {
+    async function getList(refresh, oldestMsgDt) {
         try {
             if (onGoingGetList) return
             onGoingGetList = true
@@ -143,32 +147,58 @@
                 savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
             const prevMsgMstCdt = savPrevMsgMstCdt
-            const res = await axios.post("/menu/qryDm", { kind: kindDm.value, search: search, prevMsgMstCdt: prevMsgMstCdt })
+            const res = await axios.post("/menu/qryDm", { kind: kindDm.value, search: search, prevMsgMstCdt: prevMsgMstCdt, oldestMsgDt: oldestMsgDt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             if (!rs || rs.list.length == 0) {
                 onGoingGetList = false
                 afterScrolled.value = null
                 return
             }
-            afterScrolled.value = false
-            for (let i = 0; i < rs.list.length; i++) {
-                const row = rs.list[i]
-                for (let i = 0; i < row.picture.length; i++) {
-                    if (row.picture[i] == null) {
-                        row.url[i] = null
-                    } else {
-                        row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
+            if (!oldestMsgDt) {
+                afterScrolled.value = false
+                for (let i = 0; i < rs.list.length; i++) {
+                    const row = rs.list[i]
+                    for (let i = 0; i < row.picture.length; i++) {
+                        if (row.picture[i] == null) {
+                            row.url[i] = null
+                        } else {
+                            row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
+                        }
+                    }                
+                    procChanRowImg(row)
+                    listDm.value.push(row)
+                    if (row.LASTMSGDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
+                }
+                await nextTick()
+                if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
+                    scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
+                } else if (prevMsgMstCdt) {
+                    //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
+                }
+            } else {
+                let len = listDm.value.length
+                const arr = rs.list //새로 읽어온 데이터                
+                for (let i = 0; i < len; i++) {
+                    const row = listDm.value[i]
+                    if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
+                    const idx = arr.findIndex((item) => item.CHANID == row.CHANID)
+                    if (idx > -1) {
+                        const item = arr[idx]
+                        if (row.LASTMSGDT != item.LASTMSGDT || row.CHANDTL_UDT != item.CHANDTL_UDT || row.CHANMST_UDT != item.CHANMST_UDT || row.mynotyetCnt != item.mynotyetCnt) {
+                            listDm.value[i] = item
+                        }
+                        item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
+                    } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
+                        listDm.value.splice(i, 1)
                     }
-                }                
-                procChanRowImg(row)
-                listDm.value.push(row)
-                if (row.LASTMSGDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
-            }
-            await nextTick()
-            if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
-                scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
-            } else if (prevMsgMstCdt) {
-                //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
+                }
+                len = arr.length
+                for (let i = len - 1; i >= 0; i--) {
+                    const item = arr[i]
+                    if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
+                        listDm.value.unshift(item)
+                    }
+                }
             }
             onGoingGetList = false
         } catch (ex) {
@@ -328,7 +358,7 @@
         if (param.kind == "selectRow") {
             dmClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "refreshRow") {
-            await refreshRow(param.chanid, true)
+            if (param.appType == "dm") await refreshRow(param.chanid, true)
         } else if (param.kind == "delete") {
             const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
             if (idx == -1) return

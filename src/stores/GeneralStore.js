@@ -339,8 +339,9 @@ const GeneralStore = defineStore('General', () => {
             if (data.code != hush.cons.OK) {
                 if (notShowMsgIfNoData && data.code == hush.cons.NOT_FOUND) {
                     //데이터 없을 경우에 메시지 없이 넘어가야 할 때가 있음
-                } else {                    
-                    util.setSnack("[" + data.code + "] " + data.msg, 3) //계속 띄우지 말고 3초 정도만 표시
+                } else {
+                    const sec = data.code.startsWith(hush.cons.auth_err_prefix) ? 3 : true
+                    util.setSnack("[" + data.code + "] " + data.msg, sec)
                     if (data.code.startsWith(hush.cons.auth_err_prefix) && !route.fullPath.startsWith("/login")) {
                         router.replace({ name : 'login' }) //예) jwt token expired 또는 AuthGuard>canActivate 참조 (예: 브라우저 없이 알림바만 있을 때 클릭시)
                     }

@@ -207,7 +207,7 @@
                 if (msglistRef.value) msglistRef.value.procFromParent("addChildFromBody", { msgidReply: msgidAtFirstForChild })
             }
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
-            if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId })
+            if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType })
             if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -1596,7 +1596,7 @@
                     evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
                 }
             } else if (appType == "dm") {
-                evToPanel({ kind: "refreshRow", chanid: chanId }) //evToPanel({ kind: "update", chanid: chanId, bodytext: bodytext })
+                evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType }) //evToPanel({ kind: "update", chanid: chanId, bodytext: bodytext })
             }
             if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value }) //댓글창의 부모글 업데이트
             msgbody.value = ""            
