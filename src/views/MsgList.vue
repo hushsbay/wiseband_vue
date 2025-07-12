@@ -82,6 +82,7 @@
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
                         if (idx > -1) {
+                            debugger
                             refreshWithGetMsg(row.msgItem.data, null, idx) //부모 메시지
                             if (msglistRef.value) {
                                 if (row.REPLYTO == "") { //유사코딩이 3개나 되지만 부모자식 헷갈리지 않게 코딩 축약하지 말고 이해하기 쉽게 쓰기
@@ -198,7 +199,6 @@
                             setChanMstDtl(row.chanmst, row.chandtl)
                         }
                     } else if (row.TYP == "group") { //이미 모든 패널에는 Main.vue에서 처리하므로 여기선 MsgList 상단 그룹명만 처리하면 됨
-                        debugger
                         if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
                             pageData.value = hush.cons.state_nodata
                         } else {
@@ -210,6 +210,7 @@
                     //2) 그러나, 새창에서 열린 MsgList 단독에서는 해당 채널 데이터든 아니든 여기로 모두 들어오므로 자기 채널이 아닌 것은 여기서 그냥 skip하면 됨
                 }
             }
+            debugger
             if (cdtAtFirst < hush.cons.cdtAtLast) { //loop에서 C 케이스가 있으면 신규로 들어온 맨 처음 메시지부터 끝까지 추가 (X는 아님)
                 //console.log(cdtAtFirst+"%%%%"+msgidAtFirst )
                 chkProcScrollToBottom(cdtAtFirst, msgidAtFirst)
@@ -795,7 +796,8 @@
             if (!rs) {
                 onGoingGetList = false                
                 return
-            }            
+            }   
+            debugger
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
             //const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
@@ -979,7 +981,7 @@
     function refreshWithGetMsg(rs, msgid, idx) {
         try {
             let item = msgid ? msglist.value.find(function(row) { return row.MSGID == msgid }) : msglist.value[idx]
-            if (item) { 
+            if (item) {                 
                 item.BODY = rs.msgmst ? rs.msgmst.BODY : rs.BODY
                 item.UDT = rs.msgmst ? rs.msgmst.UDT : rs.UDT
                 item.act_later = rs.act_later
@@ -991,6 +993,8 @@
                 item.msglink = rs.msglink
                 item.reply = rs.reply
                 item.replyinfo = rs.replyinfo
+                gst.util.handleMsgSub(item)
+                debugger
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -2160,27 +2164,27 @@
     function blobSetting(e, row, idx, row5, idx5) { //row와 idx는 메시지 배열 항목 및 인덱스. row5와 idx5는 file,image,link의 배열 항목 및 인덱스
         gst.ctx.data.header = ""
         if (row5.KIND == "F") {
-            gst.ctx.menu = [
-                { nm: "에디터에 붙이기", func: function() {
-                    
-                }},
+            gst.ctx.menu = [ //파일,이미지,링크의 에디터에 붙이는 기능은 채널내에서는 딱히 의미 없으므로 향후 드랙드랍으로 다른 채널로 바로 복사하도록 하기
+                //{ nm: "복사후 에디터에 붙이기", func: function() {}}, 
                 { nm: "파일 삭제", color: 'red', func: function() {
                     delBlob(row5.KIND, row.MSGID, idx5, idx)
                 }}
             ]
         } else if (row5.KIND == "I") { //클릭시 레이어팝업 메뉴 1) 회전 2) 줌인/줌아웃 3) 클릭시 50%/200% 4) 파일로 다운로드 5) 새창에서 열기 6) 삭제
             gst.ctx.menu = [
-                { nm: "새창에서 열기", func: function() {
-                    
-                }},
-                { nm: "파일로 다운로드", func: function() {
-                    
+                { nm: "파일 다운로드", func: function() {
+                    try {
+                        gst.util.downloadBlob("I", row.MSGID, chanId, row5.CDT, row.MSGID + "_" + row5.CDT + ".png")
+                    } catch (ex) {
+                        gst.util.showEx(ex, true)
+                    }
                 }},
                 { nm: "이미지 복사", func: function() {
-                    
-                }},
-                { nm: "에디터에 붙이기", func: function() {
-                    
+                    try {
+                        gst.util.downloadBlob("I", row.MSGID, chanId, row5.CDT, "copyImage")
+                    } catch (ex) {
+                        gst.util.showEx(ex, true)
+                    }
                 }},
                 { nm: "이미지 삭제", color: 'red', func: function() {
                     delBlob(row5.KIND, row.MSGID, idx5, idx)
@@ -2189,10 +2193,11 @@
         } else if (row5.KIND == "L") {
             gst.ctx.menu = [
                 { nm: "URL링크 복사", func: function() {
-                    
-                }},
-                { nm: "복사후 에디터에 붙이기", func: function() {
-                    
+                    navigator.clipboard.writeText(row5.url).then(() => {
+                        gst.util.setToast("URL링크가 복사되었습니다.")
+                    }).catch(() => {
+                        gst.util.setToast("복사 실패. 알 수 없는 문제가 발생했습니다.")
+                    })
                 }},
                 { nm: "링크 삭제", color: 'red', func: function() {
                     delBlob(row5.KIND, row.MSGID, idx5, idx)
@@ -2629,6 +2634,7 @@
                             <div style="height:100%;display:flex;align-items:center">
                                 <img class="coImg18" :src="gst.html.getImageUrl('dimgray_download.png')">
                                 <span style="margin:0 3px">{{ row5.name }}</span>(<span>{{ hush.util.formatBytes(row5.size) }}</span>)
+                                <!-- <span style="margin:0 3px">{{ JSON.stringify(row.msgfile) }}</span>) -->
                             </div>
                             <div v-show="row5.hover" class="msg_file_seemore">
                                 <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click.stop="(e) => blobSetting(e, row, idx, row5, idx5)">

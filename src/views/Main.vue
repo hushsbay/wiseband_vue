@@ -124,7 +124,7 @@
             if (notyetCntHomeTmp != notyetCntHome.value) notyetCntHome.value = notyetCntHomeTmp
             if (notyetCntDmTmp != notyetCntDm.value) notyetCntDm.value = notyetCntDmTmp
             if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
-                debugger
+                //debugger
                 //활성/비활성배열 개념은 원래 메시지처리에 대한 개념에서 시작했는데 나중에 채널마스터/디테일처리인 'chan' TYP도 포함됨
                 //'chan' TYP는 패널의 각 행에 대한 CUD처리를 위한 목적지인 Main(arrForNotChanActivted)에서도 해야 하고 
                 //MsgList 상단의 채널명/멤버이미지를 위해서도 (새창으로도) 열려 있는 MsgList(arrForChanActivted)로도 보내져야 함
