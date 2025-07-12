@@ -197,6 +197,12 @@
                         } else {
                             setChanMstDtl(row.chanmst, row.chandtl)
                         }
+                    } else if (row.TYP == "group") { //이미 모든 패널에는 Main.vue에서 처리하므로 여기선 MsgList 상단 그룹명만 처리하면 됨
+                        if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
+                            pageData.value = hush.cons.state_nodata
+                        } else {
+                            grnm.value = row.grnm
+                        }
                     }
                 } else { //채널이 다른 경우
                     //1) 위너에서는 MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영은 Main.vue에서 처리되므로 여기로 들어오는 일은 없음

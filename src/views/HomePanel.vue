@@ -20,7 +20,11 @@
     }
 
     async function procMainToPanel(kind, obj) {
-        handleEvFromBody({ kind: kind, chanid: obj.CHANID })
+        if (kind == "procRows") {
+            await procRows()
+        } else {
+            handleEvFromBody({ kind: kind, chanid: obj.CHANID })
+        }
     }
 
     const props = defineProps({ fromPopupChanDm: String })
@@ -92,6 +96,7 @@
             } else {
                 //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
             }
+            await procRows()
         }
     })
 
@@ -110,11 +115,50 @@
         }
     }
 
-    async function getList() {
+    async function procRows() {
+        await getList(true)
+    }
+
+    async function getList(forUpdate) {
         try { //모든 데이터 가져오기 (페이징/무한스크롤 없음)
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
-            listHome.value = rs ? rs.list : []
+            if (!forUpdate) {
+                listHome.value = rs ? rs.list : []
+            } else {
+                //debugger
+                let len = listHome.value.length
+                const arr = rs.list //새로 읽어온 데이터                
+                for (let i = 0; i < len; i++) {
+                    const row = listHome.value[i]
+                    if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
+                    const idx = arr.findIndex((item) => {
+                        return (item.GR_ID == row.GR_ID && item.CHANID == row.CHANID)
+                    })
+                    if (idx > -1) {
+                        const item = arr[idx]
+                        if (row.GRMST_UDT != item.GRMST_UDT || row.CHANMST_UDT != item.CHANMST_UDT || row.mynotyetCnt != item.mynotyetCnt) {
+                            procChanRowImg(item)
+                            listHome.value[i] = item //MsgList에 반영되어야 함
+                        }
+                        item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
+                    } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
+                        //debugger
+                        listHome.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함
+                    }
+                }
+                //debugger
+                let newFound = false
+                len = arr.length
+                for (let i = len - 1; i >= 0; i--) {
+                    const item = arr[i]
+                    if (!item.checkedForUpdate) {
+                        newFound = true
+                        break
+                    }
+                }
+                if (newFound) refreshPanel() //dm처럼 배열항목을 추가하면 베스트지만 트리구조로 복잡하게 얽혀 있어 단순하게 전체 새로고침
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }

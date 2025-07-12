@@ -132,7 +132,7 @@
                     return (x.CHANID == gst.chanIdActivted)
                 }) //MsgList로 전달하는 것임
                 arrForNotChanActivted = rs.list.filter(x => { 
-                    return (x.CHANID != gst.chanIdActivted || x.TYP == 'chan')
+                    return (x.CHANID != gst.chanIdActivted || x.TYP == 'chan' || x.TYP == 'group')
                 }) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
                 cntChanActivted.value = arrForChanActivted.length //화면 표시용
                 cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
@@ -153,13 +153,18 @@
                     for (let i = 0; i < len; i++) {                        
                         const row = arrForNotChanActivted[i]
                         if (gst.selSideMenu == "mnuHome") { //채널 단위로 읽음처리 관련만 전달하면 됨
-                            await panelRef.value.procMainToPanel('updateNotyetCnt', row)
+                            if (row.TYP == 'chan' || row.TYP == 'group') {
+                                await panelRef.value.procMainToPanel('procRows')
+                            } else {
+                                await panelRef.value.procMainToPanel('updateNotyetCnt', row)
+                            }
                         } else if (gst.selSideMenu == "mnuDm") { //채널 단위로 
                             if (row.CUD == 'T') { //notyet->read가 많음 (아닌 경우도 있으나 그냥 무시) 
                                 await panelRef.value.procMainToPanel('updateNotyetCnt', row)
                             } else if (row.TYP == 'chan') {
-                                debugger
                                 await panelRef.value.procMainToPanel('procRows')
+                            } else if (row.TYP == 'group') {
+                                //skip
                             } else {
                                 await panelRef.value.procMainToPanel('refreshRow', row)
                             }
