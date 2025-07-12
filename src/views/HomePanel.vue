@@ -128,7 +128,8 @@
             } else {
                 //debugger
                 let len = listHome.value.length
-                const arr = rs.list //새로 읽어온 데이터                
+                const arr = rs.list //새로 읽어온 데이터   
+                //debugger             
                 for (let i = 0; i < len; i++) {
                     const row = listHome.value[i]
                     if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
@@ -137,20 +138,22 @@
                     })
                     if (idx > -1) {
                         const item = arr[idx]
+                        //debugger
                         if (row.GRMST_UDT != item.GRMST_UDT || row.CHANMST_UDT != item.CHANMST_UDT || row.mynotyetCnt != item.mynotyetCnt) {
                             procChanRowImg(item)
-                            listHome.value[i] = item //MsgList에 반영되어야 함
+                            listHome.value[i] = item //MsgList에 반영되어야 함 OK
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        //debugger
-                        listHome.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함
+                        debugger
+                        listHome.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
                     }
                 }
+                chanClickOnLoop(true)
                 //debugger
                 let newFound = false
                 len = arr.length
-                for (let i = len - 1; i >= 0; i--) {
+                for (let i = len - 1; i >= 0; i--) { //dm에서는 순서가 의미있으나 여기서는 refreshPanel()이므로 의미없음
                     const item = arr[i]
                     if (!item.checkedForUpdate) {
                         newFound = true

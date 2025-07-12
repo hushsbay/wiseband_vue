@@ -198,6 +198,7 @@
                             setChanMstDtl(row.chanmst, row.chandtl)
                         }
                     } else if (row.TYP == "group") { //이미 모든 패널에는 Main.vue에서 처리하므로 여기선 MsgList 상단 그룹명만 처리하면 됨
+                        debugger
                         if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
                             pageData.value = hush.cons.state_nodata
                         } else {

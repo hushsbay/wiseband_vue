@@ -120,7 +120,7 @@
                     notyetCntDmTmp = row.SUM
                 }
             }
-            debugger
+            //debugger
             if (notyetCntHomeTmp != notyetCntHome.value) notyetCntHome.value = notyetCntHomeTmp
             if (notyetCntDmTmp != notyetCntDm.value) notyetCntDm.value = notyetCntDmTmp
             if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
@@ -129,7 +129,7 @@
                 //'chan' TYP는 패널의 각 행에 대한 CUD처리를 위한 목적지인 Main(arrForNotChanActivted)에서도 해야 하고 
                 //MsgList 상단의 채널명/멤버이미지를 위해서도 (새창으로도) 열려 있는 MsgList(arrForChanActivted)로도 보내져야 함
                 if (gst.chanIdActivted) arrForChanActivted = rs.list.filter(x => {
-                    return (x.CHANID == gst.chanIdActivted)
+                    return (x.CHANID == gst.chanIdActivted) //x.TYP == 'group'인 경우는 여기로 오지 않으므로 MsgList의 그룹명은 현재 업데이트 안됨
                 }) //MsgList로 전달하는 것임
                 arrForNotChanActivted = rs.list.filter(x => { 
                     return (x.CHANID != gst.chanIdActivted || x.TYP == 'chan' || x.TYP == 'group')
@@ -148,7 +148,7 @@
                             realShown = 'N'
                         }
                     }
-                    debugger
+                    //debugger
                     const len = arrForNotChanActivted.length
                     for (let i = 0; i < len; i++) {                        
                         const row = arrForNotChanActivted[i]
