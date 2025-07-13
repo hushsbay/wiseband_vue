@@ -797,7 +797,7 @@
                 onGoingGetList = false                
                 return
             }   
-            debugger
+            //debugger
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
             //const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)

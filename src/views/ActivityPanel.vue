@@ -94,6 +94,10 @@
     }
 
     function procQuery(kind) {
+        if (kind == "mention") {
+            alert("웹에디터와 같이 개발 진행 예정")
+            return
+        }
         kindActivity.value = kind
         localStorage.wiseband_lastsel_activity = kind
         getList(true)
@@ -116,25 +120,22 @@
                 afterScrolled.value = null
                 return
             }
+            debugger
             afterScrolled.value = false
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                let title
                 if (row.TITLE == "vip") {
-                    title = "VIP"
+                    row.title = "VIP"
                 } else if (row.TITLE == "mention") {
-                    title = "맨션"
+                    row.title = "맨션"
                 } else if (row.TITLE == "thread") {
-                    title = "스레드"
-                } else if (row.TITLE == "myreact") {
-                    title = "내반응"
-                } else if (row.TITLE == "otherreact") {
-                    title = "타반응"
+                    row.title = "스레드"
+                } else if (row.TITLE == "react") {
+                    row.title = "반응"
                 }
-                row.title = title
                 listActivity.value.push(row)
-                if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
+                if (row.DT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.DT
             }
             await nextTick()
             if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
@@ -277,11 +278,8 @@
                 <div class="procMenu" :class="(kindActivity == 'thread') ? 'procMenuSel' : ''" @click="procQuery('thread')">
                     스레드
                 </div>
-                <div class="procMenu" :class="(kindActivity == 'myreact') ? 'procMenuSel' : ''" @click="procQuery('myreact')">
-                    내반응
-                </div>
-                <div class="procMenu" :class="(kindActivity == 'otherreact') ? 'procMenuSel' : ''" @click="procQuery('otherreact')">
-                    타반응
+                <div class="procMenu" :class="(kindActivity == 'react') ? 'procMenuSel' : ''" @click="procQuery('react')">
+                    반응
                 </div>
             </div>
         </div>
@@ -293,8 +291,8 @@
                     <div style="display:flex;align-items:center;color:lightgray">
                         <div style="display:flex;align-items:center">
                             <span style="margin-left:3px">[{{ row.title }}]</span>
-                            <span style="margin:0 3px">{{ row.CNT == 0 ? '' : row.CNT + '개' }}</span>
-                            <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
+                            <!-- <span style="margin:0 3px">{{ row.CNT == 0 ? '' : row.CNT + '개' }}</span> -->
+                            <img class="coImg14" style="margin-left:3px" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
                             <span style="margin-left:3px">{{ row.CHANNM }}</span>                            
                         </div>
                     </div>
@@ -304,20 +302,29 @@
                 </div>
                 <div class="nodeMiddle">
                     <div style="display:flex;align-items:center">
-                        <div v-if="row.TITLE.endsWith('react')">
+                        <div v-if="row.title.endsWith('react')">
                             <img class="coImg24" :src="gst.html.getImageUrl('emo_' + row.KIND + '.png')" :title="row.KIND">
                         </div>
                         <div v-else>
                             <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
                         </div>
-                        <div style="color:white;font-weight:bold;margin-left:5px">{{ row.USERNM }}</div>    
+                        <div style="color:white;font-weight:bold;margin-left:5px">{{ row.AUTHORNM }}</div>    
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray;margin-right:3px">
-                        {{ hush.util.displayDt(row.CDT, false) }}
+                        {{ hush.util.displayDt(row.DT, false) }}
                     </div>
                 </div>
                 <div style="width:100%">
-                    <div class="coDotDot" style="color:white">{{ row.BODYTEXT }}</div> 
+                    <div v-if="row.BODYTEXT!=''" class="coDotDot" style="color:white"><span v-if="row.TITLE=='thread'">원글: </span><span>{{ row.BODYTEXT }}</span></div> 
+                    <div v-if="row.LASTMSG!=''" class="coDotDot" style="color:white">{{ row.LASTMSG }}</div> 
+                </div>
+                <div style="width:100%;margin-top:5px;display:flex;align-items:center">
+                    <div v-for="(row1, idx1) in row.msgdtl">
+                        <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM">
+                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                            <span style="margin-left:3px">{{ row1.CNT}}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div v-if="listActivity.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
@@ -371,4 +378,7 @@
     .procMenu { padding:3px;margin-left:10px;color:lightgray;font-weight:bold;border-bottom:3px solid rgb(90, 46, 93) }
     .procMenu:hover { color:white;font-weight:bold }
     .procMenuSel { color:white;border-bottom:3px solid white }
+    .msg_body_sub1 {
+        margin-right:10px;padding:2px 4px;display:flex;align-items:center;background:lightgray;;border-radius:12px
+    }
 </style>
