@@ -99,7 +99,7 @@
             if (rsObj) {
                 rs = rsObj //바로 아래 else에서 bc1.postMessage() 한 것을 위너가 아닌 탭에서 받은 것임
             } else {
-                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt }) //sessionStorage.logdt })
+                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt })
                 rs = gst.util.chkAxiosCode(res.data, true)
                 if (!rs) {
                     realtimeJobDone = 'Y'
