@@ -586,10 +586,10 @@
                         pageShown = 'Y' 
                         pageShownChanged(pageShown)                        
                     })
-                    window.addEventListener('blur', function() {
-                        pageShown = 'N' 
-                        pageShownChanged(pageShown)
-                    })
+                    // window.addEventListener('blur', function() {
+                    //     pageShown = 'N' 
+                    //     pageShownChanged(pageShown)
+                    // })
                     bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
                     bc2.onmessage = (e) => { getBroadcast2(e.data) }
                     pageShownChanged(pageShown)
@@ -1541,9 +1541,9 @@
 
     function keyDownEnter(e) { //keyUpEnter가 아님
         if (e.ctrlKey) {
-            //saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
+            saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
         } else {
-            saveMsg() //일단 줄바꿈으로 동작하게 하기
+            //saveMsg() //일단 줄바꿈으로 동작하게 하기
         }
     }
 
@@ -2726,7 +2726,7 @@
                     @paste="pasteData" @keydown.enter.prevent="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
                 <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown.enter.prevent="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
                 </div>
                 <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
                 <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">

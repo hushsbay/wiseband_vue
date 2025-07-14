@@ -347,11 +347,11 @@
                     sessionStorage.subkindFromNoti = ''
                 }
             })
-            window.addEventListener('blur', function() {
-                pageShown = 'N'
-                pageShownChanged(pageShown)
-                console.log("blur")
-            })
+            // window.addEventListener('blur', function() {
+            //     pageShown = 'N'
+            //     pageShownChanged(pageShown)
+            //     console.log("blur")
+            // })
             window.focus() //focus()해야 blur()도 발생함
         } catch (ex) {
             gst.util.showEx(ex, true)
