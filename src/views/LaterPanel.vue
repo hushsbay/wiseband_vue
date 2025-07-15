@@ -2,7 +2,6 @@
     import { ref, onMounted, onActivated, onUnmounted, nextTick } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
-
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
@@ -13,6 +12,8 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    defineExpose({ procMainToMsglist })
+
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
 
     let keepAliveRef = ref(null)
@@ -20,9 +21,7 @@
     let scrollArea = ref(null), listLater = ref([]), cntLater = ref(''), kindLater = ref('later'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
-
-    defineExpose({ procMainToMsglist })
-
+    
     async function procMainToMsglist(kind, obj) { //단순 전달
         //await msglistRef.value.procMainToMsglist(kind, obj)
     }
@@ -62,16 +61,20 @@
     })
 
     onActivated(async () => {
-        if (mounting) {
-            mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
-            setBasicInfo()
-            if (route.path == "/main/later") { //사이드메뉴에서 클릭한 경우
-                laterClickOnLoop(true)
-            } else {
-                //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
+        try {
+            if (mounting) {
+                mounting = false
+            } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
+                setBasicInfo()
+                if (route.path == "/main/later") { //사이드메뉴에서 클릭한 경우
+                    laterClickOnLoop(true)
+                } else {
+                    //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
+                }
+                observerBottomScroll()
             }
-            observerBottomScroll()
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     })
 
@@ -132,18 +135,22 @@
     }
 
     function laterClickOnLoop(clickNode, msgid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. msgid는 명시적으로 해당 노드를 지정해서 처리하는 것임
-        const msgidToChk = msgid ? msgid : localStorage.wiseband_lastsel_latermsgid
-        let foundIdx = -1
-        listLater.value.forEach((item, index) => {
-            if (item.MSGID == msgidToChk) {
-                gst.util.scrollIntoView(msgRow, msgidToChk)
-                laterClick(item, index, clickNode, msgid)
-                foundIdx = index
+        try {
+            const msgidToChk = msgid ? msgid : localStorage.wiseband_lastsel_latermsgid
+            let foundIdx = -1
+            listLater.value.forEach((item, index) => {
+                if (item.MSGID == msgidToChk) {
+                    gst.util.scrollIntoView(msgRow, msgidToChk)
+                    laterClick(item, index, clickNode, msgid)
+                    foundIdx = index
+                }
+            })
+            if (foundIdx == -1 && listLater.value.length > 0) { //무한스크롤이므로 다음 페이지에서 선택된 것은 못가져오는데 그 경우는 처음 노드를 기본으로 선택하도록 함
+                const row = listLater.value[0]
+                laterClick(row, 0, true)
             }
-        })
-        if (foundIdx == -1 && listLater.value.length > 0) { //무한스크롤이므로 다음 페이지에서 선택된 것은 못가져오는데 그 경우는 처음 노드를 기본으로 선택하도록 함
-            const row = listLater.value[0]
-            laterClick(row, 0, true)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
     

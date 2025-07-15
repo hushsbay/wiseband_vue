@@ -2,7 +2,6 @@
     import { ref, onMounted, onActivated, nextTick } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
-
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
@@ -14,6 +13,8 @@
     const gst = GeneralStore()
 
     defineExpose({ procMainToMsglist, procMainToPanel })
+    const props = defineProps({ fromPopupChanDm: String })
+    const emits = defineEmits(["ev-click"])
 
     async function procMainToMsglist(kind, obj) { //단순 전달
         await msglistRef.value.procMainToMsglist(kind, obj)
@@ -27,29 +28,16 @@
         }
     }
 
-    const props = defineProps({ fromPopupChanDm: String })
-    const emits = defineEmits(["ev-click"]) //, "ev-to-side"])
-
     function listRowClick(row) {
         emits("ev-click", "home", row.CHANID)
     }
 
-    function evToSide(kind, menu) {
-        //emits("ev-to-side", kind, menu) //kiind=forwardToSide/menu=home,later..
-    }
+    //1) Depth는 1,2 단계만 존재 : 1단계는 사용자그룹 (슬랙의 워크스페이스) 2단계는 채널
+    //2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
+    //3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
 
-    //1. HomePanel 상태 정의는 아래와 같음
-    //   1) Depth는 1,2 단계만 존재 : 1단계는 사용자그룹 (슬랙의 워크스페이스) 2단계는 채널
-    //   2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
-    //   3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
-    //2. HomePanel에서는 MsgList의 라우팅과 Sync를 맞춰야 하는 것이 핵심과제임 
-    //   예1) MsgList url에서 뒤로 가기 눌러 다른 MsgList url로 라우팅되면 MsgList가 먼저 호출되므로 HomePanel의 트리노드 등도 역으로 같이 맞춰져야 함
-    //   예2) 사이드메뉴 '홈'을 누르면 HomePanel이 먼저 호출되고 MsgList가 나중 호출되므로 이 경우도 같이 맞춰져야 함
-
-    let keepAliveRef = ref(null)
-    let listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null), msglistRef = ref(null) //, clearCacheUrl = ref('')
-    let newRoomJustCreated = ref(false)
+    let keepAliveRef = ref(null), listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
+    let memberlistRef = ref(null), msglistRef = ref(null), newRoomJustCreated = ref(false)
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -81,22 +69,26 @@
     })
 
     onActivated(async () => {
-        console.log("Home Activated..... " + route.fullPath)
-        if (mounting) {
-            mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
-            setBasicInfo()
-            if (route.path == "/main/home") { //사이드메뉴에서 클릭한 경우
-                if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
-                    console.log("Home Activated.....click.... " + route.fullPath)
-                    chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
+        try {
+            console.log("Home Activated..... " + route.fullPath)
+            if (mounting) {
+                mounting = false
+            } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
+                setBasicInfo()
+                if (route.path == "/main/home") { //사이드메뉴에서 클릭한 경우
+                    if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
+                        console.log("Home Activated.....click.... " + route.fullPath)
+                        chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
+                    } else {
+                        chanClickOnLoop(false)
+                    }
                 } else {
-                    chanClickOnLoop(false)
+                    //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
                 }
-            } else {
-                //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
+                await procRows()
             }
-            await procRows()
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     })
 
@@ -126,10 +118,8 @@
             if (!forUpdate) {
                 listHome.value = rs ? rs.list : []
             } else {
-                //debugger
                 let len = listHome.value.length
                 const arr = rs.list //새로 읽어온 데이터   
-                //debugger             
                 for (let i = 0; i < len; i++) {
                     const row = listHome.value[i]
                     if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
@@ -138,19 +128,16 @@
                     })
                     if (idx > -1) {
                         const item = arr[idx]
-                        //debugger
                         if (row.GRMST_UDT != item.GRMST_UDT || row.CHANMST_UDT != item.CHANMST_UDT || row.mynotyetCnt != item.mynotyetCnt) {
                             procChanRowImg(item)
                             listHome.value[i] = item //MsgList에 반영되어야 함 OK
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        debugger
                         listHome.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
                     }
                 }
                 chanClickOnLoop(true)
-                //debugger
                 let newFound = false
                 len = arr.length
                 for (let i = len - 1; i >= 0; i--) { //dm에서는 순서가 의미있으나 여기서는 refreshPanel()이므로 의미없음
@@ -168,40 +155,44 @@
     }
 
     function chanClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
-        const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
-        let chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
-        let foundIdx = -1
-        listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
-            if (arr) { //onMounted때만 해당
-                item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
-                procChanRowImg(item)
-            }
-            if (item.CHANID == chanidToChk) {
-                const grIdx = listHome.value.findIndex(grItem => grItem.DEPTH == "1" && grItem.GR_ID == item.GR_ID)
-                if (grIdx > -1) { //채널아이디의 그룹이 펼쳐지지 않았으면 펼치기
-                    const grRow = listHome.value[grIdx]
-                    grRow.exploded = false
-                    chanClick(grRow, grIdx)
+        try {
+            const arr = (!localStorage.wiseband_exploded_grid) ? [] : localStorage.wiseband_exploded_grid.split(",")
+            let chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_chanid
+            let foundIdx = -1
+            listHome.value.forEach((item, index) => { //depth1,2 모두 GR_ID 가지고 있음
+                if (arr) { //onMounted때만 해당
+                    item.exploded = (arr.indexOf(item.GR_ID) == -1) ? false : true
+                    procChanRowImg(item)
                 }
-                gst.util.scrollIntoView(chanRow, item.CHANID)
-                chanClick(item, index, clickNode, chanid)
-                foundIdx = index
+                if (item.CHANID == chanidToChk) {
+                    const grIdx = listHome.value.findIndex(grItem => grItem.DEPTH == "1" && grItem.GR_ID == item.GR_ID)
+                    if (grIdx > -1) { //채널아이디의 그룹이 펼쳐지지 않았으면 펼치기
+                        const grRow = listHome.value[grIdx]
+                        grRow.exploded = false
+                        chanClick(grRow, grIdx)
+                    }
+                    gst.util.scrollIntoView(chanRow, item.CHANID)
+                    chanClick(item, index, clickNode, chanid)
+                    foundIdx = index
+                }
+            })
+            if (foundIdx == -1) { //최초 실행시 그룹과 채널이 선택이 없는 경우 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 html로 안내하기)
+                const len = listHome.value.length
+                if (len == 0) { //패널에 데이터가 없음
+                    chanidToChk = chanidToChk ?? hush.cons.state_nodata
+                    gst.util.goMsgList('home_body', { chanid: chanidToChk, msgid: hush.cons.state_nodata })
+                    return
+                }
+                for (let i = 0; i < len; i++) {
+                    const item = listHome.value[i]
+                    if (item.CHANID == null) continue //그룹은 있는데 그 아래 채널이 없는 경우 한 행 '없음'이라고 표시됨
+                    item.exploded = (item.CHANID == "") ? false : true
+                    chanClick(item, i, true)
+                    if (item.CHANID) break //사용자그룹(1단계)노드를 처리하고 채널(2단계)노드를 만나면 처리후 break
+                }
             }
-        })
-        if (foundIdx == -1) { //최초 실행시 그룹과 채널이 선택이 없는 경우 맨 처음 그룹과 채널을 선택하게 함 (그룹은 있고 채널은 없는 경우는 문제 없겠지만 그룹조차도 없는 경우는 html로 안내하기)
-            const len = listHome.value.length
-            if (len == 0) { //패널에 데이터가 없음
-                chanidToChk = chanidToChk ?? hush.cons.state_nodata
-                gst.util.goMsgList('home_body', { chanid: chanidToChk, msgid: hush.cons.state_nodata })
-                return
-            }
-            for (let i = 0; i < len; i++) {
-                const item = listHome.value[i]
-                if (item.CHANID == null) continue //그룹은 있는데 그 아래 채널이 없는 경우 한 행 '없음'이라고 표시됨
-                item.exploded = (item.CHANID == "") ? false : true
-                chanClick(item, i, true)
-                if (item.CHANID) break //사용자그룹(1단계)노드를 처리하고 채널(2단계)노드를 만나면 처리후 break
-            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -321,10 +312,9 @@
             const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
             const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
             const disableStr = (row.STATE == "P") ? true : false
-            const disableRefresh = (!row.sel) ? true : false
-            gst.ctx.menu = [
-                //"홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 WiSEBand는 부모/자식 모두 동일한 UI이므로 굳이 필요없음
-                /* 아직 미사용 : 정확히 어디에 사용할 지 아직 미결정 (향후 실시간 반영때 다시 고민. 현재는 아래 개선점도 있음)
+            //const disableRefresh = (!row.sel) ? true : false
+            gst.ctx.menu = [                
+                /* 아래는 아직 미사용 : 정확히 어디에 사용할 지 아직 미결정. 주요 소스이므로 지우지 말 것 (향후 실시간 반영때 다시 고민. 현재는 아래 개선점도 있음)
                 { nm: "메시지목록 새로고침", disable: disableRefresh, func: async function(item, idx) { //disable의 의미는 선택된 노드가 route.fullPath와 동일한 채널임을 보장함
                     gst.util.setToast("reloading " + row.CHANNM)
                     const ka = keepAliveRef.value._.__v_cache //const mapChild = ka.get(route.fullPath)
@@ -335,7 +325,7 @@
                 { nm: "새창에서 열기", func: async function(item, idx) {
                     let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
                     window.open(url + "?appType=home")
-                }},
+                }}, //"홈에서 열기" : 슬랙은 자식에게 처리된 경우 해당 부모 메시지에 자식들이 딸린 UI(withreply)여서 필요할 수 있으나 WiSEBand는 부모/자식 모두 동일한 UI이므로 굳이 필요없음
                 { nm: "채널 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                     memberlistRef.value.open("chan", row.GR_ID, row.CHANID, row.CHANNM, row.nodeImg)
                 }},
@@ -389,10 +379,10 @@
             } else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
                 newRoomJustCreated.value = true
             }
-        //} else if (param.kind == "refreshRow") { //현재까지는 updateNotyetCnt만으로도 잘 처리해 옴
-        //    await refreshPanel() //홈에서는 행 새로고침도 그냥 패널 전체 새로고침으로 처리하되 빈도가 높고 반복적인 곳은 사용하지 않기로 함 (향후 필요시 refreshRow 진짜 만들기)
         } else if (param.kind == "refreshPanel") {  //방 나가기,삭제에서 사용
             await refreshPanel()
+        //} else if (param.kind == "refreshRow") { //현재까지는 updateNotyetCnt만으로도 잘 처리해 옴
+        //    await refreshPanel() //홈에서는 행 새로고침도 그냥 패널 전체 새로고침으로 처리하되 빈도가 높고 반복적인 곳은 사용하지 않기로 함 (향후 필요시 refreshRow 진짜 만들기)
         /*} else if (param.kind == "getMsgListFromMsgid") { //지우지 말 것 (향후 사용가능성) 리얼타임 반영으로 쌓인 중간에 이빨빠진 새 데이터 뿌리기
             //MsgList의 newParentAdded, newChildAdded 관련임. 여기는 자식이 아닌 아예 부모메시지만 넘어옴. 여기 풀려면 모든 패널에 추가해야 함
             gst.util.goMsgList('home_body', { chanid: param.chanid, msgid: param.msgid })*/
@@ -464,23 +454,7 @@
         </div>        
     </div>
     <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
-    <!--clearCacheUrl 방안은 캐시 제거후 다른 채널도 (캐시 제거되어 - 컴포넌트가 unmount되서 그럴 듯) 처음 한번은 새로운 데이터를 가져옴
-        개발자가 지정한 특정 채널만 제거되고 나머지는 그대로 캐싱해야 더 바람직할 것임 (keepAliveRef로 해결함)-->
     <div v-if="listHome.length > 0" id="chan_body" :style="{ minWidth: chanMainWidth, maxWidth: chanMainWidth }">
-        <!-- <router-view v-slot="{ Component }" v-if="$route.fullPath==clearCacheUrl">
-            <component :is="Component" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
-        </router-view>
-        <router-view v-slot="{ Component }" v-else>
-            <div style="color:white">keep-alive</div>
-            <keep-alive>
-                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
-            </keep-alive>
-        </router-view> -->
-        <!-- <router-view v-slot="{ Component }">
-            <keep-alive ref="keepAliveRef">
-                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
-            </keep-alive>
-        </router-view> -->
         <router-view v-slot="{ Component }">
             <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>

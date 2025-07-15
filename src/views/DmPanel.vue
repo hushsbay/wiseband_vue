@@ -2,7 +2,6 @@
     import { ref, onMounted, onActivated, onUnmounted, nextTick } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
-
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
@@ -15,6 +14,8 @@
     const gst = GeneralStore()
 
     defineExpose({ procMainToMsglist, procMainToPanel })
+    const props = defineProps({ fromPopupChanDm: String })
+    const emits = defineEmits(["ev-click"]) //, "ev-to-side"])
 
     async function procMainToMsglist(kind, obj) { //단순 전달
         if (msglistRef.value) {
@@ -30,15 +31,8 @@
         }
     }
 
-    const props = defineProps({ fromPopupChanDm: String })
-    const emits = defineEmits(["ev-click"]) //, "ev-to-side"])
-
     function listRowClick(row) {
         emits("ev-click", "dm", row.CHANID)
-    }
-
-    function evToSide(kind, menu) {
-        //emits("ev-to-side", kind, menu) //kiind=forwardToSide/menu=home,later..
     }
 
     let keepAliveRef = ref(null)
@@ -89,21 +83,25 @@
     })
 
     onActivated(async () => {
-        if (mounting) {
-            mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
-            setBasicInfo()
-            if (route.path == "/main/dm") { //사이드메뉴에서 클릭한 경우
-                if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
-                    dmClickOnLoop(true)
+        try {
+            if (mounting) {
+                mounting = false
+            } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
+                setBasicInfo()
+                if (route.path == "/main/dm") { //사이드메뉴에서 클릭한 경우
+                    if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
+                        dmClickOnLoop(true)
+                    } else {
+                        dmClickOnLoop(false)
+                    }
                 } else {
-                    dmClickOnLoop(false)
+                    //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
                 }
-            } else {
-                //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
+                observerBottomScroll()
+                await procRows()
             }
-            observerBottomScroll()
-            await procRows()
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     })
 
@@ -168,13 +166,6 @@
                 afterScrolled.value = false
                 for (let i = 0; i < rs.list.length; i++) {
                     const row = rs.list[i]
-                    // for (let j = 0; j < row.picture.length; i++) {
-                        // if (row.picture[i] == null) {
-                        //     row.url[i] = null
-                        // } else {
-                        //     row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
-                        // }
-                    // }          
                     setRowPicture(row)      
                     procChanRowImg(row)
                     listDm.value.push(row)
@@ -187,7 +178,6 @@
                     //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
                 }
             } else {
-                //debugger
                 let len = listDm.value.length
                 const arr = rs.list //새로 읽어온 데이터                
                 for (let i = 0; i < len; i++) {
@@ -202,11 +192,9 @@
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        //debugger
                         listDm.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
                     }
                 }
-                //debugger
                 len = arr.length
                 for (let i = len - 1; i >= 0; i--) {
                     const item = arr[i]
@@ -234,7 +222,7 @@
         }
     }
 
-    async function getSingleDm(chanid) { //한행에 대해 새로고침
+    async function getSingleDm(chanid) { //한 행에 대해 새로고침
         try {
             if (onGoingGetList) return
             onGoingGetList = true
@@ -245,13 +233,6 @@
                 return
             }
             const row = rs.list[0]
-            // for (let i = 0; i < row.picture.length; i++) {
-                // if (row.picture[i] == null) {
-                //     row.url[i] = null
-                // } else {
-                //     row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
-                // }
-            // }                
             setRowPicture(row)
             procChanRowImg(row)            
             onGoingGetList = false
@@ -268,18 +249,22 @@
     }
 
     function dmClickOnLoop(clickNode, chanid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. chanid는 명시적으로 해당 노드를 지정해서 처리하는 것임
-        const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_dmchanid
-        let foundIdx = -1
-        listDm.value.forEach((item, index) => {
-            if (item.CHANID == chanidToChk) {
-                gst.util.scrollIntoView(chanRow, chanidToChk)
-                dmClick(item, index, clickNode, chanid)
-                foundIdx = index
+        try {
+            const chanidToChk = chanid ? chanid : localStorage.wiseband_lastsel_dmchanid
+            let foundIdx = -1
+            listDm.value.forEach((item, index) => {
+                if (item.CHANID == chanidToChk) {
+                    gst.util.scrollIntoView(chanRow, chanidToChk)
+                    dmClick(item, index, clickNode, chanid)
+                    foundIdx = index
+                }
+            })
+            if (foundIdx == -1 && listDm.value.length > 0) { //무한스크롤이므로 다음 페이지에서 선택된 것은 못가져오는데 그 경우는 처음 노드를 기본으로 선택하도록 함
+                const row = listDm.value[0]
+                dmClick(row, 0, true)
             }
-        })
-        if (foundIdx == -1 && listDm.value.length > 0) { //무한스크롤이므로 다음 페이지에서 선택된 것은 못가져오는데 그 경우는 처음 노드를 기본으로 선택하도록 함
-            const row = listDm.value[0]
-            dmClick(row, 0, true)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
     
