@@ -20,8 +20,10 @@
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_01_authentication.png)
 
 
+2. Layout
 
 
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_02_layout.png)
 
 
 
