@@ -39,7 +39,7 @@
 
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_03_datapolling.png)
     
-![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_03_logdata.png)    
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_04_logdata.png)    
 
 
 
