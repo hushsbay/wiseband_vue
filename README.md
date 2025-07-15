@@ -42,6 +42,11 @@
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_04_logdata.png)    
 
 
+4. DB Table 구조
+
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_05_dbtable.png)
+
+
 
 
 
