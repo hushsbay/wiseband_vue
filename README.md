@@ -48,7 +48,10 @@
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_06_auth_membership.png)
 
 
+5. 메시지 권한
 
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_07_acl01.png)
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_07_acl02.png)
 
 
 
