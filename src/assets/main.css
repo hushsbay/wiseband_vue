@@ -168,8 +168,7 @@ text-align:center;vertical-align:middle;z-index:9998; /*스크롤중에 투명�
 .coHover:hover { background:hsla(160, 100%, 37%, 0.1);cursor:pointer; }
 
 .coScrollable { 
-    /* scrollbar-color: white rgb(216, 216, 216);  */
-    scrollbar-color:dimgray var(--second-color);
+    scrollbar-color:dimgray var(--second-color); /* scrollbar-color: white rgb(216, 216, 216);  */
     scrollbar-width:thin;  
 }
 
@@ -183,13 +182,6 @@ text-align:center;vertical-align:middle;z-index:9998; /*스크롤중에 투명�
 .coImg32 { width:32px;height:32px;cursor:pointer; }
 .coImg64 { width:64px;height:64px;cursor:pointer; }
 
-/* .coImgBtn {
-  padding:4px;
-  display:flex;justify-content:center;align-items:center;
-  border:1px solid var(--main-color);border-radius:5px;cursor:pointer;
-}
-.coImgBtn:hover { background:var(--active-color);font-weight:bold }
-.coImgBtn:active { color:white;background-color: steelblue } */
 .coImgBtn {
   margin-right:5px;padding:5px 8px 5px 7px;
   display:flex;justify-content:center;align-items:center;

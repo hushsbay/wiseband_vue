@@ -2,7 +2,6 @@
     import { ref, onMounted, onActivated, watch } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
-
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
@@ -12,10 +11,10 @@
     const route = useRoute()
     const gst = GeneralStore()
 
+    defineExpose({ procMainToMsglist })
+
     let listGroup = ref([]), groupRow = ref({}) //groupRow는 element를 동적으로 할당
     let mounting = true
-
-    defineExpose({ procMainToMsglist })
 
     async function procMainToMsglist(kind, obj) { //단순 전달
         //await userlistRef.value.procMainToMsglist(kind, obj)
@@ -43,15 +42,19 @@
     })
 
     onActivated(async () => {
-        if (mounting) {
-            mounting = false
-        } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
-            setBasicInfo()
-            if (route.path == "/main/group") { //사이드메뉴에서 클릭한 경우
-                groupClickOnLoop(true)
-            } else {
-                //UserList가 라우팅되는 루틴이며 UserList로부터 처리될 것임
+        try {
+            if (mounting) {
+                mounting = false
+            } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
+                setBasicInfo()
+                if (route.path == "/main/group") { //사이드메뉴에서 클릭한 경우
+                    groupClickOnLoop(true)
+                } else {
+                    //UserList가 라우팅되는 루틴이며 UserList로부터 처리될 것임
+                }
             }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     })
 
@@ -71,19 +74,22 @@
     }
 
     function groupClickOnLoop(clickNode, grid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. grid는 명시적으로 해당 노드를 지정해서 처리하는 것임
-        //const gridToChk = grid ? grid : localStorage.wiseband_lastsel_grid
-        let foundIdx = -1
-        listGroup.value.forEach((item, index) => {
-            procgroupRowImg(item)
-            if (item.GR_ID == localStorage.wiseband_lastsel_grid) {
-                gst.util.scrollIntoView(groupRow, item.GR_ID)
-                groupClick(item, index, clickNode, grid)
-                foundIdx = index
+        try {
+            let foundIdx = -1 //const gridToChk = grid ? grid : localStorage.wiseband_lastsel_grid
+            listGroup.value.forEach((item, index) => {
+                procgroupRowImg(item)
+                if (item.GR_ID == localStorage.wiseband_lastsel_grid) {
+                    gst.util.scrollIntoView(groupRow, item.GR_ID)
+                    groupClick(item, index, clickNode, grid)
+                    foundIdx = index
+                }
+            })
+            if (foundIdx == -1 && listGroup.value.length > 0) { //최초 실행시 그룹이 있는데 선택이 없으면 맨 처음 그룹 선택
+                const item = listGroup.value[0]
+                groupClick(item, 0, true)
             }
-        })
-        if (foundIdx == -1 && listGroup.value.length > 0) { //최초 실행시 그룹이 있는데 선택이 없으면 맨 처음 그룹 선택
-            const item = listGroup.value[0]
-            groupClick(item, 0, true)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -95,23 +101,19 @@
     }
 
     async function groupClick(row, idx, clickNode, grid) {
-        try {
-            const gridReal = grid ? grid : row.GR_ID
-            listGroup.value.forEach((item) => {
-                if (item.GR_ID == gridReal) {
-                    item.sel = true
-                    procgroupRowImg(item)
-                    localStorage.wiseband_lastsel_grid = gridReal
-                    if (clickNode) gst.util.goBodyList('group_body', { grid: item.GR_ID })
-                } else {
-                    item.hover = false
-                    item.sel = false
-                    procgroupRowImg(item)
-                }
-            })
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
+        const gridReal = grid ? grid : row.GR_ID
+        listGroup.value.forEach((item) => {
+            if (item.GR_ID == gridReal) {
+                item.sel = true
+                procgroupRowImg(item)
+                localStorage.wiseband_lastsel_grid = gridReal
+                if (clickNode) gst.util.goBodyList('group_body', { grid: item.GR_ID })
+            } else {
+                item.hover = false
+                item.sel = false
+                procgroupRowImg(item)
+            }
+        })
     }
 
     function mouseEnter(row) {
@@ -135,8 +137,6 @@
         } else if (param.kind == "saveGroup" || param.kind == "deleteGroup") {
             await getList()
             groupClickOnLoop()
-        } else { //로직 더 구현 필요            
-            //if (!grid) newGroup() //그룹삭제
         }
     }
 
@@ -169,11 +169,6 @@
                     </div>
                 </div>
             </div>
-            <!-- <div v-if="listGroup.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
-                <div style="width:100%;word-break:break-all;color:white">
-                    현재 내그룹 데이터가 없습니다.
-                </div>
-            </div> -->
         </div>
     </div>
     <resizer nm="group" @ev-from-resizer="handleFromResizer"></resizer>
@@ -184,9 +179,6 @@
             </keep-alive>
         </router-view>
     </div> 
-    <!-- <div v-else id="chan_body" :style="{ width: chanMainWidth }" style="display:flex;justify-content:center;align-items:center">
-        <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
-    </div>    -->
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 

@@ -1,12 +1,10 @@
 <script setup>
     import { ref, onMounted, nextTick, useTemplateRef, onActivated, onUnmounted } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
-    import axios from 'axios'
-    
+    import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import MemberPiceach from "/src/components/MemberPiceach.vue"
-    //import ContextMenu from "/src/components/ContextMenu.vue"
     import OrgTree from "/src/components/OrgTree.vue"
             
     const router = useRouter()
@@ -20,18 +18,13 @@
     }
 
     const orgRef = ref(null) //UserList(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
-
-    //const g_userid = gst.auth.getCookie("userid")
-    let mounting = true, sideMenu = "mnuGroup", grId
-    
     const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
-    let onGoingGetList = false, prevScrollY
-        
+    let onGoingGetList = false, prevScrollY        
     let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C')
     let userlist = ref([]), chkArr = ref([])
-
     let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('member')
     let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref('')
+    let mounting = true, sideMenu = "mnuGroup", grId
 
     onMounted(async () => {
         try {
@@ -47,14 +40,18 @@
     })
 
     onActivated(async () => {
-        gst.chanIdActivted = ""
-        if (mounting) {
-            mounting = false
-        } else {
-            setBasicInfo()
-            const key = sideMenu + grId
-            if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            evToPanel({ kind: "selectRow", grid: grId })
+        try {
+            gst.chanIdActivted = ""
+            if (mounting) {
+                mounting = false
+            } else {
+                setBasicInfo()
+                const key = sideMenu + grId
+                if (gst.objSaved[key]) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+                evToPanel({ kind: "selectRow", grid: grId })
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     })
 
@@ -115,49 +112,53 @@
     }
 
     async function applyToBody(arr, mode) {
-        if (grId == "new" || singleMode.value != "C") {
-            gst.util.setSnack("먼저 그룹이 저장되어야 하고 행선택도 없어야 합니다.", true)
-            return
-        }
-        const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
-        let warn = ""
-        for (let i = 0; i < arr.length; i++) {
-            const row = arr[i]
-            const rq = { crud: "C", GR_ID: grId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member" }
-            if (mode == "tree" || mode == "search") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
-                rq.SYNC = "Y"
-            } else { //mygroup (인사연동+수동입력 혼재)
-                if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
+        try {
+            if (grId == "new" || singleMode.value != "C") {
+                gst.util.setSnack("먼저 그룹이 저장되어야 하고 행선택도 없어야 합니다.", true)
+                return
+            }
+            const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
+            let warn = ""
+            for (let i = 0; i < arr.length; i++) {
+                const row = arr[i]
+                const rq = { crud: "C", GR_ID: grId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member" }
+                if (mode == "tree" || mode == "search") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
                     rq.SYNC = "Y"
+                } else { //mygroup (인사연동+수동입력 혼재)
+                    if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
+                        rq.SYNC = "Y"
+                    } else {
+                        rq.SYNC = ""
+                        rq.ORG = row.ORG
+                        rq.JOB = row.JOB
+                        rq.EMAIL = row.EMAIL
+                        rq.TELNO = row.TELNO
+                        rq.RMKS = row.RMKS
+                    }
+                }
+                const res = await axios.post("/user/saveMember", rq) //const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
+                if (res.data.code != hush.cons.OK) {
+                    warn = "[" + res.data.code + "] " + res.data.msg
+                    break
                 } else {
-                    rq.SYNC = ""
-                    rq.ORG = row.ORG
-                    rq.JOB = row.JOB
-                    rq.EMAIL = row.EMAIL
-                    rq.TELNO = row.TELNO
-                    rq.RMKS = row.RMKS
+                    brr.push(row)
                 }
             }
-            const res = await axios.post("/user/saveMember", rq) //const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
-            if (res.data.code != hush.cons.OK) {
-                warn = "[" + res.data.code + "] " + res.data.msg
-                break
-            } else {
-                brr.push(row)
+            if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
+                await getList()
+                await nextTick()
+                for (let i = 0; i < brr.length; i++) {
+                    const row = brr[i]
+                    const idx = gst.util.getKeyIndex(userRow, row.USERID)
+                    if (idx > -1) userlist.value[idx].chk = true
+                }
+                if (brr.length > 0) gst.util.scrollIntoView(userRow, brr[0].USERID)
+                if (mode == "mygroup") orgRef.value.procFromParent("refresh")
             }
+            if (warn) gst.util.setSnack(warn, true) //경고있을 경우 사용자에게 알려야 함
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
-            await getList()
-            await nextTick()
-            for (let i = 0; i < brr.length; i++) {
-                const row = brr[i]
-                const idx = gst.util.getKeyIndex(userRow, row.USERID)
-                if (idx > -1) userlist.value[idx].chk = true
-            }
-            if (brr.length > 0) gst.util.scrollIntoView(userRow, brr[0].USERID)
-            if (mode == "mygroup") orgRef.value.procFromParent("refresh")
-        }
-        if (warn) gst.util.setSnack(warn, true) //경고있을 경우 사용자에게 알려야 함
     }
 
     function changeChk(row, idx) {
@@ -365,10 +366,6 @@
                     </div>
                     <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
                         <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
-                            <!-- <div style="display:flex;align-items:center">
-                                <span style="margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
-                                <span>{{ row.JOB }}</span>
-                            </div> -->
                             <div style="width:calc(100% - 100px);display:flex;align-items:center">
                                 <div class="coDotDot">
                                     <span style="width:60px;margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
