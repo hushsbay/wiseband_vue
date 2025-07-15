@@ -11,8 +11,8 @@ import GroupPanel from '/src/views/GroupPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 import UserList from '/src/views/UserList.vue'
 import DummySkeleton from '/src/components/DummySkeleton.vue'
-
 import GeneralStore from '/src/stores/GeneralStore.js'
+
 let gst // = GeneralStore() //router.beforeEach안에서 문제가 발생해 필요시 선언만 하고 router.beforeEach안에서 처리함 아래 (1) 참조
 
 const router = createRouter({

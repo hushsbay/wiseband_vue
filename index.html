@@ -37,19 +37,23 @@
         }
 
         start.then(() => {
-            bc = new BroadcastChannel("wbRealtime") //각탭의 index.html <=> index.html
-            bc.onmessage = (e) => { getBroadcast(e.data) }
-            winId = Math.floor(Math.random() * (99999999 - 10000000)) + 10000000
-            const tag = document.querySelector("#winid")
-            tag.innerText = winId //Main.vue에 전달
-            procLocalStorage()
+            try {
+                bc = new BroadcastChannel("wbRealtime") //각 탭의 index.html <=> index.html
+                bc.onmessage = (e) => { getBroadcast(e.data) }
+                winId = Math.floor(Math.random() * (99999999 - 10000000)) + 10000000
+                const tag = document.querySelector("#winid")
+                tag.innerText = winId //Main.vue에 전달
+                procLocalStorage()
+            } catch (ex) {
+                alert("index: " + ex.message) //여기만 alert
+            }
         }).catch(error => {
-            alert(error)
+            alert(error) //여기만 alert
         }) //.finally(() => {})
 
         window.addEventListener("beforeunload", (e) => { //Main.vue에서는 구현 어려워 여기서 locaStorage로 각 탭의 Main.vue와 통신함
             if (!bc) return
-            if (localStorage.winId == winId) { //console.log("beforeunload") //OK
+            if (localStorage.winId == winId) {
                 delete localStorage.winId //내가 위너면 내가 죽을 때 위너 자리 내놓음
                 delete localStorage.winDt
                 bc.postMessage({ code: "dead" }) //winner is dead

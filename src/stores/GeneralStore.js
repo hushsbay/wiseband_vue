@@ -2,7 +2,6 @@ import { ref, inject } from "vue"
 import { useRouter, useRoute } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
 import axios from 'axios'
-
 import hush from '/src/stores/Common.js'
 
 const GeneralStore = defineStore('General', () => {
@@ -13,41 +12,14 @@ const GeneralStore = defineStore('General', () => {
 
     let objSaved = ref({}) //현재는 MsgList에서만 사용중. 각 메뉴, 사이드메뉴+채널별 (Back하기 전에 저장한) 스크롤 위치 등이 있음
     let selSideMenu = ref(""), chanIdActivted = ref(''), objByChanId = ref({})
+
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const bottomMsg = ref(''),  routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
-
-    /* Vue에서의 컴포넌트간 통신은 여러가지 기법이 있는데 콤포넌트간 통신이 필요한 경우는 아래와 같음 
-       Later.vue 패널을 예로 설명. 여기서는 자식과 손주(스레드댓글)가 동일한 MsgList임을 유의!!
-       1) Later -> MsgList : 부모 -> 자식 (라우팅)
-       2) Later -> MsgList(스레드댓글) : 부모 -> 손자 (라우팅도 컴포넌트호출도 아닌 중간에 자식이 전달받아서 전달해야 함)
-       3) MsgList -> Later : 자식 -> 부모
-       4) MsgList(스레드댓글) -> Later : 손자 -> 부모
-       5) MsgList -> MsgList(스레드댓글) : 자식 -> 손자 (둘의 입장에서는 부모 -> 자식. 라우팅)
-       6) MsgList(스레드댓글) -> MsgList : 손자 -> 자식 (둘의 입장에서는 자식 -> 부모)
-       이 프로젝트에서는 MsgList.vue가 스레드댓글에서도 다시 사용되므로 생각없이 되는대로 통신하는 것은 향후 코딩(유지보수)에 어려움을 줄 수가 있음
-       따라서, 아래와 같이 규칙을 정해서 적용하려고 함 (사실, 모든 걸 스토어에 두고 관리하거나 props/emits로 처리해도 될 것이나 향후 복잡하게 얽힐 것임)
-       1),2) 처럼 부모가 자식에게 전달하고자 할 때 (특히, 1)은 라우팅이므로 props 사용안하고 2)도 5)를 생각해서 혼란줄이기 위해 props 쓰지 말기)
-         - MsgList에 defineExpose({ procFromPanel })처럼 정의하고, Later에서 homebodyRef.value.procFromPanel(row)와 같이 호출함
-         - 이 때 Later에서는 const homebodyRef = ref(null)로 선언하고 <component :is="Component" :key="$route.fullPath" ref="homebodyRef" />에서처럼 homebodyRef를 추가함
-         - 부모가 손주에게는 이 방식(2)으로 바로 전달되지 않고 부모가 다시 자식에게 동일한 방식으로 전달해야 함 : MsgList->MsgList스레드댓글의 경우 아래 5) 참조
-       3),4) 처럼 자식이나 손주가 부모에게 전달하려 할 때 
-         - 자식이나 손주에서 const emits = defineEmits(["ev-click"])처럼 사용하면 되겠으나 이미 MsgList(스레드댓글)->MsgList의 경우에서 사용하고 있으므로
-         - Later로 전달할 때도 그리 사용하면 향후엔 너무 혼란스러운 상황이 발생할 것임
-         - 그래서, 이 프로젝트에서는 이 경우에 한해 스토어에서 변수 및 함수를 공유하는 것으로 함
-         - 다만, 특정 vue끼리만 공유하기 위해 GeneralStore와는 별도로 만들어 사용하려 했으나 배열 루프 돌리는데 엄청 느린 현상이 발생해
-           해결할 시간을 투여하지 않고 일단 여기 GeneralStore에서 ref 변수와 객체(예: const later =)를 두어 처리함 (**77)
-         - 그런데, ev-to-panel (Later, Dm..참조)는 element를 다루는 내용 + MsgList(Parent만의경우)라 스토어에서 처리하기가 더 힘들고 emits로 처리해보니까 더 편리함
-         - 따라서, 3),4)의 경우 스토어나 ev-to-panel를 상황에 맞게 쓰는 것으로 할 것임
-       5) 처럼 (MsgList간의 통신에 한해서) 부모가 자식에게 전달하고자 할 때 : omeBody->MsgList스레드댓글
-         - props와 defineExpose 사용하기
-       6) 처럼 (MsgList간의 통신에 한해서) 자식이 부모에게 전달하고자 할 때 : MsgList(스레드댓글)->MsgList
-         - emits 사용하기
-    */
     
     const auth = {
 
-        setCookie : function(nm, val, persist) { //모든 쿠키는 main.js 설정에 따르고 여기서는 persist/session 쿠키여부만 결정함. persist는 모두 1년을 만기로 설정
+        setCookie : function(nm, val, persist) { //모든 쿠키는 main.js 설정에 따르고 여기서는 persist/session 쿠키 여부만 결정. persist는 모두 1년을 만기로 설정
             const dur = (persist == true) ? "365d" : 0
             $cookie.set(nm, val, dur)
         },
@@ -85,7 +57,7 @@ const GeneralStore = defineStore('General', () => {
 
     const ctx = { 
         
-        on : false, //Main.vue에서 <div class="coMain" @click=>처리하지 않으면 다른 곳을 클릭했을 때 right click한 ctx가 닫히면서 클릭한 이벤트가 바로 먹히지 않음        
+        on : false, //Main.vue에서 <div class="coMain" @click=>처리하지 않으면, 다른 곳을 클릭했을 때 right click한 ctx가 닫히면서 클릭한 이벤트가 바로 먹히지 않음        
 
         data : {
             posX : 0,
@@ -126,48 +98,6 @@ const GeneralStore = defineStore('General', () => {
 
     }
 
-    // const noti = {
-
-    //     procNoti : async function(row) { //알림바는 tag(=채널단위)로 groupby되어 show
-    //         if (!hush.noti.rooms[row.CHANID]) {
-    //             const res = await axios.post("/chanmsg/qryMsg", { chanid: row.CHANID, msgid: row.MSGID })
-    //             const rs = util.chkAxiosCode(res.data, true)
-    //             if (rs) hush.noti.rooms[row.CHANID] = rs.data
-    //         }
-    //         const room = hush.noti.rooms[row.CHANID] //오로지 CHANNM 가져오려고 서버 호출하는 것임
-    //         const title = '[' + (room ? room.chanmst.CHANNM : hush.cons.appName) + ']'
-    //         const author = '작성자 : ' + row.USERNM + '\n'
-    //         const body = author + row.BODYTEXT //나중에 사용자 옵션에 따라 작성자와 본문을 보여줄지 말지 구현
-    //         const objNoti = new window.Notification(title, {
-    //             body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : '/src/assets/images/color_slacklogo.png', requireInteraction : true 
-    //         }) //아래 2행은 예비용 (향후 필요시 사용)           
-    //         objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
-    //         objNoti.chanid = row.CHANID
-    //         objNoti.subkind = row.SUBKIND
-    //         objNoti.isNewWin = route.fullPath.includes('/body/msglist') ? true : false
-    //         objNoti.onclick = function () {
-    //             if (!hush.noti.winForNoti.closed) {
-    //                 if (objNoti.isNewWin) { //새창에서 알림을 받았으니 클릭하면 바로 그 창으로 열어 줘야 함
-    //                     ///const url = util.getUrlForBodyListNewWin(objNoti.chanid, objNoti.msgid); window.open(url, '_blank')
-    //                     hush.noti.winForNoti.focus() //바로 위와 같이 처리하면 기존 창이 열려 있더라도 새창이 열리게 되므로 focus()만 주면 됨
-    //                 } else { //기본적으로는 메인창에 아래와 같이 focus()를 주면 Main.vue의 focus()에서 인지해서 router.push()하도록 함
-    //                     //여기서 사용자가 알림 클릭시마다 선택할 수 있으면 좋은데 html5 notification bar에서 이벤트를 나누기 못찾음
-    //                     //sessionStorage.msgidFromNoti = objNoti.msgid //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
-    //                     sessionStorage.chanidFromNoti = objNoti.chanid
-    //                     sessionStorage.subkindFromNoti = objNoti.subkind
-    //                     hush.noti.winForNoti.focus()
-    //                 }
-    //                 setTimeout(function() { objNoti.close() }, 500)
-    //             } else {
-    //                 alert("closed") //여기로 오는 경우는 없음 (해당 탭을 닫아도 다시 shown. 브라우저 닫아도 여기로 안옴)
-    //             }
-    //         }
-    //         if (!hush.noti.winForNoti) hush.noti.winForNoti = window
-    //         gst.realtime.setObjToChan(row.CHANID, "noti", objNoti) //나중에 창이 열리게 되면 사용자가 클릭안해도 알림바가 닫히게 하려는 용도임
-    //     }
-
-    // }
-
     const realtime = {
 
         setObjToChan : function(chanid, key, val) {
@@ -187,10 +117,10 @@ const GeneralStore = defineStore('General', () => {
             const body = author + row.BODYTEXT //나중에 사용자 옵션에 따라 작성자와 본문을 보여줄지 말지 구현
             const objNoti = new window.Notification(title, {
                 body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : '/src/assets/images/color_slacklogo.png', requireInteraction : true 
-            }) //아래 2행은 예비용 (향후 필요시 사용)           
-            //objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
+            })           
             objNoti.chanid = row.CHANID
             objNoti.subkind = row.SUBKIND
+            //objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
             //objNoti.isNewWin = route.fullPath.includes('/body/msglist') ? true : false
             objNoti.onclick = function () {
                 if (!hush.noti.winForNoti.closed) {
@@ -221,30 +151,6 @@ const GeneralStore = defineStore('General', () => {
             if (objByChanId.value[chanid].noti) objByChanId.value[chanid].noti.close()
         }
 
-        // setRealShown : function(chanid, pageShown) {
-        //     setObjToChan(chanid, "realShown", pageShown)
-        // },
-
-        // setNoti : function(chanid, notiObj) {
-        //     setObjToChan(chanid, "noti", notiObj)
-        // }
-
-        // setRealShown : function(chanid, pageShown) {
-        //     if (!objByChanId.value[chanid]) {
-        //         objByChanId.value[chanid] = { realShown : pageShown }
-        //     } else {
-        //         objByChanId.value[chanid].realShown = pageShown
-        //     }
-        // },
-
-        // setNoti : function(chanid, notiObj) {
-        //     if (!objByChanId.value[chanid]) {
-        //         objByChanId.value[chanid] = { noti : notiObj }
-        //     } else {
-        //         objByChanId.value[chanid].noti = notiObj
-        //     }
-        // }
-
     }
     
     const util = {
@@ -256,7 +162,7 @@ const GeneralStore = defineStore('General', () => {
             // }
             // sessionStorage.mountedFullpath = route.fullPath
             // setTimeout(function() { sessionStorage.mountedFullpath = '' }, 1000)
-            return true
+            return true //현재 미사용이라 위에 막고 return true만 처리
         }, 
 
         setSnack : function(ex, toastSec, fromConfig) {
@@ -440,8 +346,8 @@ const GeneralStore = defineStore('General', () => {
             } else { //사이드 메뉴 같은 경우 : 사용자가 다른 사이드 메뉴를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 바뀐 경우
                 routedToSamePanelFromMsgList.value = false
             }
-            console.log("## routeFrom: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
-            console.log("## routeTo: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(to.query))
+            //console.log("## routeFrom: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
+            //console.log("## routeTo: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(to.query))
         },
 
         goMsgList : async function(nm, params, refresh) {
@@ -563,10 +469,10 @@ const GeneralStore = defineStore('General', () => {
     }
     
     return { 
-        //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
         objSaved, selSideMenu, chanIdActivted, objByChanId,
         snackBar, toast, bottomMsg, routeFrom, routeTo, routedToSamePanelFromMsgList,
-        auth, ctx, html, realtime, util,
+        auth, ctx, html, realtime, util
+        //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
     }
 
     ////////////////////////////////////////////////////////////////////////////////예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

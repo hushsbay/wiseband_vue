@@ -2,7 +2,6 @@
     import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
-
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupSidemenu from "/src/components/PopupSidemenu.vue"
@@ -43,33 +42,37 @@
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
     //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
     //2개의 조합으로도 불안하므로 브라우저 강제종료 등의 예외 대비해 procLocalStorage 타이머로 체크 추가
-    //ckarhfh, Main.vue가 들어가는 탭은 사용자가 다른 탭에서 url을 치거나 복사해야 가능 (새창에서 열기 메뉴는 main.vue가 없는 MsgList.vue만 존재하므로 무시)
+    //참고로, Main.vue가 들어가는 탭은 사용자가 다른 탭에서 url을 치거나 복사해야 가능 (새창에서 열기 메뉴는 main.vue가 없는 MsgList.vue만 존재하므로 무시)
     function procLocalStorage() {
-        if (!winId) return
-        let shouldSetNewWinId = false
-        if (!localStorage.winId) {
-            shouldSetNewWinId = true
-        } else { //이미 다른 탭이 위너로 자리잡고 있다고 봐야 하나 (자기자신이나 다른 탭이) 비정상적인 브라우저 종료로 미처 delete 안되었을 경우도 고려
-            if (localStorage.winId == winId) {
-                localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
-            } else { //내가 위너가 아니면 위너의 widDt 체크해서 업데이트안되고 있다고 파악되면 여기 winId로 그자리 바로 차지해서 위너되기 (디버깅은 넘어가도 alert는 다른 서버호출도 중지시키므로 문제가 됨)
-                const winDt = localStorage.winDt //localStorage.winId가 있으면 localStorage.winDt도 무조건 있다고 보기
-                const dtPrev = hush.util.getDateTimeStamp(winDt)
-                const sec = parseInt(((new Date()) - dtPrev) / 1000) //return seconds
-                if (sec > TIMERSEC_WINNER) shouldSetNewWinId = true //5초 지나면 위너가 업데이트 안하고 있는 것인데 (위너가 비정상 종료되어) 새로 위너에 도전하기
+        try {
+            if (!winId) return
+            let shouldSetNewWinId = false
+            if (!localStorage.winId) {
+                shouldSetNewWinId = true
+            } else { //이미 다른 탭이 위너로 자리잡고 있다고 봐야 하나 (자기자신이나 다른 탭이) 비정상적인 브라우저 종료로 미처 delete 안되었을 경우도 고려
+                if (localStorage.winId == winId) {
+                    localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
+                } else { //내가 위너가 아니면 위너의 widDt 체크해서 업데이트안되고 있다고 파악되면 여기 winId로 그자리 바로 차지해서 위너되기 (디버깅은 넘어가도 alert는 다른 서버호출도 중지시키므로 문제가 됨)
+                    const winDt = localStorage.winDt //localStorage.winId가 있으면 localStorage.winDt도 무조건 있다고 보기
+                    const dtPrev = hush.util.getDateTimeStamp(winDt)
+                    const sec = parseInt(((new Date()) - dtPrev) / 1000) //return seconds
+                    if (sec > TIMERSEC_WINNER) shouldSetNewWinId = true //5초 지나면 위너가 업데이트 안하고 있는 것인데 (위너가 비정상 종료되어) 새로 위너에 도전하기
+                }
             }
+            if (shouldSetNewWinId) {
+                localStorage.winId = winId
+                localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
+            }
+            if (localStorage.winId == winId) {
+                isWinner = true
+            } else {
+                isWinner = false
+            }
+            if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
+            setTimeout(function() { procLocalStorage() }, TIMERSEC_SHORT)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        if (shouldSetNewWinId) {
-            localStorage.winId = winId
-            localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
-        }
-        if (localStorage.winId == winId) {
-            isWinner = true
-        } else {
-            isWinner = false
-        }
-        if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
-        setTimeout(function() { procLocalStorage() }, TIMERSEC_SHORT)
     }
 
     /* 
@@ -120,11 +123,9 @@
                     notyetCntDmTmp = row.SUM
                 }
             }
-            //debugger
             if (notyetCntHomeTmp != notyetCntHome.value) notyetCntHome.value = notyetCntHomeTmp
             if (notyetCntDmTmp != notyetCntDm.value) notyetCntDm.value = notyetCntDmTmp
             if (rs.list.length > 0 && panelRef.value) { //로드시 가끔 패널에 panelRef가 늦게 잡히는 경우가 있는데 이 경우는 한번 더 돌아야 함
-                //debugger
                 //활성/비활성배열 개념은 원래 메시지처리에 대한 개념에서 시작했는데 나중에 채널마스터/디테일처리인 'chan' TYP도 포함됨
                 //'chan' TYP는 패널의 각 행에 대한 CUD처리를 위한 목적지인 Main(arrForNotChanActivted)에서도 해야 하고 
                 //MsgList 상단의 채널명/멤버이미지를 위해서도 (새창으로도) 열려 있는 MsgList(arrForChanActivted)로도 보내져야 함
@@ -148,7 +149,6 @@
                             realShown = 'N'
                         }
                     }
-                    //debugger
                     const len = arrForNotChanActivted.length
                     for (let i = 0; i < len; i++) {                        
                         const row = arrForNotChanActivted[i]
@@ -221,9 +221,7 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         } finally {
-            setTimeout(function() {
-                procRsObj()
-            }, 100)
+            setTimeout(function() { procRsObj() }, 100)
         }
     }
 
@@ -243,11 +241,9 @@
 
     function getBroadcast2(data) {
         if (data.code == 'pageShownChanged') {
-            //console.log("####pageShownChanged")
             bc2.postMessage({ code: 'pageShownChanged1' })
             bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
         }else if (data.code == 'pageShownChanged1') {
-            //console.log("####pageShownChanged1")
             bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
         } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
             arrCurPageShown.push({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
@@ -257,43 +253,40 @@
     }
 
     function procObjByChanid() {
-        const tmpArr = []
-        const len = arrCurPageShown.length
-        if (len > 0) {
-            for (let i = 0; i < len; i++) {
-                const item = arrCurPageShown[i]
-                //console.log("####--"+item.pageShown)
-                if (tmpArr.length == 0) {
-                    tmpArr.push(item)
-                } else {
-                    let modified = false
-                    for (let j = 0; j < tmpArr.length; j++) {
-                        if (tmpArr[j].chanid == item.chanid) {
-                            if (tmpArr[j].pageShown == 'Y') { 
-                                //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
-                            } else {
-                                if (item.pageShown == 'Y') {
-                                    tmpArr[j] = item
+        try {
+            const tmpArr = []
+            const len = arrCurPageShown.length
+            if (len > 0) {
+                for (let i = 0; i < len; i++) {
+                    const item = arrCurPageShown[i]
+                    if (tmpArr.length == 0) {
+                        tmpArr.push(item)
+                    } else {
+                        let modified = false
+                        for (let j = 0; j < tmpArr.length; j++) {
+                            if (tmpArr[j].chanid == item.chanid) {
+                                if (tmpArr[j].pageShown == 'Y') { 
+                                    //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
+                                } else {
+                                    if (item.pageShown == 'Y') {
+                                        tmpArr[j] = item
+                                    }
                                 }
+                                modified = true
                             }
-                            modified = true
                         }
+                        if (!modified) tmpArr.push(item)
                     }
-                    if (!modified) tmpArr.push(item)
-                }
-            } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
-            arrCurPageShown.splice(0, len)
+                } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
+                arrCurPageShown.splice(0, len)
+            }
+            for (let i = 0; i < tmpArr.length; i++) {
+                const item = tmpArr[i]
+                gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", item.pageShown)
+            } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        for (let i = 0; i < tmpArr.length; i++) {
-            const item = tmpArr[i]
-            // if (!gst.objByChanId[item.chanid]) {
-            //     gst.objByChanId[item.chanid] = { realShown : item.pageShown }
-            // } else {
-            //     gst.objByChanId[item.chanid].realShown = item.pageShown
-            // }
-            gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", item.pageShown)
-        } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
-        //if (gst.objByChanId["20250705111453478357041152"]) console.log("####"+gst.objByChanId["20250705111453478357041152"].realShown)
     }
 
     onMounted(async () => {
@@ -308,9 +301,9 @@
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            realtimeJobDone = 'Y' //sessionStorage.realtimeJobDone = 'Y' 
+            realtimeJobDone = 'Y'
             //if (!sessionStorage.logdt) { //9999-99-99로 잘못들어간 적이 있는데 변경할 방법이 없어 막음
-            logdt = rs.data.dbdt //sessionStorage.logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
+            logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
             //}
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USERID != null)
@@ -323,35 +316,31 @@
             procTimerShort() 
             procTimerLong()
             if (!route.fullPath.includes('/body/msglist') && !route.fullPath.includes('/notyet')) procRsObj() //아직안읽음에서는 리얼타임 반영하지 않음
-            //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
+                //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                 if (document.hidden) {
                     pageShown = 'N' 
-                    console.log("pageHidden####")                     
                 } else {
                     pageShown = 'Y'         
-                    console.log("pageShown####")           
                 }
                 pageShownChanged(pageShown)                
             }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
             window.addEventListener('focus', async function() {
                 pageShown = 'Y'
                 pageShownChanged(pageShown)
-                console.log("focus")
                 if (sessionStorage.chanidFromNoti) { //알림(noti)바를 클릭한 경우임 - GeneralStore.js의 procNoti() 참조
                     //await router.push({ name : "home_body", params : { chanid: sessionStorage.chanidFromNoti, msgid: sessionStorage.msgidFromNoti }}) //다른 채널이라도 메시지가 추가됨 (사용금지)
                     const nm = (sessionStorage.subkindFromNoti == "GS") ? "dm" : "home"
                     await goRoute({ name: nm }) //home or dm
                     sessionStorage.chanidFromNoti = ''
-                    //sessionStorage.msgidFromNoti = '' //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
                     sessionStorage.subkindFromNoti = ''
+                    //sessionStorage.msgidFromNoti = '' //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
                 }
             })
-            // window.addEventListener('blur', function() {
-            //     pageShown = 'N'
-            //     pageShownChanged(pageShown)
-            //     console.log("blur")
-            // })
+            window.addEventListener('blur', function() {
+                pageShown = 'N'
+                pageShownChanged(pageShown)
+            })
             window.focus() //focus()해야 blur()도 발생함
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -365,16 +354,20 @@
     })
 
     function sideClickOnLoop(selMenu, onMounted) {
-        let idx = -1    
-        let lastSelMenu = selMenu ? selMenu : localStorage.wiseband_lastsel_menu
-        if (lastSelMenu) {
-            idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
-        } else {
-            lastSelMenu = "mnuHome"
+        try {
+            let idx = -1    
+            let lastSelMenu = selMenu ? selMenu : localStorage.wiseband_lastsel_menu
+            if (lastSelMenu) {
+                idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
+            } else {
+                lastSelMenu = "mnuHome"
+            }
+            const idxReal = (idx == -1) ? 0 : idx
+            const row = listSel.value[idxReal]
+            sideClick(lastSelMenu, row, onMounted)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        const idxReal = (idx == -1) ? 0 : idx
-        const row = listSel.value[idxReal]
-        sideClick(lastSelMenu, row, onMounted)
     }
 
     watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
@@ -405,38 +398,46 @@
     }
 
     function mouseEnter(e) {
-        prevX = e.pageX
-        prevY = e.pageY
-        const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
-        if (menuDiv.id == "mnuSeeMore") {
-            listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value] //위 ## 주석 참조
-        } else {
-            return //더보기 말고 팝업표시하는 것은 육안으로는 화면이 더 복잡해져서 오히려 불편함을 느낌 (주관적) : 향후 필요시 return 빼고 아래 팝업 메뉴 추가하면 됨 (일단은 더보기에 대해서만 팝업 지원)
-            const found = listAll.value.find((item) => item.ID == menuDiv.id)
-            if (!found || found.POPUP != "Y") {
-                popupMenuOn.value = false //혹시 떠 있을 팝업 제거
-                return
+        try {
+            prevX = e.pageX
+            prevY = e.pageY
+            const menuDiv = e.target //console.log(e.pageY + "====mouseenter===" + prevX + "===" + menuDiv.offsetTop)
+            if (menuDiv.id == "mnuSeeMore") {
+                listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value] //위 ## 주석 참조
+            } else {
+                return //더보기 말고 팝업표시하는 것은 육안으로는 화면이 더 복잡해져서 오히려 불편함을 느낌 (주관적) : 향후 필요시 return 빼고 아래 팝업 메뉴 추가하면 됨 (일단은 더보기에 대해서만 팝업 지원)
+                const found = listAll.value.find((item) => item.ID == menuDiv.id)
+                if (!found || found.POPUP != "Y") {
+                    popupMenuOn.value = false //혹시 떠 있을 팝업 제거
+                    return
+                }
+                listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
             }
-            listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
+            popupMenuOn.value = true
+            const docHeight = document.documentElement.offsetHeight
+            if (menuDiv.offsetTop + POPUPHEIGHT > docHeight) {
+                popupMenuPos.value.top = null
+                popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 100) + "px"
+            } else { //100은 사이드메뉴아이템 높이인데 이 화면의 로직에서는 대략 산정해도 무리없음
+                popupMenuPos.value.top = (menuDiv.offsetTop - 100) + "px"
+                popupMenuPos.value.bottom = null
+            }
+            popupData.value.id = menuDiv.id
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        popupMenuOn.value = true
-        const docHeight = document.documentElement.offsetHeight
-        if (menuDiv.offsetTop + POPUPHEIGHT > docHeight) {
-            popupMenuPos.value.top = null
-            popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 100) + "px"
-        } else { //100은 사이드메뉴아이템 높이인데 이 화면의 로직에서는 대략 산정해도 무리없음
-            popupMenuPos.value.top = (menuDiv.offsetTop - 100) + "px"
-            popupMenuPos.value.bottom = null
-        }
-        popupData.value.id = menuDiv.id
     }
 
     function mouseLeave(e) {
-        const angle = hush.util.getAngle(prevX, prevY, e.pageX, e.pageY)
-        if (angle >= -60 && angle <= 60) { //if (e.pageX > prevX) {
-            //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
-        } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
-            popupMenuOn.value = false
+        try {
+            const angle = hush.util.getAngle(prevX, prevY, e.pageX, e.pageY)
+            if (angle >= -60 && angle <= 60) { //if (e.pageX > prevX) {
+                //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
+            } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
+                popupMenuOn.value = false
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -504,13 +505,13 @@
         await goRoute({ name: 'login' }, true)
     }
 
-    function handleEvFromPanel(kind, menu) { //예) kind: "forwardToSide", menu: "home" => Home.vue의 onMounted() => MsgList.vue
-        //현재 미사용. 지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조
-        const menuStr = "mnu" + menu.substring(0, 1).toUpperCase() + menu.substring(1)
-        const ka = keepAliveRef.value._.__v_cache
-        ka.delete(menu) //const appType = route.fullPath.split("/")[2] //arr[2] = home,dm 등..
-        sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
-    }
+    // function handleEvFromPanel(kind, menu) { //예) kind: "forwardToSide", menu: "home" => Home.vue의 onMounted() => MsgList.vue
+    //     //현재 미사용. 지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조
+    //     const menuStr = "mnu" + menu.substring(0, 1).toUpperCase() + menu.substring(1)
+    //     const ka = keepAliveRef.value._.__v_cache
+    //     ka.delete(menu) //const appType = route.fullPath.split("/")[2] //arr[2] = home,dm 등..
+    //     sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
+    // }
 </script>
 
 <template>

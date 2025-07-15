@@ -2,7 +2,6 @@
     import { ref, onMounted, nextTick } from 'vue'
     import { useRouter } from 'vue-router'
     import axios from 'axios'
-
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const router = useRouter()
@@ -12,13 +11,17 @@
     let uidRef = ref(null), pwdRef = ref(null) //for focusing
 
     onMounted(async () => {
-        const userid = gst.auth.getCookie("userid")
-		if (userid) {
-            saveId.value = true
-            uid.value = userid
+        try {
+            const userid = gst.auth.getCookie("userid")
+            if (userid) {
+                saveId.value = true
+                uid.value = userid
+            }
+            await nextTick()
+            uidRef.value.focus()
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        await nextTick()
-        uidRef.value.focus()
     })
 
     async function goLogin() {
@@ -121,6 +124,5 @@
         border-radius:4px;background-color:var(--primary-color);color:white;cursor:pointer 
     }
     .btn_basic:hover { background:var(--second-hover-color) }
-    /* .btn_basic:active { background:var(--active-btn) } */
 
 </style>	
