@@ -22,9 +22,24 @@
 
 2. Layout
 
+    - 사내시스템에 들어오는 것이므로 슬랙과는 달리 채널에 대해서는 모든 워크스페이스를 통합해 보여주기로 함
+    - SPA Nested Routing (중첩 라우팅) : Main > Panel > MsgList / KeepAlive (캐싱)
+    - Multi Window / Multi Channel / Multi DM
 
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_02_layout.png)
 
+
+3. Data Polling
+
+    - 동일한 브라우저내 (Same Domain) 단 하나의 Polling만 운영하도록 함
+    - 브라우저탭간에는 Broadcast Channel API 및 LocalStorage를 이용, 경합을 통해 마스터를 설정
+    - 마스터가 닫히면 다른 탭이 마스터 역할을 이어 받음
+    - 마스터에서만 Polling 데이터를 받아 나머지 탭들에게 데이터 전달
+    - 실시간 데이터 반영을 위한 로깅 테이블 운영 (S_DATALOG_TBL)
+
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_03_datapolling.png)
+    
+    
 
 
 
