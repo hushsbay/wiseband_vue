@@ -12,6 +12,11 @@
 
 1. 인증
 
+    - 임직원은 사내시스템인 WiSE에 이미 로그인이 된 것을 전제로 하므로 아래 화면이 필요없으나
+      개발자 편의상 로그인을 지원해 주는 것으로 함 (WiSE 사용자 아이디 비번 이용)
+
+    - 외부인은 아래 그림처럼 메일을 통한 OTP 인증으로 처리
+
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_01_authentication.png)
 
 
