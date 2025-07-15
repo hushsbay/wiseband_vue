@@ -45,7 +45,6 @@
     - 외부인은 아래 그림처럼 메일을 통한 OTP 인증으로 처리
 
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_01_authentication.png)
-
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_06_auth_membership.png)
 
 
