@@ -12,7 +12,7 @@
 
 1. 인증
 
-![image](https://github.com/hushsbay/wiseband_vue/wiseband_vue/pt_01_authentication.png)
+![image](https://github.com/hushsbay/wiseband_vue/pt_01_authentication.png)
 
 
 
