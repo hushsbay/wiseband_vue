@@ -1,5 +1,7 @@
-# wiseband_vue
+개발 진척도 : 약 80% (2025.7.15 기준)
 
-- Slack Clone 개발중입니다. (vue.js)
-- 현재 70%정도의 개발 진행중입니다. (2025년 8월 완료 목표)
-- 아직 운영서버에 배포되지 않았습니다.
+
+# wiseband_vue 소개
+
+- Slack Clone 개발 건 (with Vue.js + Nest.js)
+- 아직 개발서버 미배포 (localhost 개발 및 테스트)
