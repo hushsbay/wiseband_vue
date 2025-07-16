@@ -16,7 +16,7 @@
     const gst = GeneralStore()
 
     defineExpose({ procFromParent, procMainToMsglist })
-    const emits = defineEmits(["ev-click", "ev-to-panel"]) //ev-click : MsgList -> MsgList / ev-to-panel : MsgList -> Panel(Later, Dm..)
+    const emits = defineEmits(["ev-to-parent", "ev-to-panel"]) //ev-to-parent : MsgList -> MsgList / ev-to-panel : MsgList -> Panel(Later, Dm..)
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
     
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
@@ -282,7 +282,7 @@
             const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
             if (idx > -1) {
                 msglist.value.splice(idx, 1)
-                if (idx == 0) clickFromProp({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
+                if (idx == 0) handleEvFromChild({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
             }
         } else if (kind == "addChildFromBody") {
             await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
@@ -313,7 +313,7 @@
 
     function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
         if (hasProp()) return
-        if (thread.value.msgid) clickFromProp({ type: "close" })
+        if (thread.value.msgid) handleEvFromChild({ type: "close" })
         setTimeout(function() {
             thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
             thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
@@ -322,7 +322,7 @@
         
     }
 
-    async function clickFromProp(obj) { //부모에서만 사용. 자식에게서 전달받아 이벤트 처리하는 것임
+    async function handleEvFromChild(obj) { //부모에서만 사용. 자식에게서 전달받아 이벤트 처리하는 것임
         if (obj.type == "close") {
             thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
             setWidthForThread(null, obj.type)
@@ -356,8 +356,8 @@
         }
     }
 
-    function evClick(obj) { //자식에서만 사용됨
-        emits('ev-click', obj)
+    function evToParent(obj) { //자식에서만 사용됨
+        emits('ev-to-parent', obj)
     }
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -1051,7 +1051,7 @@
                     if (!rs) return
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                     if (hasProp()) { //댓글 삭제시 스레드의 부모글은 chkDataLog()에 의해 업데이트 될 것이므로 바로 아래에서는 굳이 처리 안함
-                        evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+                        evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
                     } else { //이게 MsgList(부모) -> MsgList(자식)인 경우라면 필요없어 보임 (부모글 삭제시 자식에 댓글 있으면 안되고 댓글 없으면 굳이 화면에서 연동할 필요없음)
                         if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
                     }
@@ -1166,7 +1166,7 @@
             if (!rs) return
             await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
-                evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
+                evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
             } else { 
                 if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
@@ -1190,7 +1190,7 @@
             await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)            
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
-                evClick({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
+                evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
             } else { 
                 deleteFromNewAdded(null, msgid, null)
                 if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
@@ -1495,7 +1495,7 @@
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
                     await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: rs.data.replyto })
                     if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })                  
-                    evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+                    evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
                     if (newParentAdded.value.length == 0) {
                         await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
@@ -2056,7 +2056,7 @@
                 obj.act_fixed = rs.act_fixed
             }
             if (hasProp()) { 
-                evClick({ type: "refreshFromReply", msgid: props.data.msgid })
+                evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
             } else {
                 if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
@@ -2427,7 +2427,7 @@
                         </div>
                     </div>
                     <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:0px">
-                        <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => evClick({ type: 'close' })">
+                        <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click="() => evToParent({ type: 'close' })">
                     </div>
                 </div>
             </div>
@@ -2681,7 +2681,7 @@
             </div>            
         </div>
         <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
-            <msg-list :data="thread" @ev-click="clickFromProp" ref="msglistRef"></msg-list>
+            <msg-list :data="thread" @ev-to-parent="handleEvFromChild" ref="msglistRef"></msg-list>
         </div>        
     </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>

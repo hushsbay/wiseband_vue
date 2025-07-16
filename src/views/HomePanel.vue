@@ -24,7 +24,7 @@
         if (kind == "procRows") {
             await procRows()
         } else {
-            handleEvFromBody({ kind: kind, chanid: obj.CHANID })
+            handleEvFromMsgList({ kind: kind, chanid: obj.CHANID }) //기존 함수 가져다 쓰기
         }
     }
 
@@ -366,7 +366,7 @@
         newRoomJustCreated.value = false
     }
 
-    async function handleEvFromBody(param) { //MsgList에서 실행
+    async function handleEvFromMsgList(param) {
         if (param.kind == "selectRow") {
             chanClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
@@ -457,7 +457,7 @@
     <div v-if="listHome.length > 0" id="chan_body" :style="{ minWidth: chanMainWidth, maxWidth: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive ref="keepAliveRef">
-                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromMsgList"/>
             </keep-alive>
         </router-view>
     </div>

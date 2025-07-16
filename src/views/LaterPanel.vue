@@ -239,7 +239,7 @@
         laterClickOnLoop(true)
     }
 
-    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+    async function handleEvFromMsgList(param) {
         if (param.kind == "selectRow") {
             laterClickOnLoop(false, param.msgid) //뒤로가기는 clickNode = false
         } else if (param.kind == "update") {
@@ -351,7 +351,7 @@
     <div v-if="listLater.length > 0" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive ref="keepAliveRef">
-                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody"/>
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromMsgList"/>
             </keep-alive>
         </router-view>
     </div>

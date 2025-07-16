@@ -50,7 +50,7 @@
         show.value = false
     }
 
-    const orgRef = ref(null) //memberlist(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
+    const orgRef = ref(null)
 
     const g_userid = gst.auth.getCookie("userid")
     const g_usernm = gst.auth.getCookie("usernm")

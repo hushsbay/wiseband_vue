@@ -27,7 +27,7 @@
         if (kind == "procRows") {
             await procRows()
         } else {
-            await handleEvFromBody({ kind: kind, chanid: obj.CHANID })
+            await handleEvFromMsgList({ kind: kind, chanid: obj.CHANID }) //기존 함수 가져다 쓰기
         }
     }
 
@@ -369,7 +369,7 @@
         newRoomJustCreated.value = false
     }
 
-    async function handleEvFromBody(param) { //MsgList.vue에서 실행
+    async function handleEvFromMsgList(param) {
         if (param.kind == "selectRow") {
             dmClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "refreshRow") {
@@ -503,7 +503,7 @@
     <div v-if="listDm.length > 0" id="chan_body" :style="{ width: chanMainWidth }"> <!--<component ref="msglistRef" -->
         <router-view v-slot="{ Component }">
             <keep-alive ref="keepAliveRef">
-                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromBody" />
+                <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromMsgList" />
             </keep-alive>
         </router-view>
     </div>

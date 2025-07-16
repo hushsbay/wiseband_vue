@@ -17,7 +17,7 @@
         emits("ev-to-panel", param)
     }
 
-    const orgRef = ref(null) //UserList(부모)가 OrgTree(자식)의 procFromParent()를 호출하기 위함
+    const orgRef = ref(null)
     const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
     let onGoingGetList = false, prevScrollY        
     let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C')

@@ -131,7 +131,7 @@
         groupClickOnLoop(true)
     }
 
-    async function handleEvFromBody(param) { //UserList.vue에서 실행
+    async function handleEvFromMsgList(param) {
         if (param.kind == "selectRow") {
             groupClickOnLoop(false, param.grid) //뒤로가기는 clickNode = false
         } else if (param.kind == "saveGroup" || param.kind == "deleteGroup") {
@@ -175,7 +175,7 @@
     <div id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>
-                <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromBody"/>
+                <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromMsgList"/>
             </keep-alive>
         </router-view>
     </div> 
