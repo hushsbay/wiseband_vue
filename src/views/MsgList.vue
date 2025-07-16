@@ -410,9 +410,7 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         } finally {
-            setTimeout(function() {
-                procRsObj()
-            }, 100)
+            setTimeout(function() { procRsObj() }, 100)
         }
     }
 
@@ -440,36 +438,40 @@
     }
 
     function procObjByChanid() {
-        const tmpArr = []
-        const len = arrCurPageShown.length
-        if (len > 0) {
-            for (let i = 0; i < len; i++) {
-                const item = arrCurPageShown[i]
-                if (tmpArr.length == 0) {
-                    tmpArr.push(item)
-                } else {
-                    let modified = false
-                    for (let j = 0; j < tmpArr.length; j++) {
-                        if (tmpArr[j].chanid == item.chanid) {
-                            if (tmpArr[j].pageShown == 'Y') { 
-                                //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
-                            } else {
-                                if (item.pageShown == 'Y') {
-                                    tmpArr[j] = item
+        try {
+            const tmpArr = []
+            const len = arrCurPageShown.length
+            if (len > 0) {
+                for (let i = 0; i < len; i++) {
+                    const item = arrCurPageShown[i]
+                    if (tmpArr.length == 0) {
+                        tmpArr.push(item)
+                    } else {
+                        let modified = false
+                        for (let j = 0; j < tmpArr.length; j++) {
+                            if (tmpArr[j].chanid == item.chanid) {
+                                if (tmpArr[j].pageShown == 'Y') { 
+                                    //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
+                                } else {
+                                    if (item.pageShown == 'Y') {
+                                        tmpArr[j] = item
+                                    }
                                 }
+                                modified = true
                             }
-                            modified = true
                         }
+                        if (!modified) tmpArr.push(item)
                     }
-                    if (!modified) tmpArr.push(item)
-                }
-            } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
-            arrCurPageShown.splice(0, len)
+                } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
+                arrCurPageShown.splice(0, len)
+            }
+            for (let i = 0; i < tmpArr.length; i++) {
+                const item = tmpArr[i]
+                gst.realtime.setObjToChan(item.chanid, "realShown", item.pageShown)
+            } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        for (let i = 0; i < tmpArr.length; i++) {
-            const item = tmpArr[i]
-            gst.realtime.setObjToChan(item.chanid, "realShown", item.pageShown)
-        } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
     }
 
     onMounted(async () => {
@@ -531,33 +533,37 @@
     })
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
-        if (!route.fullPath.includes("_body")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
-        console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
-        gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
-        if (mounting) {
-            mounting = false
-        } else {            
-            subTitle = subTitle.replace("M", "A")
-            if (hasProp()) {
-                setBasicInfoInProp()
-            } else {
-                setBasicInfo()
-                observerTopScroll()
-                observerBottomScroll()
-                pageShownChanged('Y')      
-            }
-            const key = msgidInChan ? msgidInChan : sideMenu + chanId
-            if (gst.objSaved[key]) {
-                if (scrollArea.value) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-            }
-            if (gst.routedToSamePanelFromMsgList) { //아래는 사이드 메뉴 같은 경우만 실행됨 : 사용자가 방내 범위내에서 노드를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 안바뀌고 해당 패널내에서 라우팅하는 경우
-                console.log("MsgList Activated selectRow..... " + appType + "==="+ chanId)
-                if (appType == "home" || appType == "dm") {
-                    evToPanel({ kind: "selectRow", chanid: chanId })
-                } else if (appType == "activity" || appType == "later" || appType == "fixed") {
-                    evToPanel({ kind: "selectRow", msgid: msgidInChan })
+        try {
+            if (!route.fullPath.includes("_body")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
+            console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
+            gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
+            if (mounting) {
+                mounting = false
+            } else {            
+                subTitle = subTitle.replace("M", "A")
+                if (hasProp()) {
+                    setBasicInfoInProp()
+                } else {
+                    setBasicInfo()
+                    observerTopScroll()
+                    observerBottomScroll()
+                    pageShownChanged('Y')      
+                }
+                const key = msgidInChan ? msgidInChan : sideMenu + chanId
+                if (gst.objSaved[key]) {
+                    if (scrollArea.value) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+                }
+                if (gst.routedToSamePanelFromMsgList) { //아래는 사이드 메뉴 같은 경우만 실행됨 : 사용자가 방내 범위내에서 노드를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 안바뀌고 해당 패널내에서 라우팅하는 경우
+                    console.log("MsgList Activated selectRow..... " + appType + "==="+ chanId)
+                    if (appType == "home" || appType == "dm") {
+                        evToPanel({ kind: "selectRow", chanid: chanId })
+                    } else if (appType == "activity" || appType == "later" || appType == "fixed") {
+                        evToPanel({ kind: "selectRow", msgid: msgidInChan })
+                    }
                 }
             }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     })
 
@@ -672,23 +678,27 @@
     }
 
     function setChanMstDtl(chanmstParam, chandtlParam) {
-        document.title = chanmstParam.CHANNM + " [채널-" + subTitle + "]"
-        grnm.value = chanmstParam.GR_NM
-        chanNm.value = chanmstParam.CHANNM
-        chanMasterId.value = chanmstParam.MASTERID
-        chanMasterNm.value = chanmstParam.MASTERNM
-        chanImg.value = gst.util.getChanImg(chanmstParam.TYP, chanmstParam.STATE)
-        chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
-        chanmemFullExceptMe.value = []
-        const len = chandtlParam.length
-        for (let i = 0; i < len; i++) {
-            const row = chandtlParam[i]    
-            row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-            chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
-            if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
-            if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
+        try {
+            document.title = chanmstParam.CHANNM + " [채널-" + subTitle + "]"
+            grnm.value = chanmstParam.GR_NM
+            chanNm.value = chanmstParam.CHANNM
+            chanMasterId.value = chanmstParam.MASTERID
+            chanMasterNm.value = chanmstParam.MASTERNM
+            chanImg.value = gst.util.getChanImg(chanmstParam.TYP, chanmstParam.STATE)
+            chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
+            chanmemFullExceptMe.value = []
+            const len = chandtlParam.length
+            for (let i = 0; i < len; i++) {
+                const row = chandtlParam[i]    
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
+                if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+                if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
+            }
+            chandtl.value = chandtlParam
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        chandtl.value = chandtlParam
     }
 
     //1) prevMsgMstCdt : EndlessScroll 관련 (가장 오래된 일시를 저장해서 그것보다 더 이전의 데이터를 가져 오기 위함. 화면에서 위로 올라가는 경우임)
@@ -1103,40 +1113,48 @@
     }
 
     async function deleteFromNewAdded(row, parentMsgid, childMsgid) {
-        let isParent, msgidToProc
-        if (row) {
-            isParent = (row.REPLYTO == "") ? true : false
-            msgidToProc = row.MSGID
-        } else {
-            isParent = parentMsgid ? true : false
-            msgidToProc = parentMsgid ? parentMsgid : childMsgid
-        }
-        if (isParent) { //부모메시지
-            const idxFound = newParentAdded.value.findIndex(item => item.MSGID == msgidToProc)
-            if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
-            //아래는 원래 없었는데 다음과 같은 문제해결을 위해 추가된 것임. 창이 2개 이상 같은 채널이 열려 있을 때 하나만이라도 pageShown일 경우는 다른 창이 숨겨져 있어도 pageShown=Y로 보기로 함
-            //그렇지 않으면, '도착 메세지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
-            //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
-            //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
-            if (newParentAdded.value.length == 0) { //이 방안은 개선이 필요함
-                await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
+        try {
+            let isParent, msgidToProc
+            if (row) {
+                isParent = (row.REPLYTO == "") ? true : false
+                msgidToProc = row.MSGID
+            } else {
+                isParent = parentMsgid ? true : false
+                msgidToProc = parentMsgid ? parentMsgid : childMsgid
             }
-        } else { //자식메시지
-            const idxFound = newChildAdded.value.findIndex(item => item.MSGID == msgidToProc)
-            if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
+            if (isParent) { //부모메시지
+                const idxFound = newParentAdded.value.findIndex(item => item.MSGID == msgidToProc)
+                if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
+                //아래는 원래 없었는데 다음과 같은 문제해결을 위해 추가된 것임. 창이 2개 이상 같은 채널이 열려 있을 때 하나만이라도 pageShown일 경우는 다른 창이 숨겨져 있어도 pageShown=Y로 보기로 함
+                //그렇지 않으면, '도착 메세지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
+                //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
+                //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
+                if (newParentAdded.value.length == 0) { //이 방안은 개선이 필요함
+                    await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
+                }
+            } else { //자식메시지
+                const idxFound = newChildAdded.value.findIndex(item => item.MSGID == msgidToProc)
+                if (idxFound > -1) newChildAdded.value.splice(idxFound, 1)
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
     async function refreshMsgDtlWithQryAction(msgid, msgdtl) { //msgdtl 없으면 서버호출하는 것임
-        const item = msglist.value.find(function(row) { return row.MSGID == msgid })
-        if (!item) return
-        if (msgdtl) { //굳이 서버호출없어도 됨
-            item.msgdtl = msgdtl //해당 msgid 찾아 msgdtl을 통째로 업데이트
-        } else {
-            const res = await axios.post("/chanmsg/qryAction", { msgid: msgid, chanid: chanId })
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return null
-            item.msgdtl = rs.list //해당 msgid 찾아 msgdtl을 통째로 업데이트
+        try {
+            const item = msglist.value.find(function(row) { return row.MSGID == msgid })
+            if (!item) return
+            if (msgdtl) { //굳이 서버호출없어도 됨
+                item.msgdtl = msgdtl //해당 msgid 찾아 msgdtl을 통째로 업데이트
+            } else {
+                const res = await axios.post("/chanmsg/qryAction", { msgid: msgid, chanid: chanId })
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return null
+                item.msgdtl = rs.list //해당 msgid 찾아 msgdtl을 통째로 업데이트
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -1214,28 +1232,32 @@
     }
 
     async function addAllNew(strKind) { //home,dm에서만 버튼 보임
-        let msgid, cdtAtFirst
-        if (strKind == "P") { //Parent : 신규 부모글
-            if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
-            msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
-            cdtAtFirst = newParentAdded.value[0].CDT
-            chkProcScrollToBottom(cdtAtFirst, msgid) //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
-            gst.realtime.closeNoti(chanId)
-        } else { //Child : 신규 댓글
-            if (newChildAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
-            //가장 오래된 자식메시지의 부모아이디부터 조회하도록 해야 사용자가 안놓침
-            const arr = newChildAdded.value //그런데, 그게 인덱스 0가 아닐 수도 있으므로 아래처럼 처리하고자 함
-            arr.sort((a, b) => a.CDT.localeCompare(b.CDT)) //오름차순 정렬
-            msgid = arr[0].REPLYTO //자식의 부모아이디
-            cdtAtFirst = arr[0].CDT //여기선 msgid로 사용
-            //const newWin = window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
-            const url = gst.util.getUrlForBodyListNewWin(chanId, msgid, appType)
-            const newWin = window.open(url)
-            newWin.onload = function() {
-                const arr = newWin.document.querySelectorAll(".chan_center_body")
-                //vue.js로 랜더링하는 바로 아래 class는 안읽혀서 vue.js 아녀도 바로 뿌려주는 class(chan_center_body)로 잡음
-                //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
+        try {
+            let msgid, cdtAtFirst
+            if (strKind == "P") { //Parent : 신규 부모글
+                if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
+                msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
+                cdtAtFirst = newParentAdded.value[0].CDT
+                chkProcScrollToBottom(cdtAtFirst, msgid) //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
+                gst.realtime.closeNoti(chanId)
+            } else { //Child : 신규 댓글
+                if (newChildAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
+                //가장 오래된 자식메시지의 부모아이디부터 조회하도록 해야 사용자가 안놓침
+                const arr = newChildAdded.value //그런데, 그게 인덱스 0가 아닐 수도 있으므로 아래처럼 처리하고자 함
+                arr.sort((a, b) => a.CDT.localeCompare(b.CDT)) //오름차순 정렬
+                msgid = arr[0].REPLYTO //자식의 부모아이디
+                cdtAtFirst = arr[0].CDT //여기선 msgid로 사용
+                //const newWin = window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
+                const url = gst.util.getUrlForBodyListNewWin(chanId, msgid, appType)
+                const newWin = window.open(url)
+                newWin.onload = function() {
+                    const arr = newWin.document.querySelectorAll(".chan_center_body")
+                    //vue.js로 랜더링하는 바로 아래 class는 안읽혀서 vue.js 아녀도 바로 뿌려주는 class(chan_center_body)로 잡음
+                    //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
+                }
             }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -1281,23 +1303,31 @@
     }
 
     const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
-        const childbodyAttr = hasProp() ? true : false
-        const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
-        if (!rect) return null
-        const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
-        let yy = rect.top + 6
-        const ele = document.elementFromPoint(xx, yy)
-        return ele
+        try {
+            const childbodyAttr = hasProp() ? true : false
+            const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
+            if (!rect) return null
+            const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
+            let yy = rect.top + 6
+            const ele = document.elementFromPoint(xx, yy)
+            return ele
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
     }
 
     const getBottomMsgBody = () => { //육안으로 보이는 맨 아래 MSGID의 div 찾기
-        if (hasProp()) return null
-        const rect = hush.util.getRect(".chan_center_footer")
-        if (!rect) return null
-        const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
-        let yy = rect.top - 10
-        const ele = document.elementFromPoint(xx, yy)
-        return ele
+        try {
+            if (hasProp()) return null
+            const rect = hush.util.getRect(".chan_center_footer")
+            if (!rect) return null
+            const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
+            let yy = rect.top - 10
+            const ele = document.elementFromPoint(xx, yy)
+            return ele
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
     }
 
     async function delBlob(kind, msgid, idx, index) { //msgid = temp or real msgid
@@ -1593,17 +1623,21 @@
     // }
 
     function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
-        if (!chkEditorFocus()) return
-        let selection = window.getSelection()
-        if (selection.rangeCount == 0) return
-        const range = selection.getRangeAt(0) 
-        let content = range.cloneContents()
-        let node = document.createElement('span')
-        node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
-        const text = node.innerHTML
-        node.remove()
-        storeCursorPosition()
-        uploadLink('makelink', text)
+        try {
+            if (!chkEditorFocus()) return
+            let selection = window.getSelection()
+            if (selection.rangeCount == 0) return
+            const range = selection.getRangeAt(0) 
+            let content = range.cloneContents()
+            let node = document.createElement('span')
+            node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
+            const text = node.innerHTML
+            node.remove()
+            storeCursorPosition()
+            uploadLink('makelink', text)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
     }
 
     // function wordStyleFailed(type) { //코딩 실패 케이스 (donotdelete)
@@ -1853,45 +1887,49 @@
     // }
     
     async function okPopup(kind) {
-        if (kind == "addlink" || kind == "makelink") {
-            const regexp = new RegExp("^https?://")
-            if (regexp.test(linkText.value) || regexp.test(linkUrl.value)) { //2개 필드중 하나라도 링크가 있으면 OK
-                if (linkText.value.trim() == "") {
-                    linkText.value = linkUrl.value.trim()
-                } else if (linkUrl.value.trim() == "") {
-                    linkUrl.value = linkText.value.trim()
-                } else {
-                    if (regexp.test(linkText.value) && !regexp.test(linkUrl.value)) {
-                        gst.util.setSnack("http(s)://로 시작되는 링크가 필요합니다.", true)
-                        return
+        try {
+            if (kind == "addlink" || kind == "makelink") {
+                const regexp = new RegExp("^https?://")
+                if (regexp.test(linkText.value) || regexp.test(linkUrl.value)) { //2개 필드중 하나라도 링크가 있으면 OK
+                    if (linkText.value.trim() == "") {
+                        linkText.value = linkUrl.value.trim()
+                    } else if (linkUrl.value.trim() == "") {
+                        linkUrl.value = linkText.value.trim()
+                    } else {
+                        if (regexp.test(linkText.value) && !regexp.test(linkUrl.value)) {
+                            gst.util.setSnack("http(s)://로 시작되는 링크가 필요합니다.", true)
+                            return
+                        }
                     }
+                } else {
+                    gst.util.setSnack("http(s)://로 시작되는 링크가 필요합니다.", true)
+                    return
                 }
-            } else {
-                gst.util.setSnack("http(s)://로 시작되는 링크가 필요합니다.", true)
-                return
+                if (kind == "addlink") {
+                    const rq = { chanid: chanId, kind: "L", body: linkText.value + hush.cons.deli + linkUrl.value }
+                    const res = await axios.post("/chanmsg/uploadBlob", rq)
+                    const rs = gst.util.chkAxiosCode(res.data)
+                    if (!rs) return
+                    linkArr.value.push({ hover: false, text: linkText.value, url: linkUrl.value, cdt: rs.data.cdt })
+                } else {
+                    inEditor.value.focus()
+                    const range = restoreCursorPosition()
+                    let node = document.createElement('a')
+                    node.setAttribute("href", linkUrl.value)
+                    node.setAttribute("target", "_blank")
+                    node.style.color = "steelblue"
+                    node.append(linkText.value)
+                    range.deleteContents()
+                    range.insertNode(node)
+                    range.collapse(false)
+                    //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
+                }
+                linkText.value = ""
+                linkUrl.value = ""
+                linkPopupRef.value.close()
             }
-            if (kind == "addlink") {
-                const rq = { chanid: chanId, kind: "L", body: linkText.value + hush.cons.deli + linkUrl.value }
-                const res = await axios.post("/chanmsg/uploadBlob", rq)
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return
-                linkArr.value.push({ hover: false, text: linkText.value, url: linkUrl.value, cdt: rs.data.cdt })
-            } else {
-                inEditor.value.focus()
-                const range = restoreCursorPosition()
-                let node = document.createElement('a')
-                node.setAttribute("href", linkUrl.value)
-                node.setAttribute("target", "_blank")
-                node.style.color = "steelblue"
-                node.append(linkText.value)
-                range.deleteContents()
-                range.insertNode(node)
-                range.collapse(false)
-                //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
-            }
-            linkText.value = ""
-            linkUrl.value = ""
-            linkPopupRef.value.close()
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -1974,21 +2012,25 @@
     }
 
     async function okChanDmPopup(kind, strChanid, strMsgid) { //바로 아래 forwardMsg()에서 연결됨 : strChanid(새로 선택한 채널(DM)방), strMsgid(전달하려고 하는 기존 메시지)
-        popupChanDmRef.value.close()
-        const rq = { chanid: chanId, msgid: strMsgid, targetChanid: strChanid } //선택한 채널의 메시지를 targetChanid에 복사
-        const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
-        let rs = gst.util.chkAxiosCode(res.data)
-        if (!rs) return
-        //window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=" + kind)
-        const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
-        window.open(url)
-        /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)
-           다만 슬랙은 새창을 띄우지 않아서 아래 2안으로 노력했는데 2안시 마지막 단계인 MsgList의 캐시제거가 살짝 구현이 안되었음. 필요시 2안으로 노력을 더 기울여도 되나 각 패널에 추가해야 하는 것이 번거로울 것임
-        if (kind == appType) {
-            evToPanel({ kind: "refreshPanel" })
-        } else { //home->dm or dm->home 등등
-            evToPanel({ kind: "forwardToSide", menu: kind })
-        }*/
+        try {
+            popupChanDmRef.value.close()
+            const rq = { chanid: chanId, msgid: strMsgid, targetChanid: strChanid } //선택한 채널의 메시지를 targetChanid에 복사
+            const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
+            let rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            //window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=" + kind)
+            const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
+            window.open(url)
+            /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)
+            다만 슬랙은 새창을 띄우지 않아서 아래 2안으로 노력했는데 2안시 마지막 단계인 MsgList의 캐시제거가 살짝 구현이 안되었음. 필요시 2안으로 노력을 더 기울여도 되나 각 패널에 추가해야 하는 것이 번거로울 것임
+            if (kind == appType) {
+                evToPanel({ kind: "refreshPanel" })
+            } else { //home->dm or dm->home 등등
+                evToPanel({ kind: "forwardToSide", menu: kind })
+            }*/
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
     }
 
     async function forwardMsg(kind, msgid) { //내가 편집(발송)가능한 채널과 DM방중에서 1개를 선택해 table에 insert후 해당 패널의 방으로 이동해 바로 보여주기
@@ -2216,28 +2258,32 @@
 
     async function procInput(e) {
         if (e.keyCode == 13) { //Enter
-            const param = { searchText: searchUser, onlyAllUsers: true }
-            const res = await axios.post("/user/procOrgSearch", param)
-            const rs = gst.util.chkAxiosCode(res.data) 
-            if (!rs) return
-            userSearched.value = []
-            const arr = []
-            for (let i = 0; i < rs.list.length; i++) {
-                const row = rs.list[i]
-                if (row.ORG_NM == "" & row.TOP_ORG_NM == "") {
-                    row.userInfo = row.USERNM + "/" + row.EMAIL
-                } else {
-                    row.userInfo = row.USERNM + "/" + row.JOB.trim() + "/" + row.ORG_NM + "/" + row.TOP_ORG_NM
+            try {
+                const param = { searchText: searchUser, onlyAllUsers: true }
+                const res = await axios.post("/user/procOrgSearch", param)
+                const rs = gst.util.chkAxiosCode(res.data) 
+                if (!rs) return
+                userSearched.value = []
+                const arr = []
+                for (let i = 0; i < rs.list.length; i++) {
+                    const row = rs.list[i]
+                    if (row.ORG_NM == "" & row.TOP_ORG_NM == "") {
+                        row.userInfo = row.USERNM + "/" + row.EMAIL
+                    } else {
+                        row.userInfo = row.USERNM + "/" + row.JOB.trim() + "/" + row.ORG_NM + "/" + row.TOP_ORG_NM
+                    }
+                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                    arr.push(row)
                 }
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                arr.push(row)
+                if (rs.list.length == 1) {
+                    addUserToDm(rs.list[0])
+                    searchText.value = ""
+                } else {
+                    userSearched.value = arr
+                }
+            } catch (ex) {
+                gst.util.showEx(ex, true)
             }
-            if (rs.list.length == 1) {
-                addUserToDm(rs.list[0])
-                searchText.value = ""
-            } else {
-                userSearched.value = arr
-            }            
         } else if (e.keyCode == 40) { //Arrow Down (focus to result list)
             userSearchedRef.value.focus() //tabIndex를 사용해 포커싱은 되는데 해당 div에서 화살표 위아래 누를 때 선택행이 변경되도록 해야 함 (향후 도전)
         } else if (e.keyCode == 8 || e.keyCode == 46) { //BackSpace, Del
@@ -2248,29 +2294,33 @@
     }
 
     async function addUserToDm(row) {
-        const found = userAdded.value.findIndex(item => item.USERID == row.USERID)
-        if (found > -1) {
-            userAdded.value[found].found = true //기존 중복 표시임
-            setTimeout(function() { userAdded.value[found].found = false }, 1000)
-            return
+        try {
+            const found = userAdded.value.findIndex(item => item.USERID == row.USERID)
+            if (found > -1) {
+                userAdded.value[found].found = true //기존 중복 표시임
+                setTimeout(function() { userAdded.value[found].found = false }, 1000)
+                return
+            }
+            if (row.USERID == g_userid) {
+                gst.util.setSnack("본인 아이디는 추가하지 않습니다.")
+                return
+            }
+            userAdded.value.push(row)
+            userAdded.value[userAdded.value.length - 1].found = true //기존 중복이 아닌 새로운 추가 표시임
+            setTimeout(function() { userAdded.value[userAdded.value.length - 1].found = false }, 500)
+            await nextTick()
+            const topVal = document.getElementById("divAddedUser").offsetHeight + document.getElementById("divAddUser").offsetHeight
+            searchedResultTop.value = topVal + 5
+            ///////////////////////////////////////////////////////////
+            const member = [] //기존 DM방 여부 체크
+            userAdded.value.forEach(item => { member.push(item.USERID) })
+            const res = await axios.post("/menu/qryDmChkExist", { member: member })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return null
+            dmChanIdAlready.value = rs.data.chanid
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        if (row.USERID == g_userid) {
-            gst.util.setSnack("본인 아이디는 추가하지 않습니다.")
-            return
-        }
-        userAdded.value.push(row)
-        userAdded.value[userAdded.value.length - 1].found = true //기존 중복이 아닌 새로운 추가 표시임
-        setTimeout(function() { userAdded.value[userAdded.value.length - 1].found = false }, 500)
-        await nextTick()
-        const topVal = document.getElementById("divAddedUser").offsetHeight + document.getElementById("divAddUser").offsetHeight
-        searchedResultTop.value = topVal + 5
-        ///////////////////////////////////////////////////////////
-        const member = [] //기존 DM방 여부 체크
-        userAdded.value.forEach(item => { member.push(item.USERID) })
-        const res = await axios.post("/menu/qryDmChkExist", { member: member })
-        const rs = gst.util.chkAxiosCode(res.data)
-        if (!rs) return null
-        dmChanIdAlready.value = rs.data.chanid
     }
 
     function delUserItem(idx) {
@@ -2278,12 +2328,16 @@
     }
 
     function openDmRoom(chanid, newWin) {
-        if (newWin) {
-            const url = gst.util.getUrlForBodyListNewWin(chanid, "0", "dm")
-            window.open(url)
-        } else {
-            let obj = { name : "dm_body", params : { chanid: chanid, msgid: "0" }} //DM 패널이 아니라면 MsgList Mounted 반복되는 문제 발생
-            router.push(obj)
+        try {
+            if (newWin) {
+                const url = gst.util.getUrlForBodyListNewWin(chanid, "0", "dm")
+                window.open(url)
+            } else {
+                let obj = { name : "dm_body", params : { chanid: chanid, msgid: "0" }} //DM 패널이 아니라면 MsgList Mounted 반복되는 문제 발생
+                router.push(obj)
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 </script>
