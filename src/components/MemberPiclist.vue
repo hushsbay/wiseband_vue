@@ -1,9 +1,6 @@
 <script setup>
-    import hush from '/src/stores/Common.js'
-    import GeneralStore from '/src/stores/GeneralStore.js'
     import MemberPiceach from "/src/components/MemberPiceach.vue"
 
-    const gst = GeneralStore()
     const props = defineProps({ row: Object }) //향후 유지보수 편하게 하기 위해서는 굳이 아래 루프처리하지 말기
 </script>
 

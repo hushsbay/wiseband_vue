@@ -1,8 +1,5 @@
 <script setup>
     import { ref } from 'vue' 
-    import axios from 'axios'
-    
-    import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import HomePanel from '/src/views/HomePanel.vue'
     import DmPanel from '/src/views/DmPanel.vue'
@@ -10,7 +7,6 @@
     const gst = GeneralStore()
     
     defineExpose({ open, close })
-
     const emits = defineEmits(["ev-click-chandm"])
 
     function setInfoToParent() {
@@ -101,8 +97,4 @@
         margin-top:10px;padding:8px;display:flex;justify-content:center;align-items:center;border-radius:5px;cursor:pointer;
         background:#510143;color:white 
     }
-    /* .item {  				
-        padding:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1px solid lightgray
-    }
-    .item:hover { background:var(--hover-color) } */
 </style>

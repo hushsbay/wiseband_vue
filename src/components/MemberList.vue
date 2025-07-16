@@ -1,20 +1,16 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onUnmounted } from 'vue' 
+    import { ref, nextTick } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
-    import axios from 'axios'
-    
+    import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import MemberPiceach from "/src/components/MemberPiceach.vue"
-    import ContextMenu from "/src/components/ContextMenu.vue"
     import OrgTree from "/src/components/OrgTree.vue"
             
-    const router = useRouter()
-    const route = useRoute()
     const gst = GeneralStore()
 
-    const emits = defineEmits(["ev-from-member"]) //memberlist -> HomePanel or DmPanel
     defineExpose({ open, close }) //부모(예:HomePanel,DmPanel) => MemberList의 open(), close() 호출
+    const emits = defineEmits(["ev-from-member"]) //memberlist -> HomePanel or DmPanel
     
     function evToPanel(kind) { //말 그대로 패널에게 호출하는 것임
         emits("ev-from-member", chanId, kind)
@@ -54,16 +50,14 @@
 
     const g_userid = gst.auth.getCookie("userid")
     const g_usernm = gst.auth.getCookie("usernm")
-    let mounting = true
-    
-    let kind = ref(''), show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null), state = ref(false)
+
+    let show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null), state = ref(false)
     const scrollArea = ref(null), memberRow = ref({}) //memberRow는 element를 동적으로 할당
     let onGoingGetList = false
         
     let grId
     let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C'), stateSel = ref("A"), chkArr = ref([])
     let memberlist = ref([]), chanmemFullExceptMe = ref([]), appType
-
     let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
     let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref(''), rowState = ref('')
 
@@ -114,41 +108,46 @@
     }
 
     async function applyToBody(arr, mode) {
-        if (appType == "chan" && (chanId == "new" || singleMode.value != "C")) {
-            gst.util.setSnack("먼저 채널이 저장되어야 하고 행선택도 없어야 합니다.")
-            return
-        } else if (appType == "dm" && chanId == "new") {
-            const ret = await saveChan()
-            if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
-        }
-        const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
-        let warn = ""
-        for (let i = 0; i < arr.length; i++) {
-            const row = arr[i]
-            const rq = { crud: "C", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member", SYNC: row.SYNC }
-            const res = await axios.post("/chanmsg/saveChanMember", rq) //const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
-            if (res.data.code != hush.cons.OK) {
-                warn = "[" + res.data.code + "] " + res.data.msg
-                break
-            } else {
-                brr.push(row)
+        try {
+            if (appType == "chan" && (chanId == "new" || singleMode.value != "C")) {
+                gst.util.setSnack("먼저 채널이 저장되어야 하고 행선택도 없어야 합니다.")
+                return
+            } else if (appType == "dm" && chanId == "new") {
+                const ret = await saveChan()
+                if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
             }
-        }
-        if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
-            await getList()
-            await nextTick()
-            for (let i = 0; i < brr.length; i++) {
-                const row = brr[i]
-                const idx = gst.util.getKeyIndex(memberRow, row.USERID)
-                if (idx > -1) memberlist.value[idx].chk = true
+            const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
+            let warn = ""
+            for (let i = 0; i < arr.length; i++) {
+                const row = arr[i]
+                const rq = { crud: "C", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member", SYNC: row.SYNC }
+                const res = await axios.post("/chanmsg/saveChanMember", rq) //const rs = gst.util.chkAxiosCode(res.data, true) //true : 중복 체크 등 오류 표시 넘어감
+                if (res.data.code != hush.cons.OK) {
+                    warn = "[" + res.data.code + "] " + res.data.msg
+                    break
+                } else {
+                    brr.push(row)
+                }
             }
-            if (brr.length == 1) {
-                gst.util.scrollIntoView(memberRow, brr[0].USERID)
+            if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
+                await getList()
+                await nextTick()
+                for (let i = 0; i < brr.length; i++) {
+                    const row = brr[i]
+                    const idx = gst.util.getKeyIndex(memberRow, row.USERID)
+                    if (idx > -1) memberlist.value[idx].chk = true
+                }
+                if (brr.length == 1) {
+                    gst.util.scrollIntoView(memberRow, brr[0].USERID)
+                }
+                if (appType == "dm") evToPanel("update")
+                evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
             }
-            if (appType == "dm") evToPanel("update")
-            evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
+            if (warn) gst.util.setSnack(warn, true) //경고있을 경우 사용자에게 알려야 함
+        } catch (ex) {
+            onGoingGetList = false
+            gst.util.showEx(ex, true)
         }
-        if (warn) gst.util.setSnack(warn, true) //경고있을 경우 사용자에게 알려야 함
     }
 
     function changeChk(row, idx) {
@@ -303,12 +302,6 @@
                 return
             }
             if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다.\n계속할까요?")) return
-            // for (let i = 0; i < len; i++) {
-            //     const rq = { CHANID: chanId, USERID: arr[i].USERID }
-            //     const res = await axios.post("/chanmsg/inviteToMember", rq)
-            //     const rs = gst.util.chkAxiosCode(res.data)
-            //     if (!rs) return
-            // }
             let channmStr = ""
             if (appType == 'dm') {
                 channmStr = (chanmemFullExceptMe.value.length >= 1) ? chanmemFullExceptMe.value.join(", ") + ", " + g_usernm: g_usernm
@@ -468,10 +461,7 @@
                                             <td class="tdLabel">이름</td>
                                             <td class="tdValue">
                                                 <input type="text" style="width:150px" v-model="rowUsernm" disabled="true"/>
-                                                <!-- <span style="margin-left:10px;color:dimgray">직책/업무</span>
-                                                <input type="text" style="width:150px;margin-left:10px" v-model="rowJob" disabled="true"/> -->
                                                 <input type="text" style="width:calc(100% - 190px);margin-left:5px" v-model="rowJob" :disabled="true" placeholder="직책/업무"/>
-                                                <!-- <span style="margin-left:10px">{{  }}</span> -->
                                             </td>
                                             <td class="tdValue" colspan="2">
                                                 <div style="display:flex;align-items:center">
@@ -506,7 +496,6 @@
             <div class="overlay" @click="close"></div>
         </div>
     </Transition>
-    <!-- <context-menu @ev-menu-click="gst.ctx.proc"></context-menu> -->
 </template>
 
 <style scoped>

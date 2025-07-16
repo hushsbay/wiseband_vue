@@ -1,6 +1,6 @@
 <script setup>
-    import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
+    
     const gst = GeneralStore()
 
     const props = defineProps({ picUrl: String, sizeName: String })

@@ -1,25 +1,21 @@
 <script setup>
     import { ref, onMounted, nextTick } from 'vue' 
-    import axios from 'axios'
-    
+    import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import MemberPiceach from "/src/components/MemberPiceach.vue"
 
     const gst = GeneralStore()
+
+    defineExpose({ open, close, procFromParent })
     const props = defineProps({ mode: String, kind: String, grid: String }) //kind=chan/dm
     const emits = defineEmits(["ev-click"])
-    
-    defineExpose({ open, close, procFromParent })
 
     let mode = ref('tree'), show = ref(true), searchText = ref(''), myteam = ref(''), mycomp = ref('')
     let depthToShow = ref(1), chkCnt = ref(0) //mygroup을 고려해서 depthToShow는 기본적으로는 반드시 1로 해야 함
     let maxLevel = 1
 
     const scrollArea = ref(null), orglist = ref([]), orgRow = ref({}) //orgRow는 element를 동적으로 할당
-
-    //const g_toporgcd = gst.auth.getCookie("toporgcd")
-    //const g_orgcd = gst.auth.getCookie("orgcd")
 
     onMounted(async () => {
         try {
@@ -84,61 +80,65 @@
     }
 
     async function procQuery(strMode) {
-        mode.value = strMode
-        if (strMode == "tree") {
-            depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
-        } else if (strMode == "mygroup") {
-            depthToShow.value = localStorage.wiseband_orgtree_depthToShow_mygroup ?? 1
-        }
-        const controller = (strMode == "tree") ? "orgTree" : "qryGroupWithUser"
-        const notShowMsgIfNoData = (strMode == "tree") ? false : true
-        const res = await axios.post("/user/" + controller, { 
-            myteam: (strMode == "tree" && myteam.value) ? gst.auth.getCookie("orgcd") : "",
-            mycomp: (strMode == "tree" && mycomp.value) ? gst.auth.getCookie("toporgcd") : "",
-            grid: props.grid ? props.grid : "", //qryGroupWithUser 에만 해당
-            toastMsg: true
-        })
-        const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
-        if (!rs) return
-        orglist.value = []
-        maxLevel = rs.data.maxLevel
-        const vips = getVips(rs)
-        for (let i = 0; i < rs.list.length; i++) {
-            const row = rs.list[i]
-            orglist.value.push(row)
-            const userlist = row.userlist
-            if (userlist.length > 0) {
-                procNode(row, userlist[0], 'org')
-                for (let j = 0; j < userlist.length; j++) { //org에 userlist가 있으면 루프돌면서 추가
-                    const item = userlist[j]
-                    orglist.value.push(item)
-                    procNode(item, null, 'user', vips)
-                }
-            } else {
-                if (i == rs.list.length - 1) {
-                    procNode(row, null, 'org')
-                } else {
-                    procNode(row, rs.list[i + 1], 'org')
-                }
+        try {
+            mode.value = strMode
+            if (strMode == "tree") {
+                depthToShow.value = localStorage.wiseband_orgtree_depthToShow ?? 1
+            } else if (strMode == "mygroup") {
+                depthToShow.value = localStorage.wiseband_orgtree_depthToShow_mygroup ?? 1
             }
-        }
-        const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임
-        if (myOrgArr && myOrgArr.length > 0) { //마지막이 회사코드, 처음이 본인 소속부서임
-            for (let j = myOrgArr.length - 1; j >= 0; j--) {
-                let k = 0
-                for (let i = k; i < orglist.value.length; i++) {
-                    const row = orglist.value[i]
-                    if (row.nodekind == "G") { //console.log(myOrgArr[j].ORG_CD+"============"+row.ORG_CD+"============"+i)
-                        if (row.ORG_CD == myOrgArr[j].ORG_CD) { //console.log(myOrgArr[j].ORG_CD+"============"+i)
-                            clickNode(null, row, i)
-                            k = i + 1
-                            break
-                        }
+            const controller = (strMode == "tree") ? "orgTree" : "qryGroupWithUser"
+            const notShowMsgIfNoData = (strMode == "tree") ? false : true
+            const res = await axios.post("/user/" + controller, { 
+                myteam: (strMode == "tree" && myteam.value) ? gst.auth.getCookie("orgcd") : "",
+                mycomp: (strMode == "tree" && mycomp.value) ? gst.auth.getCookie("toporgcd") : "",
+                grid: props.grid ? props.grid : "", //qryGroupWithUser 에만 해당
+                toastMsg: true
+            })
+            const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
+            if (!rs) return
+            orglist.value = []
+            maxLevel = rs.data.maxLevel
+            const vips = getVips(rs)
+            for (let i = 0; i < rs.list.length; i++) {
+                const row = rs.list[i]
+                orglist.value.push(row)
+                const userlist = row.userlist
+                if (userlist.length > 0) {
+                    procNode(row, userlist[0], 'org')
+                    for (let j = 0; j < userlist.length; j++) { //org에 userlist가 있으면 루프돌면서 추가
+                        const item = userlist[j]
+                        orglist.value.push(item)
+                        procNode(item, null, 'user', vips)
+                    }
+                } else {
+                    if (i == rs.list.length - 1) {
+                        procNode(row, null, 'org')
+                    } else {
+                        procNode(row, rs.list[i + 1], 'org')
                     }
                 }
             }
-            await nextTick()
-            orgRow.value[myOrgArr[0].ORG_CD].scrollIntoView(true) //true 필요. true=scrollIntoViewOptions: {block: "start", inline: "nearest"}와 동일
+            const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임
+            if (myOrgArr && myOrgArr.length > 0) { //마지막이 회사코드, 처음이 본인 소속부서임
+                for (let j = myOrgArr.length - 1; j >= 0; j--) {
+                    let k = 0
+                    for (let i = k; i < orglist.value.length; i++) {
+                        const row = orglist.value[i]
+                        if (row.nodekind == "G") { //console.log(myOrgArr[j].ORG_CD+"============"+row.ORG_CD+"============"+i)
+                            if (row.ORG_CD == myOrgArr[j].ORG_CD) { //console.log(myOrgArr[j].ORG_CD+"============"+i)
+                                clickNode(null, row, i)
+                                k = i + 1
+                                break
+                            }
+                        }
+                    }
+                }
+                await nextTick()
+                orgRow.value[myOrgArr[0].ORG_CD].scrollIntoView(true) //true 필요. true=scrollIntoViewOptions: {block: "start", inline: "nearest"}와 동일
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -182,20 +182,24 @@
     }
 
     async function procSearch() {
-        mode.value = "search"
-        const param = { searchText: searchText.value.trim() }
-        const res = await axios.post("/user/procOrgSearch", param)
-        const rs = gst.util.chkAxiosCode(res.data) 
-        if (!rs) return
-        orglist.value = []
-        const vips = getVips(rs)
-        for (let i = 0; i < rs.list.length; i++) {
-            const row = rs.list[i]
-            row.nodekind = "U"
-            row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-            row.key = row.USERID
-            row.isVip = chkVips(vips, row.USERID)
-            orglist.value.push(row)
+        try {
+            mode.value = "search"
+            const param = { searchText: searchText.value.trim() }
+            const res = await axios.post("/user/procOrgSearch", param)
+            const rs = gst.util.chkAxiosCode(res.data) 
+            if (!rs) return
+            orglist.value = []
+            const vips = getVips(rs)
+            for (let i = 0; i < rs.list.length; i++) {
+                const row = rs.list[i]
+                row.nodekind = "U"
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                row.key = row.USERID
+                row.isVip = chkVips(vips, row.USERID)
+                orglist.value.push(row)
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
     }
 
@@ -333,23 +337,27 @@
     }
 
     async function setVip(bool) {
-        if (chkCnt.value == 0) {
-            gst.util.setToast("먼저 사용자를 선택하시기 바랍니다.")
-            return
+        try {
+            if (chkCnt.value == 0) {
+                gst.util.setToast("먼저 사용자를 선택하시기 바랍니다.")
+                return
+            }
+            const list = getCheckedUser(["GR_ID", "USERID", "USERNM"])
+            const res = await axios.post("/user/setVip", { 
+                list: list, bool: bool
+            })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            list.forEach(item => {
+                const key = item.USERID + (item.GR_ID ? hush.cons.deli + item.GR_ID : "")
+                const idx = gst.util.getKeyIndex(orgRow, key)
+                orglist.value[idx].isVip = bool
+            })
+            let msg = (bool ? "설정 완료" : "해제 완료") + " (" + rs.data.retCnt + "명)"
+            gst.util.setSnack(msg)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
         }
-        const list = getCheckedUser(["GR_ID", "USERID", "USERNM"])
-        const res = await axios.post("/user/setVip", { 
-            list: list, bool: bool
-        })
-        const rs = gst.util.chkAxiosCode(res.data)
-        if (!rs) return
-        list.forEach(item => {
-            const key = item.USERID + (item.GR_ID ? hush.cons.deli + item.GR_ID : "")
-            const idx = gst.util.getKeyIndex(orgRow, key)
-            orglist.value[idx].isVip = bool
-        })
-        let msg = (bool ? "설정 완료" : "해제 완료") + " (" + rs.data.retCnt + "명)"
-        gst.util.setSnack(msg)
     }
 
     function applyToBody() {
@@ -428,7 +436,6 @@
                             <span v-if="row.isVip" class="vipMark">VIP</span>
                             <div style="margin-left:5px">{{ row.ORG }}</div>
                             <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>                            
-                            <!-- <div style="margin-left:5px;color:dimgray">{{ row.EMAIL }}</div> -->
                         </div>
                         <div v-if="(mode == 'mygroup' || row.USERID) && (row.KIND=='guest' || row.KIND=='admin')" 
                             style="min-width:36px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">

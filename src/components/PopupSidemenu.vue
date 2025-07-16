@@ -1,9 +1,9 @@
 <script setup>
     import { ref } from 'vue' 
-
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
+    
     const props = defineProps({ popupOn: Boolean, popupPos: Object, list : Array, popupData: Object }) //props update 문제 유의
     const emits = defineEmits(["ev-click", "ev-leave"])
 

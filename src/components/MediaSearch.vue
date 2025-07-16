@@ -1,7 +1,6 @@
 <script setup>
     import { ref } from 'vue' 
-    import axios from 'axios'
-    
+    import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupImage from "/src/components/PopupImage.vue"
@@ -14,10 +13,8 @@
     let rdoOpt = ref('all')
     let frYm = ref(''), toYm = ref(''), authorNm = ref(''), searchText = ref(''), fileExt = ref('')
     let savPrevMsgMstCdt
-
     const scrollArea = ref(null), filelist = ref([]), imagelist = ref([]), msglist = ref([]) 
     let prevScrollY = 0 //Intersection Observer 오류(parameter 1 is not of type 'Element') 해결이 어려워 onScrollEnd에서 처리함
-
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
 
     function open(strTabid, strChanid, strChannm, strChanimg, strSearchText) {
@@ -56,57 +53,67 @@
     }
 
     async function procSearchMedia(refresh) {
-        if (refresh) {
-            savPrevMsgMstCdt = hush.cons.cdtAtLast
-            prevScrollY = 0
-            if (tab.value == "file") {
-                filelist.value = []
-            } else if (tab.value == "image") {
-                imagelist.value = []
+        try {
+            if (refresh) {
+                savPrevMsgMstCdt = hush.cons.cdtAtLast
+                prevScrollY = 0
+                if (tab.value == "file") {
+                    filelist.value = []
+                } else if (tab.value == "image") {
+                    imagelist.value = []
+                }
             }
-        }
-        const param = { 
-            chanid: chanid, kind: tab.value, prevMsgMstCdt: savPrevMsgMstCdt, rdoOpt: rdoOpt.value, 
-            fileExt: fileExt.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
-            authorNm: authorNm.value.trim(), searchText: searchText.value.trim()
-        }
-        const res = await axios.post("/chanmsg/searchMedia", param)
-        const rs = gst.util.chkAxiosCode(res.data) 
-        if (!rs) return
-        for (let i = 0; i < rs.list.length; i++) {
-            const row = rs.list[i]
-            row.chanImg = gst.util.getChanImg(row.TYP, row.STATE)
-            if (tab.value == "image") {
-                if (!row.BUFFER) continue
-                row.url = hush.util.getImageBlobUrl(row.BUFFER.data)
-                row.cdt = row.CDT
-                imagelist.value.push(row)
-            } else if (tab.value == "file") {
-                filelist.value.push(row)
+            const param = { 
+                chanid: chanid, kind: tab.value, prevMsgMstCdt: savPrevMsgMstCdt, rdoOpt: rdoOpt.value, 
+                fileExt: fileExt.value.trim(), frYm: frYm.value.trim(), toYm: toYm.value.trim(), 
+                authorNm: authorNm.value.trim(), searchText: searchText.value.trim()
             }
-            if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
+            const res = await axios.post("/chanmsg/searchMedia", param)
+            const rs = gst.util.chkAxiosCode(res.data) 
+            if (!rs) return
+            for (let i = 0; i < rs.list.length; i++) {
+                const row = rs.list[i]
+                row.chanImg = gst.util.getChanImg(row.TYP, row.STATE)
+                if (tab.value == "image") {
+                    if (!row.BUFFER) continue
+                    row.url = hush.util.getImageBlobUrl(row.BUFFER.data)
+                    row.cdt = row.CDT
+                    imagelist.value.push(row)
+                } else if (tab.value == "file") {
+                    filelist.value.push(row)
+                }
+                if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
+            }
+        } catch (ex) {
+            onGoingGetList = false
+            gst.util.showEx(ex, true)
         }
     }
 
     async function procSearchMsg(refresh) {
-        if (refresh) {
-            savPrevMsgMstCdt = hush.cons.cdtAtLast
-            prevScrollY = 0
-            msglist.value = []
-        }
-        const param = { 
-            chanid: chanid, kind: tab.value, prevMsgMstCdt: savPrevMsgMstCdt, rdoOpt: rdoOpt.value, 
-            frYm: frYm.value.trim(), toYm: toYm.value.trim(), authorNm: authorNm.value.trim(), searchText: searchText.value.trim()
-        }
-        const res = await axios.post("/chanmsg/searchMsg", param)
-        const rs = gst.util.chkAxiosCode(res.data) 
-        if (!rs) return
-        for (let i = 0; i < rs.list.length; i++) {
-            const row = rs.list[i]
-            row.chanImg = gst.util.getChanImg(row.TYP, row.STATE)
-            gst.util.handleMsgSub(row)
-            msglist.value.push(row)
-            if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
+        try {
+            if (refresh) {
+                savPrevMsgMstCdt = hush.cons.cdtAtLast
+                prevScrollY = 0
+                msglist.value = []
+            }
+            const param = { 
+                chanid: chanid, kind: tab.value, prevMsgMstCdt: savPrevMsgMstCdt, rdoOpt: rdoOpt.value, 
+                frYm: frYm.value.trim(), toYm: toYm.value.trim(), authorNm: authorNm.value.trim(), searchText: searchText.value.trim()
+            }
+            const res = await axios.post("/chanmsg/searchMsg", param)
+            const rs = gst.util.chkAxiosCode(res.data) 
+            if (!rs) return
+            for (let i = 0; i < rs.list.length; i++) {
+                const row = rs.list[i]
+                row.chanImg = gst.util.getChanImg(row.TYP, row.STATE)
+                gst.util.handleMsgSub(row)
+                msglist.value.push(row)
+                if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
+            }
+        } catch (ex) {
+            onGoingGetList = false
+            gst.util.showEx(ex, true)
         }
     }
 

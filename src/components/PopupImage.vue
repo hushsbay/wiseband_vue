@@ -1,12 +1,11 @@
 <script setup>
-    import { ref } from 'vue' 
-    
+    import { ref } from 'vue'     
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
-    const props = defineProps({ param: Object })
-    
+
     defineExpose({ open, close })
+    const props = defineProps({ param: Object })    
 
     let show = ref(false), vRotate = ref(0), vScale = ref(10), scalMin = ref(10), scaleMax = ref(20)
     let menuShow = ref(false)

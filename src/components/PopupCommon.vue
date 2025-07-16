@@ -1,10 +1,10 @@
 <script setup>
     import { ref } from 'vue' 
 
+    defineExpose({ open, close })
     const props = defineProps({ kind: String })
     const emits = defineEmits(["ev-click"])
-    defineExpose({ open, close })
-
+    
     let show = ref(false)
 
     function open() {

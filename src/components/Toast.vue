@@ -1,6 +1,5 @@
 <script setup>
     import { watchEffect } from 'vue'
-
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()

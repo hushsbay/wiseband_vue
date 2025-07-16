@@ -1,17 +1,16 @@
 <script setup>
     import { ref, watch, nextTick } from 'vue' 
-
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
+
     const emits = defineEmits(["ev-menu-click"])
 
     let ctxStyle = ref({}) //Parent 스타일
     let ctxChildOn = ref(false), ctxChildStyle = ref({}), ctxChildMenu = ref([])
-
     let prevX
 
-    watch([gst.ctx], async () => { //4번씩 실행됨 : lodash의 debounce로 처리해도 문제 (10으로 잡아도 3번 처리, 500 잡으면 느리게 중첩으로 보여 문제 있음)
+    watch([gst.ctx], async () => {
         if (!gst.ctx.on) ctxChildOn.value = false
         let posX = gst.ctx.data.posX
         let posY = gst.ctx.data.posY
