@@ -313,8 +313,8 @@
             decideSeeMore()
             sideClickOnLoop(null, true)
             procLocalStorage() 
-            procTimerShort() 
-            procTimerLong()
+            //procTimerShort() 
+            //procTimerLong()
             if (!route.fullPath.includes('/body/msglist') && !route.fullPath.includes('/notyet')) procRsObj() //아직안읽음에서는 리얼타임 반영하지 않음
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt

@@ -93,7 +93,9 @@ const GeneralStore = defineStore('General', () => {
     const html = {
 
         getImageUrl : function(strFile) { //<template>의 <img>에서 사용
-            return new URL('/src/assets/images/' + strFile, import.meta.url).href //예) import.meta.url => http://localhost:5173/src/views/current.vue?t=1730165570470
+            //import.meta.url => http://localhost:5173/src/stores/GeneralStore.js?t=1752741856628
+            //return new URL('/src/assets/images/' + strFile, import.meta.url).href
+            return new URL('../assets/images/' + strFile, import.meta.url).href //배포된 운영서버에서는 public/assets/images로 표시
         }
 
     }
