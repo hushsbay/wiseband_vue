@@ -19,6 +19,18 @@
             }
             await nextTick()
             uidRef.value.focus()
+            qry() //Test ID 제공
+            // list.value = [
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
+            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }
+            // ]
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -62,6 +74,21 @@
     function chkSaveId() {
         saveId.value = !saveId.value
     }
+
+    /////////////////////////////////////////////////////////////////////Test ID 제공
+    let list = ref([])
+
+    async function qry() {
+        try {
+            const param = { searchText: "", onlyAllUsers: true }
+            const res = await axios.post("/user/procOrgSearch", param)
+            const rs = gst.util.chkAxiosCode(res.data) 
+            if (!rs) return
+            list.value = rs.list
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
 </script>
 
 <template>
@@ -75,7 +102,7 @@
                 <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="이메일" spellcheck=false autocomplete=off style="width:190px"/> 
                 <div class="btn_basic" @click="goLogin">확인</div>
             </div>
-            <div class="center_body" style="height:400px">
+            <div class="center_body" style="height:100px">
                 <div v-if="nextOk" class="center_row">
                     <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:190px"/>
                     <div class="btn_basic" @click="goLoginNext">인증</div>
@@ -96,6 +123,13 @@
                     </div>
                 </div>
             </div>
+        </div>        
+    </div>
+    <div class="container1">
+        <div class="center_body coScrollable">
+            <div v-for="(row, idx) in list" @click="rowClick()" :key="row.ID" style="width:100%;height:30px;display:flex;border:1px solid lightgray">
+                {{ row.TOP_ORG_NM }} {{ row.ORG_NM }} {{ row.USERNM }} {{ row.USERID }}
+            </div>
         </div>
     </div>
 </template>
@@ -107,8 +141,12 @@
     input[type=password]:focus { outline:2px solid lightgreen }
     input[type=checkbox] { width:18px;height:18px }
 
-    .container { 
-        width: 100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center 
+    .container { /*height:100%;*/
+        width: 100%;padding-top:50px;display:flex;flex-direction:column;align-items:center 
+    }
+
+    .container1 { 
+        width: 100%;height:300px;padding-top:50px;display:flex;flex-direction:column;align-items:center 
     }
 
     .center_body { 
