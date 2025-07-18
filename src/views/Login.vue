@@ -20,17 +20,6 @@
             await nextTick()
             uidRef.value.focus()
             qry() //Test ID 제공
-            // list.value = [
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }, 
-            //     { USERID: "1111", USERNM: "하하하", ORG_NM: "ㅁㅁㅁ", TOP_ORG_NM: "1212" }
-            // ]
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -76,18 +65,23 @@
     }
 
     /////////////////////////////////////////////////////////////////////Test ID 제공
-    let list = ref([])
+    let list = ref([]), opac = ref(true)
 
     async function qry() {
         try {
-            const param = { searchText: "", onlyAllUsers: true }
-            const res = await axios.post("/user/procOrgSearch", param)
+            const res = await axios.post("/auth/qryUserList")
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) return
             list.value = rs.list
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    }
+
+    function rowClick(row) {
+        uid.value = row.USERID
+        pwd.value = row.USERNM
+        opac.value = false
     }
 </script>
 
@@ -100,9 +94,9 @@
             </div>
             <div class="center_row">
                 <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="이메일" spellcheck=false autocomplete=off style="width:190px"/> 
-                <div class="btn_basic" @click="goLogin">확인</div>
+                <div class="btn_basic" @click="goLogin" :style="{ opacity: opac ? 1.0 : 0.5 }">확인</div>
             </div>
-            <div class="center_body" style="height:100px">
+            <!-- <div class="center_body" style="height:100px">
                 <div v-if="nextOk" class="center_row">
                     <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:190px"/>
                     <div class="btn_basic" @click="goLoginNext">인증</div>
@@ -115,20 +109,45 @@
                 </div>
                 <div v-if="nextOk" class="center_row" style="flex-direction:column">
                     <div class="center_row">
-                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">이메일 저장</label>
+                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label>
                     </div>
                     <div style="width:250px">
                         <div>이메일에서 확인한 6자리 인증번호를</div>
                         <div>입력후 인증 버튼을 누르십시오.</div>
                     </div>
                 </div>
+            </div> -->
+            <div class="center_body" style="height:100px">
+                <div class="center_row">
+                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:190px"/>
+                    <div class="btn_basic" @click="goLoginNext">인증</div>
+                </div>
+                <div>
+                    <div class="center_row">
+                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label>
+                    </div>
+                </div>
+                <div style="width:320px;font-weight:bold">
+                    <div>테스트1 - 일반적인 테스트 방법.</div>
+                    <div>목록(Fake UserID)에서 선택해 '인증'을 누르면</div>
+                    <div>해당 사용자로 바로 인증됩니다.</div>
+                </div>
+                <div style="width:320px;margin-top:10px">
+                    <div>테스트2 - 이메일 OTP 테스트 방법.</div>
+                    <div>이메일 주소를 넣고 '확인'을 누른 후 이메일로</div>
+                    <div>전송된 인증번호를 넣고 '인증'을 누르면 됩니다.</div>
+                    <div>이메일은 사이트내 '그룹'메뉴에서 미리 등록 필요.</div>
+                </div>                
             </div>
         </div>        
     </div>
-    <div class="container1">
-        <div class="center_body coScrollable">
-            <div v-for="(row, idx) in list" @click="rowClick()" :key="row.ID" style="width:100%;height:30px;display:flex;border:1px solid lightgray">
-                {{ row.TOP_ORG_NM }} {{ row.ORG_NM }} {{ row.USERNM }} {{ row.USERID }}
+    <div class="listContainer">
+        <div class="list">
+            <div v-for="(row, idx) in list" @click="rowClick(row)" :key="row.USERID" class="listRow">
+                <span style="margin-right:5px">{{ row.TOP_ORG_NM }}</span>
+                <span style="margin-right:5px">{{ row.ORG_NM }}</span>
+                <span style="margin-right:5px;font-weight:bold">{{ row.USERNM }}</span> 
+                <span style="margin-right:5px">{{ row.USERID }}</span>
             </div>
         </div>
     </div>
@@ -141,12 +160,8 @@
     input[type=password]:focus { outline:2px solid lightgreen }
     input[type=checkbox] { width:18px;height:18px }
 
-    .container { /*height:100%;*/
-        width: 100%;padding-top:50px;display:flex;flex-direction:column;align-items:center 
-    }
-
-    .container1 { 
-        width: 100%;height:300px;padding-top:50px;display:flex;flex-direction:column;align-items:center 
+    .container {
+        width:100%;height:320px;padding-top:30px;display:flex;flex-direction:column;align-items:center 
     }
 
     .center_body { 
@@ -154,7 +169,7 @@
     }
 
     .center_row { 
-        margin-bottom:30px;display:flex;justify-content:center;align-items:center 
+        margin-bottom:20px;display:flex;justify-content:center;align-items:center 
     }
 
     .btn_basic { 
@@ -162,5 +177,22 @@
         border-radius:4px;background-color:var(--primary-color);color:white;cursor:pointer 
     }
     .btn_basic:hover { background:var(--second-hover-color) }
+
+    .listContainer { 
+        width: 100%;height:300px;padding-top:50px;display:flex;flex-direction:column;align-items:center 
+    }
+
+    .list { 
+        width:350px;height:400px;padding:5px;overflow-y:auto;border:1px solid dimgray
+    }
+
+    .listRow {
+        width:100%;height:40px;display:flex;align-items:center;border-bottom:1px solid lightgray;cursor:pointer
+    }
+
+    .listRow:hover {
+        background:var(--hover-color)
+    }
+
 
 </style>	
