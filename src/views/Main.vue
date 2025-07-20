@@ -532,7 +532,7 @@
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>
                 <div class="btn_basic" @click="openMsgSearch()"><img :src="gst.html.getImageUrl('search.png')" style="width:16;height:16px" ></div>
-                <div class="btn_basic" @click="openMsgSearch()"><span>통합검색으로이동**</span></div>
+                <div class="btn_basic" @click="openMsgSearch()"><span>통합검색으로이동****</span></div>
             </div>
             <div style="display:flex;justify-content:flex-end;align-items:center;cursor:pointer">
                 <span style="margin-right:10px;color:whitesmoke">{{ gst.auth.getCookie("usernm") }}</span>
