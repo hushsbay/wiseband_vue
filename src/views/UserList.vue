@@ -463,7 +463,7 @@
             </div>
         </div>
         <div class="chan_right" style="width:560px;height:calc(100% - 12px);margin:5px 0">
-            <org-tree mode="mygroup" ref="orgRef" @ev-click="applyToBody"></org-tree>
+            <org-tree mode="tree" ref="orgRef" @ev-click="applyToBody"></org-tree>
         </div>  
     </div>
 </template>

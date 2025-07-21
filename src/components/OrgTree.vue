@@ -99,6 +99,7 @@
             const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
             if (!rs) return
             maxLevel = rs.data.maxLevel
+            //if (myteam.value) depthToShow.value = maxLevel
             const vips = getVips(rs)
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
@@ -118,8 +119,8 @@
                         procNode(row, rs.list[i + 1], 'org')
                     }
                 }
-            }
-            const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임 ###9(서버 참조)
+            } /* ###9(로직 개선 필요. 서버 참조)
+            const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임
             if (myOrgArr && myOrgArr.length > 0) { //마지막이 회사코드, 처음이 본인 소속부서임
                 for (let j = myOrgArr.length - 1; j >= 0; j--) {
                     let k = 0
@@ -136,7 +137,7 @@
                 }
                 await nextTick()
                 orgRow.value[myOrgArr[0].ORG_CD].scrollIntoView(true) //true 필요. true=scrollIntoViewOptions: {block: "start", inline: "nearest"}와 동일
-            }
+            }*/
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -407,7 +408,7 @@
                             <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg16" title="새로고침">
                         </div>                        
                         <!-- <input v-show="mode == 'tree'" type="checkbox" id="myteam" v-model="myteam" style="margin-left:10px" @change="toggleMyTeam"/>
-                        <label v-show="mode == 'tree'" for="myteam" style="">내팀</label> ###9 서버 참조-->
+                        <label v-show="mode == 'tree'" for="myteam" style="">내팀</label> -->
                         <input v-show="mode == 'tree'" type="checkbox" id="mycomp" v-model="mycomp" style="margin-left:10px" @change="toggleMyComp"/>
                         <label v-show="mode == 'tree'" for="mycomp" style="">내회사</label>
                     </div>
