@@ -10,16 +10,24 @@
     let uid = ref(''), pwd = ref(''), saveId = ref(true), nextOk = ref(false)
     let uidRef = ref(null), pwdRef = ref(null) //for focusing
 
+    //Test ID 제공
+    let list = ref([]), opac = ref(true), userRow = ref({})
+
     onMounted(async () => {
         try {
+            await qry() //Test ID 제공
             const userid = gst.auth.getCookie("userid")
             if (userid) {
                 saveId.value = true
                 uid.value = userid
+                const idx = gst.util.getKeyIndex(userRow, userid)
+                if (idx > -1) {
+                    list.value[idx].color = "blue"
+                    userRow.value[userid].scrollIntoView()
+                } //const row = list.value.find(item => item.USERID == userid)
             }
             await nextTick()
-            uidRef.value.focus()
-            qry() //Test ID 제공
+            uidRef.value.focus()            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -64,9 +72,6 @@
         saveId.value = !saveId.value
     }
 
-    /////////////////////////////////////////////////////////////////////Test ID 제공
-    let list = ref([]), opac = ref(true)
-
     async function qry() {
         try {
             const res = await axios.post("/auth/qryUserList")
@@ -81,7 +86,8 @@
     function rowClick(row) {
         uid.value = row.USERID
         pwd.value = row.USERNM
-        opac.value = false
+        opac.value = false //미사용
+        row.color = "blue"
     }
 </script>
 
@@ -94,7 +100,7 @@
             </div>
             <div class="center_row">
                 <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="이메일" spellcheck=false autocomplete=off style="width:190px"/> 
-                <div class="btn_basic" @click="goLogin" :style="{ opacity: opac ? 1.0 : 0.5 }">확인</div>
+                <div class="btn_basic" @click="goLogin" :style="{ opacity: opac ? 1.0 : 1.0 }">확인</div><!--opacity 사용하지 않기로 함-->
             </div>
             <!-- <div class="center_body" style="height:100px">
                 <div v-if="nextOk" class="center_row">
@@ -127,10 +133,10 @@
                         <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label>
                     </div>
                 </div>
-                <div style="width:320px;font-weight:bold">
+                <div style="width:320px">
                     <div>테스트1 - 일반적인 테스트 방법.</div>
-                    <div>목록(Fake UserID)에서 선택해 '인증'을 누르면</div>
-                    <div>해당 사용자로 바로 인증됩니다.</div>
+                    <div style="color:red">목록(Fake UserID)에서 선택해 '인증'을 누르면</div>
+                    <div style="color:red">해당 사용자로 바로 인증됩니다.</div>
                 </div>
                 <div style="width:320px;margin-top:10px">
                     <div>테스트2 - 이메일 OTP 테스트 방법.</div>
@@ -143,7 +149,8 @@
     </div>
     <div class="listContainer">
         <div class="list">
-            <div v-for="(row, idx) in list" @click="rowClick(row)" :key="row.USERID" class="listRow">
+            <div v-for="(row, idx) in list" @click="rowClick(row)" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyidx="idx" 
+                class="listRow" :style="{ color: row.color ? row.color : '' }">
                 <span style="margin-right:5px">{{ row.TOP_ORG_NM }}</span>
                 <span style="margin-right:5px">{{ row.ORG_NM }}</span>
                 <span style="margin-right:5px;font-weight:bold">{{ row.USERNM }}</span> 
@@ -194,5 +201,8 @@
         background:var(--hover-color)
     }
 
+    .listRow:active {
+        background:var(--hover-color)
+    }
 
 </style>	
