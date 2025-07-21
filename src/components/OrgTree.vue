@@ -95,9 +95,9 @@
                 grid: props.grid ? props.grid : "", //qryGroupWithUser 에만 해당
                 toastMsg: true
             })
+            orglist.value = []
             const rs = gst.util.chkAxiosCode(res.data, notShowMsgIfNoData) //NOT_FOUND일 경우도 오류메시지 표시하지 않기 
             if (!rs) return
-            orglist.value = []
             maxLevel = rs.data.maxLevel
             const vips = getVips(rs)
             for (let i = 0; i < rs.list.length; i++) {

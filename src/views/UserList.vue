@@ -277,7 +277,7 @@
             }
             if (!confirm("선택한 행(" + arr.length + "건)을 삭제할까요?")) return
             for (let i = 0; i < len; i++) {
-                const rq = { GR_ID: grId, USERID: arr[i].USERID }
+                const rq = { GR_ID: grId, USERID: arr[i].USERID,  USERNM: arr[i].USERNM }
                 const res = await axios.post("/user/deleteMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
