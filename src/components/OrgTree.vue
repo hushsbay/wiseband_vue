@@ -164,6 +164,7 @@
         row.expanded = expanded
         row.paddingleft = paddingLeft + "px"
         if (nodekind == "U") {
+            if (row.USERNM == '박석현') debugger
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, row.USERID)
             row.key = row.USERID + (row.GR_ID ? hush.cons.deli + row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 userid가 들어 있을 것이므로 grid로 추가 구분함
