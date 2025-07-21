@@ -400,7 +400,7 @@
             <div class="chan_center">
                 <div class="chan_center_header">
                     <div class="chan_center_header_left">
-                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" @input="procClearSearch" style="width:100px" />
+                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" @input="procClearSearch" style="width:100px" spellcheck="false" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
                             <img :src="gst.html.getImageUrl('white_search.png')" class="coImg16">
                         </div>
@@ -439,11 +439,11 @@
                             <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>                            
                         </div>
                         <div v-if="(mode == 'mygroup' || row.USERID) && (row.KIND=='guest' || row.KIND=='admin')" 
-                            style="min-width:36px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">
+                            style="min-width:39px;height:40px;margin-right:3px;display:flex;justify-content:flex-end;align-items:center">
                             <span class="kind">{{ row.KIND=='guest' ? '외부인' : '관리자' }}</span>
                         </div>
                         <div v-if="mode == 'mygroup' && row.USERID && row.SYNC != 'Y'" 
-                            style="min-width:32px;height:40px;margin-right:0px;display:flex;justify-content:flex-end;align-items:center">
+                            style="min-width:35px;height:40px;margin-right:3px;display:flex;justify-content:flex-end;align-items:center">
                             <span class="kind">입력</span>
                         </div>
                     </div>
@@ -452,7 +452,7 @@
                     <div v-for="(row, idx) in orglist" :key="row.key"  :keyidx="idx" 
                         class="org_body" @click="(e) => clickNode(e, row, idx)">
                         <div class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
-                            style="width:100%;height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">
+                            style="width:calc(100% - 6px);height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                             <div style="margin-left:5px;font-weight:bold">{{ row.USERNM }}</div>

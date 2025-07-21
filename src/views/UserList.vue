@@ -72,7 +72,7 @@
             onGoingGetList = true
             let param = { grid: grId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            const kind = param.kind
+            //const kind = param.kind
             const res = await axios.post("/user/qryGroupWithUser", param)
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
@@ -85,7 +85,6 @@
             document.title = grnm.value + " [그룹]"
             const grdtl = rs.list[0].userlist
             const len = grdtl.length
-            debugger
             for (let i = 0; i < len; i++) {
                 const row = grdtl[i]
                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
@@ -114,8 +113,12 @@
 
     async function applyToBody(arr, mode) {
         try {
-            if (grId == "new" || singleMode.value != "C") {
-                gst.util.setSnack("먼저 그룹이 저장되어야 하고 행선택도 없어야 합니다.", true)
+            if (grId == "new") {
+                gst.util.setSnack("먼저 그룹이 저장되어야 합니다.", true)
+                return
+            }
+            if (singleMode.value != "C") {
+                gst.util.setSnack("먼저 (왼쪽) 그룹내 행 선택을 해제해 주시기 바랍니다.", true)
                 return
             }
             const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
@@ -239,7 +242,8 @@
             } else {
                 const row = arr[0] //row.USERID is one of key
                 const rq = { crud: "U", GR_ID: grId, USERID: row.USERID }
-                //if (row.SYNC != "Y") {                
+                //if (row.SYNC != "Y") {
+                    rq.SYNC = row.SYNC
                     rq.ORG = rowOrg.value
                     rq.JOB = rowJob.value
                     rq.EMAIL = rowEmail.value
@@ -320,6 +324,14 @@
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
+    }
+
+    function clearAllChk() {
+        userlist.value.forEach(item => {
+            if (item.chk) item.chk = false
+        })
+        chkEditRow()
+        chkAll.value = false
     }
 </script>
 
@@ -423,7 +435,8 @@
                         <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
                         <span class="coImgSpn">삭제</span>
                     </div>
-                    <span style="margin-right:5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
+                    <span style="margin:0 5px;font-weight:bold">선택:</span><span style="margin-right:10px;font-weight:bold">{{ chkArr.length }}</span>
+                    <span class="vipBtn" @click="clearAllChk()">해제</span>
                 </div>
                 <div style="display:flex;align-items:center;cursor:pointer">
                     <table>
@@ -514,4 +527,5 @@
     .tdLabel { color:dimgray;border:none }
     .tdInput { width:calc(100% - 10px) }
     .tdValue { border:none }
+    .vipBtn { margin-left:5px;padding:1px 2px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
 </style>
