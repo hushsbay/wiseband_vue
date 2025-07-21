@@ -119,7 +119,7 @@
                     }
                 }
             }
-            const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임
+            const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임 ###9(서버 참조)
             if (myOrgArr && myOrgArr.length > 0) { //마지막이 회사코드, 처음이 본인 소속부서임
                 for (let j = myOrgArr.length - 1; j >= 0; j--) {
                     let k = 0
