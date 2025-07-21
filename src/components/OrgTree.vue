@@ -405,10 +405,9 @@
                         </div>
                         <div class="coImgBtn" @click="reset(mode)">
                             <img :src="gst.html.getImageUrl('white_refresh.png')" class="coImg16" title="새로고침">
-                        </div>
-                        
-                        <input v-show="mode == 'tree'" type="checkbox" id="myteam" v-model="myteam" style="margin-left:10px" @change="toggleMyTeam"/>
-                        <label v-show="mode == 'tree'" for="myteam" style="">내팀</label>
+                        </div>                        
+                        <!-- <input v-show="mode == 'tree'" type="checkbox" id="myteam" v-model="myteam" style="margin-left:10px" @change="toggleMyTeam"/>
+                        <label v-show="mode == 'tree'" for="myteam" style="">내팀</label> ###9 서버 참조-->
                         <input v-show="mode == 'tree'" type="checkbox" id="mycomp" v-model="mycomp" style="margin-left:10px" @change="toggleMyComp"/>
                         <label v-show="mode == 'tree'" for="mycomp" style="">내회사</label>
                     </div>
