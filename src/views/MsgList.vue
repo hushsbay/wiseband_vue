@@ -2256,6 +2256,11 @@
         if (searchText.value == "") userSearched.value = []
     }
 
+    async function procClearSearchWhenFocus() {
+        searchText.value = ""
+        procClearSearch()
+    }
+
     async function procInput(e) {
         if (e.keyCode == 13) { //Enter
             try {
@@ -2366,9 +2371,9 @@
                     <div style="min-width:48px;display:flex;align-items:center;font-weight:bold">추가 :</div>
                     <div>
                         <input type="search" ref="searchInput" v-model="searchText"  spellcheck="false" style="width:402px" placeholder="이름을 넣고 Enter를 누르십시오."
-                               @keyup="(e) => procInput(e)" @input="procClearSearch" @focus="searchInput.select()" />
+                               @keyup="(e) => procInput(e)" @input="procClearSearch" @focus="procClearSearchWhenFocus" />
                     </div>
-                    <div style="margin-left:10px;display:flex;align-items:center">(대상인원 : {{ userAdded.length }})</div>
+                    <div style="margin-left:10px;display:flex;align-items:center">(멤버 : {{ userAdded.length }})</div>
                 </div>
                 <div style="margin-top:20px;display:flex;align-items:center">
                     <div v-show="dmChanIdAlready" class="coImgBtn" @click="openDmRoom(dmChanIdAlready)">
@@ -2589,7 +2594,7 @@
                         </span>                    
                     </div>
                 </div>
-                <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center">
+                <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center" @click="procClearSearchWhenFocus">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
                 </div><!--observerBottomTarget은 color 및 minHeight 유의-->
                 <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" :style="{ minHeight: showBottomObserver ? '10px' : '0px', color:'transparent' }">{{ hush.cons.endOfData }}</div>

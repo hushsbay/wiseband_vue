@@ -174,6 +174,7 @@
         userlist.value.forEach(item => { item.chk = false })
         row.chk = true
         chkEditRow()
+        chkAll.value = false
     }
 
     function getCheckedArr() {
@@ -284,7 +285,7 @@
                 const rq = { GR_ID: grId, USERID: arr[i].USERID,  USERNM: arr[i].USERNM }
                 const res = await axios.post("/user/deleteMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return
+                //if (!rs) return
             }
             newMember()
             await getList()
@@ -435,7 +436,7 @@
                         <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
                         <span class="coImgSpn">삭제</span>
                     </div>
-                    <span style="margin:0 5px;font-weight:bold">선택:</span><span style="margin-right:10px;font-weight:bold">{{ chkArr.length }}</span>
+                    <span style="margin:0 5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
                     <span class="vipBtn" @click="clearAllChk()">해제</span>
                 </div>
                 <div style="display:flex;align-items:center;cursor:pointer">

@@ -109,8 +109,11 @@
 
     async function applyToBody(arr, mode) {
         try {
-            if (appType == "chan" && (chanId == "new" || singleMode.value != "C")) {
-                gst.util.setSnack("먼저 채널이 저장되어야 하고 행선택도 없어야 합니다.")
+            if (appType == "chan" && chanId == "new") {
+                gst.util.setSnack("먼저 채널이 저장되어야 합니다.")
+                return
+            } else if (appType == "chan" && singleMode.value != "C") {
+                gst.util.setSnack("먼저 (왼쪽) 채널내 행 선택을 해제해 주시기 바랍니다.")
                 return
             } else if (appType == "dm" && chanId == "new") {
                 const ret = await saveChan()
@@ -159,6 +162,7 @@
         memberlist.value.forEach(item => { item.chk = false })
         row.chk = true
         chkEditRow()
+        chkAll.value = false
     }
 
     function getCheckedArr() {
@@ -245,7 +249,7 @@
                 const rq = { CHANID: chanId, USERID: arr[i].USERID }
                 const res = await axios.post("/chanmsg/deleteChanMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return
+                //if (!rs) return
             }
             newMember()
             await getList()
@@ -317,6 +321,14 @@
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
+    }
+
+    function clearAllChk() {
+        memberlist.value.forEach(item => {
+            if (item.chk) item.chk = false
+        })
+        chkEditRow()
+        chkAll.value = false
     }
 </script>
 
@@ -446,7 +458,8 @@
                                     <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg20">
                                     <span class="coImgSpn">초대</span>
                                 </div>
-                                <span style="margin-right:5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
+                                <span style="margin:0 5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
+                                <span class="vipBtn" @click="clearAllChk()">해제</span>
                             </div>
                             <div style="display:flex;align-items:center;cursor:pointer">
                                 <table>
@@ -504,7 +517,7 @@
     input { height:28px;margin-right:8px;border:1px solid dimgray;border-radius:0px }
     input[type=text]:focus { outline:2px solid lightgreen }
     .popup {
-        position:fixed;width:90%;min-width:1200px;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;z-index:1000;background:white;
+        position:fixed;width:90%;min-width:1200px;height:90%;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px 10px 20px 20px;z-index:1000;background:white;
         display:flex;flex-direction:column;border-radius:10px
     }
     .overlay {
@@ -551,4 +564,5 @@
     .tdLabel { color:dimgray;border:none }
     .tdInput { width:calc(100% - 10px) }
     .tdValue { vertical-align:middle;border:none }
+    .vipBtn { margin-left:5px;padding:1px 2px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
 </style>
