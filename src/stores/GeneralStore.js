@@ -274,6 +274,7 @@ const GeneralStore = defineStore('General', () => {
             } else {
                 msg = ex.toString()
             }
+            if (msg.includes('Network Error')) msg += " : 서버 재접속시 자동 복구됩니다."
             util.setToast("")
             util.setSnack(msg, sec)
         },
