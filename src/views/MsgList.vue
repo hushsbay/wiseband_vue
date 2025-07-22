@@ -1442,10 +1442,10 @@
     }
 
     function keyDownEnter(e) { //keyUpEnter가 아님
-        if (e.ctrlKey) {
-            saveMsg() //나중에 Ctrl+Enter를 saveMsg() 할 수 있도록 옵션 제공하기
+        if (e.shiftKey) {
+            //나중에 옵션 주기
         } else {
-            //saveMsg() //일단 줄바꿈으로 동작하게 하기
+            saveMsg() //일단 줄바꿈으로 동작하게 하기
         }
     }
 
@@ -2422,13 +2422,17 @@
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                         <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
                     </div>
-                    <div v-if="hasProp() && threadReply.replyinfo && threadReply.replyinfo[0].CDT_MAX" class="replyAct" style="font-size:13px">
-                        <div style="margin:0 5px;display:flex;align-items:center">
+                    <!-- <div v-if="hasProp() && threadReply.replyinfo && threadReply.replyinfo[0].CDT_MAX" class="replyAct" style="font-size:13px"> -->
+                    <div v-if="hasProp()" class="replyAct" style="font-size:13px">
+                        <div style="margin:0 5px;display:flex;align-items:center" v-if="threadReply.replyinfo && threadReply.replyinfo[0].CDT_MAX">
                             <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
                             <span style="color:steelblue;font-weight:bold">{{ threadReply.replyinfo[0].CNT_EACH }}개</span>
                             <span style="margin:0 4px;color:dimgray">최근:</span>
                             <span style="color:dimgray">{{ hush.util.displayDt(threadReply.replyinfo[0].CDT_MAX) }}</span>
                             <span v-show="threadReply.replyinfo[0].MYNOTYETCNT > 0" class="coMyNotYet">{{ threadReply.replyinfo[0].MYNOTYETCNT }}</span>
+                        </div>
+                        <div style="margin:0 5px;display:flex;align-items:center" v-else>
+                            <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글이 없습니다.</span>
                         </div>
                     </div>
                     <div v-if="hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:0px">
@@ -2647,7 +2651,7 @@
                     </div>
                 </div>
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown.enter.prevent="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
                 <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
                     @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
