@@ -15,7 +15,7 @@ const GeneralStore = defineStore('General', () => {
 
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
-    const bottomMsg = ref(''),  routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
+    const bottomMsg = ref(''),  bottomMsgList = ref([]), routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
     
     const auth = {
 
@@ -238,7 +238,7 @@ const GeneralStore = defineStore('General', () => {
         chkAxiosCode : function(data, notShowMsgIfNoData) { //data는 axios의 rs.data
             setTimeout(function() { 
                 util.setToast("")
-                bottomMsg.value = ""
+                //bottomMsg.value = ""
             }, 100) //setting은 main.js axios에 있음
             if (data == "") {
                 util.setSnack('서버 Response data가 없습니다.', true)
@@ -472,7 +472,7 @@ const GeneralStore = defineStore('General', () => {
     
     return { 
         objSaved, selSideMenu, chanIdActivted, objByChanId,
-        snackBar, toast, bottomMsg, routeFrom, routeTo, routedToSamePanelFromMsgList,
+        snackBar, toast, bottomMsg, bottomMsgList, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, realtime, util
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
     }

@@ -35,8 +35,12 @@ axios.interceptors.request.use(
     function (config) { //console.log("main.js axios config : " + config.url + " ::: " + JSON.stringify(config.data))
         if (config.data && config.data.toastMsg) {
             gst.util.setToast(hush.cons.toastMsg, true) //clear는 axios response interceptor에 구현해도 되나 chkAxiosCode in gst에 이미 구현되어 있어 그대로 둠
+        } else if (config.data && config.data.noMsg) {
+            //toastMsg도 bottomMsg도 아님 (표시 없음) - 리얼타임 반영
         } else {
-            gst.bottomMsg = config.url + " :: " + JSON.stringify(config.data)
+            gst.bottomMsg = hush.util.getCurDateTimeStr(true, true) + " :: " + config.url + " :: " + JSON.stringify(config.data)
+            gst.bottomMsgList.unshift(gst.bottomMsg)
+            while (gst.bottomMsgList.length > 20) gst.bottomMsgList.pop()
         }
         return config
     }, function (error) { 

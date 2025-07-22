@@ -6,6 +6,7 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupSidemenu from "/src/components/PopupSidemenu.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
+    import PopupCommon from "/src/components/PopupCommon.vue"
 
     const gst = GeneralStore()
     const router = useRouter()
@@ -24,12 +25,12 @@
 
     let prevX, prevY
     let keepAliveRef = ref(null)
-    let mediaPopupRef = ref(null), searchText = ref('')
+    let mediaPopupRef = ref(null), searchText = ref(''), bottomMsgListPopupRef = ref(null)
 
     //리얼타임 반영
     let panelRef = ref(null)
     let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 1000, TIMERSEC_WINNER = 10 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
+    const TIMERSEC_SHORT = 5000, TIMERSEC_LONG = 5000, TIMERSEC_WINNER = 10 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
     //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
     //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
@@ -102,7 +103,7 @@
             if (rsObj) {
                 rs = rsObj //바로 아래 else에서 bc1.postMessage() 한 것을 위너가 아닌 탭에서 받은 것임
             } else {
-                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt })
+                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt, noMsg: true })
                 rs = gst.util.chkAxiosCode(res.data, true)
                 if (!rs) {
                     realtimeJobDone = 'Y'
@@ -313,8 +314,8 @@
             decideSeeMore()
             sideClickOnLoop(null, true)
             procLocalStorage() 
-            //procTimerShort() 
-            //procTimerLong()
+            procTimerShort() 
+            procTimerLong()
             if (!route.fullPath.includes('/body/msglist') && !route.fullPath.includes('/notyet')) procRsObj() //아직안읽음에서는 리얼타임 반영하지 않음
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
@@ -512,6 +513,10 @@
     //     ka.delete(menu) //const appType = route.fullPath.split("/")[2] //arr[2] = home,dm 등..
     //     sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
     // }
+
+    function showBottomMsgList() {
+        bottomMsgListPopupRef.value.open()
+    }
 </script>
 
 <template>
@@ -576,7 +581,7 @@
                         </keep-alive>
                     </router-view>
                 </div>
-                <div class="footer">
+                <div class="footer" @click="showBottomMsgList()" style="color:lightgray;cursor:pointer">
                     <div class="coDotDot">
                         {{ gst.bottomMsg }}
                     </div>
@@ -586,6 +591,11 @@
     </div>
     <popup-sidemenu :popupOn="popupMenuOn" :popupPos="popupMenuPos" :list="listPopupMenu" :popupData="popupData" @ev-click="sideClick" @ev-leave="popupMenuOn=false"></popup-sidemenu> 
     <media-search ref="mediaPopupRef"></media-search>
+    <popup-common ref="bottomMsgListPopupRef" style="display:flex;flex-direction:column">
+         <div v-for="(row, idx) in gst.bottomMsgList" >
+            <span style="margin:0px">{{ row }}</span>
+        </div>
+    </popup-common>
 </template>
 
 <style scoped>
