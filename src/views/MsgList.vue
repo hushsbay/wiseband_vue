@@ -2350,7 +2350,7 @@
 <template>
     <div class="chan_main">
         <div v-if="!hasProp() && pageData==hush.cons.state_nodata" 
-            style="top:0;left:0;width:100%;height:100%;margin-right:-10000px;padding:30px 0 0 30px;background:white;z-index:9999">
+            style="top:0;left:0;width:100%;height:100%;margin-right:-10000px;padding:30px 0 0 30px;background:white;z-index:999">
             <span>데이터가 없습니다.<br>왼쪽 패널에서 노드를 클릭하시기 바랍니다.</span>
         </div>
         <div class="chan_center" :style="{ width: widthChanCenter }">

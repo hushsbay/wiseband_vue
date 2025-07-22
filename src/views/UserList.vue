@@ -72,7 +72,6 @@
             onGoingGetList = true
             let param = { grid: grId }
             if (addedParam) Object.assign(param, addedParam) //추가 파라미터를 기본 param에 merge
-            //const kind = param.kind
             const res = await axios.post("/user/qryGroupWithUser", param)
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
@@ -318,10 +317,12 @@
             if (!confirm("[" + grnm.value + "]그룹에 대해 전체 삭제를 진행합니다. 계속할까요?")) return
             const rq = { GR_ID: grId }
             const res = await axios.post("/user/deleteGroup", rq)
-            const rs = gst.util.chkAxiosCode(res.data)
+            const rs = gst.util.chkAxiosCode(res.data)            
             if (!rs) return
             evToPanel({ kind: "deleteGroup", grid: grId })
             orgRef.value.procFromParent("refresh")
+            userlist.value = []
+            grId = "new"
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
