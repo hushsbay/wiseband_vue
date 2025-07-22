@@ -52,7 +52,7 @@
     .v-enter-from, .v-leave-to { opacity: 0; }
 
     .popupMenu { /*top:0px;bottom:0px;height:380px; 3개는 props.popupPos로 표시 */
-        position:fixed;width:300px;left:70px;
+        position:fixed;width:300px;left:60px;
         display:flex;flex-direction:column;z-index:9999;
         background:white;border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px gray
     }

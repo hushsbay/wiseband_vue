@@ -440,13 +440,18 @@
                 listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
             }
             popupMenuOn.value = true
-            const docHeight = document.documentElement.offsetHeight
-            if (menuDiv.offsetTop + POPUPHEIGHT > docHeight) {
-                popupMenuPos.value.top = null
-                popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 100) + "px"
-            } else { //100은 사이드메뉴아이템 높이인데 이 화면의 로직에서는 대략 산정해도 무리없음
-                popupMenuPos.value.top = (menuDiv.offsetTop - 100) + "px"
+            if (menuDiv.id == "mnuSeeMore") { //console.log(e.pageY + "===" + prevX + "===" + menuDiv.offsetTop)
+                popupMenuPos.value.top = (e.pageY - POPUPHEIGHT + 50) + "px"
                 popupMenuPos.value.bottom = null
+            } else {
+                // const docHeight = document.documentElement.offsetHeight
+                // if (menuDiv.offsetTop + POPUPHEIGHT > docHeight) {
+                //     popupMenuPos.value.top = null
+                //     popupMenuPos.value.bottom = (docHeight - menuDiv.offsetTop - 100) + "px"
+                // } else { //100은 사이드메뉴아이템 높이인데 이 화면의 로직에서는 대략 산정해도 무리없음
+                //     popupMenuPos.value.top = (menuDiv.offsetTop - 100) + "px"
+                //     popupMenuPos.value.bottom = null
+                // }
             }
             popupData.value.id = menuDiv.id
         } catch (ex) {
@@ -457,9 +462,9 @@
     function mouseLeave(e) {
         try {
             const angle = hush.util.getAngle(prevX, prevY, e.pageX, e.pageY)
-            if (angle >= -60 && angle <= 60) { //if (e.pageX > prevX) {
+            if (angle >= -90 && angle <= 90) { //if (e.pageX > prevX) {
                 //마우스가 오른쪽으로 나가면 팝업으로 들어가게 되므로 팝업을 그대로 유지하기로 함
-            } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX);
+            } else { //console.log(e.pageY + "====leave : " + e.pageX + "===" + prevX)
                 popupMenuOn.value = false
             }
         } catch (ex) {
