@@ -75,6 +75,8 @@
     async function procMainToMsglist(kind, obj) {
         if (kind == "realtime") {
             chkDataLogEach(obj)
+        } else if (kind == "userprofile") {
+            //이미지 변경할 데이터 찾기가 현재로선 조금 난항이라서 급한 것 마무리하고 진행하기로 함
         }
     }
 

@@ -22,7 +22,7 @@
     let mounting = true, onGoingGetList = false
 
     async function procMainToMsglist(kind, obj) { //단순 전달
-        //await msglistRef.value.procMainToMsglist(kind, obj)
+        await msglistRef.value.procMainToMsglist(kind, obj)
     }
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징

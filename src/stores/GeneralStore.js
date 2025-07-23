@@ -239,7 +239,7 @@ const GeneralStore = defineStore('General', () => {
             setTimeout(function() { 
                 util.setToast("")
                 //bottomMsg.value = ""
-            }, 100) //setting은 main.js axios에 있음
+            }, 500) //setting은 main.js axios에 있음
             if (data == "") {
                 util.setSnack('서버 Response data가 없습니다.', true)
                 return null

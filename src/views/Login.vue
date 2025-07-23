@@ -1,20 +1,22 @@
 <script setup>
     import { ref, onMounted, nextTick } from 'vue'
-    import { useRouter } from 'vue-router'
+    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const router = useRouter()
+    const route = useRoute()
     const gst = GeneralStore()    
     
-    let uid = ref(''), pwd = ref(''), saveId = ref(true), nextOk = ref(false)
+    let uid = ref(''), pwd = ref(''), saveId = ref(true), nextOk = ref(false), mailOtp = ref('')
     let uidRef = ref(null), pwdRef = ref(null) //for focusing
 
     //Test ID 제공
-    let list = ref([]), opac = ref(true), userRow = ref({})
+    let list = ref([]), userRow = ref({})
 
     onMounted(async () => {
         try {
+            mailOtp.value = route.query.mailOtp
             await qry() //Test ID 제공
             const userid = gst.auth.getCookie("userid")
             if (userid) {
@@ -40,6 +42,7 @@
                 const res = await axios.post("/auth/setOtp", { uid : uid.value })
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
+                gst.util.setToast("인증번호가 이메일로 전송되었습니다.", 5)                
             } else {
                 //goLoginNext() 호출
             }
@@ -85,8 +88,7 @@
 
     function rowClick(row) {
         uid.value = row.USERID
-        pwd.value = row.USERNM
-        opac.value = false //미사용
+        pwd.value = (row.ISOPEN == "Y") ? "ignore_pwd" : ""
         row.color = "blue"
     }
 </script>
@@ -99,8 +101,8 @@
                 <div style="margin-left:5px;font-size:22px;font-weight:bold;cursor:pointer">WiSEBand</div>
             </div>
             <div class="center_row">
-                <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="이메일" spellcheck=false autocomplete=off style="width:190px"/> 
-                <div class="btn_basic" @click="goLogin" :style="{ opacity: opac ? 1.0 : 1.0 }">확인</div><!--opacity 사용하지 않기로 함-->
+                <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="아이디/이메일" spellcheck=false autocomplete=off style="width:190px"/> 
+                <div class="btn_basic" @click="goLogin" :style="{ opacity: (mailOtp == 'Y') ? 1.0 : 0 }">확인</div>
             </div>
             <!-- <div class="center_body" style="height:100px">
                 <div v-if="nextOk" class="center_row">
@@ -125,7 +127,7 @@
             </div> -->
             <div class="center_body" style="height:100px">
                 <div class="center_row">
-                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:190px"/>
+                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="비밀번호/인증번호(6자리)" spellcheck=false autocomplete=off style="width:190px"/>
                     <div class="btn_basic" @click="goLoginNext">인증</div>
                 </div>
                 <div>
@@ -133,30 +135,38 @@
                         <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label>
                     </div>
                 </div>
-                <div style="width:320px">
-                    <div>테스트1 - 일반적인 테스트 방법.</div>
-                    <div style="color:red">목록(Fake UserID)에서 선택해 '인증'을 누르면</div>
-                    <div style="color:red">해당 사용자로 바로 인증됩니다.</div>
-                </div>
-                <div style="width:320px;margin-top:10px">
-                    <div>테스트2 - 이메일 OTP 테스트 방법.</div>
+                <div v-if="mailOtp=='Y'" style="width:320px;margin-top:10px">
+                    <div>[이메일 OTP 테스트 방법]</div>
                     <div>이메일 주소를 넣고 '확인'을 누른 후 이메일로</div>
                     <div>전송된 인증번호를 넣고 '인증'을 누르면 됩니다.</div>
                     <div>이메일은 사이트내 '그룹'메뉴에서 미리 등록 필요.</div>
-                </div>                
+                </div> 
+                <div v-else style="width:320px">
+                    <div>목록(테스트용아이디)에서 선택해 '인증'을 누르면</div>
+                    <div>진행됩니다. (인증후 이름/비번 설정 가능)</div>
+                    <div>- 자물쇠 아이콘 : 이미 설정된 비번 필요</div>
+                    <div>- 사람 아이콘 : 비번없이 아이디로만 인증 가능</div>
+                </div>                               
             </div>
-        </div>        
+        </div>
     </div>
-    <div class="listContainer">
+    <div v-if="mailOtp!='Y'" class="listContainer">
         <div class="list">
             <div v-for="(row, idx) in list" @click="rowClick(row)" :key="row.USERID" :ref="(ele) => { userRow[row.USERID] = ele }" :keyidx="idx" 
                 class="listRow" :style="{ color: row.color ? row.color : '' }">
+                <img :src="gst.html.getImageUrl(row.ISOPEN == 'Y' ? 'violet_people2.png' : 'violet_lock.png')" style="width:16;height:16px;margin-right:5px" >
                 <span style="margin-right:5px">{{ row.TOP_ORG_NM }}</span>
                 <span style="margin-right:5px">{{ row.ORG_NM }}</span>
                 <span style="margin-right:5px;font-weight:bold">{{ row.USERNM }}</span> 
                 <span style="margin-right:5px">{{ row.USERID }}</span>
             </div>
         </div>
+    </div>
+    <div v-if="mailOtp=='Y'" style="display:flex;justify-content:center">
+        <a href="javascript:location.replace('/login')">테스트 사용자 아이디 페이지로 가기</a>
+    </div>
+    <div v-else style="display:flex;justify-content:center;margin-top:30px">
+        <a href="javascript:location.replace('/login?mailOtp=Y')">이메일 OTP 테스트 페이지로 가기</a>
     </div>
 </template>
 
@@ -186,7 +196,7 @@
     .btn_basic:hover { background:var(--second-hover-color) }
 
     .listContainer { 
-        width: 100%;height:300px;padding-top:50px;display:flex;flex-direction:column;align-items:center 
+        width: 100%;height:300px;padding-top:0px;display:flex;flex-direction:column;align-items:center 
     }
 
     .list { 

@@ -6,6 +6,7 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupSidemenu from "/src/components/PopupSidemenu.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
+    import UserProfile from "/src/components/UserProfile.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
 
     const gst = GeneralStore()
@@ -25,7 +26,9 @@
 
     let prevX, prevY
     let keepAliveRef = ref(null)
-    let mediaPopupRef = ref(null), searchText = ref(''), bottomMsgListPopupRef = ref(null)
+    let mediaPopupRef = ref(null), searchText = ref('')
+    let userProfileRef = ref(null), user = ref(null)
+    let bottomMsgListPopupRef = ref(null)
 
     //리얼타임 반영
     let panelRef = ref(null)
@@ -335,6 +338,11 @@
             listSel.value = rs.list.filter(x => x.USERID != null)
             listUnSel.value = rs.list.filter(x => x.USERID == null)
             window.addEventListener('resize', () => { decideSeeMore() })
+            const res1 = await axios.post("/user/getUserInfo")
+            const rs1 = gst.util.chkAxiosCode(res1.data)
+            if (!rs1) return
+            user.value = rs1.data
+            setImgUrl(user.value.PICTURE)
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
             sideClickOnLoop(null, true)
@@ -530,6 +538,19 @@
         mediaPopupRef.value.open("msg", '', '', '', searchText.value.trim())
     }
 
+    function openUserProfile() {
+        userProfileRef.value.open("msg", '', '', '', searchText.value.trim())
+    }   
+    
+    function setImgUrl(pict) {
+        user.value.url = (pict) ? hush.util.getImageBlobUrl(pict.data) : null
+    }
+
+    function handleEvFromUserProfile(userObj) {
+        user.value = userObj
+        panelRef.value.procMainToMsglist("userprofile", userObj)
+    }
+
     async function logout() {
         if (!confirm("로그아웃합니다. 계속 진행할까요?")) return
         gst.auth.logout()
@@ -570,7 +591,8 @@
                 <div class="btn_basic" @click="openMsgSearch()"><span>통합검색으로이동</span></div>
             </div>
             <div style="display:flex;justify-content:flex-end;align-items:center;cursor:pointer">
-                <span style="margin-right:10px;color:whitesmoke">{{ gst.auth.getCookie("usernm") }}</span>
+                <!-- <span style="margin-right:10px;color:whitesmoke">{{ gst.auth.getCookie("usernm") }}</span> -->
+                <span style="margin-right:10px;color:whitesmoke">{{ user ? user.USERNM : '' }}</span>
                 <span style="color:whitesmoke;font-weight:bold" @click="logout">Logout</span>
             </div>
         </div>
@@ -600,7 +622,11 @@
                     </div>
                 </div>
                 <div class="sideBottom">
-                    <div class="menu" style="margin:0 0 16px 0"><img class="menu32" :src="gst.html.getImageUrl('user.png')"></div>
+                    <div class="menu" style="margin:0 0 30px 0" @click="openUserProfile">
+                        <!-- <img class="menu32" :src="gst.html.getImageUrl('user.png')" @click="openUserProfile"> -->
+                        <img v-if="user && user.url" :src="user.url" class="coImg32" style="border-radius:16px">
+                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
+                    </div>
                 </div>
             </div>
             <div class="main">
@@ -621,6 +647,7 @@
     </div>
     <popup-sidemenu :popupOn="popupMenuOn" :popupPos="popupMenuPos" :list="listPopupMenu" :popupData="popupData" @ev-click="sideClick" @ev-leave="popupMenuOn=false"></popup-sidemenu> 
     <media-search ref="mediaPopupRef"></media-search>
+    <user-profile ref="userProfileRef" @evToMain="handleEvFromUserProfile"></user-profile>
     <popup-common ref="bottomMsgListPopupRef" style="display:flex;flex-direction:column">
          <div v-for="(row, idx) in gst.bottomMsgList" >
             <span style="margin:0px">{{ row }}</span>
