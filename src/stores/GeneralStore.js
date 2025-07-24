@@ -274,7 +274,14 @@ const GeneralStore = defineStore('General', () => {
             } else {
                 msg = ex.toString()
             }
-            if (msg.includes('Network Error')) msg += " : 서버 재접속시 자동 복구됩니다."
+            if (msg.includes('Network Error')) {
+                msg = "서버에 접속되지 않고 있습니다. "
+                if (route.fullPath.includes('/login')) {                    
+                    msg += "잠시후 다시 시도해 주시기 바랍니다."
+                } else {
+                    msg += "서버 재접속시 자동 복구됩니다."
+                }
+            }
             util.setToast("")
             util.setSnack(msg, sec)
         },
