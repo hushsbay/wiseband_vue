@@ -23,7 +23,9 @@
     let mounting = true, onGoingGetList = false
     
     async function procMainToMsglist(kind, obj) { //단순 전달
-        await msglistRef.value.procMainToMsglist(kind, obj)
+        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
+            await msglistRef.value.procMainToMsglist(kind, obj)
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징

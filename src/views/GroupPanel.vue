@@ -148,11 +148,11 @@
 <template>
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
-            <div class="chan_side_top_left"></div>
+            <div class="chan_side_top_left">그룹</div>
             <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px">
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
-                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="내그룹 만들기" @click="newGroup">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="그룹만들기" @click="newGroup">
                 </div>
             </div>
         </div>
@@ -170,15 +170,25 @@
                 </div>
             </div>
         </div>
+        <div v-if="listGroup.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
+            <div style="width:100%;word-break:break-all;color:white">
+                현재 그룹 데이터가 없습니다.<br><br>
+                패널 우측상단 '그룹만들기' 버튼으로<br>
+                사용하시기 바랍니다.
+            </div>
+        </div>
     </div>
     <resizer nm="group" @ev-from-resizer="handleFromResizer"></resizer>
-    <div id="chan_body" :style="{ width: chanMainWidth }">
+    <div v-if="listGroup.length > 0 || !$route.fullPath.endsWith('/main/group')" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive>
                 <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromMsgList"/>
             </keep-alive>
         </router-view>
     </div> 
+    <div v-else id="chan_body" :style="{ width: chanMainWidth }" style="display:flex;justify-content:center;align-items:center">
+        <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
+    </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
 </template>
 
@@ -191,7 +201,7 @@
         width:100%;height:50px;display:flex;justify-content:space-between;
     }
     .chan_side_top_left {
-        width:50%;height:100%;padding-left:10px;display:flex;align-items:center;
+        width:50%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
     }
     .chan_side_top_right {
         width:50%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center

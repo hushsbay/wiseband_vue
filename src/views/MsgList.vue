@@ -24,7 +24,7 @@
 
     const MAX_PICTURE_CNT = 4, adminShowID = ref(false)
     const g_userid = gst.auth.getCookie("userid")
-    let mounting = true, appType
+    let mounting = true, appType //appType은 거의 패널타입인데 msglist도 들어 있어 panelType으로 정의하지 않음 (WS/GS 구분은 chanType을 사용)
     
     let widthChanCenter = ref('calc(100% - 20px)')
     let widthChanRight = ref('0px') //MsgList가 부모나 자식상태 모두 기본적으로 가지고 있을 넓이
@@ -37,7 +37,7 @@
         
     let subTitle = '', sideMenu, chanId, msgidInChan
     let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
-    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([])
+    let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([]), chanType = ref('WS')
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
@@ -560,6 +560,7 @@
                     if (appType == "home" || appType == "dm") {
                         evToPanel({ kind: "selectRow", chanid: chanId })
                     } else if (appType == "activity" || appType == "later" || appType == "fixed") {
+                        debugger
                         evToPanel({ kind: "selectRow", msgid: msgidInChan })
                     }
                 }
@@ -687,6 +688,7 @@
             chanMasterId.value = chanmstParam.MASTERID
             chanMasterNm.value = chanmstParam.MASTERNM
             chanImg.value = gst.util.getChanImg(chanmstParam.TYP, chanmstParam.STATE)
+            chanType.value = chanmstParam.TYP
             chanmemUnder.value = [] //예) 11명 멤버인데 4명만 보여주기. 대신에 <div v-for="idx in MAX_PICTURE_CNT" chandtl[idx-1]로 사용가능한데 null 발생해 일단 대안으로 사용중
             chanmemFullExceptMe.value = []
             const len = chandtlParam.length
@@ -1547,7 +1549,7 @@
     async function uploadLink(kind, text) {
         try {
             if (appType == "dm" && showUserSearch.value) {
-                gst.util.setSnack("Dm방 새로 만들 때에는 텍스트만 전송 가능합니다.")
+                gst.util.setSnack("DM방 새로 만들 때에는 텍스트만 전송 가능합니다.")
                 return
             }
             popupRefKind.value = kind
@@ -1943,7 +1945,7 @@
     async function uploadFile(e) {
         try {
             if (appType == "dm" && showUserSearch.value) {
-                gst.util.setSnack("Dm방 새로 만들 때에는 텍스트만 전송 가능합니다.")
+                gst.util.setSnack("DM방 새로 만들 때에는 텍스트만 전송 가능합니다.")
                 return
             }            
             const files = e.target.files
@@ -2408,7 +2410,7 @@
                     <span v-if="adminShowID" style="margin-right:5px">{{ chanId }}</span>
                     <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
                     <div v-else style="width:100%;display:flex;align-items:center">                    
-                        <div v-if="appType=='dm'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
+                        <div v-if="chanType=='GS'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
                         <div v-else class="coDotDot"><span>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span></div>
                     </div>
                 </div>

@@ -17,7 +17,9 @@
     const emits = defineEmits(["ev-click"])
 
     async function procMainToMsglist(kind, obj) { //단순 전달
-        await msglistRef.value.procMainToMsglist(kind, obj)
+        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
+            await msglistRef.value.procMainToMsglist(kind, obj)
+        }
     }
 
     async function procMainToPanel(kind, obj) {
@@ -454,7 +456,7 @@
         </div>        
     </div>
     <resizer nm="chan" @ev-from-resizer="handleFromResizer"></resizer>
-    <div v-if="listHome.length > 0" id="chan_body" :style="{ minWidth: chanMainWidth, maxWidth: chanMainWidth }">
+    <div v-if="listHome.length > 0 && !$route.fullPath.endsWith('/main/home')" id="chan_body" :style="{ minWidth: chanMainWidth, maxWidth: chanMainWidth }">
         <router-view v-slot="{ Component }">
             <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromMsgList"/>
