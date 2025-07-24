@@ -406,6 +406,9 @@
                         </div>
                     </div>
                 </div>
+                <div style="display:flex;align-items:center;color:lightgray;margin-right:3px;color:white">
+                    {{ row.MSGID }}
+                </div>
             </div>
             <div v-if="listActivity.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
                 <div style="width:100%;word-break:break-all;color:white">
