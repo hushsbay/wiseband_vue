@@ -922,7 +922,6 @@
                 item.reply = rs.reply
                 item.replyinfo = rs.replyinfo
                 gst.util.handleMsgSub(item)
-                debugger
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)

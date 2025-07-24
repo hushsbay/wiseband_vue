@@ -72,7 +72,8 @@
                 } else {
                     //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
                 }
-                observerBottomScroll()        
+                observerBottomScroll()       
+                await procRows() 
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -92,7 +93,16 @@
         if (afterScrolled.value == false) afterScrolled.value = true //false 조건에 유의 (아니면 마지막 hide 안됨)
     }
 
-    async function getList(refresh) {
+    async function procRows() {
+        if (listFixed.value.length > 0) {
+            const row = listFixed.value[listFixed.value.length - 1]
+            await getList(null, row.UDT) //가장 오래된 메시지 일시로 패널내 모든 데이터를 읽어와서 기존과 비교하고자 함
+        } else { 
+            await getList(true) //await getList(null, hush.cons.cdtAtFirst)
+        }
+    }
+
+    async function getList(refresh, oldestMsgDt) {
         try {
             if (onGoingGetList) return
             onGoingGetList = true
@@ -101,27 +111,55 @@
                 savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
             const prevMsgMstCdt = savPrevMsgMstCdt
-            const res = await axios.post("/menu/qryPanel", { kind: "fixed", prevMsgMstCdt: prevMsgMstCdt })
+            const res = await axios.post("/menu/qryPanel", { kind: "fixed", prevMsgMstCdt: prevMsgMstCdt, oldestMsgDt: oldestMsgDt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             if (!rs || rs.list.length == 0) {
                 onGoingGetList = false
                 afterScrolled.value = null
                 return
             }
-            afterScrolled.value = false
-            for (let i = 0; i < rs.list.length; i++) {
-                const row = rs.list[i]
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                listFixed.value.push(row)
-                if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
+            if (!oldestMsgDt) {
+                afterScrolled.value = false
+                for (let i = 0; i < rs.list.length; i++) {
+                    const row = rs.list[i]
+                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                    listFixed.value.push(row)
+                    if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
+                }
+                await nextTick()
+                if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
+                    scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
+                } else if (prevMsgMstCdt) {
+                    //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
+                }
+                getCount()
+            } else {
+                let len = listFixed.value.length //기존 데이터
+                const arr = rs.list //새로 읽어온 데이터                
+                for (let i = 0; i < len; i++) {
+                    const row = listFixed.value[i]
+                    if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
+                    const idx = arr.findIndex((item) => item.MSGID == row.MSGID)
+                    if (idx > -1) {
+                        const item = arr[idx]    
+                        if (row.BODYTEXT != item.BODYTEXT) {
+                            setRowPicture(item)
+                            listFixed.value[i] = item //MsgList에 반영되어야 함 OK
+                        }
+                        item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
+                    } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
+                        listFixed.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
+                    }
+                }
+                len = arr.length
+                for (let i = len - 1; i >= 0; i--) {
+                    const item = arr[i]
+                    if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
+                        setRowPicture(item)
+                        listFixed.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
+                    }
+                }
             }
-            await nextTick()
-            if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
-                scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
-            } else if (prevMsgMstCdt) {
-                //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
-            }
-            getCount()
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -284,7 +322,7 @@
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;color:lightgray">
                         <div v-if="row.TYP=='GS'" style="display:flex;align-items:center">
-                            {{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}
+                            <span>[DM] {{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}</span>
                         </div>
                         <div v-else style="display:flex;align-items:center">
                             <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">

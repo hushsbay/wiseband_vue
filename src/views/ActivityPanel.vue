@@ -74,6 +74,7 @@
                     //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
                 }
                 observerBottomScroll()
+                await procRows()
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -108,7 +109,16 @@
         getList(true)
     }
 
-    async function getList(refresh) {
+    async function procRows() {
+        if (listActivity.value.length > 0) {
+            const row = listActivity.value[listActivity.value.length - 1]
+            await getList(null, row.DT) //가장 오래된 메시지 일시로 패널내 모든 데이터를 읽어와서 기존과 비교하고자 함
+        } else { 
+            await getList(true) //await getList(null, hush.cons.cdtAtFirst)
+        }
+    }
+
+    async function getList(refresh, oldestMsgDt) {
         try {
             if (onGoingGetList) return
             onGoingGetList = true
@@ -118,39 +128,93 @@
             }
             const prevMsgMstCdt = savPrevMsgMstCdt
             const yn = notyetChk.value ? "Y" : "N"
-            const res = await axios.post("/menu/qryActivity", { kind: kindActivity.value, notyet: yn, prevMsgMstCdt: prevMsgMstCdt })
+            const res = await axios.post("/menu/qryActivity", { kind: kindActivity.value, notyet: yn, prevMsgMstCdt: prevMsgMstCdt, oldestMsgDt: oldestMsgDt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
             if (!rs || rs.list.length == 0) {
                 onGoingGetList = false
                 afterScrolled.value = null
                 return
             }
-            afterScrolled.value = false
-            for (let i = 0; i < rs.list.length; i++) {
-                const row = rs.list[i]
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                if (row.TITLE == "vip") {
-                    row.title = "VIP"
-                } else if (row.TITLE == "mention") {
-                    row.title = "맨션"
-                } else if (row.TITLE == "thread") {
-                    row.title = "스레드"
-                } else if (row.TITLE == "react") {
-                    row.title = "반응"
+            if (!oldestMsgDt) {
+                afterScrolled.value = false
+                for (let i = 0; i < rs.list.length; i++) {
+                    const row = rs.list[i]
+                    setRowPicture(row)
+                    listActivity.value.push(row)
+                    if (row.DT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.DT
                 }
-                listActivity.value.push(row)
-                if (row.DT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.DT
-            }
-            await nextTick()
-            if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
-                scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
-            } else if (prevMsgMstCdt) {
-                //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
+                await nextTick()
+                if (prevMsgMstCdt == hush.cons.cdtAtLast) { //맨 처음엔 최신인 맨 위로 스크롤 이동
+                    scrollArea.value.scrollTo({ top: 0 }) //{ top: scrollArea.value.scrollHeight }
+                } else if (prevMsgMstCdt) {
+                    //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
+                }
+            } else {
+                let len = listActivity.value.length //기존 데이터
+                const arr = rs.list //새로 읽어온 데이터                
+                for (let i = 0; i < len; i++) {
+                    const row = listActivity.value[i]
+                    if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
+                    const idx = arr.findIndex((item) => item.MSGID == row.MSGID)
+                    if (idx > -1) {
+                        const item = arr[idx]    
+                        if (row.TITLE == "react") { //예) done을 제거하면 msgdtl에 남아 있지 않아서 CHKDT로 비교 불가
+                            let updated = false
+                            if ((row.msgdtl && !item.msgdtl) || (!row.msgdtl && item.msgdtl)) {
+                                updated = true
+                            } else if (row.msgdtl.length != item.msgdtl.length) {
+                                updated = true
+                            } else {
+                                for (let i = 0; i < row.msgdtl.length; i++) {
+                                    const row1 = row.msgdtl[i]
+                                    const item1 = item.msgdtl[i]
+                                    if (row1.ID != item1.ID || row1.KIND != item1.KIND) {
+                                        updated = true
+                                        break
+                                    }
+                                }
+                            }
+                            if (updated) {
+                                setRowPicture(item)
+                                listActivity.value[i] = item //MsgList에 반영되어야 함 OK
+                            }                       
+                        } else {              
+                            if (row.CHKDT != item.CHKDT || row.BODYTEXT != item.BODYTEXT || row.LASTMSG != item.LASTMSG) {
+                                setRowPicture(item)
+                                listActivity.value[i] = item //MsgList에 반영되어야 함 OK
+                            }
+                        }
+                        item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
+                    } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
+                        listActivity.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
+                    }
+                }
+                len = arr.length
+                for (let i = len - 1; i >= 0; i--) {
+                    const item = arr[i]
+                    if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
+                        setRowPicture(item)
+                        listActivity.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
+                    }
+                }
             }
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
+        }
+    }
+
+    function setRowPicture(row) {
+        row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+        if (row.TITLE == "vip") {
+            row.title = "VIP"
+        } else if (row.TITLE == "mention") {
+            row.title = "맨션"
+        } else if (row.TITLE == "thread") {
+            row.title = "스레드"
+        } else if (row.TITLE == "react") {
+            row.title = "반응"
         }
     }
 
@@ -295,14 +359,24 @@
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
                 @click="activityClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
-                    <div style="display:flex;align-items:center;color:lightgray">
+                    <!-- <div style="display:flex;align-items:center;color:lightgray">
                         <div style="display:flex;align-items:center">
                             <span style="margin-left:3px">[{{ row.title }}]</span>
                             <img class="coImg14" style="margin-left:3px" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
                             <span style="margin-left:3px">{{ row.CHANNM }}</span>                            
                         </div>
+                    </div> -->
+                    <div style="width:calc(100% - 35px);display:flex;align-items:center;color:lightgray" class="coDotDot">
+			            <span style="margin:0 3px">[{{ row.title }}]</span>
+                        <div v-if="row.TYP=='GS'" style="display:flex;align-items:center" class="coDotDot">
+                            <span>[DM] {{ row.memnm.join(", ") }}{{ row.memcnt > hush.cons.picCnt ? '..' : '' }}</span>
+                        </div>
+                        <div v-else style="display:flex;align-items:center">
+                            <img class="coImg14" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
+                            <span style="margin-left:3px">{{ row.CHANNM }}</span>
+                        </div>
                     </div>
-                    <div style="display:flex;align-items:center;color:lightgray">
+                    <div style="min-width:30px;display:flex;align-items:center;color:lightgray">
                         {{ row.REPLYTO ? '댓글' : '' }}
                     </div>
                 </div>

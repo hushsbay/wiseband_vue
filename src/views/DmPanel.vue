@@ -140,7 +140,7 @@
             const row = listDm.value[listDm.value.length - 1]
             await getList(null, row.LASTMSGDT) //가장 오래된 메시지 일시로 패널내 모든 데이터를 읽어와서 기존과 비교하고자 함
         } else { 
-            await getList(null, hush.cons.cdtAtFirst)
+            await getList(true) //await getList(null, hush.cons.cdtAtFirst)
         }
     }
     
@@ -178,7 +178,7 @@
                     //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
                 }
             } else {
-                let len = listDm.value.length
+                let len = listDm.value.length //기존 데이터
                 const arr = rs.list //새로 읽어온 데이터                
                 for (let i = 0; i < len; i++) {
                     const row = listDm.value[i]
@@ -471,6 +471,7 @@
                         <span :class="row.mynotyetCnt == 0 ? '' : 'coMyNotYet'">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
                         <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
                         <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
+                        <span style="margin-left:5px">{{ row.REPLYTO ? '댓글' : '' }}</span>
                         <span style="margin-left:5px">{{ hush.util.displayDt(row.LASTMSGDT, false) }}</span>
                     </div>
                 </div>
