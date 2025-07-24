@@ -356,8 +356,8 @@ const GeneralStore = defineStore('General', () => {
             } else { //사이드 메뉴 같은 경우 : 사용자가 다른 사이드 메뉴를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 바뀐 경우
                 routedToSamePanelFromMsgList.value = false
             }
-            //console.log("## routeFrom: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
-            //console.log("## routeTo: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(to.query))
+            console.log("## routeFrom: " + from.path + " : " + JSON.stringify(from.params) + " : " + JSON.stringify(from.query))
+            console.log("## routeTo: " + to.path + " : " + JSON.stringify(to.params) + " : " + JSON.stringify(to.query))
         },
 
         goMsgList : async function(nm, params, refresh) {

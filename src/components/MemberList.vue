@@ -140,9 +140,7 @@
                     const idx = gst.util.getKeyIndex(memberRow, row.USERID)
                     if (idx > -1) memberlist.value[idx].chk = true
                 }
-                if (brr.length == 1) {
-                    gst.util.scrollIntoView(memberRow, brr[0].USERID)
-                }
+                if (brr.length > 0) gst.util.scrollIntoView(memberRow, brr[0].USERID)
                 if (appType == "dm") evToPanel("update")
                 evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
             }

@@ -500,7 +500,7 @@
         </div>
     </div>
     <resizer nm="dm" @ev-from-resizer="handleFromResizer"></resizer>
-    <div v-if="listDm.length > 0" id="chan_body" :style="{ width: chanMainWidth }"> <!--<component ref="msglistRef" -->
+    <div v-if="listDm.length > 0 || $route.fullPath.includes('dm_body_new')" id="chan_body" :style="{ width: chanMainWidth }"> <!--<component ref="msglistRef" -->
         <router-view v-slot="{ Component }">
             <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" ref="msglistRef" @ev-to-panel="handleEvFromMsgList" />

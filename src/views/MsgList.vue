@@ -487,7 +487,7 @@
             if (hasProp()) {
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
-            } else {
+            } else {                
                 if (route.fullPath == "/main/dm/dm_body_new") {
                     showUserSearch.value = true
                 } else {
@@ -536,7 +536,7 @@
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
         try {
-            if (!route.fullPath.includes("_body")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
+            if (!route.fullPath.includes("_body/")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
             console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
             gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
             if (mounting) {
@@ -1383,7 +1383,7 @@
             if (pastedData.length == 0) return
             if (pastedData[0].type.includes("image")) { //예) image/png
                 if (appType == "dm" && showUserSearch.value) {
-                    gst.util.setSnack("Dm방 새로 만들 때에는 텍스트만 전송 가능합니다.")
+                    gst.util.setSnack("DM방 새로 만들 때에는 텍스트만 전송 가능합니다.")
                     return
                 }
                 if (editMsgId.value) {
@@ -1511,13 +1511,14 @@
                 const rs = await getMsg({ msgid: editMsgId.value }, true)
                 if (rs == null) return
                 refreshWithGetMsg(rs, editMsgId.value)
-            }            
+            }    
             if (appType == "later" || appType == "fixed" || appType == "activity") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") {
                     evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
                 }
             } else if (appType == "dm") {
                 if (showUserSearch.value) { //DM방 새로 만들기
+                    showUserSearch.value = false
                     dmChanIdAlready.value = ""
                     userAdded.value = []
                     dmChanIdAlready.value = false                

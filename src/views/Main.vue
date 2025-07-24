@@ -182,9 +182,11 @@
                     }
                 }
                 if (arrForChanActivted.length > 0) {
-                    await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async/await 동작함 (동기화 가능)
-                    //위 실행하여 MsgList.vue까지 가서 처리후 console.log 찍고 여기 아래 console.log 찍으면 순서바뀌지 않고 제대로 찍힘
-                    //따라서, sessionStorage.logdt는 그냥 여기 변수로 logdt로 잡고 sessionStorage.realtimeJobDone은 제거해도 되나 일단 막아두기만 함
+                    if (panelRef.value && panelRef.value.procMainToMsglist) {
+                        await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async/await 동작함 (동기화 가능)
+                        //위 실행하여 MsgList.vue까지 가서 처리후 console.log 찍고 여기 아래 console.log 찍으면 순서바뀌지 않고 제대로 찍힘
+                        //따라서, sessionStorage.logdt는 그냥 여기 변수로 logdt로 잡고 sessionStorage.realtimeJobDone은 제거해도 되나 일단 막아두기만 함
+                    }
                 }
                 logdt = rs.data.logdt
             }
@@ -548,7 +550,7 @@
 
     function handleEvFromUserProfile(userObj) {
         user.value = userObj
-        panelRef.value.procMainToMsglist("userprofile", userObj)
+        if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("userprofile", userObj)
     }
 
     async function logout() {

@@ -18,7 +18,7 @@ if (location.href.startsWith("http://localhost")) {
     hostnameStr = "hushsbay.com"
     domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
 }
-const MAX_LINES = 30
+const MAX_LINES = 20
 
 const app = createApp(App) 
 app.config.globalProperties.axios = axios //global로 설정했음에도 각 .vue마다 axios import하지 않고는 axios or this.axios로 호출시 오류 발생!?
