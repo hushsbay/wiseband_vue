@@ -40,7 +40,7 @@
     let notyetChk = ref(false), searchWord = ref('') //msglistRef = ref(null), 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all'), msglistRef = ref(null)
-    let newRoomJustCreated = ref(false)
+    //let newRoomJustCreated = ref(false)
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
 
@@ -401,7 +401,7 @@
     async function refreshPanel() {
         await getList(true) //true시 listDm이 초기화되었다 다시 추가되므로 MsgList의 onMounted()가 실행됨을 유의
         dmClickOnLoop(true)
-        newRoomJustCreated.value = false
+        //newRoomJustCreated.value = false
     }
 
     async function handleEvFromMsgList(param) {
@@ -447,7 +447,7 @@
                 }
             }
         } else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
-            newRoomJustCreated.value = true
+            procRows() //newRoomJustCreated.value = true
         }
     }
 
@@ -488,10 +488,10 @@
                 </div>
             </div>
         </div>
-        <div v-if="newRoomJustCreated" @click="refreshPanel" style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:yellow;border-bottom:1px solid lightgray;cursor:pointer">
+        <!-- <div v-if="newRoomJustCreated" @click="refreshPanel" style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:yellow;border-bottom:1px solid lightgray;cursor:pointer">
             <span style="margin-right:10px;font-weight:bold">새 DM방 생성됨</span>
-        </div>
-        <div v-else style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:whitesmoke;border-bottom:1px solid lightgray;cursor:pointer">
+        </div> -->
+        <div style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:whitesmoke;border-bottom:1px solid lightgray;cursor:pointer">
             <span style="margin-right:10px" @click="newDm()">신규</span>
             <span style="margin-right:10px">|</span>
             <span style="margin-right:10px" @click="newDm(true)">신규(관리용)</span>

@@ -39,7 +39,7 @@
     //3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
 
     let keepAliveRef = ref(null), listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null), msglistRef = ref(null), newRoomJustCreated = ref(false) //newRoomJustCreated 문제있음 - 개선방안 고민하기
+    let memberlistRef = ref(null), msglistRef = ref(null)//, newRoomJustCreated = ref(false) //newRoomJustCreated 문제있음 - 개선방안 고민하기
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -379,7 +379,7 @@
     async function refreshPanel() {
         await getList()
         chanClickOnLoop(true)
-        newRoomJustCreated.value = false
+        //newRoomJustCreated.value = false
     }
 
     async function handleEvFromMsgList(param) {
@@ -392,8 +392,8 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 row.mynotyetCnt = rs.data.kindCnt
-            //} else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
-            //    newRoomJustCreated.value = true
+            } else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
+                procRows() //    newRoomJustCreated.value = true
             }
         } else if (param.kind == "refreshPanel") {  //방 나가기,삭제에서 사용
             await refreshPanel()
@@ -426,11 +426,11 @@
                     <option value="all">모든 채널</option>
                 </select>
             </div>
-            <div v-if="newRoomJustCreated" @click="refreshPanel" class="chan_side_top_right"
+            <!-- <div v-if="newRoomJustCreated" @click="refreshPanel" class="chan_side_top_right"
                 style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:yellow;cursor:pointer">
                 <span style="margin-right:10px;font-weight:bold">새 채널 생성됨</span>
-            </div>
-            <div v-else class="chan_side_top_right">
+            </div> -->
+            <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px" @click="refreshPanel">
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침">
                 </div>
