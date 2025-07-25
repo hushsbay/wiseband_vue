@@ -157,9 +157,37 @@
             const prevMsgMstCdt = savPrevMsgMstCdt
             const res = await axios.post("/menu/qryDm", { kind: kindDm.value, search: search, prevMsgMstCdt: prevMsgMstCdt, oldestMsgDt: oldestMsgDt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
-            if (!rs || rs.list.length == 0) {
+            if (!rs) {
                 onGoingGetList = false
                 afterScrolled.value = null
+                return
+            }
+            if (rs.list.length == 0) {
+                onGoingGetList = false
+                afterScrolled.value = null
+                if (oldestMsgDt) { //패널에 한개 남았을 때 DT보다 큰걸 조회하면 length가 0로 나와서 여기로 들어오는데 key1,key2로 찾아 있으면 업데이트 없으면 제거하면 됨
+                    for (let i = 0; i < listDm.value.length; i++) {
+                        let row = listDm.value[i]
+                        const res = await axios.post("/menu/qryDm", { kind: kindDm.value, search: search, key: row.CHANID })
+                        const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
+                        if (rs) {
+                            if (rs.list.length == 0) {
+                                row.checkedForDelete = true
+                            } else {
+                                listDm.value[i] = rs.list[0] //하나만 존재
+                                row = listDm.value[i]
+                                setRowPicture(row)
+                            }
+                        }
+                    }
+                    const len = listDm.value.length
+                    for (let i = len - 1; i >= 0; i--) {
+                        const row = listDm.value[i]
+                        if (row.checkedForDelete) {
+                            listDm.value.splice(i, 1)
+                        }
+                    }
+                }
                 return
             }
             if (!oldestMsgDt) {
@@ -182,7 +210,7 @@
                 const arr = rs.list //새로 읽어온 데이터                
                 for (let i = 0; i < len; i++) {
                     const row = listDm.value[i]
-                    if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
+                    //if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
                     const idx = arr.findIndex((item) => item.CHANID == row.CHANID)
                     if (idx > -1) {
                         const item = arr[idx]
@@ -192,7 +220,16 @@
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        listDm.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
+                        //listDm.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
+                        row.checkedForDelete = true
+                    }
+                    
+                }
+                len = listDm.value.length
+                for (let i = len - 1; i >= 0; i--) {
+                    const row = listDm.value[i]
+                    if (row.checkedForDelete) {
+                        listDm.value.splice(i, 1)
                     }
                 }
                 len = arr.length

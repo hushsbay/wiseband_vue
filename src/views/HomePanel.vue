@@ -124,7 +124,7 @@
                 const arr = rs.list //새로 읽어온 데이터   
                 for (let i = 0; i < len; i++) {
                     const row = listHome.value[i]
-                    if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
+                    //if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
                     const idx = arr.findIndex((item) => {
                         return (item.GR_ID == row.GR_ID && item.CHANID == row.CHANID)
                     })
@@ -136,20 +136,34 @@
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        listHome.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
+                        //listHome.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
+                        row.checkedForDelete = true
                     }
                 }
-                chanClickOnLoop(true)
-                let newFound = false
-                len = arr.length
-                for (let i = len - 1; i >= 0; i--) { //dm에서는 순서가 의미있으나 여기서는 refreshPanel()이므로 의미없음
-                    const item = arr[i]
-                    if (!item.checkedForUpdate) {
-                        newFound = true
+                let deleteFound = false
+                len = listHome.value.length
+                for (let i = len - 1; i >= 0; i--) {
+                    const row = listHome.value[i]
+                    if (row.checkedForDelete) {
+                        deleteFound = true
                         break
                     }
                 }
-                if (newFound) refreshPanel() //dm처럼 배열항목을 추가하면 베스트지만 트리구조로 복잡하게 얽혀 있어 단순하게 전체 새로고침
+                if (deleteFound) {
+                    refreshPanel() //dm처럼 배열항목을 삭제하면 베스트지만 트리구조로 복잡하게 얽혀 있어 단순하게 전체 새로고침
+                } else {
+                    chanClickOnLoop(true)
+                    let newFound = false
+                    len = arr.length
+                    for (let i = len - 1; i >= 0; i--) { //dm에서는 순서가 의미있으나 여기서는 refreshPanel()이므로 의미없음
+                        const item = arr[i]
+                        if (!item.checkedForUpdate) {
+                            newFound = true
+                            break
+                        }
+                    }
+                    if (newFound) refreshPanel() //dm처럼 배열항목을 추가하면 베스트지만 트리구조로 복잡하게 얽혀 있어 단순하게 전체 새로고침
+                }
             }
         } catch (ex) {
             gst.util.showEx(ex, true)

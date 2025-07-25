@@ -226,6 +226,7 @@
                             }
                             deleteFromNewAdded(row)
                         }
+                        debugger
                         if (appType == "home") {
                             panelUpdateNotyetCnt = true
                         } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
@@ -1523,7 +1524,7 @@
                     dmChanIdAlready.value = ""
                     userAdded.value = []
                     dmChanIdAlready.value = false                
-                    $$evToPanel({ kind: "refreshPanel" })
+                    evToPanel({ kind: "refreshPanel" })
                 } else {
                     //$$evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType })
                 }

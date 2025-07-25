@@ -136,9 +136,38 @@
             const yn = notyetChk.value ? "Y" : "N"
             const res = await axios.post("/menu/qryActivity", { kind: kindActivity.value, notyet: yn, prevMsgMstCdt: prevMsgMstCdt, oldestMsgDt: oldestMsgDt })
             const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
-            if (!rs || rs.list.length == 0) {
+            if (!rs) {
                 onGoingGetList = false
                 afterScrolled.value = null
+                return
+            }
+            if (rs.list.length == 0) {
+                onGoingGetList = false
+                afterScrolled.value = null
+                if (oldestMsgDt) { //패널에 한개 남았을 때 DT보다 큰걸 조회하면 length가 0로 나와서 여기로 들어오는데 key1,key2로 찾아 있으면 업데이트 없으면 제거하면 됨
+                    for (let i = 0; i < listActivity.value.length; i++) {
+                        let row = listActivity.value[i]
+                        const key1 = row.TITLE == 'vip' ? row.CHANID : row.MSGID
+                        const res = await axios.post("/menu/qryActivity", { kind: kindActivity.value, notyet: yn, key1: key1, key2: row.TITLE })
+                        const rs = gst.util.chkAxiosCode(res.data, true) //NOT_FOUND일 경우도 오류메시지 표시하지 않기
+                        if (rs) {
+                            if (rs.list.length == 0) {
+                                row.checkedForDelete = true
+                            } else {
+                                listActivity.value[i] = rs.list[0] //하나만 존재
+                                row = listActivity.value[i]
+                                setRowPicture(row)
+                            }
+                        }
+                    }
+                    const len = listActivity.value.length
+                    for (let i = len - 1; i >= 0; i--) {
+                        const row = listActivity.value[i]
+                        if (row.checkedForDelete) {
+                            listActivity.value.splice(i, 1)
+                        }
+                    }
+                }
                 return
             }
             if (!oldestMsgDt) {
@@ -157,13 +186,12 @@
                 }
             } else {
                 let len = listActivity.value.length //기존 데이터
-                const arr = rs.list //새로 읽어온 데이터                
+                const arr = rs.list //새로 읽어온 데이터 
                 for (let i = 0; i < len; i++) {
                     const row = listActivity.value[i]
-                    if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
-                    const idx = arr.findIndex((item) => item.MSGID == row.MSGID)
+                    const idx = arr.findIndex((item) => item.MSGID == row.MSGID && item.TITLE == row.TITLE)
                     if (idx > -1) {
-                        const item = arr[idx]    
+                        const item = arr[idx]   
                         if (row.TITLE == "react") { //예) done을 제거하면 msgdtl에 남아 있지 않아서 CHKDT로 비교 불가
                             let updated = false
                             if ((row.msgdtl && !item.msgdtl) || (!row.msgdtl && item.msgdtl)) {
@@ -184,23 +212,30 @@
                                 setRowPicture(item)
                                 listActivity.value[i] = item //MsgList에 반영되어야 함 OK
                             }                       
-                        } else {              
+                        } else {
                             if (row.CHKDT != item.CHKDT || row.BODYTEXT != item.BODYTEXT || row.LASTMSG != item.LASTMSG) {
                                 setRowPicture(item)
                                 listActivity.value[i] = item //MsgList에 반영되어야 함 OK
                             }
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
-                    } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        listActivity.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
+                    } else { //구배열의 항목이 새배열에 없으면 삭제해야 하는 것임
+                        row.checkedForDelete = true
+                    }
+                }
+                len = listActivity.value.length
+                for (let i = len - 1; i >= 0; i--) {
+                    const row = listActivity.value[i]
+                    if (row.checkedForDelete) {
+                        listActivity.value.splice(i, 1)
                     }
                 }
                 len = arr.length
                 for (let i = len - 1; i >= 0; i--) {
                     const item = arr[i]
-                    if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
+                    if (!item.checkedForUpdate) { //신규로 추가된 것인데 배열의 맨위로 넣으면 됨
                         setRowPicture(item)
-                        listActivity.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
+                        listActivity.value.unshift(item) //최초 생성된 것인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
                     }
                 }
             }
@@ -363,7 +398,7 @@
             </div>
         </div>
         <div class="chan_side_main coScrollable" id="chan_side_main" ref="scrollArea" @scroll="onScrolling">
-            <div v-for="(row, idx) in listActivity" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx"
+            <div v-for="(row, idx) in listActivity" :key="row.MSGID+row.TITLE" :ref="(ele) => { msgRow[row.MSGID+row.TITLE] = ele }" :keyidx="idx"
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
                 @click="activityClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
@@ -414,9 +449,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- <div style="display:flex;align-items:center;color:lightgray;margin-right:3px;color:white">
-                    {{ row.MSGID }} {{ row.SUBKIND }} 
-                </div> -->
             </div>
             <div v-if="listActivity.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
                 <div style="width:100%;word-break:break-all;color:white">
