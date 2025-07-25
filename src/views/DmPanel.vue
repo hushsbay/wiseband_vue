@@ -372,10 +372,10 @@
             dmClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "refreshRow") {
             if (param.appType == "dm") await refreshRow(param.chanid, true)
-        } else if (param.kind == "delete") {
-            const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
-            if (idx == -1) return
-            listDm.value.splice(idx, 1)
+        // } else if (param.kind == "delete") {
+        //     const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
+        //     if (idx == -1) return
+        //     listDm.value.splice(idx, 1)
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
             const row = listDm.value.find((item) => item.CHANID == param.chanid)
             if (!row) return

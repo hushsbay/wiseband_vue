@@ -173,6 +173,12 @@
                             } else {
                                 await panelRef.value.procMainToPanel('refreshRow', row)
                             }
+                        } else if (gst.selSideMenu == "mnuActivity" || gst.selSideMenu == "mnuLater" || gst.selSideMenu == "mnuFixed") { //메시지 단위로 
+                            if (row.TYP == 'group') {
+                                //skip
+                            } else {
+                                await panelRef.value.procMainToPanel('procRows')
+                            }
                         }
                         if (row.TYP == 'msg' && row.CUD == "C" && gst.chanIdActivted != '') {
                             if (realShown != 'Y' && row.USERID != g_userid) {

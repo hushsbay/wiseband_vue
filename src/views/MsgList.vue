@@ -109,11 +109,11 @@
             //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
             //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
             let cdtAtFirst = hush.cons.cdtAtLast, msgidAtFirst = '', cdtAtFirstForChild = hush.cons.cdtAtLast, msgidAtFirstForChild = ''
-            let panelUpdateNotyetCnt = false, panelRefreshRow = false
+            let panelUpdateNotyetCnt = false, panelRefreshRow = false, panelProcAll = false
             for (let i = 0; i < len; i++) {
                 const row = arr[i] //원칙직으로 스레드에서는 리얼타임 반영을 위한 polling이 없고 row.msgItem.data에는 부모메시지 정보만 담는 것으로 되어 있음 (스레드로는 아이디만 넘겨서 서버 호출)
                 if (row.CHANID == chanId) {
-                    if (row.SUBKINDD == 'readall') { //서버 chanmsg>updateAllWithNewKind() 참조
+                    if (row.SUBKIND == 'readall') { //서버 chanmsg>updateAllWithNewKind() 참조
                         newParentAdded.value = []
                         newChildAdded.value = []
                         const len = msglist.value.length                        
@@ -124,7 +124,9 @@
                         }
                         if (appType == "home" || appType == "dm") {
                             panelUpdateNotyetCnt = true
-                        }
+                        } else if (appType == "activity") {
+                            panelProcAll = true
+                        } //나머지는 여기서 처리할 필요없음
                     } else if (row.TYP == "read" || row.TYP == "react" || row.TYP == "user") {
                         const parentMsgid = (row.REPLYTO == "") ? row.MSGID : row.REPLYTO
                         const idx = gst.util.getKeyIndex(msgRow, parentMsgid)
@@ -145,15 +147,15 @@
                             if (appType == "home" || appType == "dm") { //DM패널에 안읽음 체크시 처리하는 것은 아래 evToPanel({ kind: "updateNotyetCnt", chanid: chanId })에서 전달받아 패널에서 처리
                                 panelUpdateNotyetCnt = true
                             } else if (appType == "activity") { //패널에 안읽음 체크시 처리하는 것은 패널에서 전달받아 처리
-                                evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO }) 
+                                panelProcAll = true
                             } //나머지는 여기서 처리할 필요없음
                         } else if (row.TYP == "react") {
                             if (appType == "activity") {
-                                evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
+                                panelProcAll = true
                             } //나머지는 여기서 처리할 필요없음
                         } else if (row.TYP == "user") {
                             if (appType == "later" || appType == "fixed") {
-                                evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
+                                panelProcAll = true
                             } //나머지는 여기서 처리할 필요없음
                         }
                     } else if (row.TYP == "msg") {
@@ -228,10 +230,8 @@
                             panelUpdateNotyetCnt = true
                         } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
                             panelRefreshRow = true //본문이 수정되고 안읽음+1이 되므로 행 새로고침
-                        //} else if (appType == "activity") { //home,dm만 일단 리얼타임 반영
-                        //    evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, cud: row.CUD }) 
-                        //} else if (appType == "later" || appType == "fixed") {
-                        //    evToPanel({ kind: "procRow", msgid: row.MSGID, replyto: row.REPLYTO, act: row.KIND, cud: row.CUD }) 
+                        } else if (appType == "activity" || appType == "later" || appType == "fixed") {
+                            panelProcAll = true
                         }
                     } else if (row.TYP == "chan") { //이미 모든 패널에는 Main.vue에서 처리하므로 여기선 MsgList 상단 채널명과 멤버이미지만 처리하면 됨
                         if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
@@ -258,14 +258,15 @@
                 if (msglistRef.value) msglistRef.value.procFromParent("addChildFromBody", { msgidReply: msgidAtFirstForChild })
             }
             //아래 2행은 home,dm에 대해서만 패널로 전달해 처리하는 것인데 이 2개만 채널을 단위로 처리하는 것임. 나머지 패널인 activity,later,fixed는 msgid 단위이므로 여기서 처리안됨
-            if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType })
+            if (panelRefreshRow) evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType }) //dm만 해당
             if (panelUpdateNotyetCnt) evToPanel({ kind: "updateNotyetCnt", chanid: chanId }) //안읽은 처리는 워낙 빈도가 높아서 행 새로고침에서 별도로 뺀 것임. 나머지는 왠만하면 refeshRow로 처리
+            if (panelProcAll) evToPanel({ kind: "procRows" }) //home,dm도 procRows로 할 수는 있으나 부하, 효율성 등을 고려해 일단 activity,later,fixed만 여기서 처리함
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
-    async function procFromParent(kind, obj) {
+    async function procFromParent(kind, obj) { //리얼타임 반영시에도 아래를 호출하므로 아래는 지우지 말 것
         if ((kind == "later" || kind == "fixed") && obj.work == "delete") {
             const msgid = (obj.msgid == obj.msgidParent) ? obj.msgid : obj.msgidParent //댓글인 경우는 부모 아이디
             const row = msglist.value.find((item) => item.MSGID == msgid)
@@ -328,10 +329,10 @@
         if (obj.type == "close") {
             thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
             setWidthForThread(null, obj.type)
-        } else if (obj.type == "refreshFromReply") {
+        /*//@@} else if (obj.type == "refreshFromReply") {
             const rs = await getMsg({ msgid: obj.msgid }, true)
             if (rs == null) return
-            refreshWithGetMsg(rs, obj.msgid)
+            refreshWithGetMsg(rs, obj.msgid)*/
         }
     }
 
@@ -560,7 +561,6 @@
                     if (appType == "home" || appType == "dm") {
                         evToPanel({ kind: "selectRow", chanid: chanId })
                     } else if (appType == "activity" || appType == "later" || appType == "fixed") {
-                        debugger
                         evToPanel({ kind: "selectRow", msgid: msgidInChan })
                     }
                 }
@@ -1054,13 +1054,13 @@
                     if (!rs) return
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                     if (hasProp()) { //댓글 삭제시 스레드의 부모글은 chkDataLog()에 의해 업데이트 될 것이므로 바로 아래에서는 굳이 처리 안함
-                        evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
+                        //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
                     } else { //이게 MsgList(부모) -> MsgList(자식)인 경우라면 필요없어 보임 (부모글 삭제시 자식에 댓글 있으면 안되고 댓글 없으면 굳이 화면에서 연동할 필요없음)
-                        if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
+                        //##if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
                     }
                     if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때
                         //gst[appType].procFromBody("work", { msgid: row.MSGID, work: "delete" })
-                        evToPanel({ kind: "delete", msgid: row.MSGID }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
+                        //$$evToPanel({ kind: "delete", msgid: row.MSGID }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
                     }
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
@@ -1169,9 +1169,9 @@
             if (!rs) return
             await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
-                evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
+                //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
             } else { 
-                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
+                //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
@@ -1193,12 +1193,12 @@
             await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)            
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
-                evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
+                //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
             } else { 
                 deleteFromNewAdded(null, msgid, null)
-                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
+                //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
-            if (appType == "home" || appType == "dm") evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
+            //$$if (appType == "home" || appType == "dm") evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1498,7 +1498,7 @@
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
                     await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: rs.data.replyto })
                     if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })                  
-                    evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
+                    //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
                     if (newParentAdded.value.length == 0) {
                         await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
@@ -1515,7 +1515,7 @@
             }    
             if (appType == "later" || appType == "fixed" || appType == "activity") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
                 if (crud == "U") {
-                    evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
+                    //$$evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
                 }
             } else if (appType == "dm") {
                 if (showUserSearch.value) { //DM방 새로 만들기
@@ -1523,12 +1523,12 @@
                     dmChanIdAlready.value = ""
                     userAdded.value = []
                     dmChanIdAlready.value = false                
-                    evToPanel({ kind: "refreshPanel" })
+                    $$evToPanel({ kind: "refreshPanel" })
                 } else {
-                    evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType })
+                    //$$evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType })
                 }
             }
-            if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value }) //댓글창의 부모글 업데이트
+            //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value }) //댓글창의 부모글 업데이트
             msgbody.value = ""            
             editMsgId.value = null
         } catch (ex) { 
@@ -2060,13 +2060,13 @@
                 obj.act_fixed = rs.act_fixed
             }
             if (hasProp()) { 
-                evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
+                //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
             } else {
-                if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
+                //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
             if (appType == "later" || appType == "fixed") { //패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
                 //gst[appType].procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
-                evToPanel({ kind: work, msgid: msgid }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
+                //$$evToPanel({ kind: work, msgid: msgid }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)

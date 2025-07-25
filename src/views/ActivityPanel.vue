@@ -12,7 +12,19 @@
     const route = useRoute()
     const gst = GeneralStore()
 
-    defineExpose({ procMainToMsglist })
+    defineExpose({ procMainToMsglist, procMainToPanel })
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
+            await msglistRef.value.procMainToMsglist(kind, obj)
+        }
+    }
+
+    async function procMainToPanel(kind, obj) {
+        if (kind == "procRows") {
+            await procRows()
+        }
+    }
 
     let keepAliveRef = ref(null)
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
@@ -20,12 +32,6 @@
     let scrollArea = ref(null), listActivity = ref([]), kindActivity = ref('all'), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
-
-    async function procMainToMsglist(kind, obj) { //단순 전달
-        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
-            await msglistRef.value.procMainToMsglist(kind, obj)
-        }
-    }
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
     let chanSideWidth = ref(localStorage.wiseband_lastsel_activitysidewidth ?? '320px') //localStorage 이름 유의
@@ -296,32 +302,34 @@
     async function handleEvFromMsgList(param) {
         if (param.kind == "selectRow") {
             activityClickOnLoop(false, param.msgid) //뒤로가기는 clickNode = false
-        } else if (param.kind == "update") {
-            const row = listActivity.value.find((item) => item.MSGID == param.msgid)
-            if (row) row.BODYTEXT = param.bodytext
-        } else if (param.kind == "create" || param.kind == "delete") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, kind: work }
-            if (param.kind == "delete") { 
-                const idx = listActivity.value.findIndex((item) => item.MSGID == param.msgid)
-                if (idx > -1) listActivity.value.splice(idx, 1)
-            } else { //create (화면에 없는 걸 보이게 하는 것임)
-                if (kindActivity.value != "later") { 
-                    const res = await axios.post("/menu/qryActivity", { msgid: param.msgid })
-                    const rs = gst.util.chkAxiosCode(res.data)
-                    if (!rs || rs.list.length == 0) return
-                    const row = rs.list[0]
-                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                    let added = false
-                    const len = listActivity.value.length
-                    for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-                        if (param.msgid > listActivity.value[i].MSGID) {
-                            listActivity.value.splice(i, 0, row)
-                            added = true
-                            break
-                        }
-                    }
-                    if (!added) listActivity.value.push(row)
-                }
-            }
+        } else if (param.kind == "procRows") {
+            procRows()
+        // } else if (param.kind == "update") {
+        //     const row = listActivity.value.find((item) => item.MSGID == param.msgid)
+        //     if (row) row.BODYTEXT = param.bodytext //getMsg처럼 호출해서 반영하는 것 있을 것이니 찾아보기
+        // } else if (param.kind == "create" || param.kind == "delete") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, kind: work }
+        //     if (param.kind == "delete") { 
+        //         const idx = listActivity.value.findIndex((item) => item.MSGID == param.msgid)
+        //         if (idx > -1) listActivity.value.splice(idx, 1)
+        //     } else { //create (화면에 없는 걸 보이게 하는 것임)
+        //         if (kindActivity.value != "later") { 
+        //             const res = await axios.post("/menu/qryActivity", { msgid: param.msgid })
+        //             const rs = gst.util.chkAxiosCode(res.data)
+        //             if (!rs || rs.list.length == 0) return
+        //             const row = rs.list[0]
+        //             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+        //             let added = false
+        //             const len = listActivity.value.length
+        //             for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
+        //                 if (param.msgid > listActivity.value[i].MSGID) {
+        //                     listActivity.value.splice(i, 0, row)
+        //                     added = true
+        //                     break
+        //                 }
+        //             }
+        //             if (!added) listActivity.value.push(row)
+        //         }
+        //     }
         }
     }
 </script>
