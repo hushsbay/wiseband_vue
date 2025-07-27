@@ -59,7 +59,7 @@
     })
 
     function setBasicInfo() {
-        document.title = "WiSEBand 그룹"
+        document.title = "WiSEBand 워크스페이스"
         gst.selSideMenu = "mnuGroup" //UserList.vue에 Blank 방지
     }
 
@@ -84,7 +84,7 @@
                     foundIdx = index
                 }
             })
-            if (foundIdx == -1 && listGroup.value.length > 0) { //최초 실행시 그룹이 있는데 선택이 없으면 맨 처음 그룹 선택
+            if (foundIdx == -1 && listGroup.value.length > 0) { //최초 실행시 워크스페이스가 있는데 선택이 없으면 맨 처음 워크스페이스 선택
                 const item = listGroup.value[0]
                 groupClick(item, 0, true)
             }
@@ -148,11 +148,11 @@
 <template>
     <div class="chan_side" id="chan_side" :style="{ width: chanSideWidth }">
         <div class="chan_side_top">
-            <div class="chan_side_top_left">그룹</div>
+            <div class="chan_side_top_left">워크스페이스(WS)</div>
             <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px">
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침" style="margin-right:12px" @click="refreshPanel">
-                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="그룹만들기" @click="newGroup">
+                    <img class="coImg20" :src="gst.html.getImageUrl(hush.cons.color_light + 'compose.png')" title="워크스페이스만들기" @click="newGroup">
                 </div>
             </div>
         </div>
@@ -165,15 +165,15 @@
                         {{ row.GR_NM }}
                     </div>
                     <div class="nodeRight">
-                        <img v-if="row.otherImg" class="coImg14" :src="gst.html.getImageUrl(row.otherImg)" title="다른 그룹">
+                        <img v-if="row.otherImg" class="coImg14" :src="gst.html.getImageUrl(row.otherImg)" title="다른 워크스페이스">
                     </div>
                 </div>
             </div>
         </div>
         <div v-if="listGroup.length == 0" style="width:calc(100% - 20px);height:100%;margin-top:50px;padding:0 10px">
             <div style="width:100%;word-break:break-all;color:white">
-                현재 그룹 데이터가 없습니다.<br><br>
-                패널 우측상단 '그룹만들기' 버튼으로<br>
+                현재 워크스페이스 데이터가 없습니다.<br><br>
+                패널 우측상단 '워크스페이스만들기' 버튼으로<br>
                 사용하시기 바랍니다.
             </div>
         </div>
@@ -201,10 +201,10 @@
         width:100%;height:50px;display:flex;justify-content:space-between;
     }
     .chan_side_top_left {
-        width:50%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
+        width:70%;height:100%;padding-left:10px;display:flex;align-items:center;font-size:18px;font-weight:bold;color:white
     }
     .chan_side_top_right {
-        width:50%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
+        width:30%;height:100%;padding-right:10px;display:flex;justify-content:flex-end;align-items:center
     }
     .chan_side_main {
         width:100%;height:100%;display:flex;display:flex;flex-direction:column;flex:1;overflow-y:auto;  

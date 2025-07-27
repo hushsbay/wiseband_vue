@@ -146,7 +146,7 @@
     function procNode(row, rowNext, kind, vips) {
         const lvl = parseInt(row.LVL) //org,user,mygroup에 모두 존재
         const org_cd = row.ORG_CD ? row.ORG_CD : row.GR_ID //1) tree,search에는 ORG_CD가 org 및 user에 모두 존재 2) mygroup에서는 GR_ID
-        const nodekind = row.USERID ? "U" : "G" //사용자(U),그룹(G=회사or부서or내그룹)
+        const nodekind = row.USERID ? "U" : "G" //사용자(U),그룹(G=회사or부서or워크스페이스)
         let hasChild
         if (nodekind == "U" || rowNext == null) { //사용자면 false, 다음행이 없는 마지막이면 false
             hasChild = false
@@ -168,7 +168,8 @@
             //if (row.USERNM == '박석현' || row.USERNM == '이상병') debugger
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, row.USERID)
-            row.key = row.USERID + (row.GR_ID ? hush.cons.deli + row.GR_ID : "") //vue의 loop에서의 :key는 unique해야 하는데 내그룹은 그룹마다 같은 userid가 들어 있을 것이므로 grid로 추가 구분함
+            row.key = row.USERID + (row.GR_ID ? hush.cons.deli + row.GR_ID : "") 
+            //vue의 loop에서의 :key는 unique해야 하는데 워크스페이스는 워크스페이스마다 같은 userid가 들어 있을 수 있으므로 grid로 추가 구분함
         } else {
             if (mode.value == "mygroup") {
                 row.url = "violet_people2.png"
@@ -386,7 +387,7 @@
                     </div>
                     <div class="topMenu" :class="mode == 'mygroup' ? 'tab_sel' : 'tab_unsel'" @click="changeTab('mygroup')">
                         <img class="coImg18" :src="gst.html.getImageUrl('dimgray_people2.png')">
-                        <span style="margin-left:5px;font-weight:bold">내그룹</span> 
+                        <span style="margin-left:5px;font-weight:bold">워크스페이스</span> 
                     </div>
                     <span style="margin:0 5px 0 10px;color:dimgray">선택:</span><span style="color:dimblue;font-weight:bold">{{ chkCnt }}</span>
                     <span class="vipBtn" style="margin-left:8px" @click="clearAllChk()">해제</span>

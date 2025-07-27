@@ -30,7 +30,7 @@
         try {
             setBasicInfo()
             if (grId == "new") {
-                //gst.util.setSnack("상단의 그룹명을 입력후 '그룹저장'을 누르시면 됩니다.", true)
+                //gst.util.setSnack("상단의 워크스페이스(WS)명을 입력후 'WS저장'을 누르시면 됩니다.", true)
             } else {
                 await getList()                    
             }            
@@ -81,7 +81,7 @@
             userlist.value = []
             grnm.value = rs.list[0].GR_NM
             masternm.value = rs.list[0].MASTERNM
-            document.title = grnm.value + " [그룹]"
+            document.title = grnm.value + " [워크스페이스]"
             const grdtl = rs.list[0].userlist
             const len = grdtl.length
             for (let i = 0; i < len; i++) {
@@ -113,11 +113,11 @@
     async function applyToBody(arr, mode) {
         try {
             if (grId == "new") {
-                gst.util.setSnack("먼저 그룹이 저장되어야 합니다.", true)
+                gst.util.setSnack("먼저 워크스페이스가 저장되어야 합니다.", true)
                 return
             }
             if (singleMode.value != "C") {
-                gst.util.setSnack("먼저 (왼쪽) 그룹내 행 선택을 해제해 주시기 바랍니다.", true)
+                gst.util.setSnack("먼저 (왼쪽) 워크스페이스내 행 선택을 해제해 주시기 바랍니다.", true)
                 return
             }
             const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
@@ -128,7 +128,7 @@
                 if (mode == "tree" || mode == "search") { //수동입력이 아닌 조직도에서 넘기는 것임 (SYNC=Y)
                     rq.SYNC = "Y"
                 } else { //mygroup (인사연동+수동입력 혼재)
-                    if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 내그룹으로 저장한 것임
+                    if (row.SYNC == "Y") { //수동입력이 아닌 조직도에서 넘긴 것을 워크스페이스로 저장한 것임
                         rq.SYNC = "Y"
                     } else {
                         rq.SYNC = ""
@@ -296,7 +296,7 @@
 
     async function saveGroup() {
         try {
-            const rq = { GR_ID: grId, GR_NM: grnm.value } //grId=new일 경우는 신규그룹 생성
+            const rq = { GR_ID: grId, GR_NM: grnm.value } //grId=new일 경우는 신규 워크스페이스 생성
             const res = await axios.post("/user/saveGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
@@ -314,7 +314,7 @@
 
     async function deleteGroup() {
         try {
-            if (!confirm("[" + grnm.value + "]그룹에 대해 전체 삭제를 진행합니다. 계속할까요?")) return
+            if (!confirm("[" + grnm.value + "] 워크스페이스에 대해 전체 삭제를 진행합니다. 계속할까요?")) return
             const rq = { GR_ID: grId }
             const res = await axios.post("/user/deleteGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)            
@@ -344,7 +344,7 @@
                 <div class="chan_center_header_left">
                     <img class="coImg18" :src="gst.html.getImageUrl('violet_people2.png')" style="margin-right:5px">
                     <div style="display:flex;align-items:center">                    
-                        <div class="coDotDot">{{ grnm ? grnm : "새그룹 만들기" }}</div>
+                        <div class="coDotDot">{{ grnm ? grnm : "새 워크스페이스 만들기" }}</div>
                     </div>
                 </div>
                 <div class="chan_center_header_right">
@@ -355,18 +355,18 @@
                         background:whitesmoke;border:1px solid lightgray;border-top:none;box-shadow:0px 2px 0px gray">
                 <div style="width:calc(100% - 220px);height:100%;display:flex;align-items:center">
                     <input v-show="userlist.length > 0" type="checkbox" v-model="chkAll" @change="changeChkAll()" style="min-width:18px;margin-right:5px" />
-                    <input type="text" v-model="grnm" style="width:100%;margin-left:5px" spellcheck="false" placeholder="그룹명"/>
+                    <input type="text" v-model="grnm" style="width:100%;margin-left:5px" spellcheck="false" placeholder="워크스페이스명"/>
                     <span style="min-width:36px;margin-left:10px;color:dimgray">관리:</span>
                     <span class="coDotDot" style="min-width:80px">{{ masternm }}</span>
                 </div>
                 <div style="width:220px;height:100%;display:flex;align-items:center;justify-content:flex-end">
                     <div class="coImgBtn" @click="saveGroup()">
                         <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
-                        <span class="coImgSpn">그룹저장</span>
+                        <span class="coImgSpn">WS저장</span>
                     </div>
                     <div class="coImgBtn" @click="deleteGroup">
                         <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
-                        <span class="coImgSpn">그룹삭제</span>
+                        <span class="coImgSpn">WS삭제</span>
                     </div>
                 </div>
             </div>
@@ -419,7 +419,7 @@
                     </div>
                 </div>
                 <div v-if="userlist.length == 0" style="width:100%;height:100%;margin-top:50px;display:flex;justify-content:center;word-break:break-all">
-                    먼저 상단의 그룹명을 설정후 '그룹저장' 버튼을<br>
+                    먼저 상단의 워크스페이스(WS)명을 설정후 'WS저장' 버튼을<br>
                     누른 후 오른쪽 패널에서 멤버를 선택해 추가하시기 바랍니다.
                 </div>
             </div>
