@@ -339,32 +339,6 @@
             activityClickOnLoop(false, param.msgid) //뒤로가기는 clickNode = false
         } else if (param.kind == "procRows") {
             procRows()
-        // } else if (param.kind == "update") {
-        //     const row = listActivity.value.find((item) => item.MSGID == param.msgid)
-        //     if (row) row.BODYTEXT = param.bodytext //getMsg처럼 호출해서 반영하는 것 있을 것이니 찾아보기
-        // } else if (param.kind == "create" || param.kind == "delete") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, kind: work }
-        //     if (param.kind == "delete") { 
-        //         const idx = listActivity.value.findIndex((item) => item.MSGID == param.msgid)
-        //         if (idx > -1) listActivity.value.splice(idx, 1)
-        //     } else { //create (화면에 없는 걸 보이게 하는 것임)
-        //         if (kindActivity.value != "later") { 
-        //             const res = await axios.post("/menu/qryActivity", { msgid: param.msgid })
-        //             const rs = gst.util.chkAxiosCode(res.data)
-        //             if (!rs || rs.list.length == 0) return
-        //             const row = rs.list[0]
-        //             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-        //             let added = false
-        //             const len = listActivity.value.length
-        //             for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-        //                 if (param.msgid > listActivity.value[i].MSGID) {
-        //                     listActivity.value.splice(i, 0, row)
-        //                     added = true
-        //                     break
-        //                 }
-        //             }
-        //             if (!added) listActivity.value.push(row)
-        //         }
-        //     }
         }
     }
 </script>
@@ -402,13 +376,6 @@
                 class="node" :class="[row.hover ? 'nodeHover' : '', row.sel ? 'nodeSel' : '']" 
                 @click="activityClick(row, idx, true)" @mouseenter="mouseEnter(row)" @mouseleave="mouseLeave(row)" @mousedown.right="(e) => mouseRight(e, row)">
                 <div style="display:flex;align-items:center;justify-content:space-between">
-                    <!-- <div style="display:flex;align-items:center;color:lightgray">
-                        <div style="display:flex;align-items:center">
-                            <span style="margin-left:3px">[{{ row.title }}]</span>
-                            <img class="coImg14" style="margin-left:3px" :src="gst.html.getImageUrl(hush.cons.color_light + ((row.STATE == 'A') ? 'channel.png' : 'lock.png'))">
-                            <span style="margin-left:3px">{{ row.CHANNM }}</span>                            
-                        </div>
-                    </div> -->
                     <div style="width:calc(100% - 35px);display:flex;align-items:center;color:lightgray" class="coDotDot">
 			            <span style="margin:0 3px">[{{ row.title }}]</span>
                         <div v-if="row.TYP=='GS'" style="display:flex;align-items:center" class="coDotDot">

@@ -5,7 +5,8 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
     import PopupImage from "/src/components/PopupImage.vue"
 
-    const gst = GeneralStore()    
+    const gst = GeneralStore()
+
     defineExpose({ open, close })
 
     let tab = ref(''), show = ref(false), chanid = '', channm = ref(''), chanimg = ref(null)

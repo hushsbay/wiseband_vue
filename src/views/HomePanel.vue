@@ -39,7 +39,7 @@
     //3) 스크롤 위치도 2)와 마찬가지로 기억 => localStorage와 scrollIntoView() 이용해서 현재 클릭한 채널노드를 화면에 보이도록 하는 것으로 변경함
 
     let keepAliveRef = ref(null), listHome = ref([]), kind = ref('all'), chanRow = ref({}) //chanRow는 element를 동적으로 할당
-    let memberlistRef = ref(null), msglistRef = ref(null)//, newRoomJustCreated = ref(false) //newRoomJustCreated 문제있음 - 개선방안 고민하기
+    let memberlistRef = ref(null), msglistRef = ref(null)
     let mounting = true
 
     ///////////////////////////////////////////////////////////////////////////패널 리사이징
@@ -124,7 +124,6 @@
                 const arr = rs.list //새로 읽어온 데이터   
                 for (let i = 0; i < len; i++) {
                     const row = listHome.value[i]
-                    //if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
                     const idx = arr.findIndex((item) => {
                         return (item.GR_ID == row.GR_ID && item.CHANID == row.CHANID)
                     })
@@ -136,7 +135,6 @@
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        //listHome.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
                         row.checkedForDelete = true
                     }
                 }
@@ -379,7 +377,6 @@
     async function refreshPanel() {
         await getList()
         chanClickOnLoop(true)
-        //newRoomJustCreated.value = false
     }
 
     async function handleEvFromMsgList(param) {
@@ -392,13 +389,11 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 row.mynotyetCnt = rs.data.kindCnt
-            } else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
-                procRows() //    newRoomJustCreated.value = true
+            } else {
+                procRows()
             }
         } else if (param.kind == "refreshPanel") {  //방 나가기,삭제에서 사용
             await refreshPanel()
-        //} else if (param.kind == "refreshRow") { //현재까지는 updateNotyetCnt만으로도 잘 처리해 옴
-        //    await refreshPanel() //홈에서는 행 새로고침도 그냥 패널 전체 새로고침으로 처리하되 빈도가 높고 반복적인 곳은 사용하지 않기로 함 (향후 필요시 refreshRow 진짜 만들기)
         /*} else if (param.kind == "getMsgListFromMsgid") { //지우지 말 것 (향후 사용가능성) 리얼타임 반영으로 쌓인 중간에 이빨빠진 새 데이터 뿌리기
             //MsgList의 newParentAdded, newChildAdded 관련임. 여기는 자식이 아닌 아예 부모메시지만 넘어옴. 여기 풀려면 모든 패널에 추가해야 함
             gst.util.goMsgList('home_body', { chanid: param.chanid, msgid: param.msgid })*/
@@ -426,10 +421,6 @@
                     <option value="all">모든 채널</option>
                 </select>
             </div>
-            <!-- <div v-if="newRoomJustCreated" @click="refreshPanel" class="chan_side_top_right"
-                style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:yellow;cursor:pointer">
-                <span style="margin-right:10px;font-weight:bold">새 채널 생성됨</span>
-            </div> -->
             <div class="chan_side_top_right">
                 <div style="padding:5px;border-radius:8px" @click="refreshPanel">
                     <img class="coImg20" :src="gst.html.getImageUrl('whitesmoke_refresh.png')" title="새로고침">
@@ -451,7 +442,6 @@
                         {{ row.DEPTH == '1' ? row.GR_NM : row.CHANNM }}
                     </div>
                     <div class="nodeRight">
-                        <!--<span style="margin-right:5px;color:darkgray">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>-->
                         <span :class="row.DEPTH == '1' || row.mynotyetCnt == 0 ? '' : 'coMyNotYet'">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
                         <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
                         <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">

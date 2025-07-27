@@ -1,6 +1,5 @@
 <script setup>
     import { ref, nextTick } from 'vue' 
-    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'

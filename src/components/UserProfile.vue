@@ -5,20 +5,13 @@
     import GeneralStore from '/src/stores/GeneralStore.js'
 
     const gst = GeneralStore()
+
     defineExpose({ open, close })
     const emits = defineEmits(["evToMain"])
 
-    //let tab = ref(''), 
-    let show = ref(false) //, chanid = '', channm = ref(''), chanimg = ref(null)
-    //let rdoOpt = ref('all')
-    //let frYm = ref(''), toYm = ref(''), authorNm = ref(''), searchText = ref(''), fileExt = ref('')
-    //let savPrevMsgMstCdt
-    //const scrollArea = ref(null), filelist = ref([]), imagelist = ref([]), msglist = ref([]) 
-    //let prevScrollY = 0 //Intersection Observer 오류(parameter 1 is not of type 'Element') 해결이 어려워 onScrollEnd에서 처리함
-    //const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
-
+    let show = ref(false)
     let editmode = ref(false)
-    let user = ref(null), userid = ref(''), usernm = ref(''), pwdOld = ref(''), pwdNew = ref(''), pwdAgain = ref('')
+    let user = ref(null), usernm = ref(''), pwdOld = ref(''), pwdNew = ref(''), pwdAgain = ref('')
 
     async function open() {
         show.value = true
@@ -57,43 +50,11 @@
         }
     }
     
-    // function downloadFile(msgid, chanid, row) {
-    //     try {
-    //         const cdtsub = row.CDTSUB ?? row.CDT //msgmst의 cdt가 아닌 msgsub의 cdt가 필요
-    //         gst.util.downloadBlob("F", msgid, chanid, cdtsub, row.BODY)
-    //     } catch (ex) {
-    //         gst.util.showEx(ex, true)
-    //     }
-    // }
-
-    // function imgLoaded(e, row) {
-    //     row.realWidth = e.currentTarget.naturalWidth
-    //     row.readHeight = e.currentTarget.naturalHeight
-    // }
-
-    // function showImage(row, msgid) {
-    //     try {
-    //         imgParam.value = row
-    //         imgParam.value.msgid = msgid
-    //         imgParam.value.chanid = chanid
-    //         imgPopupUrl.value = row.url
-    //         imgPopupStyle.value = { width: row.realWidth + "px", height: row.realHeight + "px" }
-    //         imgPopupRef.value.open()
-    //     } catch (ex) {
-    //         gst.util.showEx(ex, true)
-    //     }
-    // }
-
     async function changeUserName() {
         try {
             if (!editmode.value) {
                 editmode.value = true
             } else {
-                // const fd = new FormData()
-                // fd.append("usernm", usernm.value)
-                // const res = await axios.post("/user/setUserInfo", fd) //, { headers: { 'Content-Type': 'multipart/form-data' }})
-                // const rs = gst.util.chkAxiosCode(res.data)
-                // if (!rs) return
                 const res = await axios.post("/user/setUserInfo", { usernm: usernm.value })
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return

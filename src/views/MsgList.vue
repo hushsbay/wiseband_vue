@@ -16,7 +16,7 @@
     const gst = GeneralStore()
 
     defineExpose({ procFromParent, procMainToMsglist })
-    const emits = defineEmits(["ev-to-parent", "ev-to-panel"]) //ev-to-parent : MsgList -> MsgList / ev-to-panel : MsgList -> Panel(Later, Dm..)
+    const emits = defineEmits(["ev-to-parent", "ev-to-panel"]) 
     const props = defineProps({ data: Object }) //자식에서만 사용 : props update 문제 유의
     
     let observerTop = ref(null), observerTopTarget = ref(null), observerBottom = ref(null), observerBottomTarget = ref(null)
@@ -226,7 +226,6 @@
                             }
                             deleteFromNewAdded(row)
                         }
-                        debugger
                         if (appType == "home") {
                             panelUpdateNotyetCnt = true
                         } else if (appType == "dm") { //dm은 채널이고 나머지는 메시지를 업데이트하는 것임
@@ -268,17 +267,7 @@
     }
 
     async function procFromParent(kind, obj) { //리얼타임 반영시에도 아래를 호출하므로 아래는 지우지 말 것
-        if ((kind == "later" || kind == "fixed") && obj.work == "delete") {
-            const msgid = (obj.msgid == obj.msgidParent) ? obj.msgid : obj.msgidParent //댓글인 경우는 부모 아이디
-            const row = msglist.value.find((item) => item.MSGID == msgid)
-            if (row) { //자식에 later, fixed 처리되어 있고 부모는 색상만 리셋하면 되나 여기 어차피 null이니 이 부분도 처리해서 공통화시킴
-                if (kind == "later") row.act_later = null
-                if (kind == "fixed") row.act_fixed = null
-            }
-            if (obj.msgid != obj.msgidParent) { //스레드댓글 패널 열려 있으면 전달해서 거기서 자식의 later, fixed를 제거해야 함 (MsgList에서 MsgList에게 전달)
-                if (msglistRef.value) msglistRef.value.procFromParent(kind, { msgid: obj.msgid, msgidParent: obj.msgid, work: "delete" })
-            }
-        } else if (kind == "refreshMsg") {
+        if (kind == "refreshMsg") {
             const rs = await getMsg({ msgid: obj.msgid })
             if (rs == null) return
             refreshWithGetMsg(rs, obj.msgid)
@@ -330,10 +319,6 @@
         if (obj.type == "close") {
             thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
             setWidthForThread(null, obj.type)
-        /*//@@} else if (obj.type == "refreshFromReply") {
-            const rs = await getMsg({ msgid: obj.msgid }, true)
-            if (rs == null) return
-            refreshWithGetMsg(rs, obj.msgid)*/
         }
     }
 
@@ -1054,15 +1039,6 @@
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
                     msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
-                    if (hasProp()) { //댓글 삭제시 스레드의 부모글은 chkDataLog()에 의해 업데이트 될 것이므로 바로 아래에서는 굳이 처리 안함
-                        //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
-                    } else { //이게 MsgList(부모) -> MsgList(자식)인 경우라면 필요없어 보임 (부모글 삭제시 자식에 댓글 있으면 안되고 댓글 없으면 굳이 화면에서 연동할 필요없음)
-                        //##if (msglistRef.value) msglistRef.value.procFromParent("deleteMsg", { msgid: row.MSGID })
-                    }
-                    if (appType == "later" || appType == "fixed") { //수정자 기준 : 패널 열려 있을 때
-                        //gst[appType].procFromBody("work", { msgid: row.MSGID, work: "delete" })
-                        //$$evToPanel({ kind: "delete", msgid: row.MSGID }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
-                    }
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
@@ -1169,11 +1145,6 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
-            if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
-                //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
-            } else { 
-                //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
-            }
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
                     const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
@@ -1194,12 +1165,9 @@
             await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)            
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
-                //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid }) //props.data.msgid는 자식의 부모 아이디
             } else { 
                 deleteFromNewAdded(null, msgid, null)
-                //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
             }
-            //$$if (appType == "home" || appType == "dm") evToPanel({ kind: "updateNotyetCnt", chanid: chanId })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1251,11 +1219,10 @@
                 arr.sort((a, b) => a.CDT.localeCompare(b.CDT)) //오름차순 정렬
                 msgid = arr[0].REPLYTO //자식의 부모아이디
                 cdtAtFirst = arr[0].CDT //여기선 msgid로 사용
-                //const newWin = window.open("/body/msglist/" + chanId + "/" + msgid + "?appType=" + appType) //scrollToBottom 사용시 순서 흐트러짐
                 const url = gst.util.getUrlForBodyListNewWin(chanId, msgid, appType)
                 const newWin = window.open(url)
                 newWin.onload = function() {
-                    const arr = newWin.document.querySelectorAll(".chan_center_body")
+                    //const arr = newWin.document.querySelectorAll(".chan_center_body")
                     //vue.js로 랜더링하는 바로 아래 class는 안읽혀서 vue.js 아녀도 바로 뿌려주는 class(chan_center_body)로 잡음
                     //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
                 }
@@ -1499,7 +1466,6 @@
                 if (hasProp()) { //댓글 전송후엔 작성자 입장에서는 맨아래로 스크롤하기
                     await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: rs.data.replyto })
                     if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })                  
-                    //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
                 } else {
                     if (newParentAdded.value.length == 0) {
                         await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
@@ -1514,22 +1480,15 @@
                 if (rs == null) return
                 refreshWithGetMsg(rs, editMsgId.value)
             }    
-            if (appType == "later" || appType == "fixed" || appType == "activity") { //수정자 기준 : 패널 열려 있을 때 메시지 수정후 패널내 해당 메시지 본문 업데이트
-                if (crud == "U") {
-                    //$$evToPanel({ kind: "update", msgid: editMsgId.value, bodytext: bodytext })
-                }
-            } else if (appType == "dm") {
+            if (appType == "dm") {
                 if (showUserSearch.value) { //DM방 새로 만들기
                     showUserSearch.value = false
                     dmChanIdAlready.value = ""
                     userAdded.value = []
                     dmChanIdAlready.value = false                
                     evToPanel({ kind: "refreshPanel" })
-                } else {
-                    //$$evToPanel({ kind: "refreshRow", chanid: chanId, appType: appType })
                 }
             }
-            //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: editMsgId.value }) //댓글창의 부모글 업데이트
             msgbody.value = ""            
             editMsgId.value = null
         } catch (ex) { 
@@ -2023,7 +1982,6 @@
             const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //window.open("/body/msglist/" + strChanid + "/" + rs.data.newMsgid + "?appType=" + kind)
             const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
             window.open(url)
             /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)
@@ -2059,15 +2017,6 @@
             if (obj) {
                 obj.act_later = rs.act_later
                 obj.act_fixed = rs.act_fixed
-            }
-            if (hasProp()) { 
-                //@@evToParent({ type: "refreshFromReply", msgid: props.data.msgid })
-            } else {
-                //##if (msglistRef.value) msglistRef.value.procFromParent("refreshMsg", { msgid: msgid })
-            }
-            if (appType == "later" || appType == "fixed") { //패널 열려 있을 때 changeAction()후 패널내 해당 메시지 추가 또는 제거
-                //gst[appType].procFromBody("work", { msgid: msgid, work: work }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
-                //$$evToPanel({ kind: work, msgid: msgid }) //work: delete/create(해당 아이디 조회해서 배열에 넣기) + laterCnt 구하기
             }
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -2427,7 +2376,6 @@
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                         <img class="coImg20 maintainContextMenu" :src="gst.html.getImageUrl('dimgray_option_vertical.png')" @click="chanCtxMenu">
                     </div>
-                    <!-- <div v-if="hasProp() && threadReply.replyinfo && threadReply.replyinfo[0].CDT_MAX" class="replyAct" style="font-size:13px"> -->
                     <div v-if="hasProp()" class="replyAct" style="font-size:13px">
                         <div style="margin:0 5px;display:flex;align-items:center" v-if="threadReply.replyinfo && threadReply.replyinfo[0].CDT_MAX">
                             <span style="margin-right:4px;color:steelblue;font-weight:bold">댓글 </span>
@@ -2509,16 +2457,8 @@
                     </div>
                     <div v-if="row.UDT && row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                     <div class="msg_body_sub"><!-- 반응, 댓글 -->
-                        <!-- <div v-for="(row1, idx1) in row.msgdtl" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
-                            <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                            <span style="margin-left:3px">{{ row1.CNT}}</span>
-                        </div> -->
                         <div v-for="(row1, idx1) in row.msgdtl">
-                            <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
-                                <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                                <span style="margin-left:3px">{{ row1.CNT}}</span>
-                            </div> -->
-                            <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
+                            <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
                                 <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 <span v-if="row1.KIND == 'notyet' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" style="margin-left:3px;color:red;font-weight:bold">{{ row1.CNT}}</span>
                                 <span v-else style="margin-left:3px">{{ row1.CNT}}</span>

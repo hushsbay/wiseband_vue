@@ -163,7 +163,6 @@
                 afterScrolled.value = false
                 for (let i = 0; i < rs.list.length; i++) {
                     const row = rs.list[i]
-                    //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                     setRowPicture(row)
                     listLater.value.push(row)
                     if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
@@ -180,7 +179,6 @@
                 const arr = rs.list //새로 읽어온 데이터                
                 for (let i = 0; i < len; i++) {
                     const row = listLater.value[i]
-                    //if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
                     const idx = arr.findIndex((item) => item.MSGID == row.MSGID)
                     if (idx > -1) {
                         const item = arr[idx]    
@@ -190,7 +188,6 @@
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        //listLater.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
                         row.checkedForDelete = true
                     }
                 }
@@ -273,9 +270,9 @@
             const idx = listLater.value.findIndex((item) => item.MSGID == msgid)
             if (idx > -1) listLater.value.splice(idx, 1)
             getCount() //화면에 갯수 업데이트
-            if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
-            const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
-            msglistRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
+            // if (kind != "delete") return //delete인 경우만 아래에서 MsgList 업데이트
+            // const msgidParent = (row.REPLYTO) ? row.REPLYTO : msgid //자식에게 처리되어 있는 경우는 부모 색상도 원위치 필요함
+            // msglistRef.value.procFromParent("later", { msgid: msgid, msgidParent: msgidParent, work: "delete" })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -329,35 +326,8 @@
     async function handleEvFromMsgList(param) {
         if (param.kind == "selectRow") {
             laterClickOnLoop(false, param.msgid) //뒤로가기는 clickNode = false
-        // } else if (param.kind == "update") {
-        //     const row = listFixed.value.find((item) => item.MSGID == param.msgid)
-        //     if (row) row.BODYTEXT = param.bodytext
         } else if (param.kind == "procRows") {
             procRows()
-        // } else if (param.kind == "create" || param.kind == "delete") { //MsgList.vue의 changeAction() 참조 : { msgid: msgid, kind: work }
-        //     if (param.kind == "delete") { 
-        //         const idx = listLater.value.findIndex((item) => item.MSGID == param.msgid)
-        //         if (idx > -1) listLater.value.splice(idx, 1)
-        //     } else { //create (화면에 없는 걸 보이게 하는 것임)
-        //         if (kindLater.value == "later") { //'나중에' 패널에서 진행중(later)탭이 아니면 추가된 행 화면업뎃할 일 없음
-        //             const res = await axios.post("/menu/qryPanel", { msgid: param.msgid })
-        //             const rs = gst.util.chkAxiosCode(res.data)
-        //             if (!rs || rs.list.length == 0) return
-        //             const row = rs.list[0]
-        //             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-        //             let added = false
-        //             const len = listLater.value.length
-        //             for (let i = 0; i < len; i++) { //최근일시가 맨 위에 있음
-        //                 if (param.msgid > listLater.value[i].MSGID) {
-        //                     listLater.value.splice(i, 0, row)
-        //                     added = true
-        //                     break
-        //                 }
-        //             }
-        //             if (!added) listLater.value.push(row)
-        //         }
-        //     }
-        //     getCount()
         }
     }
 

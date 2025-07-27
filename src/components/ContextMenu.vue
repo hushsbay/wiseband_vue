@@ -122,35 +122,34 @@
     <!-- 전체 fixed는 클릭시 ctx를 닫으나 클릭시 psg_proc 메뉴도 안보이게 되고 클릭후 다시 우클릭해야 ctx가 떠서 슬랙과 동일하지 않아서 일단 막음
          이걸 막게 되면 gst에 의존하지 않고 완전한 모듈을 만들려고 한 목표는 실패임 -> 향후 독립적인 모듈화 다시 시도하기 
     <div v-show="gst.ctx.on" style="width:100%;height:100%;position:fixed;top:0;left:0;background:transparent;z-index:9999" @click="gst.ctx.hide" @mousedown.right="gst.ctx.hide"> -->
-        <div v-show="gst.ctx.on" id="ctxParent" class="popupMenu" :style="ctxStyle">
-            <div v-if="gst.ctx.data.header" class="popupHeader">
-                <div v-html="gst.ctx.data.header" class="popupHeaderItem coDotDot"></div>
-            </div>
-            <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid var(--border-color)' : '' }" 
-                @mouseenter="(e) => mouseEnter(e, row)" @mouseleave="(e) => mouseLeave(e, row)" @click.stop="rowClick(row, idx)"> 
-                <div v-if="row.child" class="popupMenuItemChild coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
-                    <div style="display:flex;align-items:center">
-                        <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:2px">
-                        <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
-                    </div>
-                    <div style="color:dimgray;margin-right:8px">></div>
-                </div>
-                <div v-else class="popupMenuItem coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
-                    <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:4px">
-                    <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
-                </div>                    
-            </div> 
+    <div v-show="gst.ctx.on" id="ctxParent" class="popupMenu" :style="ctxStyle">
+        <div v-if="gst.ctx.data.header" class="popupHeader">
+            <div v-html="gst.ctx.data.header" class="popupHeaderItem coDotDot"></div>
         </div>
-        <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle" @mouseleave="mouseLeaveChild">
-            <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid var(--border-color)' : '' }" 
-                @click.stop="rowClick(row, idx)">
-                <div class="popupMenuItem coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
+        <div v-for="(row, idx) in gst.ctx.menu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid var(--border-color)' : '' }" 
+            @mouseenter="(e) => mouseEnter(e, row)" @mouseleave="(e) => mouseLeave(e, row)" @click.stop="rowClick(row, idx)"> 
+            <div v-if="row.child" class="popupMenuItemChild coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
+                <div style="display:flex;align-items:center">
                     <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:2px">
                     <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
-                </div> 
+                </div>
+                <div style="color:dimgray;margin-right:8px">></div>
+            </div>
+            <div v-else class="popupMenuItem coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
+                <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:4px">
+                <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
+            </div>                    
+        </div> 
+    </div>
+    <div v-show="ctxChildOn" id="ctxChild" class="popupMenu" :style="ctxChildStyle" @mouseleave="mouseLeaveChild">
+        <div v-for="(row, idx) in ctxChildMenu" class="coHover" :style="{ color: row.disable ? 'dimgray' : '', borderBottom: row.deli ? '1px solid var(--border-color)' : '' }" 
+            @click.stop="rowClick(row, idx)">
+            <div class="popupMenuItem coDotDot" :style="{ paddingLeft: row.img ? '4px' : '22px' }">
+                <img v-if="row.img" class="coImg14" :src="gst.html.getImageUrl(row.img)" style="margin-right:2px">
+                <span :style="{ color: row.color ? row.color : '' }">{{ row.nm }}</span>
             </div> 
-        </div>
-    <!-- </div> -->
+        </div> 
+    </div>
 </template>
 
 <style scoped>

@@ -225,29 +225,6 @@
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG) //procTimerLong() }.bind(this)
     }
 
-/*
-    async function procTimerShort() {
-        //요점 : 페이지가 보이면 최단시간 타이머 안보이면 타이머 갭을 늘리기 : 하나의 window 객체에 Main.vue의 timer가 돌아가는 것은 오직 1개만 가능하도록 함
-        //vue-observe-visibility npm 굳이 사용하지 않고도 pageShown으로 처리 가능
-        //sessionStorage.pageShown은 document.hidden(index.html) 참조. hot deploy시 타이머가 더 생기는지 체크 필요 (아래 .bind(this) 적용 테스트 더 해보기)
-        if (timerShort) {
-            if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
-                await chkDataLogEach()
-            }
-        }
-        timerShort = (pageShown == 'Y') ? true : false
-        timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT) //procTimerShort() }.bind(this)
-    }
-
-    async function procTimerLong() { //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
-        if (!timerShort) {
-            if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
-                await chkDataLogEach()
-            }
-        }
-        timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG) //procTimerLong() }.bind(this)
-    }*/
-
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
         try {
             if (fifo.length > 0) {
@@ -371,7 +348,6 @@
                 pageShown = 'Y'
                 pageShownChanged(pageShown)
                 if (sessionStorage.chanidFromNoti) { //알림(noti)바를 클릭한 경우임 - GeneralStore.js의 procNoti() 참조
-                    //await router.push({ name : "home_body", params : { chanid: sessionStorage.chanidFromNoti, msgid: sessionStorage.msgidFromNoti }}) //다른 채널이라도 메시지가 추가됨 (사용금지)
                     const nm = (sessionStorage.subkindFromNoti == "GS") ? "dm" : "home"
                     await goRoute({ name: nm }) //home or dm
                     sessionStorage.chanidFromNoti = ''
@@ -448,12 +424,12 @@
                 listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value] //위 ## 주석 참조
             } else {
                 return //더보기 말고 팝업표시하는 것은 육안으로는 화면이 더 복잡해져서 오히려 불편함을 느낌 (주관적) : 향후 필요시 return 빼고 아래 팝업 메뉴 추가하면 됨 (일단은 더보기에 대해서만 팝업 지원)
-                const found = listAll.value.find((item) => item.ID == menuDiv.id)
-                if (!found || found.POPUP != "Y") {
-                    popupMenuOn.value = false //혹시 떠 있을 팝업 제거
-                    return
-                }
-                listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
+                // const found = listAll.value.find((item) => item.ID == menuDiv.id)
+                // if (!found || found.POPUP != "Y") {
+                //     popupMenuOn.value = false //혹시 떠 있을 팝업 제거
+                //     return
+                // }
+                // listPopupMenu.value = [] //임시. 여기서부터는 실시간으로 axios로 가져와도 무방할 것임 (한번 가져오면 그 다음부터는 캐싱..등 고려)
             }
             popupMenuOn.value = true
             if (menuDiv.id == "mnuSeeMore") { //console.log(e.pageY + "===" + prevX + "===" + menuDiv.offsetTop)
@@ -536,9 +512,9 @@
         ["mnuActivity"] : async (row, onMounted) => { await goRoute({ name: 'activity' }, onMounted) },
         ["mnuLater"] : async (row, onMounted) => { await goRoute({ name: 'later' }, onMounted) },
         ["mnuFixed"] : async (row, onMounted) => { await goRoute({ name: 'fixed' }, onMounted) },
-        ["mnuAuto"] : async (row, onMounted) => { 
-            gst.util.setToast("미개발된 메뉴입니다.") //await goRoute({ name: 'auto' }, onMounted) 
-        },
+        // ["mnuAuto"] : async (row, onMounted) => { 
+        //     gst.util.setToast("미개발된 메뉴입니다.") //await goRoute({ name: 'auto' }, onMounted) 
+        // },
         ["mnuGroup"] : async (row, onMounted) => { await goRoute({ name: 'group' }, onMounted) }
     }
 
@@ -599,7 +575,6 @@
                 <div class="btn_basic" @click="openMsgSearch()"><span>통합검색으로이동</span></div>
             </div>
             <div style="display:flex;justify-content:flex-end;align-items:center;cursor:pointer">
-                <!-- <span style="margin-right:10px;color:whitesmoke">{{ gst.auth.getCookie("usernm") }}</span> -->
                 <span style="margin-right:10px;color:whitesmoke">{{ user ? user.USERNM : '' }}</span>
                 <span style="color:whitesmoke;font-weight:bold" @click="logout">Logout</span>
             </div>
@@ -631,7 +606,6 @@
                 </div>
                 <div class="sideBottom">
                     <div class="menu" style="margin:0 0 30px 0" @click="openUserProfile">
-                        <!-- <img class="menu32" :src="gst.html.getImageUrl('user.png')" @click="openUserProfile"> -->
                         <img v-if="user && user.url" :src="user.url" class="coImg32" style="border-radius:16px">
                         <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
                     </div>

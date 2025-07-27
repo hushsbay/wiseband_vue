@@ -10,9 +10,8 @@
     
     let uid = ref(''), pwd = ref(''), saveId = ref(true), nextOk = ref(false), mailOtp = ref('')
     let uidRef = ref(null), pwdRef = ref(null) //for focusing
-
-    //Test ID 제공
-    let list = ref([]), userRow = ref({})
+    
+    let list = ref([]), userRow = ref({}) //Test ID 제공
 
     onMounted(async () => {
         try {
@@ -104,27 +103,6 @@
                 <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="아이디/이메일" spellcheck=false autocomplete=off style="width:190px"/> 
                 <div class="btn_basic" @click="goLogin" :style="{ opacity: (mailOtp == 'Y') ? 1.0 : 0 }">확인</div>
             </div>
-            <!-- <div class="center_body" style="height:100px">
-                <div v-if="nextOk" class="center_row">
-                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="6자리 인증번호" spellcheck=false autocomplete=off style="width:190px"/>
-                    <div class="btn_basic" @click="goLoginNext">인증</div>
-                </div>
-                <div v-if="!nextOk" class="center_row" style="flex-direction:column">
-                    <div style="width:250px">
-                        <div>이메일 주소를 넣고 확인을 누르면</div>
-                        <div>인증번호가 전송되고 계속 진행됩니다.</div>
-                    </div>
-                </div>
-                <div v-if="nextOk" class="center_row" style="flex-direction:column">
-                    <div class="center_row">
-                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label>
-                    </div>
-                    <div style="width:250px">
-                        <div>이메일에서 확인한 6자리 인증번호를</div>
-                        <div>입력후 인증 버튼을 누르십시오.</div>
-                    </div>
-                </div>
-            </div> -->
             <div class="center_body" style="height:100px">
                 <div class="center_row">
                     <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="비밀번호/인증번호(6자리)" spellcheck=false autocomplete=off style="width:190px"/>

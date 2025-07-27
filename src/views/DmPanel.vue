@@ -37,10 +37,9 @@
 
     let keepAliveRef = ref(null)
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
-    let notyetChk = ref(false), searchWord = ref('') //msglistRef = ref(null), 
+    let notyetChk = ref(false), searchWord = ref('') 
     let scrollArea = ref(null), chanRow = ref({}) //chanRow는 element를 동적으로 할당
     let memberlistRef = ref(null), listDm = ref([]), kindDm = ref('all'), msglistRef = ref(null)
-    //let newRoomJustCreated = ref(false)
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
 
@@ -210,7 +209,6 @@
                 const arr = rs.list //새로 읽어온 데이터                
                 for (let i = 0; i < len; i++) {
                     const row = listDm.value[i]
-                    //if (!row) break //중간에 항목 삭제가 있는데 len은 그대로 둘것이므로 체크해야 함
                     const idx = arr.findIndex((item) => item.CHANID == row.CHANID)
                     if (idx > -1) {
                         const item = arr[idx]
@@ -220,7 +218,6 @@
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
-                        //listDm.value.splice(i, 1) //MsgList에 해당 채널이 떠 있다면 그것도 막아야 함 OK
                         row.checkedForDelete = true
                     }
                     
@@ -238,7 +235,6 @@
                     if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
                         setRowPicture(item)
                         listDm.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
-                        //dmClickOnLoop(true, item.CHANID) //알림에서도 방을 자동으로 클릭하지는 않음
                     }
                 }
             }
@@ -401,7 +397,6 @@
     async function refreshPanel() {
         await getList(true) //true시 listDm이 초기화되었다 다시 추가되므로 MsgList의 onMounted()가 실행됨을 유의
         dmClickOnLoop(true)
-        //newRoomJustCreated.value = false
     }
 
     async function handleEvFromMsgList(param) {
@@ -409,10 +404,6 @@
             dmClickOnLoop(false, param.chanid) //뒤로가기는 clickNode = false
         } else if (param.kind == "refreshRow") {
             if (param.appType == "dm") await refreshRow(param.chanid, true)
-        // } else if (param.kind == "delete") {
-        //     const idx = listDm.value.findIndex((item) => item.CHANID == param.chanid)
-        //     if (idx == -1) return
-        //     listDm.value.splice(idx, 1)
         } else if (param.kind == "updateNotyetCnt") { //사용자가 읽고 나서 갯수 새로 고침
             const row = listDm.value.find((item) => item.CHANID == param.chanid)
             if (!row) return
@@ -447,7 +438,7 @@
                 }
             }
         } else { //refreshPanel() 사용시 MsgList도 다시 Mounted되므로 사용자 액션으로 누르지 않는 한 사용하지 말기
-            procRows() //newRoomJustCreated.value = true
+            procRows()
         }
     }
 
@@ -463,7 +454,6 @@
             } else { //패널에 데이터가 없음
                 gst.util.goMsgList('dm_body', { chanid: chanid, msgid: "nodata" })
             }
-            //MsgList의 마스터/디테일 새로고침을 아래 if (kind == "forwardToBody") 말고 여기서 처리해도 되나 home에서 호출안되는 부분도 있어 일관되게 별도로 빼기로 함
         } else if (kind == "create") {
             const row = await getSingleDm(chanid)
             listDm.value.unshift(row)
@@ -488,9 +478,6 @@
                 </div>
             </div>
         </div>
-        <!-- <div v-if="newRoomJustCreated" @click="refreshPanel" style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:yellow;border-bottom:1px solid lightgray;cursor:pointer">
-            <span style="margin-right:10px;font-weight:bold">새 DM방 생성됨</span>
-        </div> -->
         <div style="padding:0 5px 10px 0;display:flex;align-items:center;justify-content:flex-end;color:whitesmoke;border-bottom:1px solid lightgray;cursor:pointer">
             <span style="margin-right:10px" @click="newDm()">신규</span>
             <span style="margin-right:10px">|</span>
