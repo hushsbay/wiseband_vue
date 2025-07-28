@@ -57,7 +57,7 @@
 
     onMounted(async () => {
         try {
-            gst.util.chkOnMountedTwice(route, 'FixedPanel')
+            //gst.util.chkOnMountedTwice(route, 'FixedPanel')
             setBasicInfo()
             await getList(true)            
             fixedClickOnLoop(true)

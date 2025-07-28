@@ -56,7 +56,7 @@
 
     onMounted(async () => {
         try {
-            gst.util.chkOnMountedTwice(route, 'ActivityPanel')
+            //gst.util.chkOnMountedTwice(route, 'ActivityPanel')
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_notyet_activity == "Y") ? true : false
             kindActivity.value = localStorage.wiseband_lastsel_activity ? localStorage.wiseband_lastsel_activity : "all"

@@ -66,7 +66,7 @@
 
     onMounted(async () => {
         try {
-            if (!gst.util.chkOnMountedTwice(route, 'DmPanel')) return
+            //if (!gst.util.chkOnMountedTwice(route, 'DmPanel')) return
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_lastsel_dm == "notyet") ? true : false
             await getList(true)
@@ -386,6 +386,7 @@
         if (manage) {
             memberlistRef.value.open("dm", null, "new")
         } else {
+            gst.util.deleteCacheFromKeepAlive(keepAliveRef, "/main/dm/dm_body_new") 
             listDm.value.forEach((item) => { //선택 해제
                 item.sel = false
                 item.hover = false
@@ -461,7 +462,7 @@
                 dmClick(listDm.value[0], 0, true) //이 때 새 라우팅이므로 MsgList의 onMounted()가 당연히 발생함
             }, 1000)
         } else if (kind == "forwardToBody") {
-            msglistRef.value.procFromParent(kind)
+            if (msglistRef.value && msglistRef.value.procFromParent) msglistRef.value.procFromParent(kind)
         }
     }
 </script>

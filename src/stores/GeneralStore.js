@@ -118,7 +118,7 @@ const GeneralStore = defineStore('General', () => {
             const author = '작성자 : ' + row.USERNM + '\n'
             const body = author + row.BODYTEXT //나중에 사용자 옵션에 따라 작성자와 본문을 보여줄지 말지 구현
             const objNoti = new window.Notification(title, {
-                body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : '/src/assets/images/color_slacklogo.png', requireInteraction : true 
+                body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : html.getImageUrl('color_slacklogo.png'), requireInteraction : true 
             })           
             objNoti.chanid = row.CHANID
             objNoti.subkind = row.SUBKIND
@@ -292,6 +292,14 @@ const GeneralStore = defineStore('General', () => {
             const idx = parseInt(ele.getAttribute("keyidx")) //해당 루프에서 keyIndex로 해도 keyindex로 렌더링되어 편의상 keyidx로 변경함
             if (hush.util.isvoid(idx)) return -1 //if (!idx) return -1 //idx가 0일 경우도 있으므로 유의해서 코딩
             return idx
+        },
+
+        deleteCacheFromKeepAlive : function(keepAliveRef, urlStr) {
+            const ka = keepAliveRef.value._.__v_cache
+            if (ka) {
+                const pathCached = ka.get(urlStr)
+                if (pathCached) ka.delete(urlStr)
+            }
         },
 
         scrollIntoView : function(rowRef, rowValue, opt) {

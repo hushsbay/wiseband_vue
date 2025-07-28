@@ -13,7 +13,7 @@
 
     defineExpose({ procMainToMsglist })
 
-    let listGroup = ref([]), groupRow = ref({}) //groupRow는 element를 동적으로 할당
+    let keepAliveRef = ref(null), listGroup = ref([]), groupRow = ref({}) //groupRow는 element를 동적으로 할당
     let mounting = true
 
     async function procMainToMsglist(kind, obj) { //단순 전달
@@ -32,7 +32,7 @@
 
     onMounted(async () => {
         try {
-            gst.util.chkOnMountedTwice(route, 'GroupPanel')
+            //gst.util.chkOnMountedTwice(route, 'GroupPanel')
             setBasicInfo()
             await getList()
             groupClickOnLoop(true)
@@ -140,7 +140,8 @@
         }
     }
 
-    function newGroup() {  
+    function newGroup() {
+        gst.util.deleteCacheFromKeepAlive(keepAliveRef, "/main/group/group_body/new") 
         gst.util.goBodyList('group_body', { grid: "new" })
     }
 </script>
@@ -181,7 +182,7 @@
     <resizer nm="group" @ev-from-resizer="handleFromResizer"></resizer>
     <div v-if="listGroup.length > 0 || !$route.fullPath.endsWith('/main/group')" id="chan_body" :style="{ width: chanMainWidth }">
         <router-view v-slot="{ Component }">
-            <keep-alive>
+            <keep-alive ref="keepAliveRef">
                 <component :is="Component" :key="$route.fullPath" @ev-to-panel="handleEvFromMsgList"/>
             </keep-alive>
         </router-view>

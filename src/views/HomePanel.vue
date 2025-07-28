@@ -55,7 +55,7 @@
     onMounted(async () => {
         try {
             console.log("Home Mounted..... " + route.fullPath)
-            if (!gst.util.chkOnMountedTwice(route, 'HomePanel')) return            
+            //if (!gst.util.chkOnMountedTwice(route, 'HomePanel')) return            
             setBasicInfo()
             if (localStorage.wiseband_lastsel_home) kind.value = localStorage.wiseband_lastsel_home
             await getList()
@@ -404,7 +404,7 @@
 
     async function handleEvFromMemberList(chanid, kind) { //MemberList에서 실행
         if (kind == "forwardToBody") {
-            await msglistRef.value.procFromParent(kind)
+            if (msglistRef.value && msglistRef.value.procFromParent) await msglistRef.value.procFromParent(kind)
         } else {
             await refreshPanel()
         }
