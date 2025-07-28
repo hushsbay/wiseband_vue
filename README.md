@@ -1,5 +1,6 @@
 개발 진척도 : 약 90% (2025.7.28 현재)
-
+개발자 : 이상병 (hushsbay@gmail.com)<br>
+테스트서버 : https://hushsbay.com:446 (테스트용 아이디 제공)
 
 # wiseband_vue (프론트엔드) + wiseband_nest (백엔드)
 
