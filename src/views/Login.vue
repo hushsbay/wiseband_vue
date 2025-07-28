@@ -113,18 +113,20 @@
                         <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label>
                     </div>
                 </div>
-                <div v-if="mailOtp=='Y'" style="width:320px;margin-top:10px">
+                <div v-if="mailOtp=='Y'" style="width:330px;margin-top:10px">
                     <div>[이메일 OTP 테스트 방법]</div>
-                    <div>이메일 주소를 넣고 '확인'을 누른 후 이메일로</div>
-                    <div>전송된 인증번호를 넣고 '인증'을 누르면 됩니다.</div>
-                    <div>이메일은 사이트내 '그룹'메뉴에서 미리 등록 필요.</div>
+                    <div>1. 이메일 주소를 넣고 '확인'을 누릅니다.</div>
+                    <div>2. 이메일로 전송된 번호를 넣고 '인증'을 누릅니다.</div>
+                    <div>3. 이메일은 사이트내 'WS' 메뉴에서 등록 필요.</div>
                 </div> 
-                <div v-else style="width:320px">
-                    <div>목록(테스트용아이디)에서 선택해 '인증'을 누르면</div>
-                    <div>진행됩니다. (인증후 이름/비번 설정 가능)</div>
+                <div v-else style="width:330px">
+                    <div>1. 아래 목록은 모두 Fake/Mock 데이터입니다.</div>
+                    <div>2. 목록에서 선택해 '인증'을 누르면 진행됩니다.</div>
+                    <div>3. 인증후엔 본인 이름/비번으로 설정 가능합니다.</div>
+                    <p style="margin-top:10px"></p>
                     <div>- 자물쇠 아이콘 : 설정된 비번 입력해야 인증 가능</div>
                     <div>- 사람 아이콘 : 비번없이 아이디로만 인증 가능</div>
-                </div>                                            
+                </div>     
             </div>
         </div>
     </div>
@@ -136,7 +138,7 @@
                 <span style="margin-right:5px">{{ row.TOP_ORG_NM }}</span>
                 <span style="margin-right:5px">{{ row.ORG_NM }}</span>
                 <span style="margin-right:5px;font-weight:bold">{{ row.USERNM }}</span> 
-                <span style="margin-right:5px">{{ row.USERID }}</span>
+                <span style="margin-right:5px">({{ row.USERID }})</span>
             </div>
         </div>
     </div>
