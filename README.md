@@ -38,6 +38,18 @@
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_05_layout.png)
 
 
+# 안읽은 메시지 관리
+
+- 안읽은 메시지는 아래와 같이 도착 및 표시됨
+
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_11_notyet.png)
+
+
+# Context Menu
+
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_12_contextmenu.png)
+
+
 # 리얼타임 데이터 반영 (socket.io/redis)
 
 - 동일한 브라우저내 (Same Domain) 단 하나의 접속 포인트만 유지하도록 함
