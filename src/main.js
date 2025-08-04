@@ -2,7 +2,6 @@ import '/src/assets/main.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import VueCookies from "vue-cookies"
 import axios from 'axios'
 //import Vue3Sanitize  from 'vue-3-sanitize'
 import App from '/src/App.vue'
