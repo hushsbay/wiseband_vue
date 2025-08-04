@@ -4,10 +4,12 @@
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
+    import {socket, chatMessages, id} from "/src/stores/socket.js"
     import PopupSidemenu from "/src/components/PopupSidemenu.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
     import UserProfile from "/src/components/UserProfile.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
+    import ConnectionState from "/src/components/ConnectionState.vue"       
 
     const gst = GeneralStore()
     const router = useRouter()
@@ -42,6 +44,39 @@
     let realtimeJobDone, pageShown = 'Y'
     let bc1, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
     let bc2, arrCurPageShown = []
+
+    //socket.io
+    // const message = ref('')
+    // const chatContainer = ref(null)
+
+    // function sendMessage() {
+    //     // const chat = {
+    //     //     owner: id.value,
+    //     //     message: message.value
+    //     // }
+    //     // chatMessages.value.push(chat)
+    //     socket.timeout(5000).emit('ClientToServer', "000000000000000")
+
+    //     message.value = "";
+    //     // 스크롤을 새 메시지 아래로 이동시킵니다.
+    //     nextTick(() => {
+    //         scrollChatToBottom();
+    //     });
+    // }
+
+    // function adjustTextarea() {
+    // }
+
+    // function scrollChatToBottom() {
+    //     if (chatContainer.value) {
+    //         chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+    //     }
+    // }
+
+    // watchEffect(()=>{
+    //     scrollChatToBottom();
+    //     console.log(chatMessages.value)
+    // })
 
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
     //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
@@ -332,8 +367,8 @@
             decideSeeMore()
             sideClickOnLoop(null, true)
             procLocalStorage() 
-            procTimerShort() 
-            procTimerLong()
+            //procTimerShort() 
+            //procTimerLong()
             if (!route.fullPath.includes('/body/msglist') && !route.fullPath.includes('/notyet')) procRsObj() //아직안읽음에서는 리얼타임 반영하지 않음
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
@@ -360,6 +395,7 @@
                 pageShownChanged(pageShown)
             })
             window.focus() //focus()해야 blur()도 발생함
+            socket.timeout(5000).emit('ClientToServer', "000000000000000")
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -620,9 +656,10 @@
                     </router-view>
                 </div>
                 <div class="footer" @click="showBottomMsgList()" style="color:lightgray;cursor:pointer">
-                    <div class="coDotDot">
+                    <!--<div class="coDotDot">
                         {{ gst.bottomMsg }}
-                    </div>
+                    </div>-->
+                    <ConnectionState/>
                 </div>
             </div>
         </div>
