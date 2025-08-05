@@ -23,3 +23,14 @@ socket.on('ServerToClient', (data) => {
     console.log(data+"@@@@@@@@@@@@@@@@@")
     chatMessages.value.push(data)
 })
+
+socket.on('error', (data) => {
+    console.log(data+"!!!!!!!!!!!!!!!")
+    chatMessages.value.push(data)
+})
+
+socket.on("connect_error", err => { //https://socket.io/docs/v4/server-api/
+  console.log(err instanceof Error); // true
+  console.log(err.message); // not authorized
+  console.log(err.data); // { content: "Please retry later" }
+});
