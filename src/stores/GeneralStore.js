@@ -295,11 +295,11 @@ const GeneralStore = defineStore('General', () => {
         },
 
         deleteCacheFromKeepAlive : function(keepAliveRef, urlStr) {
+            if (!keepAliveRef.value) return
             const ka = keepAliveRef.value._.__v_cache
-            if (ka) {
-                const pathCached = ka.get(urlStr)
-                if (pathCached) ka.delete(urlStr)
-            }
+            if (!ka) return
+            const pathCached = ka.get(urlStr)
+            if (pathCached) ka.delete(urlStr)
         },
 
         scrollIntoView : function(rowRef, rowValue, opt) {

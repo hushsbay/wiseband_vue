@@ -4,6 +4,7 @@
     import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
+    import { socket } from "/src/stores/socket.js"
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
@@ -515,6 +516,7 @@
                     procRsObj()
                     window.focus() //focus()해야 blur()도 발생함
                 }
+                console.log(socket.id+"************")
             }
         } catch (ex) {
             gst.util.showEx(ex, true)

@@ -3,7 +3,7 @@
 const hush = {
 
     cons : {
-        appName : 'WiSEBand',
+        appName : 'WiSEBand', //socket.io namespace로도 사용됨 (서버/클라이언트 동일해야 동작함)
         OK : '0',
         NOT_OK : '-1',
         NOT_FOUND : '-100',

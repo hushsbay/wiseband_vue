@@ -4,7 +4,7 @@
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
-    import {socket, chatMessages, id} from "/src/stores/socket.js"
+    import { socket } from "/src/stores/socket.js"
     import PopupSidemenu from "/src/components/PopupSidemenu.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
     import UserProfile from "/src/components/UserProfile.vue"
@@ -395,7 +395,8 @@
                 pageShownChanged(pageShown)
             })
             window.focus() //focus()해야 blur()도 발생함
-            socket.timeout(5000).emit('ClientToServer', "000000000000000")
+            socket.emit('join-room', "20250806064600712609004245")
+            console.log(socket.id+"========")
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -588,6 +589,10 @@
     function showBottomMsgList() {
         bottomMsgListPopupRef.value.open()
     }
+
+    function test() {
+        socket.emit('ClientToServer', "room")
+    }
 </script>
 
 <template>
@@ -618,7 +623,7 @@
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
-                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center">
+                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center" @click="test">
                         <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
                     </div>
                     <div id="sideTop" class="sideTop">
