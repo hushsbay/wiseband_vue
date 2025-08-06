@@ -1,10 +1,9 @@
 <script setup>
-import {connected, id} from "/src/stores/socket.js"
-
+import { connected } from "/src/stores/socket.js"
 </script>
 
 <template>
-  <p>State: {{ connected }} {{id}}</p>
+  <p>Socket: {{ connected }}</p>
 </template>
 
 <style scoped>

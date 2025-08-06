@@ -516,7 +516,6 @@
                     procRsObj()
                     window.focus() //focus()해야 blur()도 발생함
                 }
-                console.log(socket.id+"************")
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -1491,8 +1490,9 @@
                     evToPanel({ kind: "refreshPanel" })
                 }
             }
-            msgbody.value = ""            
+            msgbody.value = ""
             editMsgId.value = null
+            socket.emit('sendMsg', { roomid: chanId })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

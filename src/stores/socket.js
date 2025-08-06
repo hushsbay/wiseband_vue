@@ -1,17 +1,17 @@
-import { ref, inject } from "vue"
+import { ref } from "vue"
 import VueCookies from "vue-cookies"
 import { io } from "socket.io-client"
 import hush from '/src/stores/Common.js'
 
+const query = { token : VueCookies.get("token") }
+
 export const id = ref(Math.random().toString()) //브로드캐스팅 받은 데이터 구분을 위한 id
 export const chatMessages =ref([]) //받은 데이터를 수집
 export const connected =ref(false) //연결 상태
-
-const query = { token : VueCookies.get("token") }
 export const socket = io('http://localhost:3000/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query }) //hush.cons.appName은 namespace
 
 socket.on("connect", () => {
-    console.log("connect..socket.io")
+    console.log("connect")
     connected.value = true
 })
 
@@ -20,10 +20,10 @@ socket.on("disconnect", () => {
     connected.value = false
 })
 
-socket.on('ServerToClient', (data) => {
-    console.log(data+"@@@@@@@@@@@@@@@@@")
-    chatMessages.value.push(data)
-})
+// socket.on('ServerToClient', (data) => {
+//     console.log(data+"@@@@@@@@@@@@@@@@@")
+//     chatMessages.value.push(data)
+// })
 
 socket.on('error', (data) => {
     console.log(data+"!!!!!!!!!!!!!!!")
