@@ -1492,7 +1492,7 @@
             }
             msgbody.value = ""
             editMsgId.value = null
-            sock.socket.emit('sendMsg', { roomid: chanId }) //gst.realtime.socket.emit('sendMsg', { roomid: chanId })
+            sock.socket.emit('sendMsg', { roomid: chanId })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

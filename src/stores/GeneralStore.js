@@ -3,7 +3,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
 import axios from 'axios'
 import VueCookies from "vue-cookies"
-import { io } from "socket.io-client"
 import hush from '/src/stores/Common.js'
 
 const GeneralStore = defineStore('General', () => {
@@ -18,8 +17,6 @@ const GeneralStore = defineStore('General', () => {
     const snackBar = ref({ msg : '', where : '', toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const bottomMsg = ref(''),  bottomMsgList = ref([]), routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
-
-    const sockConnected = ref(false)
 
     const auth = {
 
@@ -157,42 +154,8 @@ const GeneralStore = defineStore('General', () => {
             if (objByChanId.value[chanid].noti) objByChanId.value[chanid].noti.close()
         },
 
-        socket : null,        
-
-        connectSock : function() {
-            const query = { token : VueCookies.get("token") }
-            realtime.socket = io('http://localhost:3000/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query }) //hush.cons.appName은 namespace
-            realtime.socket.on("connect", () => {
-                console.log("socket connected")
-                sockConnected.value = true
-            })
-            realtime.socket.on("disconnect", () => {
-                console.log("socket disconnected")
-                sockConnected.value = false
-            })
-            // socket.on('ServerToClient', (data) => {
-            //     console.log(data+"@@@@@@@@@@@@@@@@@")
-            //     chatMessages.value.push(data)
-            // })
-            realtime.socket.on('error', (data) => {
-                console.log('error: ' + data + "!!!!!!!!!!!!!!!")
-                //chatMessages.value.push(data)
-            })
-            realtime.socket.on("connect_error", err => { //https://socket.io/docs/v4/server-api/
-                console.log("connect_error: " + err instanceof Error) // true
-                console.log("connect_error: " + err.message) // not authorized
-                console.log("connect_error: " + err.data) // { content: "Please retry later" }
-            })
-        }
-
     }
 
-    const sock = {
-
-
-
-    }
-    
     const util = {
 
         chkOnMountedTwice : function(route, str) { //MsgList가 1초 이내 2번 mounted되는데 이 루틴으로 한번만 막으려 했으나 노드자동클릭 안되는 현상 발생해 모두 막아야 함
@@ -526,7 +489,7 @@ const GeneralStore = defineStore('General', () => {
     
     return { 
         objSaved, selSideMenu, chanIdActivted, objByChanId,
-        snackBar, toast, bottomMsg, bottomMsgList, routeFrom, routeTo, routedToSamePanelFromMsgList, sockConnected,
+        snackBar, toast, bottomMsg, bottomMsgList, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, realtime, util
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임
     }
