@@ -4,7 +4,7 @@
     import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
-    import { socket } from "/src/stores/socket.js"
+    import { sock } from "/src/stores/socket.js"
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
@@ -1492,7 +1492,7 @@
             }
             msgbody.value = ""
             editMsgId.value = null
-            socket.emit('sendMsg', { roomid: chanId })
+            sock.socket.emit('sendMsg', { roomid: chanId }) //gst.realtime.socket.emit('sendMsg', { roomid: chanId })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

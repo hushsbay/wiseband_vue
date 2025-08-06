@@ -4,7 +4,7 @@
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
-    import { socket } from "/src/stores/socket.js"
+    import { sock, connectSock } from "/src/stores/socket.js"
     import PopupSidemenu from "/src/components/PopupSidemenu.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
     import UserProfile from "/src/components/UserProfile.vue"
@@ -104,11 +104,23 @@
             }
             if (localStorage.winId == winId) {
                 isWinner = true
+                // if (!gst.realtime.socket || !gst.realtime.socket.connected) {
+                //     gst.realtime.connectSock()
+                // }
+                // gst.realtime.socket.on('sendMsg', async (data) => { //console.log(JSON.stringify(data)+"@@@@@@@@@@@@@@@@@")
+                //     debugger
+                //     if (isWinner) await chkDataLogEach()
+                // })
+                connectSock()
+                sock.socket.on('sendMsg', async (data) => { //console.log(JSON.stringify(data)+"@@@@@@@@@@@@@@@@@")
+                    debugger
+                    if (isWinner) await chkDataLogEach()
+                })
             } else {
                 isWinner = false
             }
             if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
-            setTimeout(function() { procLocalStorage() }, TIMERSEC_SHORT)
+            setTimeout(function() { procLocalStorage() }, 1000)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -400,10 +412,7 @@
                 pageShown = 'N'
                 pageShownChanged(pageShown)
             })
-            window.focus() //focus()해야 blur()도 발생함
-            socket.on('sendMsg', async (data) => { //console.log(JSON.stringify(data)+"@@@@@@@@@@@@@@@@@")
-                if (isWinner) await chkDataLogEach()
-            })
+            window.focus() //focus()해야 blur()도 발생함            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -598,7 +607,7 @@
     }
 
     function test() {
-        socket.emit('ClientToServer', "room")
+        //socket.emit('ClientToServer', "room")
     }
 </script>
 
