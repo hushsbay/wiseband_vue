@@ -49,6 +49,7 @@
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
     let savNextMsgMstCdt = hush.cons.cdtAtFirst //가장 작은 일시(1111-11-11)로부터 시작해서 스크롤이 내려갈 때마다 점점 다음의 큰 일시가 저장됨   
     let onGoingGetList = false, prevScrollY = 0, prevScrollHeight //, getAlsoWhenDown = ""
+    //let onReading = false
 
     //dm 보내기 (신규)
     let showUserSearch = ref(false), userSearchedRef = useTemplateRef('userSearchedRef')
@@ -862,7 +863,8 @@
                 }
             } else if (nextMsgMstCdt && kind == "scrollToBottom" && !msgidReply) { //스크롤 맨 아래로 위치
                 if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-                readMsgToBeSeen() //스크롤 이벤트와 충돌 날수도..하지만 맨 아래 데이터 가져와서 읽음 처리 안되는 경우가 생겨 추가한 것임
+                console.log("1111111112222222222222")
+                setTimeout(function() { readMsgToBeSeen() }, 500) //스크롤 이벤트와 충돌 날수도..하지만 맨 아래 데이터 가져와서 읽음 처리 안되는 경우가 생겨 추가한 것임
             } else if (nextMsgMstCdt) {
                 //그냥 두면 됨
             }
@@ -1001,9 +1003,9 @@
             { nm: "새창에서 열기", func: function(item, idx) {
                 window.open(url)
             }},
-            { nm: textRead, disable: disableStr, func: function(item, idx) {
+            { nm: textRead, disable: disableStr, func: async function(item, idx) {
                 if (oldKind == "notyet" && newKind == "read") {
-                    updateNotyetToRead(row.MSGID)
+                    await updateNotyetToRead(row.MSGID)
                 } else {
                     updateWithNewKind(row.MSGID, oldKind, newKind)
                 }
@@ -1056,14 +1058,14 @@
         row.hover = false
     }
 
-    function rowClick(row) { //msglist가 크면 클수록 바쁘게 랜더링이 돌아갈텐데 단순 클릭으로 행 위치 알려 주는 정도인 아래 코딩에서는 부담없을 것임
+    async function rowClick(row) { //msglist가 크면 클수록 바쁘게 랜더링이 돌아갈텐데 단순 클릭으로 행 위치 알려 주는 정도인 아래 코딩에서는 부담없을 것임
         msglist.value.forEach(item => item.background = '')
         row.background = hush.cons.color_athome //setTimeout(function() { row.background = "" }, 1000) //1초후에 적용되지 않고 row.hover해서 렌더링한 후에 바로 적용됨
         for (let i = 0; i < row.msgdtl.length; i++) {
             const item = row.msgdtl[i]
             if (item.KIND == 'notyet') { //스크롤 없을 때 읽음처리하기 => 내가 아직 안읽은 메시지라면 클릭하면 읽음 처리됨 (향후 대안 더 생각해보기)
                 if ((', ' + item.ID + ',').includes(', ' + g_userid + ',')) {
-                    updateNotyetToRead(row.MSGID)
+                    await updateNotyetToRead(row.MSGID)
                 }
                 break
             }
@@ -1090,6 +1092,7 @@
     }
 
     const onScrollEnd = () => {
+        console.log("111111111")
         readMsgToBeSeen() //사용자별 데이터지만 읽음 처리를 onScrolling에 두면 스크롤링하면서 초당 4~5회의 동일 데이터를 서버로 요청해서 업데이트를 시도하려 함 (table lock 체크 이전에 일단 스크롤종료시만 호출하는 것으로 변경함)
     }
 
@@ -1121,19 +1124,23 @@
             gst.util.showEx(ex, true)
         }
     }
-
-    async function refreshMsgDtlWithQryAction(msgid, msgdtl) { //msgdtl 없으면 서버호출하는 것임
+    
+    //async function refreshMsgDtlWithQryAction(msgid, msgdtl) { //msgdtl 없으면 서버호출하는 것임
+    async function refreshMsgDtlWithQryAction(msgid) { //서버의 updateNotyetToRead() 설명 참조 msgdtl 인자 막음
         try {
             const item = msglist.value.find(function(row) { return row.MSGID == msgid })
+            //console.log(msgid+"^^^^^^")
             if (!item) return
-            if (msgdtl) { //굳이 서버호출없어도 됨
-                item.msgdtl = msgdtl //해당 msgid 찾아 msgdtl을 통째로 업데이트
-            } else {
+            //if (msgdtl) { //굳이 서버호출없어도 됨
+            //    console.log(JSON.stringify(item.msgdtl)+"$$$$$$$"+JSON.stringify(msgdtl))
+            //    item.msgdtl = msgdtl //해당 msgid 찾아 msgdtl을 통째로 업데이트
+            //} else {
+                //console.log(msgid+"%%%%%%%%%%")
                 const res = await axios.post("/chanmsg/qryAction", { msgid: msgid, chanid: chanId })
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return null
                 item.msgdtl = rs.list //해당 msgid 찾아 msgdtl을 통째로 업데이트
-            }
+            //}
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -1145,7 +1152,7 @@
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
+            await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
                     const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
@@ -1163,7 +1170,9 @@
             const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)            
+            //console.log(msgid+"####")
+            await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
+            //console.log(msgid+"####")
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
             } else { 
@@ -1234,43 +1243,51 @@
     }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
-        if (showUserSearch.value) return //DM방 만들기에서는 무시
-        const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
-        if (!eleTop) {
-            return
-        } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
-            setTimeout(function() { readMsgToBeSeen() }, 500) //토스트를 bottomMsg로 대체해서 여기 올 경우는 없을 것이나 그대로 둠
-        } else {
-            const idTop = eleTop.id
-            const idx = gst.util.getKeyIndex(msgRow, idTop) //let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
-            if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
-                const len = msglist.value.length
-                const start = (idx - 10 < 0) ? 0 : idx - 10
-                const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
-                const childbodyAttr = hasProp() ? true : false
-                const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
-                const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
-                const eleHeaderHeight = eleHeader ? eleHeader.offsetHeight : 0 //Main.vue가 없는 msglist 라우팅의 경우도 있을 수 있음
-                const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
-                const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
-                const topFrom = eleHeader1.offsetHeight + eleHeaderHeight + (hasProp() ? 0 : eleNav.offsetHeight)
-                for (let i = start; i <= end; i++) {
-                    const msgdtlArr = msglist.value[i].msgdtl
-                    const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
-                    const msgid = msglist.value[i].MSGID
-                    if (msgdtlRow) { 
-                        //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-                    } else {
-                        const ele = msgRow.value[msgid]
-                        if (ele) {
-                            const rect = ele.getBoundingClientRect()
-                            if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
-                                updateNotyetToRead(msgid) //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
+        try {
+            //if (onReading) return
+            //onReading = true
+            if (showUserSearch.value) return //DM방 만들기에서는 무시
+            const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
+            if (!eleTop) {
+                return
+            } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
+                setTimeout(function() { readMsgToBeSeen() }, 500) //토스트를 bottomMsg로 대체해서 여기 올 경우는 없을 것이나 그대로 둠
+            } else {
+                const idTop = eleTop.id
+                const idx = gst.util.getKeyIndex(msgRow, idTop) //let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
+                if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
+                    const len = msglist.value.length
+                    const start = (idx - 10 < 0) ? 0 : idx - 10
+                    const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
+                    const childbodyAttr = hasProp() ? true : false
+                    const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
+                    const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
+                    const eleHeaderHeight = eleHeader ? eleHeader.offsetHeight : 0 //Main.vue가 없는 msglist 라우팅의 경우도 있을 수 있음
+                    const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
+                    const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
+                    const topFrom = eleHeader1.offsetHeight + eleHeaderHeight + (hasProp() ? 0 : eleNav.offsetHeight)
+                    for (let i = start; i <= end; i++) {
+                        const msgdtlArr = msglist.value[i].msgdtl
+                        const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+                        const msgid = msglist.value[i].MSGID
+                        if (msgdtlRow) { 
+                            //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
+                        } else {
+                            const ele = msgRow.value[msgid]
+                            if (ele) {
+                                const rect = ele.getBoundingClientRect()
+                                if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
+                                    await updateNotyetToRead(msgid) //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
+                                }
                             }
                         }
                     }
                 }
             }
+        } catch (ex) {
+            console.log("readMsgToBeSeen ex: " + ex.message) //오류나도 넘어가기로 함
+        } finally {
+            //onReading = false
         }
     }
 
@@ -1971,7 +1988,7 @@
             const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
+            await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -2584,7 +2601,7 @@
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
                             :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('S')">
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
-                            @click="htmlView()"><!--개발자사용-->
+                            @click="htmlView()"><!--개발자 사용-->
                     </div>
                     <div style="height:100%;display:flex;align-items:center">
                         <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')">

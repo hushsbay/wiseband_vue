@@ -35,7 +35,7 @@
     //리얼타임 반영
     let panelRef = ref(null)
     let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 5000, TIMERSEC_LONG = 10000, TIMERSEC_WINNER = 10, TIMER_SEC_LOCAL_STORAGE = 1000 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
+    const TIMERSEC_SHORT = 30000, TIMERSEC_LONG = 60000, TIMERSEC_WINNER = 10, TIMER_SEC_LOCAL_STORAGE = 1000 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
     //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
     //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
