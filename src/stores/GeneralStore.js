@@ -18,6 +18,8 @@ const GeneralStore = defineStore('General', () => {
     const toast = ref({ msg : '', close : false, toastSec : 0 }) //ref 대신 storeToRefs로 감싸지 말 것 (this 해결안됨)
     const bottomMsg = ref(''),  bottomMsgList = ref([]), routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
 
+    let timerShort = ref(-1) //-1은 Long Timer를 운영하는 것이고 0부터 n까지(3초정도)는 Short Timer를 운영하는 것임 (Main.vue)
+
     const auth = {
 
         setCookie : function(nm, val, persist) { //모든 쿠키는 main.js 설정에 따르고 여기서는 persist/session 쿠키 여부만 결정. persist는 모두 1년을 만기로 설정
@@ -153,6 +155,10 @@ const GeneralStore = defineStore('General', () => {
             if (!objByChanId.value[chanid]) return
             if (objByChanId.value[chanid].noti) objByChanId.value[chanid].noti.close()
         },
+
+        set : function() { //리얼타임 반영 시작 (약 3초동안. Main.vue 참조)
+            timerShort.value = 0
+        }
 
     }
 
@@ -488,7 +494,7 @@ const GeneralStore = defineStore('General', () => {
     }
     
     return { 
-        objSaved, selSideMenu, chanIdActivted, objByChanId,
+        objSaved, selSideMenu, chanIdActivted, objByChanId, timerShort,
         snackBar, toast, bottomMsg, bottomMsgList, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, realtime, util
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

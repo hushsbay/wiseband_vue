@@ -34,8 +34,8 @@
 
     //리얼타임 반영
     let panelRef = ref(null)
-    let timerShort = true, timeoutShort, timeoutLong
-    const TIMERSEC_SHORT = 30000, TIMERSEC_LONG = 60000, TIMERSEC_WINNER = 10, TIMER_SEC_LOCAL_STORAGE = 1000 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
+    let timeoutShort, timeoutLong //timerShort = true, 
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 10000, TIMERSEC_WINNER = 10, TIMER_SEC_LOCAL_STORAGE = 1000 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
     //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
     //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
     //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
@@ -74,7 +74,7 @@
                 if (!sock.socket || !sock.socket.connected) {
                     connectSock()
                     sock.socket.off('sendMsg').on('sendMsg', async (data) => { //console.log(JSON.stringify(data))
-                        if (isWinner) await chkDataLogEach()
+                        if (isWinner) gst.realtime.set()
                     })
                 }
             } else {
@@ -211,26 +211,22 @@
         }
     }
 
-    async function procTimer() { //procTimerShort()과 procTimerLong()은 소켓 적용하기 전의 코딩임. 소켓 잘되면 둘 다 제거하기
-        if (isWinner) await chkDataLogEach() //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
-        timeoutShort = setTimeout(function() { procTimer() }, TIMERSEC_SHORT)
-    }
-
     async function procTimerShort() {
         //요점 : 페이지가 보이면 최단시간 타이머 안보이면 타이머 갭을 늘리기 : 하나의 window 객체에 Main.vue의 timer가 돌아가는 것은 오직 1개만 가능하도록 함
         //vue-observe-visibility npm 굳이 사용하지 않고도 pageShown으로 처리 가능
         //sessionStorage.pageShown은 document.hidden(index.html) 참조. hot deploy시 타이머가 더 생기는지 체크 필요 (아래 .bind(this) 적용 테스트 더 해보기)
-        if (timerShort) {
+        if (gst.timerShort >= 0) {
             if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
                 await chkDataLogEach()
             }
-        }
-        timerShort = (pageShown == 'Y') ? true : false
+            gst.timerShort += 1 //timerShort = (pageShown == 'Y') ? true : false
+            if (gst.timerShort >= 3) gst.timerShort = -1 //3초정도만 리얼타임으로 처리하고 그 이후엔 Long Timer로 전환
+        }        
         timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT) //procTimerShort() }.bind(this)
     }
 
     async function procTimerLong() { //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
-        if (!timerShort) {
+        if (gst.timerShort == -1) {
             if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
                 await chkDataLogEach()
             }
@@ -345,9 +341,8 @@
             decideSeeMore()
             sideClickOnLoop(null, true)
             procLocalStorage() 
-            procTimer()
-            //procTimerShort() 
-            //procTimerLong()
+            procTimerShort() 
+            procTimerLong()
             if (!route.fullPath.includes('/body/msglist') && !route.fullPath.includes('/notyet')) procRsObj() //아직안읽음에서는 리얼타임 반영하지 않음
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
                 //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
@@ -586,6 +581,7 @@
                 <span v-show="winnerId != winId">
                     <span>fifoLen : {{ fifoLen }}</span>
                 </span>
+                <span style="margin-left:20px">timerShort : {{ gst.timerShort }}</span>
                 <div style="margin-left:20px"><ConnectionState/></div>
             </div>
             <div style="display:flex;justify-content:center;align-items:center">

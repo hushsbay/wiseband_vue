@@ -863,7 +863,6 @@
                 }
             } else if (nextMsgMstCdt && kind == "scrollToBottom" && !msgidReply) { //스크롤 맨 아래로 위치
                 if (scrollArea.value) scrollArea.value.scrollTo({ top: scrollArea.value.scrollHeight })
-                console.log("1111111112222222222222")
                 setTimeout(function() { readMsgToBeSeen() }, 500) //스크롤 이벤트와 충돌 날수도..하지만 맨 아래 데이터 가져와서 읽음 처리 안되는 경우가 생겨 추가한 것임
             } else if (nextMsgMstCdt) {
                 //그냥 두면 됨
@@ -1092,7 +1091,6 @@
     }
 
     const onScrollEnd = () => {
-        console.log("111111111")
         readMsgToBeSeen() //사용자별 데이터지만 읽음 처리를 onScrolling에 두면 스크롤링하면서 초당 4~5회의 동일 데이터를 서버로 요청해서 업데이트를 시도하려 함 (table lock 체크 이전에 일단 스크롤종료시만 호출하는 것으로 변경함)
     }
 
@@ -1110,11 +1108,12 @@
                 const idxFound = newParentAdded.value.findIndex(item => item.MSGID == msgidToProc)
                 if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
                 //아래는 원래 없었는데 다음과 같은 문제해결을 위해 추가된 것임. 창이 2개 이상 같은 채널이 열려 있을 때 하나만이라도 pageShown일 경우는 다른 창이 숨겨져 있어도 pageShown=Y로 보기로 함
-                //그렇지 않으면, '도착 메세지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
+                //그렇지 않으면, '도착 메시지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
                 //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
                 //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
-                if (newParentAdded.value.length == 0) { //이 방안은 개선이 필요함
-                    await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
+                if (newParentAdded.value.length == 0) { //이 방안은 문제가 많아 개선이 필요함 : '메시지 도착'이 나타났다가 바로 사라지는 원인도 되므로 일단 막고 고민
+                    console.log('has to be fixed out.')
+                    //await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
                 }
             } else { //자식메시지
                 const idxFound = newChildAdded.value.findIndex(item => item.MSGID == msgidToProc)
@@ -1129,13 +1128,11 @@
     async function refreshMsgDtlWithQryAction(msgid) { //서버의 updateNotyetToRead() 설명 참조 msgdtl 인자 막음
         try {
             const item = msglist.value.find(function(row) { return row.MSGID == msgid })
-            //console.log(msgid+"^^^^^^")
             if (!item) return
             //if (msgdtl) { //굳이 서버호출없어도 됨
             //    console.log(JSON.stringify(item.msgdtl)+"$$$$$$$"+JSON.stringify(msgdtl))
             //    item.msgdtl = msgdtl //해당 msgid 찾아 msgdtl을 통째로 업데이트
             //} else {
-                //console.log(msgid+"%%%%%%%%%%")
                 const res = await axios.post("/chanmsg/qryAction", { msgid: msgid, chanid: chanId })
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return null
@@ -1170,9 +1167,7 @@
             const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //console.log(msgid+"####")
             await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
-            //console.log(msgid+"####")
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
             } else { 
@@ -1237,6 +1232,7 @@
                     //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
                 }
             }
+            gst.realtime.set()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -2477,7 +2473,12 @@
                     <div v-if="row.UDT && row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                     <div class="msg_body_sub"><!-- 반응, 댓글 -->
                         <div v-for="(row1, idx1) in row.msgdtl">
-                            <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
+                            <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
+                                <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                                <span v-if="row1.KIND == 'notyet' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" style="margin-left:3px;color:red;font-weight:bold">{{ row1.CNT}}</span>
+                                <span v-else style="margin-left:3px">{{ row1.CNT}}</span>
+                            </div> -->
+                            <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
                                 <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 <span v-if="row1.KIND == 'notyet' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" style="margin-left:3px;color:red;font-weight:bold">{{ row1.CNT}}</span>
                                 <span v-else style="margin-left:3px">{{ row1.CNT}}</span>
@@ -2565,7 +2566,8 @@
                 <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center" @click="procClearSearchWhenFocus">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
                 </div><!--observerBottomTarget은 color 및 minHeight 유의-->
-                <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" :style="{ minHeight: showBottomObserver ? '10px' : '0px', color:'transparent' }">{{ hush.cons.endOfData }}</div>
+                <!-- <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" :style="{ minHeight: showBottomObserver ? '0px' : '0px', color:'red', backgroundColor: 'yellow' }">{{ hush.cons.endOfData }}</div> -->
+                <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" style="min-height:0px;color:transparent">{{ hush.cons.endOfData }}</div>
             </div>
             <div v-if="tabForNewWin==''" class="chan_center_footer">
                 <div style="width:100%;height:40px;display:flex;overflow-x:hidden;background:whitesmoke">
