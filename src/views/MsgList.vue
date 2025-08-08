@@ -1232,7 +1232,7 @@
                     //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
                 }
             }
-            gst.realtime.set()
+            gst.realtime.emit("room", { ev: "readMsg", roomid: chanId })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -1505,7 +1505,7 @@
             }
             msgbody.value = ""
             editMsgId.value = null
-            sock.socket.emit('sendMsg', { roomid: chanId })
+            gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId })
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

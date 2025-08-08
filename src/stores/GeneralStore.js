@@ -2,8 +2,9 @@ import { ref, inject } from "vue"
 import { useRouter, useRoute } from 'vue-router'
 import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-model, 구조분해할당 등에서 문제없음 (this 해결 어려우므로 꼭 필요시 사용)
 import axios from 'axios'
-import VueCookies from "vue-cookies"
+//import VueCookies from "vue-cookies"
 import hush from '/src/stores/Common.js'
+import { sock } from "/src/stores/socket.js"
 
 const GeneralStore = defineStore('General', () => {
 
@@ -156,8 +157,22 @@ const GeneralStore = defineStore('General', () => {
             if (objByChanId.value[chanid].noti) objByChanId.value[chanid].noti.close()
         },
 
+        //아래부터는 내가 만들어놓은 socket.js 관련임
         set : function() { //리얼타임 반영 시작 (약 3초동안. Main.vue 참조)
             timerShort.value = 0
+        },
+
+        emit : function(kind, data) {
+            sock.socket.emit(kind, data)
+            realtime.set()
+        },
+
+        onSock : function(kind, beforeCallback, afterCallback) {
+            sock.socket.off(kind).on(kind, async (data) => {
+                if (beforeCallback) await beforeCallback(data)
+                realtime.set()
+                if (afterCallback) await afterCallback(data)
+            })
         }
 
     }
