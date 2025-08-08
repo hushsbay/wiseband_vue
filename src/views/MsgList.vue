@@ -1143,7 +1143,7 @@
         }
     }
 
-    async function updateWithNewKind(msgid, oldKind, newKind) { //현재는 읽기 관련 처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
+    async function updateWithNewKind(msgid, oldKind, newKind) { //현재는 notyet->read 읽음처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
         try {
             const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
@@ -1167,6 +1167,7 @@
             const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" })
             await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
@@ -1183,7 +1184,8 @@
             const rq = { chanid: chanId, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return            
+            if (!rs) return
+            gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" })
             await listMsg('notyet')
             setTimeout(function() { window.close() }, 1000)
         } catch (ex) { 
@@ -1232,7 +1234,6 @@
                     //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
                 }
             }
-            gst.realtime.emit("room", { ev: "readMsg", roomid: chanId })
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -1504,8 +1505,8 @@
                 }
             }
             msgbody.value = ""
-            editMsgId.value = null
-            gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId })
+            gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" })
+            editMsgId.value = null            
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

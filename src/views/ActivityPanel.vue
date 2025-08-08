@@ -303,7 +303,7 @@
 
     async function mouseRight(e, row) {
         gst.ctx.data.header = ""
-        const url = gst.util.openWinForBodyList(row.CHANID, row.MSGID, "activity")
+        const url = gst.util.getUrlForBodyListNewWin(row.CHANID, row.MSGID, "later") 
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: function(item, idx) {
                 window.open(url)

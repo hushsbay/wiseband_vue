@@ -157,8 +157,8 @@ const GeneralStore = defineStore('General', () => {
             if (objByChanId.value[chanid].noti) objByChanId.value[chanid].noti.close()
         },
 
-        //아래부터는 내가 만들어놓은 socket.js 관련임
-        set : function() { //리얼타임 반영 시작 (약 3초동안. Main.vue 참조)
+        //아래부터는 만들어 놓은 socket.js 관련임
+        set : function() { //리얼타임 반영 시작 (약 3초동안 - Main.vue 참조)
             timerShort.value = 0
         },
 
