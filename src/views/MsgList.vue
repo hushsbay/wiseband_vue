@@ -58,7 +58,7 @@
 
     //실시간 반영
     let realLastCdt = '', pageShown = 'Y'
-    let newParentAdded = ref([]), newChildAdded = ref([])
+    let newParentAdded = ref([]), newChildAdded = ref([]), memIdTyping = ref([]), memNmTyping = ref([])
     let bc2, arrCurPageShown = [], fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
     let bc3, timerChkTyping
 
@@ -79,6 +79,8 @@
             chkDataLogEach(obj)
         } else if (kind == "userprofile") {
             //이미지 변경할 데이터 찾기가 현재로선 조금 난항이라서 급한 것 마무리하고 진행하기로 함
+        } else if (kind == "chkTyping") {
+            //console.log(JSON.stringify(obj)+"==========")
         }
     }
 
@@ -576,14 +578,16 @@
             }
             if (!hasProp()) {
                 if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가 (onMounted만 발생하고 onActivated는 없음)
-                    bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
-                    bc2.onmessage = (e) => { getBroadcast2(e.data) }
+                    if (!bc2) {
+                        bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
+                        bc2.onmessage = (e) => { getBroadcast2(e.data) }
+                    }
                     pageShownChanged(pageShown)
                     procRsObj()
                     window.focus() //focus()해야 blur()도 발생함
                 }                
             }
-            bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
+            if (!bc3) bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
             chkTyping()
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -2666,6 +2670,9 @@
                             <span class="coImgSpn">댓글 도착</span>
                             <span class="coMyNotYet">{{ newChildAdded.length }}</span>
                         </div>
+                    </div>
+                    <div style="width:100%;height:100%;display:flex;align-items:center" class="coDotDot">
+                        <div class="coDotDot"><span>{{ memNmTyping }}</span></div>
                     </div>
                 </div>
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 

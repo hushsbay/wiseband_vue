@@ -73,9 +73,13 @@
                 isWinner = true
                 if (!sock.socket || !sock.socket.connected) {
                     connectSock()
+                    console.log("##############")
                     sock.socket.off("room").on("room", async (data) => {
                         if (data.ev == "chkTyping") {
-                            //console.log(data.typing+"===========")
+                            console.log(JSON.stringify(data)+"@@@@@@@")
+                            if (panelRef.value && panelRef.value.procMainToMsglist) {
+                                panelRef.value.procMainToMsglist("chkTyping", data)
+                            }
                         } else {
                             gst.realtime.set()
                         }
@@ -90,14 +94,17 @@
                         gst.realtime.set()
                     })
                 }
-                bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true일 경우만 해당
-                bc3.onmessage = (e) => {
-                    if (e.data.data.ev == "chkTyping") {
-                        sock.socket.emit(e.data.kind, e.data.data) //data polling 없음
-                    } else {
-                        gst.realtime.emit(e.data.kind, e.data.data) 
-                    }
-                } //각 탭 MsgList.vue로부터 데이터를 받아서 emit()만 처리하는 전용 채널
+                if (!bc3) {
+                    bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true일 경우만 해당
+                    bc3.onmessage = (e) => {
+                        if (e.data.data.ev == "chkTyping") {
+                            //console.log("chkTyping...........!!!!!!")
+                            sock.socket.emit(e.data.kind, e.data.data) //data polling 없음
+                        } else {
+                            gst.realtime.emit(e.data.kind, e.data.data) 
+                        }
+                    } //각 탭 MsgList.vue로부터 데이터를 받아서 emit()만 처리하는 전용 채널
+                }
             } else {
                 isWinner = false
                 if (bc3) bc3.close()
@@ -133,6 +140,7 @@
             cntChanActivted.value = 0
             cntNotChanActivted.value = 0
             let rs
+            procBroadcastChannel() //바로 아래 bc1.postMessage() / bc2.postMessage() 오류가 문제되어 여기서 처리
             if (rsObj) {
                 rs = rsObj //바로 아래 else에서 bc1.postMessage() 한 것을 위너가 아닌 탭에서 받은 것임
             } else {
@@ -334,12 +342,20 @@
         }
     }
 
-    onMounted(async () => {
-        try {   
+    function procBroadcastChannel() { //bs3은 별도 설정
+        if (!bc1) {
             bc1 = new BroadcastChannel("wbRealtime1") //각탭의 Main.vue <=> Main.vue
             bc1.onmessage = (e) => { getBroadcast1(e.data) }
+        }
+        if (!bc2) {
             bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue
             bc2.onmessage = (e) => { getBroadcast2(e.data) }
+        }
+    }
+
+    onMounted(async () => {
+        try {   
+            procBroadcastChannel()
             pageShownChanged(pageShown)
             const tag = document.querySelector("#winid") //변하지 않는 값
             winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
@@ -402,6 +418,7 @@
         clearTimeout(timeoutLong)
         if (bc1) bc1.close()
         if (bc2) bc2.close()
+        if (bc3) bc3.close()
     })
 
     function sideClickOnLoop(selMenu, onMounted) {
