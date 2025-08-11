@@ -4,7 +4,7 @@
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
-    import { sock, connectSock } from "/src/stores/socket.js"
+    import { sock, connectSock } from "/src/stores/Socket.js"
     import PopupSidemenu from "/src/components/PopupSidemenu.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
     import UserProfile from "/src/components/UserProfile.vue"
@@ -74,6 +74,9 @@
                 if (!sock.socket || !sock.socket.connected) {
                     connectSock()
                     gst.realtime.onSock("room")
+                    gst.realtime.onSock("member")
+                    gst.realtime.onSock("all")
+                    gst.realtime.onSock("user")
                 }
             } else {
                 isWinner = false

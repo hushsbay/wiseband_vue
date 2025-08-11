@@ -4,7 +4,7 @@ import { defineStore } from "pinia" //ref 대신에 storeToRefs 사용해야 v-m
 import axios from 'axios'
 //import VueCookies from "vue-cookies"
 import hush from '/src/stores/Common.js'
-import { sock } from "/src/stores/socket.js"
+import { sock } from "/src/stores/Socket.js"
 
 const GeneralStore = defineStore('General', () => {
 
@@ -162,8 +162,8 @@ const GeneralStore = defineStore('General', () => {
             timerShort.value = 0
         },
 
-        emit : function(kind, data) {
-            sock.socket.emit(kind, data)
+        emit : function(kind, data) { //room 멤버가 아닌 다른 사용자 또는 다른 소켓 1개에만 직접 전송하는 것은 서버 로직 참조
+            sock.socket.emit(kind, data) //보낼 때는 서버의 본인 소켓으로만 보내고 서버에서 kind가 myself/room/all에 따라 그 대상으로 전송함
             realtime.set()
         },
 

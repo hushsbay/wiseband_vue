@@ -132,6 +132,7 @@
                 }
             }
             if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
+                gst.realtime.emit("room", { ev: "saveChanMember", roomid: chanId, from: "applyToBody" })
                 await getList()
                 await nextTick()
                 for (let i = 0; i < brr.length; i++) {
@@ -223,6 +224,7 @@
             const res = await axios.post("/chanmsg/saveChanMember", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            gst.realtime.emit("room", { ev: "saveChanMember", roomid: chanId, from: "saveMember" })
             memberlist.value.forEach(item => { //반영할 항목들이 많으면 아예 qry로 한행 읽어서 해당 배열 항목 한행만 새로고침하면 되나 여기서는 딱 한개 필드만 반영하면 되므로 아래와 같이 처리
                 if (item.USERID == row.USERID) {
                     item.KIND = rowKind.value
@@ -248,6 +250,7 @@
                 const rs = gst.util.chkAxiosCode(res.data)
                 //if (!rs) return
             }
+            gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
             newMember()
             await getList()
             if (appType == "dm") evToPanel("update")
@@ -271,6 +274,7 @@
                 evToPanel("update")
                 evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
             }
+            gst.realtime.emit("room", { ev: "saveChan", roomid: chanId, from: "saveChan" })
             return true
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -284,6 +288,7 @@
             const res = await axios.post("/chanmsg/deleteChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            gst.realtime.emit("room", { ev: "deleteChan", roomid: chanId, from: "deleteChan" })
             evToPanel("delete")
             setTimeout(function() { close() }, 500)
         } catch (ex) { 
@@ -291,7 +296,7 @@
         }
     }
 
-    async function inviteToMember() {
+    async function inviteToMember() { //메일 발송은 리얼타임 반영 없음 : 일단, 방멤버가 초대했다고 명시적으로 알리는 정도로 가름함
         try {
             let arr = [] //const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
             memberlist.value.forEach(item => {

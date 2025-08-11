@@ -4,7 +4,6 @@
     import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
-    import { sock } from "/src/stores/socket.js"
     import ContextMenu from "/src/components/ContextMenu.vue"
     import PopupImage from "/src/components/PopupImage.vue"
     import PopupCommon from "/src/components/PopupCommon.vue"
@@ -216,7 +215,13 @@
                             const idx = gst.util.getKeyIndex(msgRow, parentMsgid) //부모아이디로 찾으면 됨
                             if (idx > -1) {                            
                                 if (row.REPLYTO == "") {
+                                    const lastIndex = msglist.value.length - 1
                                     msglist.value.splice(idx, 1) //const item = msglist.value[idx]
+                                    if (idx < lastIndex) { //삭제한 메시지의 바로 다음 메시지는 무조건 메시지 작성자의 이미지와 이름이 무조건 보여야 그 위 메시지의 작성자와 혼동되지 않음
+                                        const item = msglist.value[idx]
+                                        item.stickToPrev = false
+                                        item.hasSticker = false
+                                    }
                                 } else { //삭제한 MSGID가 댓글일 경우
                                     refreshWithGetMsg(row.msgItem.data, null, idx) //row.msgItem.data에 부모메시지 정보 들어 있음
                                     if (msglistRef.value) {
@@ -607,6 +612,7 @@
                     const res = await axios.post("/chanmsg/deleteChanMember", rq)
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
+                    gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
                     await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조 
                     evToPanel({ kind: "refreshPanel" })                   
                 } catch (ex) { 
@@ -1040,7 +1046,8 @@
                     })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
-                    msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
+                    gst.realtime.emit("room", { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" })
+                    //msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
@@ -1149,7 +1156,8 @@
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
+            //gst.realtime.emit("member", { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }) 본인에게 보내는 건 polling부터 로직 다시 확인 필요
+            //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
                     const idx = msglist.value.findIndex((item) => item.MSGID == msgid)
@@ -1168,7 +1176,7 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" })
-            await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
+            //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
             } else { 
@@ -1985,7 +1993,8 @@
             const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
+            gst.realtime.emit("room", { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" })
+            //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -1998,6 +2007,7 @@
             const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            gst.realtime.emit("room", { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" })
             const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
             window.open(url)
             /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)
@@ -2474,12 +2484,12 @@
                     <div v-if="row.UDT && row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
                     <div class="msg_body_sub"><!-- 반응, 댓글 -->
                         <div v-for="(row1, idx1) in row.msgdtl">
-                            <!-- <div v-if="row1.KIND != 'read' && row1.KIND != 'unread'" class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
-                                <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
-                                <span v-if="row1.KIND == 'notyet' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" style="margin-left:3px;color:red;font-weight:bold">{{ row1.CNT}}</span>
-                                <span v-else style="margin-left:3px">{{ row1.CNT}}</span>
-                            </div> -->
-                            <div class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
+                            <div v-if="(row1.KIND == 'read' || row1.KIND == 'unread')">
+                                <div v-if="(', ' + row1.ID + ',').includes(', ' + g_userid + ',')" class="msg_body_sub1" :title="'['+row1.KIND+ ']'" @click="toggleReaction(row.MSGID, row1.KIND)">
+                                    <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
+                                </div>
+                            </div>
+                            <div v-else class="msg_body_sub1" :title="'['+row1.KIND+ '] ' + row1.NM" @click="toggleReaction(row.MSGID, row1.KIND)">
                                 <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 <span v-if="row1.KIND == 'notyet' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" style="margin-left:3px;color:red;font-weight:bold">{{ row1.CNT}}</span>
                                 <span v-else style="margin-left:3px">{{ row1.CNT}}</span>

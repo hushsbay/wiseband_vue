@@ -1,5 +1,5 @@
 <script setup>
-import { connected } from "/src/stores/socket.js"
+import { connected } from "/src/stores/Socket.js"
 </script>
 
 <template>
