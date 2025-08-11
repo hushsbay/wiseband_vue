@@ -93,8 +93,7 @@
                 bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true일 경우만 해당
                 bc3.onmessage = (e) => {
                     if (e.data.data.ev == "chkTyping") {
-                        sock.socket.emit(e.data.kind, e.data.data)
-                        //console.log(e.data.kind + "===" + JSON.stringify(e.data.data))
+                        sock.socket.emit(e.data.kind, e.data.data) //data polling 없음
                     } else {
                         gst.realtime.emit(e.data.kind, e.data.data) 
                     }

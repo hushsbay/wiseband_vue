@@ -399,11 +399,11 @@
 
     function chkTyping() {
         console.log("chkTyping...........")
-        let body = document.getElementById(editorId).innerHTML.trim()
-        let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: false, from: "chkTyping" }
-        if (body.length > 0) data.typing = true
+        let body = document.getElementById(editorId).innerText.trim() //innerHtml로 하면 다 지워도 <br>이 남아 있어서 innerText로 처리
+        let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkTyping" }
+        data.typing = (body.length > 0) ? true : false
         bc3.postMessage({ kind: "room", data: data}) //gst.realtime.emit("chkTyping", data)
-        timerChkTyping = setTimeout(function() { chkTyping() }, 1000)
+        timerChkTyping = setTimeout(function() { chkTyping() }, 3000)
     }
 
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
@@ -530,15 +530,15 @@
                         pageShown = 'N' 
                         pageShownChanged(pageShown)
                     })
-                    bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
-                    bc2.onmessage = (e) => { getBroadcast2(e.data) }
-                    pageShownChanged(pageShown)
-                    procRsObj()
-                    window.focus() //focus()해야 blur()도 발생함
+                    //bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
+                    //bc2.onmessage = (e) => { getBroadcast2(e.data) }
+                    //pageShownChanged(pageShown)
+                    //procRsObj()
+                    //window.focus() //focus()해야 blur()도 발생함
                 }                
             }
-            bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
-            chkTyping()
+            //bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
+            //chkTyping()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -549,9 +549,9 @@
             if (!route.fullPath.includes("_body/")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
             console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
             gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
-            if (mounting) {
+            if (mounting) { //맨 처음 onMounted직후 여기로 들어오게 됨 (mounting = true)
                 mounting = false
-            } else {
+            } else { //여기 else는 onMounted 직후 따라오는 onActivated에서는 실행이 안되고 onActivated 단독으로 실행될 때 처리되는 루틴임
                 subTitle = subTitle.replace("M", "A")
                 if (hasProp()) {
                     setBasicInfoInProp()
@@ -574,22 +574,36 @@
                     }
                 }
             }
+            if (!hasProp()) {
+                if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가 (onMounted만 발생하고 onActivated는 없음)
+                    bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
+                    bc2.onmessage = (e) => { getBroadcast2(e.data) }
+                    pageShownChanged(pageShown)
+                    procRsObj()
+                    window.focus() //focus()해야 blur()도 발생함
+                }                
+            }
+            bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
+            chkTyping()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
     onDeactivated(() => {
-        pageShownChanged('N')        
+        pageShownChanged('N')
+        clearTimeout(timerChkTyping)
+        if (bc2) bc2.close()
+        if (bc3) bc3.close()
     })
 
     onUnmounted(() => {
         if (observerTop && observerTop.value) observerTop.value.disconnect()
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
         pageShownChanged('N')
-        clearTimeout(timerChkTyping)
-        if (bc2) bc2.close()
-        if (bc3) bc3.close()
+        // clearTimeout(timerChkTyping)
+        // if (bc2) bc2.close()
+        // if (bc3) bc3.close()
     })
 
     function setBasicInfo() {
