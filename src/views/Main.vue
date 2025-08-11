@@ -43,7 +43,7 @@
     let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
     let realtimeJobDone, pageShown = 'Y'
     let bc1, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
-    let bc2, arrCurPageShown = []
+    let bc2, arrCurPageShown = [], bc3
 
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
     //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
@@ -73,13 +73,35 @@
                 isWinner = true
                 if (!sock.socket || !sock.socket.connected) {
                     connectSock()
-                    gst.realtime.onSock("room")
-                    gst.realtime.onSock("member")
-                    gst.realtime.onSock("all")
-                    gst.realtime.onSock("user")
+                    sock.socket.off("room").on("room", async (data) => {
+                        if (data.ev == "chkTyping") {
+                            //console.log(data.typing+"===========")
+                        } else {
+                            gst.realtime.set()
+                        }
+                    })
+                    sock.socket.off("member").on("member", async (data) => {
+                        gst.realtime.set()
+                    })
+                    sock.socket.off("all").on("all", async (data) => {
+                        gst.realtime.set()
+                    })
+                    sock.socket.off("user").on("user", async (data) => {
+                        gst.realtime.set()
+                    })
                 }
+                bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true일 경우만 해당
+                bc3.onmessage = (e) => {
+                    if (e.data.data.ev == "chkTyping") {
+                        sock.socket.emit(e.data.kind, e.data.data)
+                        //console.log(e.data.kind + "===" + JSON.stringify(e.data.data))
+                    } else {
+                        gst.realtime.emit(e.data.kind, e.data.data) 
+                    }
+                } //각 탭 MsgList.vue로부터 데이터를 받아서 emit()만 처리하는 전용 채널
             } else {
                 isWinner = false
+                if (bc3) bc3.close()
             }
             if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
             setTimeout(function() { procLocalStorage() }, TIMER_SEC_LOCAL_STORAGE)
@@ -379,6 +401,8 @@
         pageShownChanged('N')
         clearTimeout(timeoutShort)
         clearTimeout(timeoutLong)
+        if (bc1) bc1.close()
+        if (bc2) bc2.close()
     })
 
     function sideClickOnLoop(selMenu, onMounted) {

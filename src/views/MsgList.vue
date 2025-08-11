@@ -23,7 +23,7 @@
     let afterScrolled = ref(false), showTopObserver = ref(true), showBottomObserver = ref(true), scrollDir
 
     const MAX_PICTURE_CNT = 4, adminShowID = ref(false)
-    const g_userid = gst.auth.getCookie("userid")
+    const g_userid = gst.auth.getCookie("userid"), g_usernm = gst.auth.getCookie("usernm")
     let mounting = true, appType //appType은 거의 패널타입인데 msglist도 들어 있어 panelType으로 정의하지 않음 (WS/GS 구분은 chanType을 사용)
     
     let widthChanCenter = ref('calc(100% - 20px)')
@@ -60,6 +60,7 @@
     let realLastCdt = '', pageShown = 'Y'
     let newParentAdded = ref([]), newChildAdded = ref([])
     let bc2, arrCurPageShown = [], fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
+    let bc3, timerChkTyping
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -396,17 +397,30 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
+    function chkTyping() {
+        console.log("chkTyping...........")
+        let body = document.getElementById(editorId).innerHTML.trim()
+        let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: false, from: "chkTyping" }
+        if (body.length > 0) data.typing = true
+        bc3.postMessage({ kind: "room", data: data}) //gst.realtime.emit("chkTyping", data)
+        timerChkTyping = setTimeout(function() { chkTyping() }, 1000)
+    }
+
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
+        let gap
         try {            
             if (fifo.length > 0) {
                 const rsObj = { list: fifo[0] }
                 await chkDataLogEach(rsObj)
                 fifo.splice(0, 1)
+                gap = 100
+            } else {
+                gap = 500
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
         } finally {
-            setTimeout(function() { procRsObj() }, 100)
+            setTimeout(function() { procRsObj() }, gap)
         }
     }
 
@@ -521,8 +535,10 @@
                     pageShownChanged(pageShown)
                     procRsObj()
                     window.focus() //focus()해야 blur()도 발생함
-                }
+                }                
             }
+            bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
+            chkTyping()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -535,7 +551,7 @@
             gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
             if (mounting) {
                 mounting = false
-            } else {            
+            } else {
                 subTitle = subTitle.replace("M", "A")
                 if (hasProp()) {
                     setBasicInfoInProp()
@@ -564,13 +580,16 @@
     })
 
     onDeactivated(() => {
-        pageShownChanged('N')
+        pageShownChanged('N')        
     })
 
     onUnmounted(() => {
         if (observerTop && observerTop.value) observerTop.value.disconnect()
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
         pageShownChanged('N')
+        clearTimeout(timerChkTyping)
+        if (bc2) bc2.close()
+        if (bc3) bc3.close()
     })
 
     function setBasicInfo() {
@@ -612,7 +631,8 @@
                     const res = await axios.post("/chanmsg/deleteChanMember", rq)
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
-                    gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
+                    bc3.postMessage({ kind: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
+                    //gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
                     await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조 
                     evToPanel({ kind: "refreshPanel" })                   
                 } catch (ex) { 
@@ -1046,7 +1066,8 @@
                     })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
-                    gst.realtime.emit("room", { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" })
+                    bc3.postMessage({ kind: "room", data: { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" }})
+                    //gst.realtime.emit("room", { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" })
                     //msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
@@ -1156,6 +1177,7 @@
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            //bc3.postMessage({ kind: "member", data: { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }})
             //gst.realtime.emit("member", { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }) 본인에게 보내는 건 polling부터 로직 다시 확인 필요
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (oldKind == "read" || oldKind == "unread") {
@@ -1175,7 +1197,8 @@
             const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" })
+            bc3.postMessage({ kind: "room", data: { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" }})
+            //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
@@ -1193,7 +1216,8 @@
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" })
+            bc3.postMessage({ kind: "room", data: { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" }})
+            //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" })
             await listMsg('notyet')
             setTimeout(function() { window.close() }, 1000)
         } catch (ex) { 
@@ -1513,7 +1537,8 @@
                 }
             }
             msgbody.value = ""
-            gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" })
+            bc3.postMessage({ kind: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }})
+            //gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" })
             editMsgId.value = null            
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -1993,7 +2018,8 @@
             const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.realtime.emit("room", { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" })
+            bc3.postMessage({ kind: "room", data: { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" }})
+            //gst.realtime.emit("room", { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -2003,11 +2029,12 @@
     async function okChanDmPopup(kind, strChanid, strMsgid) { //바로 아래 forwardMsg()에서 연결됨 : strChanid(새로 선택한 채널(DM)방), strMsgid(전달하려고 하는 기존 메시지)
         try {
             popupChanDmRef.value.close()
-            const rq = { chanid: chanId, msgid: strMsgid, targetChanid: strChanid } //선택한 채널의 메시지를 targetChanid에 복사
+            const rq = { kind, chanid: chanId, msgid: strMsgid, targetChanid: strChanid } //선택한 채널의 메시지를 targetChanid에 복사
             const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.realtime.emit("room", { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" })
+            bc3.postMessage({ kind: "room", data: { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" }})
+            //gst.realtime.emit("room", { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" })
             const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
             window.open(url)
             /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)

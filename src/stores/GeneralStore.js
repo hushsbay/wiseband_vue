@@ -167,13 +167,13 @@ const GeneralStore = defineStore('General', () => {
             realtime.set()
         },
 
-        onSock : function(kind, beforeCallback, afterCallback) {
-            sock.socket.off(kind).on(kind, async (data) => {
-                if (beforeCallback) await beforeCallback(data)
-                realtime.set()
-                if (afterCallback) await afterCallback(data)
-            })
-        }
+        // onSock : function(kind, beforeCallback, afterCallback) {
+        //     sock.socket.off(kind).on(kind, async (data) => {
+        //         if (beforeCallback) await beforeCallback(data) //reserved
+        //         realtime.set()
+        //         if (afterCallback) await afterCallback(data) //reserved
+        //     })
+        // }
 
     }
 
