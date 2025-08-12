@@ -59,7 +59,7 @@
     //실시간 반영
     let realLastCdt = '', pageShown = 'Y'
     let newParentAdded = ref([]), newChildAdded = ref([]), memIdTyping = ref([]), memNmTyping = ref([])
-    let bc2, arrCurPageShown = [], fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
+    let bc2, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
     let timerChkTyping
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -80,8 +80,21 @@
         } else if (kind == "userprofile") {
             //이미지 변경할 데이터 찾기가 현재로선 조금 난항이라서 급한 것 마무리하고 진행하기로 함
         } else if (kind == "chkTyping") {
-            console.log(JSON.stringify(obj)+"==========")
-            //if (memIdTyping.includes(obj.userid))
+            if (obj.roomid == chanId) {
+                if (obj.typing) {
+                    if (!memIdTyping.value.includes(obj.userid)) {
+                        memIdTyping.value.push(obj.userid)
+                        memNmTyping.value.push(obj.usernm)
+                    }
+                } else {
+                    const idx = memIdTyping.value.indexOf(obj.userid)
+                    console.log(JSON.stringify(obj)+"^^^"+idx)
+                    if (idx > -1) {
+                        memIdTyping.value.splice(idx, 1)
+                        memNmTyping.value.splice(idx, 1)
+                    }
+                }
+            }
         }
     }
 
@@ -103,13 +116,9 @@
             let realShown
             const objChanid = gst.objByChanId[chanId]
             if (!objChanid) {
-                realShown = pageShown
+                realShown = 'N' //pageShown
             } else {
-                if (objChanid && objChanid.realShown == 'Y') {
-                    realShown = 'Y'
-                } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
-                    realShown = 'N'
-                }
+                realShown = (objChanid.realShown == 'Y') ? 'Y' : 'N'
             }
             //넘어오는 항목(SELECT) : MSGID, REPLYTO, CUD, MAX(CDT) MAX_CDT : 본문에서의 MAX_CDT는 C,D는 유일하게 1개일 것이며 U정도만 효용성이 있음
             //따라서, 아래 C,X의 경우 MAX_CDT를 해당 메시지의 CDT(생성일시)로 봐도 무방함
@@ -416,13 +425,18 @@
         let body = document.getElementById(editorId).innerText.trim() //innerHtml로 하면 다 지워도 <br>이 남아 있어서 innerText로 처리
         let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkTyping" }
         data.typing = (body.length > 0) ? true : false
-        try {
-            sendSockObjToMain({ kind: "room", data: data}) //gst.realtime.emit("chkTyping", data)
-        } catch (ex) {
-            console.log("chkTyping..........." + ex.message)
-        } finally {
-            timerChkTyping = setTimeout(function() { chkTyping() }, 3000)
-        }
+        //if (firstIn) { //뒤즌게 들어온 멤버를 위해 처음 한번은 무조건 가져와야 함 : 자기 것만 가져오므로 안됨
+        sendSockObjToMain({ kind: "room", data: data})
+        // } else {
+        //     if (data.typing && memIdTyping.value.includes(g_userid)) {
+        //         //입력중인데 멤버에 들어 있으면 굳이 알릴 필요없음
+        //     } else if (!data.typing && !memIdTyping.value.includes(g_userid)) {
+        //         //입력중이지 않는데 멤버에도 들어 있지 않으면 굳이 알릴 필요없음
+        //     } else {
+        //         sendSockObjToMain({ kind: "room", data: data})
+        //     }
+        // }
+        timerChkTyping = setTimeout(function() { chkTyping() }, 3000)
     }
 
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
@@ -445,7 +459,6 @@
 
     function pageShownChanged(ps) { //ps=pageShown
         if (chanId) gst.realtime.setObjToChan(chanId, "realShown", ps)
-        if (bc2) bc2.postMessage({ code: 'pageShownChanged' })        
     }
 
     function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
@@ -456,58 +469,12 @@
                 //여기로 오지 않고 Main.vue에서 data polling으로 처리 완료되는 경우임
             }
         } else {
-            if (data.code == 'pollingToMsgList') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
+            if (data.code == 'pollingToMsgList') { //별도 창의 Main.vue로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
                 //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
                 //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
                 fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
                 fifoLen.value = fifo.length
-            } else if (data.code == 'pageShownChanged') {            
-                bc2.postMessage({ code: 'pageShownChanged1' }) //pageShownChanged으로 처리시 pageShownChanged를 받는 탭은 정작 informCurPageShown으로 들어오는 정보를 못받아서 다시 한번 보내 받게 해줌
-                bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
-            }else if (data.code == 'pageShownChanged1') {
-                bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
-            } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
-                arrCurPageShown.push({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
-                arrCurPageShown.push(data)
-                setTimeout(function() { procObjByChanid() }, 500)
             }
-        }
-    }
-
-    function procObjByChanid() {
-        try {
-            const tmpArr = []
-            const len = arrCurPageShown.length
-            if (len > 0) {
-                for (let i = 0; i < len; i++) {
-                    const item = arrCurPageShown[i]
-                    if (tmpArr.length == 0) {
-                        tmpArr.push(item)
-                    } else {
-                        let modified = false
-                        for (let j = 0; j < tmpArr.length; j++) {
-                            if (tmpArr[j].chanid == item.chanid) {
-                                if (tmpArr[j].pageShown == 'Y') { 
-                                    //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
-                                } else {
-                                    if (item.pageShown == 'Y') {
-                                        tmpArr[j] = item
-                                    }
-                                }
-                                modified = true
-                            }
-                        }
-                        if (!modified) tmpArr.push(item)
-                    }
-                } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
-                arrCurPageShown.splice(0, len)
-            }
-            for (let i = 0; i < tmpArr.length; i++) {
-                const item = tmpArr[i]
-                gst.realtime.setObjToChan(item.chanid, "realShown", item.pageShown)
-            } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
-        } catch (ex) {
-            gst.util.showEx(ex, true)
         }
     }
 
@@ -565,8 +532,8 @@
             if (route.fullPath.includes('/body/msglist')) {
                 bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue : Main.vue의 onMounted 주석 참조   
                 bc2.onmessage = (e) => { getBroadcast2(e.data) }
-                chkTyping()
             }
+            chkTyping()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -2542,7 +2509,7 @@
                     <div class="msg_body_sub"><!-- 반응, 댓글 -->
                         <div v-for="(row1, idx1) in row.msgdtl">
                             <div v-if="(row1.KIND == 'read' || row1.KIND == 'unread')">
-                                <div v-if="(', ' + row1.ID + ',').includes(', ' + g_userid + ',')" class="msg_body_sub1" :title="'['+row1.KIND+ ']'" @click="toggleReaction(row.MSGID, row1.KIND)">
+                                <div v-if="row1.KIND == 'unread' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" class="msg_body_sub1" :title="'['+row1.KIND+ ']'" @click="toggleReaction(row.MSGID, row1.KIND)">
                                     <img class="coImg18" :src="gst.html.getImageUrl('emo_' + row1.KIND + '.png')">
                                 </div>
                             </div>
@@ -2673,18 +2640,18 @@
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
                             @click="htmlView()"><!--개발자 사용-->
                     </div>
-                    <div style="height:100%;display:flex;align-items:center">
-                        <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')">
-                            <span class="coImgSpn">메시지 도착</span>
+                    <div style="height:100%;margin-left:10px;display:flex;align-items:center">
+                        <div v-show="listMsgSel == 'all' && newParentAdded.length > 0" class="coImgBtn" @click="addAllNew('P')" style="width:70px">
+                            <span class="coImgSpn">메시지</span>
                             <span class="coMyNotYet">{{ newParentAdded.length }}</span> 
                         </div>
-                        <div v-show="listMsgSel == 'all' && newChildAdded.length > 0" class="coImgBtn" @click="addAllNew('C')">
-                            <span class="coImgSpn">댓글 도착</span>
+                        <div v-show="listMsgSel == 'all' && newChildAdded.length > 0" class="coImgBtn" @click="addAllNew('C')" style="width:80px">
+                            <span class="coImgSpn">댓글</span>
                             <span class="coMyNotYet">{{ newChildAdded.length }}</span>
                         </div>
                     </div>
-                    <div style="width:100%;height:100%;display:flex;align-items:center" class="coDotDot">
-                        <div class="coDotDot"><span>{{ memNmTyping }}</span></div>
+                    <div style="width:100%;height:100%;margin-left:10px;display:flex;align-items:center" class="coDotDot">
+                        <div class="coDotDot"><span>{{ memNmTyping.join(',') }}</span></div>
                     </div>
                 </div>
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 

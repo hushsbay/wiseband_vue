@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue' 
-    import { useRouter, useRoute } from 'vue-router'
+    import { useRouter } from 'vue-router'
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
@@ -13,7 +13,6 @@
 
     const gst = GeneralStore()
     const router = useRouter()
-    const route = useRoute()
 
     const g_userid = gst.auth.getCookie("userid")
 
@@ -33,92 +32,39 @@
     let bottomMsgListPopupRef = ref(null)
 
     //리얼타임 반영
-    let panelRef = ref(null)
-    let timeoutShort, timeoutLong //timerShort = true, 
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 30000, TIMERSEC_WINNER = 10, TIMER_SEC_LOCAL_STORAGE = 1000 //procLocalStorage()의 10초때문에 1초/3초로 정하고 10초보다 크게 가면 3초도 좀 더 크게 가도 됨
-    //여기 sec은 데이터를 읽어오고 타이머가 처리하는 동안은 추가로 중복 실행안되게 함 (1초 간격이라도 1초가 넘을 수도 있음 - 따라서, 위너는 아래 10초정도로 충분한 시간을 줌)
-    //이 TIMERSEC_SHORT, TIMERSEC_LONG은 여러탭에서는 결국 하나의 위너에서만 서버호출할텐데, 위너가 보이고 다른 이들이 안보이면 전달이 1초일테고 위너가 안보이면 3초일테니 그땐 좀 늦게 반영되게 됨
-    //결국, 사용자들이 자기가 원해서 여러개의 탭을 띄운다면 (위너가 뒤로 가면 리얼타임 반영이 3초로 약간) 늦어질 수도 있다는 안내가 필요할 수도 있음
-    let logdt = '', logdtDisp = ref(''), cntChanActivted = ref(0), cntNotChanActivted = ref(0), logdtColor = ref('yellow') //화면 표시용
-    let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
-    let realtimeJobDone, pageShown = 'Y'
-    let bc1, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
-    let bc2, arrCurPageShown = []
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 30000 //, cntChanActivted = ref(0), cntNotChanActivted = ref(0)
+    let logdt = '', logdtDisp = ref(''), logdtColor = ref('yellow') //화면 표시용
+    let panelRef = ref(null), notyetCntHome = ref(0), notyetCntDm = ref(0)
+    let bc2, realtimeJobDone, pageShown = 'Y', timeoutShort, timeoutLong
 
-    //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
-    //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
-    //2개의 조합으로도 불안하므로 브라우저 강제종료 등의 예외 대비해 procLocalStorage 타이머로 체크 추가
-    //참고로, Main.vue가 들어가는 탭은 사용자가 다른 탭에서 url을 치거나 복사해야 가능 (새창에서 열기 메뉴는 main.vue가 없는 MsgList.vue만 존재하므로 무시)
-    function procLocalStorage() {
-        try {
-            if (!winId) return
-            let shouldSetNewWinId = false
-            if (!localStorage.winId) {
-                shouldSetNewWinId = true
-            } else { //이미 다른 탭이 위너로 자리잡고 있다고 봐야 하나 (자기자신이나 다른 탭이) 비정상적인 브라우저 종료로 미처 delete 안되었을 경우도 고려
-                if (localStorage.winId == winId) {
-                    localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
-                } else { //내가 위너가 아니면 위너의 widDt 체크해서 업데이트안되고 있다고 파악되면 여기 winId로 그자리 바로 차지해서 위너되기 (디버깅은 넘어가도 alert는 다른 서버호출도 중지시키므로 문제가 됨)
-                    const winDt = localStorage.winDt //localStorage.winId가 있으면 localStorage.winDt도 무조건 있다고 보기
-                    const dtPrev = hush.util.getDateTimeStamp(winDt)
-                    const sec = parseInt(((new Date()) - dtPrev) / 1000) //return seconds
-                    if (sec > TIMERSEC_WINNER) shouldSetNewWinId = true //5초 지나면 위너가 업데이트 안하고 있는 것인데 (위너가 비정상 종료되어) 새로 위너에 도전하기
+    function startSocket() {
+        connectSock()
+        console.log("##############")
+        sock.socket.off("room").on("room", async (data) => {
+            if (data.ev == "chkTyping") {
+                console.log(JSON.stringify(data)+"@@@@@@@")
+                if (panelRef.value && panelRef.value.procMainToMsglist) {
+                    panelRef.value.procMainToMsglist("chkTyping", data)
                 }
-            }
-            if (shouldSetNewWinId) {
-                localStorage.winId = winId
-                localStorage.winDt = hush.util.getCurDateTimeStr(true) //타이머에서 계속 업데이트
-            }
-            if (localStorage.winId == winId) {
-                isWinner = true
-                if (!sock.socket || !sock.socket.connected) {
-                    connectSock()
-                    console.log("##############")
-                    sock.socket.off("room").on("room", async (data) => {
-                        if (data.ev == "chkTyping") {
-                            console.log(JSON.stringify(data)+"@@@@@@@")
-                            if (panelRef.value && panelRef.value.procMainToMsglist) {
-                                panelRef.value.procMainToMsglist("chkTyping", data)
-                            }
-                            bc2.postMessage({ kind: "room", data: data }) //혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
-                        } else {
-                            gst.realtime.set()
-                        }
-                    })
-                    sock.socket.off("member").on("member", async (data) => {
-                        gst.realtime.set()
-                    })
-                    sock.socket.off("all").on("all", async (data) => {
-                        gst.realtime.set()
-                    })
-                    sock.socket.off("user").on("user", async (data) => {
-                        gst.realtime.set()
-                    })
-                }
+                bc2.postMessage({ kind: "room", data: data }) //혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
             } else {
-                isWinner = false
+                gst.realtime.set()
             }
-            if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
-            setTimeout(function() { procLocalStorage() }, TIMER_SEC_LOCAL_STORAGE)
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
+        })
+        sock.socket.off("member").on("member", async (data) => {
+            gst.realtime.set()
+        })
+        sock.socket.off("all").on("all", async (data) => {
+            gst.realtime.set()
+        })
+        sock.socket.off("user").on("user", async (data) => {
+            gst.realtime.set()
+        })
     }
 
-    /* 
-       리얼타임 반영은 폴링으로 일단 처리되고 있고, 여러 개의 창에 Main.vue가 있는 것과 MagList.vue만 있는 것이 복수로 혼재되어 있는 구조인데
-       이 경우, 동일한 채널이 각각 창에 2-3개 있을 경우는 그 중에 하나만 사용자 육안으로 보일 경우는 나머지도 pageShown으로 정의해야 알림이 안오게 됨 (알림이 오면 사용자 불편)
-       이를 구현하기 위해 아래와 같이 방안을 마련함 (예를 들어, A,B,C,D 창이 있고 A,B,C가 같은 채널일 때)
-       1. 먼저 A의 이벤트에서 pageShown 값이 변경되면 단순 변경됨이라고 방송(BroadCast)함 : pageShownChanged(파라미터 필요없음)로 B,C,D로 방송
-       2. 받은 B,C,D는 현재 채널아이디와 pageShown 값을 A,B,C,D로 방송 : informCurPageShown(파라미터 = chanid and Y/N)
-       3. 본인 값과 받은 값을 합해서 채널별로 그 중에 하나라도 pageShown 값이 Y이면 Y로 정해서 gst.objChanId(공유객체-채널별관리)에 정리,저장함
-       4. 나중에 리얼타임 반영시 알림 여부 결정할 때 gst.objChanId의 pageShown 값이 Y이면 (여러개중 하나라도 Y이면) 알림을 표시하지 않기로 함
-       ** bc1은 각탭의 Main.vue <=> Main.vue 통신이고 bc2는 각탭의 Main.vue <=> MsgList.vue 이므로 bc2를 사용해야 함
-       ** 또한, 방송후 피드백(onmessage callback)을 PromiseAll로 구현해야 그 싯점에 정리가능한데 당장 쉽지 않아서 일단 타이머 0.5초이후 정리하기로 함 (그 안에 오는 알림이 표시안되면 좋은데 되는 불편 살짝..)
-       ** pageShownChanged()가 들어갈 이벤트 : visibilityChange, focus, blur, onMounted, OnUnmounted, onActivated, onDeactivated
-    */
-
-    async function chkDataLogEach(rsObj) {
+    //pageShownChanged()가 들어갈 이벤트 : visibilityChange, focus, blur, onMounted, OnUnmounted, onActivated, onDeactivated
+    //Main.vue가 없는 별도 창의 MsgList.vue는 bc2로 데이터를 받은 후 그 창 독립적으로 알림수신여부를 판단해 처리하기로 함
+    async function chkDataLogEach() {
         try {
             if (realtimeJobDone != 'Y') return
             realtimeJobDone = ''
@@ -126,24 +72,16 @@
             logdtColor.value = logdtColor.value == 'yellow' ? 'lightgreen' : 'yellow' //화면 표시용
             let arrForChanActivted = []
             let arrForNotChanActivted = []
-            cntChanActivted.value = 0
-            cntNotChanActivted.value = 0
-            let rs
-            if (rsObj) {
-                rs = rsObj //바로 아래 else에서 bc1.postMessage() 한 것을 위너가 아닌 탭에서 받은 것임
-            } else {
-                const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt, noMsg: true })
-                rs = gst.util.chkAxiosCode(res.data, true)
-                if (!rs) {
-                    realtimeJobDone = 'Y'
-                    return
-                }
-                gst.util.setSnack("")
-                bc1.postMessage({ code: 'polling', obj: rs })
-                if (rs.list.length > 0) {
-                    bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
-                }
+            //cntChanActivted.value = 0
+            //cntNotChanActivted.value = 0
+            const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt, noMsg: true })
+            let rs = gst.util.chkAxiosCode(res.data, true)
+            if (!rs) {
+                realtimeJobDone = 'Y'
+                return
             }
+            gst.util.setSnack("")
+            if (rs.list.length > 0) bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
             const listByMenu = rs.data.listByMenu //GS와 WS의 notyet count 배열임
             for (let i = 0; i < listByMenu.length; i++) {
@@ -166,19 +104,15 @@
                 arrForNotChanActivted = rs.list.filter(x => { 
                     return (x.CHANID != gst.chanIdActivted || x.TYP == 'chan' || x.TYP == 'group')
                 }) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
-                cntChanActivted.value = arrForChanActivted.length //화면 표시용
-                cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
+                //cntChanActivted.value = arrForChanActivted.length //화면 표시용
+                //cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
                 if (arrForNotChanActivted.length > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
                     let realShown
                     const objChanid = gst.objByChanId[gst.chanIdActivted]
                     if (!objChanid) {
-                        realShown = pageShown
+                        realShown = 'N' //pageShown
                     } else {
-                        if (objChanid && objChanid.realShown == 'Y') {
-                            realShown = 'Y'
-                        } else { //해당 채널이 여러 창에 있을 때는 하나라도 보이면 보인다고 정의함
-                            realShown = 'N'
-                        }
+                        realShown = (objChanid.realShown == 'Y') ? 'Y' : 'N'
                     }
                     const len = arrForNotChanActivted.length
                     for (let i = 0; i < len; i++) {                        
@@ -215,14 +149,13 @@
                 }
                 if (arrForChanActivted.length > 0) {
                     if (panelRef.value && panelRef.value.procMainToMsglist) {
-                        await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async/await 동작함 (동기화 가능)
+                        await panelRef.value.procMainToMsglist("realtime", { list: arrForChanActivted, logdt: rs.data.logdt }) //async & await 동작함 (동기화 가능)
                         //위 실행하여 MsgList.vue까지 가서 처리후 console.log 찍고 여기 아래 console.log 찍으면 순서바뀌지 않고 제대로 찍힘
-                        //따라서, sessionStorage.logdt는 그냥 여기 변수로 logdt로 잡고 sessionStorage.realtimeJobDone은 제거해도 되나 일단 막아두기만 함
                     }
                 }
                 logdt = rs.data.logdt
             }
-            realtimeJobDone = 'Y' //추가
+            realtimeJobDone = 'Y'
         } catch (ex) {
             realtimeJobDone = "Y"
             gst.util.showEx(ex, true)
@@ -230,54 +163,21 @@
     }
 
     async function procTimerShort() {
-        //요점 : 페이지가 보이면 최단시간 타이머 안보이면 타이머 갭을 늘리기 : 하나의 window 객체에 Main.vue의 timer가 돌아가는 것은 오직 1개만 가능하도록 함
-        //vue-observe-visibility npm 굳이 사용하지 않고도 pageShown으로 처리 가능
-        //sessionStorage.pageShown은 document.hidden(index.html) 참조. hot deploy시 타이머가 더 생기는지 체크 필요 (아래 .bind(this) 적용 테스트 더 해보기)
         if (gst.timerShort >= 0) {
-            if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
-                await chkDataLogEach()
-            }
-            gst.timerShort += 1 //timerShort = (pageShown == 'Y') ? true : false
-            if (gst.timerShort >= 3) gst.timerShort = -1 //3초정도만 리얼타임으로 처리하고 그 이후엔 Long Timer로 전환
+            await chkDataLogEach()
+            gst.timerShort += 1
+            if (gst.timerShort >= 3) gst.timerShort = -1 //3초정도만 리얼타임으로 처리하고 그 이후엔 다시 Long Timer로 전환
         }        
         timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT) //procTimerShort() }.bind(this)
     }
 
-    async function procTimerLong() { //사실, document.hidden시 굳이 timer가 돌아갈 이유는 없으나, 다시 shown시 처리해야 할 데이터를 분산한다는 의미로 timer 갭을 좀 길게 해 살려 두는 정도임
-        if (gst.timerShort == -1) {
-            if (isWinner) { //위너일 때만 실행 (브라우저의 모든 탭에서는 타이머를 통한 서버호출은 단 한개만 존재하고 나머지는 bc로 받아서 처리)
-                await chkDataLogEach()
-            }
-        }        
+    async function procTimerLong() {
+        if (gst.timerShort == -1) await chkDataLogEach()
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG) //procTimerLong() }.bind(this)
-    }
-
-    async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
-        try {
-            if (fifo.length > 0) {
-                const rsObj = fifo[0] //if (rsObj.list.length)
-                await chkDataLogEach(rsObj)
-                fifo.splice(0, 1)
-            }
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        } finally {
-            setTimeout(function() { procRsObj() }, 100)
-        }
     }
 
     function pageShownChanged(ps) { //ps=pageShown
         if (gst.chanIdActivted) gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", ps)
-        bc2.postMessage({ code: 'pageShownChanged' })
-    }
-
-    function getBroadcast1(data) {
-        if (data.code == 'polling') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
-            //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
-            //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
-            fifo.push(data.obj)
-            fifoLen.value = fifo.length
-        }
     }
 
     function getBroadcast2(data) {
@@ -288,73 +188,19 @@
             } else {
                 gst.realtime.emit(data.kind, data.data)
             }
-        } else {
-            if (data.code == 'pageShownChanged') {
-                bc2.postMessage({ code: 'pageShownChanged1' })
-                bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
-            }else if (data.code == 'pageShownChanged1') {
-                bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
-            } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
-                arrCurPageShown.push({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
-                arrCurPageShown.push(data)
-                setTimeout(function() { procObjByChanid() }, 500)
-            }
-        }
-    }
-
-    function procObjByChanid() {
-        try {
-            const tmpArr = []
-            const len = arrCurPageShown.length
-            if (len > 0) {
-                for (let i = 0; i < len; i++) {
-                    const item = arrCurPageShown[i]
-                    if (tmpArr.length == 0) {
-                        tmpArr.push(item)
-                    } else {
-                        let modified = false
-                        for (let j = 0; j < tmpArr.length; j++) {
-                            if (tmpArr[j].chanid == item.chanid) {
-                                if (tmpArr[j].pageShown == 'Y') { 
-                                    //Y이면 원하는 답을 얻었으므로 더 이상 안 넣어도 됨
-                                } else {
-                                    if (item.pageShown == 'Y') {
-                                        tmpArr[j] = item
-                                    }
-                                }
-                                modified = true
-                            }
-                        }
-                        if (!modified) tmpArr.push(item)
-                    }
-                } //여기까지 하면 tmpArr에 pageShwon 정보가 채널별로 Y에 중점을 두고 groupby되어 들어가므로 arrCurPageShown 아래에서 항목 제거하고 gst에 정리하면 됨
-                arrCurPageShown.splice(0, len)
-            }
-            for (let i = 0; i < tmpArr.length; i++) {
-                const item = tmpArr[i]
-                gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", item.pageShown)
-            } //if (arrCurPageShown.length > 0) setTimeout(function() { procObjByChanid() }, 10)
-        } catch (ex) {
-            gst.util.showEx(ex, true)
         }
     }
 
     onMounted(async () => {
-        try { //BroadcastChannel은 각 윈도우간의 통신이므로 onMounted가 한번만 일어나는 Main.vue 또는 Main.vue가 없는 MsgList.vue에서만 설정하기로 함 (아래 bc1, bc2)
-            bc1 = new BroadcastChannel("wbRealtime1") //각 탭의 Main.vue <=> Main.vue (이 경우 bc1은 윈도우탭별로 1개만 존재해야 하는 동작에 문제없음)
-            bc1.onmessage = (e) => { getBroadcast1(e.data) }
+        try { //BroadcastChannel은 각 윈도우간의 통신이므로 onMounted가 한번만 일어나는 Main.vue 또는 Main.vue가 없는 MsgList.vue에서만 설정하기로 함 (아래 bc2)
             bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue (Main.vue 없는 MsgList.vue에서의 bc2이므로 이 경우도 윈도우탭별로 1개만 존재해야 하는 동작에 문제없음)
             bc2.onmessage = (e) => { getBroadcast2(e.data) }
             pageShownChanged(pageShown)
-            const tag = document.querySelector("#winid") //변하지 않는 값
-            winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
             const res = await axios.post("/menu/qry", { kind : "side" })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             realtimeJobDone = 'Y'
-            //if (!sessionStorage.logdt) { //9999-99-99로 잘못들어간 적이 있는데 변경할 방법이 없어 막음
             logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
-            //}
             listAll.value = rs.list
             listSel.value = rs.list.filter(x => x.USERID != null)
             listUnSel.value = rs.list.filter(x => x.USERID == null)
@@ -367,12 +213,10 @@
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
             sideClickOnLoop(null, true)
-            procLocalStorage() 
+            startSocket()
             procTimerShort() 
-            procTimerLong()
-            if (!route.fullPath.includes('/body/msglist') && !route.fullPath.includes('/notyet')) procRsObj() //아직안읽음에서는 리얼타임 반영하지 않음
+            procTimerLong() //visibilitychange : https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
-                //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
                 if (document.hidden) {
                     pageShown = 'N' 
                 } else {
@@ -387,15 +231,14 @@
                     const nm = (sessionStorage.subkindFromNoti == "GS") ? "dm" : "home"
                     await goRoute({ name: nm }) //home or dm
                     sessionStorage.chanidFromNoti = ''
-                    sessionStorage.subkindFromNoti = ''
-                    //sessionStorage.msgidFromNoti = '' //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
+                    sessionStorage.subkindFromNoti = '' //sessionStorage.msgidFromNoti = '' //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
                 }
             })
             window.addEventListener('blur', function() {
                 pageShown = 'N'
                 pageShownChanged(pageShown)
             })
-            window.focus() //focus()해야 blur()도 발생함            
+            window.focus() //focus() 먼저 처리해야 blur()도 발생함
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -405,7 +248,6 @@
         pageShownChanged('N')
         clearTimeout(timeoutShort)
         clearTimeout(timeoutLong)
-        if (bc1) bc1.close()
         if (bc2) bc2.close()
     })
 
@@ -557,14 +399,11 @@
     }
 
     const procMenu = {
-        ["mnuHome"] : async (row, onMounted) => { await goRoute({ name: 'home' }, onMounted) }, //path: '/main/home'       
+        ["mnuHome"] : async (row, onMounted) => { await goRoute({ name: 'home' }, onMounted) },
         ["mnuDm"] : async (row, onMounted) => { await goRoute({ name: 'dm' }, onMounted) },
         ["mnuActivity"] : async (row, onMounted) => { await goRoute({ name: 'activity' }, onMounted) },
         ["mnuLater"] : async (row, onMounted) => { await goRoute({ name: 'later' }, onMounted) },
         ["mnuFixed"] : async (row, onMounted) => { await goRoute({ name: 'fixed' }, onMounted) },
-        // ["mnuAuto"] : async (row, onMounted) => { 
-        //     gst.util.setToast("미개발된 메뉴입니다.") //await goRoute({ name: 'auto' }, onMounted) 
-        // },
         ["mnuGroup"] : async (row, onMounted) => { await goRoute({ name: 'group' }, onMounted) }
     }
 
@@ -585,6 +424,10 @@
         if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("userprofile", userObj)
     }
 
+    function showBottomMsgList() {
+        bottomMsgListPopupRef.value.open()
+    }
+
     async function logout() {
         if (!confirm("로그아웃합니다. 계속 진행할까요?")) return
         gst.auth.logout()
@@ -599,12 +442,8 @@
     //     sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
     // }
 
-    function showBottomMsgList() {
-        bottomMsgListPopupRef.value.open()
-    }
-
-    function test() {
-        //gst.realtime으로 처리... sock.socket.emit('ClientToServer', "room")
+    function test() { 
+        //test
     }
 </script>
 
@@ -612,18 +451,12 @@
     <div class="coMain" @click="gst.ctx.hide">
         <div class="header" id="header"><!-- MsgList에서 id 사용-->
             <div style="display:flex;align-items:center;color:white">
-                <span v-show="winnerId == winId">
-                    <span>[</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ logdtDisp ? logdtDisp.substring(11, 19) : '' }}</span>
-                    <span>{{ logdtDisp ? logdtDisp.substring(19) : '' }}]</span>
-                    <span style="margin-left:5px">[A:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
-                    <span style="margin-left:5px">[D:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span>
-                    <span style="margin-left:5px">{{ winnerId }}/{{ winId }}</span>                    
-                </span>
-                <span v-show="winnerId != winId">
-                    <span>fifoLen : {{ fifoLen }}</span>
-                </span>
-                <span style="margin-left:20px">timerShort : {{ gst.timerShort }}</span>
+                <span>[</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ logdtDisp ? logdtDisp.substring(11, 19) : '' }}</span>
+                <span>{{ logdtDisp ? logdtDisp.substring(19) : '' }}]</span>
+                <!-- <span style="margin-left:5px">[A:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
+                <span style="margin-left:5px">[D:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span> -->
                 <div style="margin-left:20px"><ConnectionState/></div>
+                <span style="margin-left:20px">short : {{ gst.timerShort }}</span>
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>
