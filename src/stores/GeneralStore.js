@@ -20,6 +20,7 @@ const GeneralStore = defineStore('General', () => {
     const bottomMsg = ref(''),  bottomMsgList = ref([]), routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
 
     let timerShort = ref(-1) //-1은 Long Timer를 운영하는 것이고 0부터 n까지(3초정도)는 Short Timer를 운영하는 것임 (Main.vue)
+    const sockToSend = ref([])
 
     const auth = {
 
@@ -509,7 +510,7 @@ const GeneralStore = defineStore('General', () => {
     }
     
     return { 
-        objSaved, selSideMenu, chanIdActivted, objByChanId, timerShort,
+        objSaved, selSideMenu, chanIdActivted, objByChanId, timerShort, sockToSend, 
         snackBar, toast, bottomMsg, bottomMsgList, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, realtime, util
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

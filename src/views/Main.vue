@@ -43,7 +43,7 @@
     let notyetCntHome = ref(0), notyetCntDm = ref(0), winId, winnerId = ref(''), isWinner = false
     let realtimeJobDone, pageShown = 'Y'
     let bc1, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
-    let bc2, arrCurPageShown = [], bc3
+    let bc2, arrCurPageShown = []
 
     //sessionStorage와는 달리 localStorage는 persistent cookie와 유사하게 브라우저에서 사용자가 제거하지 않는 한 존재하며 도메인 단위로 공유
     //그래서, index.html에서 localStorage와 Broadcast Channel를 이용해 별도 탭이 몇개가 생성되어도 단 하나의 타이머만 돌아가게 했으나
@@ -80,6 +80,7 @@
                             if (panelRef.value && panelRef.value.procMainToMsglist) {
                                 panelRef.value.procMainToMsglist("chkTyping", data)
                             }
+                            bc2.postMessage({ kind: "room", data: data }) //혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
                         } else {
                             gst.realtime.set()
                         }
@@ -94,20 +95,8 @@
                         gst.realtime.set()
                     })
                 }
-                if (!bc3) {
-                    bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true일 경우만 해당
-                    bc3.onmessage = (e) => {
-                        if (e.data.data.ev == "chkTyping") {
-                            //console.log("chkTyping...........!!!!!!")
-                            sock.socket.emit(e.data.kind, e.data.data) //data polling 없음
-                        } else {
-                            gst.realtime.emit(e.data.kind, e.data.data) 
-                        }
-                    } //각 탭 MsgList.vue로부터 데이터를 받아서 emit()만 처리하는 전용 채널
-                }
             } else {
                 isWinner = false
-                if (bc3) bc3.close()
             }
             if (winnerId.value != localStorage.winId) winnerId.value = localStorage.winId //화면 표시용
             setTimeout(function() { procLocalStorage() }, TIMER_SEC_LOCAL_STORAGE)
@@ -140,7 +129,6 @@
             cntChanActivted.value = 0
             cntNotChanActivted.value = 0
             let rs
-            procBroadcastChannel() //바로 아래 bc1.postMessage() / bc2.postMessage() 오류가 문제되어 여기서 처리
             if (rsObj) {
                 rs = rsObj //바로 아래 else에서 bc1.postMessage() 한 것을 위너가 아닌 탭에서 받은 것임
             } else {
@@ -293,15 +281,24 @@
     }
 
     function getBroadcast2(data) {
-        if (data.code == 'pageShownChanged') {
-            bc2.postMessage({ code: 'pageShownChanged1' })
-            bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
-        }else if (data.code == 'pageShownChanged1') {
-            bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
-        } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
-            arrCurPageShown.push({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
-            arrCurPageShown.push(data)
-            setTimeout(function() { procObjByChanid() }, 500)
+        console.log("chkTyping#########"+JSON.stringify(data))
+        if (data.kind && data.data && data.data.ev) { //소켓통신 관련
+            if (data.data.ev == "chkTyping") {
+                sock.socket.emit(data.kind, data.data) //data polling 없음
+            } else {
+                gst.realtime.emit(data.kind, data.data)
+            }
+        } else {
+            if (data.code == 'pageShownChanged') {
+                bc2.postMessage({ code: 'pageShownChanged1' })
+                bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
+            }else if (data.code == 'pageShownChanged1') {
+                bc2.postMessage({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown })
+            } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
+                arrCurPageShown.push({ code: 'informCurPageShown', chanid: gst.chanIdActivted, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
+                arrCurPageShown.push(data)
+                setTimeout(function() { procObjByChanid() }, 500)
+            }
         }
     }
 
@@ -342,20 +339,12 @@
         }
     }
 
-    function procBroadcastChannel() { //bs3은 별도 설정
-        if (!bc1) {
-            bc1 = new BroadcastChannel("wbRealtime1") //각탭의 Main.vue <=> Main.vue
-            bc1.onmessage = (e) => { getBroadcast1(e.data) }
-        }
-        if (!bc2) {
-            bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue
-            bc2.onmessage = (e) => { getBroadcast2(e.data) }
-        }
-    }
-
     onMounted(async () => {
-        try {   
-            procBroadcastChannel()
+        try { //BroadcastChannel은 각 윈도우간의 통신이므로 onMounted가 한번만 일어나는 Main.vue 또는 Main.vue가 없는 MsgList.vue에서만 설정하기로 함 (아래 bc1, bc2)
+            bc1 = new BroadcastChannel("wbRealtime1") //각 탭의 Main.vue <=> Main.vue (이 경우 bc1은 윈도우탭별로 1개만 존재해야 하는 동작에 문제없음)
+            bc1.onmessage = (e) => { getBroadcast1(e.data) }
+            bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue (Main.vue 없는 MsgList.vue에서의 bc2이므로 이 경우도 윈도우탭별로 1개만 존재해야 하는 동작에 문제없음)
+            bc2.onmessage = (e) => { getBroadcast2(e.data) }
             pageShownChanged(pageShown)
             const tag = document.querySelector("#winid") //변하지 않는 값
             winId = (tag) ? tag.innerText : '' //winId를 여기서 만들지 않고 index.html에서 받아오는 것은 index.html의 beforeunload event를 여기서 구현하기가 쉽지 않아서임
@@ -418,7 +407,6 @@
         clearTimeout(timeoutLong)
         if (bc1) bc1.close()
         if (bc2) bc2.close()
-        if (bc3) bc3.close()
     })
 
     function sideClickOnLoop(selMenu, onMounted) {
@@ -442,6 +430,18 @@
         console.log("Main gst.selSideMenu..... " + gst.selSideMenu)
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
     })
+
+    watch(() => gst.sockToSend, () => {
+        if (gst.sockToSend.length ==  0) return
+        if (!sock.socket || !sock.socket.connected) return //while (gst.sockToSend.length > 0) {        
+        const obj = gst.sockToSend[0]
+        if (obj.data.ev == "chkTyping") {
+            sock.socket.emit(obj.kind, obj.data) //data polling 없음
+        } else {
+            gst.realtime.emit(obj.kind, obj.data)
+        }
+        gst.sockToSend.splice(0, 1) //console.log("gst.sockToSend: " + gst.sockToSend.length)
+    }, { deep: true }) //gst.sockToSend가 Array이므로 deep=true 옵션이 필요함
 
     function decideSeeMore() {
         try {

@@ -60,7 +60,7 @@
     let realLastCdt = '', pageShown = 'Y'
     let newParentAdded = ref([]), newChildAdded = ref([]), memIdTyping = ref([]), memNmTyping = ref([])
     let bc2, arrCurPageShown = [], fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
-    let bc3, timerChkTyping
+    let timerChkTyping
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
@@ -80,7 +80,8 @@
         } else if (kind == "userprofile") {
             //이미지 변경할 데이터 찾기가 현재로선 조금 난항이라서 급한 것 마무리하고 진행하기로 함
         } else if (kind == "chkTyping") {
-            //console.log(JSON.stringify(obj)+"==========")
+            console.log(JSON.stringify(obj)+"==========")
+            //if (memIdTyping.includes(obj.userid))
         }
     }
 
@@ -399,13 +400,29 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
+    function sendSockObjToMain(obj) {
+        if (bc2) {
+            //console.log("chkTyping...........11")
+            //console.log("chkTyping..........."+JSON.stringify(obj))
+            bc2.postMessage(obj)
+        } else {
+            //console.log("chkTyping...........22")
+            gst.sockToSend.push(obj)
+        }
+    }
+
     function chkTyping() {
         console.log("chkTyping...........")
         let body = document.getElementById(editorId).innerText.trim() //innerHtml로 하면 다 지워도 <br>이 남아 있어서 innerText로 처리
         let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkTyping" }
         data.typing = (body.length > 0) ? true : false
-        bc3.postMessage({ kind: "room", data: data}) //gst.realtime.emit("chkTyping", data)
-        timerChkTyping = setTimeout(function() { chkTyping() }, 3000)
+        try {
+            sendSockObjToMain({ kind: "room", data: data}) //gst.realtime.emit("chkTyping", data)
+        } catch (ex) {
+            console.log("chkTyping..........." + ex.message)
+        } finally {
+            timerChkTyping = setTimeout(function() { chkTyping() }, 3000)
+        }
     }
 
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
@@ -432,20 +449,28 @@
     }
 
     function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
-        if (data.code == 'pollingToMsgList') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
-            //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
-            //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
-            fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
-            fifoLen.value = fifo.length
-        } else if (data.code == 'pageShownChanged') {            
-            bc2.postMessage({ code: 'pageShownChanged1' }) //pageShownChanged으로 처리시 pageShownChanged를 받는 탭은 정작 informCurPageShown으로 들어오는 정보를 못받아서 다시 한번 보내 받게 해줌
-            bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
-        }else if (data.code == 'pageShownChanged1') {
-            bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
-        } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
-            arrCurPageShown.push({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
-            arrCurPageShown.push(data)
-            setTimeout(function() { procObjByChanid() }, 500)
+        if (data.kind && data.data && data.data.ev) { //소켓통신 관련
+            if (data.data.ev == "chkTyping") {
+                console.log(JSON.stringify(data)+"************")
+            } else {
+                //여기로 오지 않고 Main.vue에서 data polling으로 처리 완료되는 경우임
+            }
+        } else {
+            if (data.code == 'pollingToMsgList') { //위너로부터 polling된 data를 받아 서버호출없이 탭내에서 리얼타임 처리하는 것임
+                //chkDataLogEach(data.obj) //data.obj=rs <= bc.postMessage({ code: 'polling', obj: rs })
+                //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
+                fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
+                fifoLen.value = fifo.length
+            } else if (data.code == 'pageShownChanged') {            
+                bc2.postMessage({ code: 'pageShownChanged1' }) //pageShownChanged으로 처리시 pageShownChanged를 받는 탭은 정작 informCurPageShown으로 들어오는 정보를 못받아서 다시 한번 보내 받게 해줌
+                bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
+            }else if (data.code == 'pageShownChanged1') {
+                bc2.postMessage({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown })
+            } else if (data.code == 'informCurPageShown') { //정작 자기 것은 안옴
+                arrCurPageShown.push({ code: 'informCurPageShown', chanid: chanId, pageShown: pageShown }) //본인 것 넣기 (듀얼모니터 테스트시엔 N일 수가 많을 것임을 유의)
+                arrCurPageShown.push(data)
+                setTimeout(function() { procObjByChanid() }, 500)
+            }
         }
     }
 
@@ -532,22 +557,23 @@
                         pageShown = 'N' 
                         pageShownChanged(pageShown)
                     })
-                    //bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
-                    //bc2.onmessage = (e) => { getBroadcast2(e.data) }
-                    //pageShownChanged(pageShown)
-                    //procRsObj()
-                    //window.focus() //focus()해야 blur()도 발생함
+                    pageShownChanged(pageShown)
+                    procRsObj()
+                    window.focus() //focus()해야 blur()도 발생함
                 }                
             }
-            //bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
-            //chkTyping()
+            if (route.fullPath.includes('/body/msglist')) {
+                bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue : Main.vue의 onMounted 주석 참조   
+                bc2.onmessage = (e) => { getBroadcast2(e.data) }
+                chkTyping()
+            }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     })
 
     onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
-        try {
+        try { //Main.vue가 없는 MsgList.vue는 keepalive가 안되므로 여기 onActivated 거치지 않음을 유의
             if (!route.fullPath.includes("_body/")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
             console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
             gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
@@ -562,7 +588,8 @@
                     observerTopScroll()
                     observerBottomScroll()
                     pageShownChanged('Y')      
-                }
+                } //아래는 (mounting=true일 때도 할 필요없고 onMounted 거치지 않고 onActivated때만 실행해야 하는 (예: Back() 눌렀을 때) 루틴임 (그래서 아래 부분은 onMounted()에도 없음)
+                //Main.vue가 없는 MsgList.vue는 keepalive가 안되고 Back()도 불가능하므로 여기 onActivated를 아예 거치지 않음을 유의
                 const key = msgidInChan ? msgidInChan : sideMenu + chanId
                 if (gst.objSaved[key]) {
                     if (scrollArea.value) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
@@ -575,20 +602,8 @@
                         evToPanel({ kind: "selectRow", msgid: msgidInChan })
                     }
                 }
-            }
-            if (!hasProp()) {
-                if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가 (onMounted만 발생하고 onActivated는 없음)
-                    if (!bc2) {
-                        bc2 = new BroadcastChannel("wbRealtime2") //각탭의 Main.vue <=> MsgList.vue     
-                        bc2.onmessage = (e) => { getBroadcast2(e.data) }
-                    }
-                    pageShownChanged(pageShown)
-                    procRsObj()
-                    window.focus() //focus()해야 blur()도 발생함
-                }                
-            }
-            if (!bc3) bc3 = new BroadcastChannel("wbRealtime3") //isWinner가 true인 Main.vue와의 emit() 목적 전용 통신
-            chkTyping()
+                chkTyping()
+            }            
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -597,17 +612,14 @@
     onDeactivated(() => {
         pageShownChanged('N')
         clearTimeout(timerChkTyping)
-        if (bc2) bc2.close()
-        if (bc3) bc3.close()
     })
 
     onUnmounted(() => {
         if (observerTop && observerTop.value) observerTop.value.disconnect()
         if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
         pageShownChanged('N')
-        // clearTimeout(timerChkTyping)
-        // if (bc2) bc2.close()
-        // if (bc3) bc3.close()
+        clearTimeout(timerChkTyping)
+        //if (bc2) bc2.close()
     })
 
     function setBasicInfo() {
@@ -649,7 +661,7 @@
                     const res = await axios.post("/chanmsg/deleteChanMember", rq)
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
-                    bc3.postMessage({ kind: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
+                    gst.sockToSend.push({ kind: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
                     //gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
                     await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조 
                     evToPanel({ kind: "refreshPanel" })                   
@@ -1084,7 +1096,7 @@
                     })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
-                    bc3.postMessage({ kind: "room", data: { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" }})
+                    gst.sockToSend.push({ kind: "room", data: { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" }})
                     //gst.realtime.emit("room", { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" })
                     //msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                 } catch (ex) { 
@@ -1195,7 +1207,7 @@
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //bc3.postMessage({ kind: "member", data: { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }})
+            //gst.sockToSend.push({ kind: "member", data: { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }})
             //gst.realtime.emit("member", { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }) 본인에게 보내는 건 polling부터 로직 다시 확인 필요
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (oldKind == "read" || oldKind == "unread") {
@@ -1215,7 +1227,7 @@
             const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            bc3.postMessage({ kind: "room", data: { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" }})
+            gst.sockToSend.push({ kind: "room", data: { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" }})
             //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
@@ -1234,7 +1246,7 @@
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            bc3.postMessage({ kind: "room", data: { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" }})
+            gst.sockToSend.push({ kind: "room", data: { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" }})
             //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" })
             await listMsg('notyet')
             setTimeout(function() { window.close() }, 1000)
@@ -1555,7 +1567,7 @@
                 }
             }
             msgbody.value = ""
-            bc3.postMessage({ kind: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }})
+            gst.sockToSend.push({ kind: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }})
             //gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" })
             editMsgId.value = null            
         } catch (ex) { 
@@ -2036,7 +2048,7 @@
             const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            bc3.postMessage({ kind: "room", data: { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" }})
+            gst.sockToSend.push({ kind: "room", data: { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" }})
             //gst.realtime.emit("room", { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
         } catch (ex) { 
@@ -2051,7 +2063,7 @@
             const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            bc3.postMessage({ kind: "room", data: { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" }})
+            gst.sockToSend.push({ kind: "room", data: { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" }})
             //gst.realtime.emit("room", { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" })
             const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
             window.open(url)
