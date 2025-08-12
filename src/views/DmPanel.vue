@@ -26,6 +26,7 @@
     async function procMainToPanel(kind, obj) {
         if (kind == "procRows") {
             await procRows()
+            dmClickOnLoop(true)
         } else {
             await handleEvFromMsgList({ kind: kind, chanid: obj.CHANID }) //기존 함수 가져다 쓰기
         }

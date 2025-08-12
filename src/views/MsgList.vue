@@ -88,7 +88,7 @@
                     }
                 } else {
                     const idx = memIdTyping.value.indexOf(obj.userid)
-                    console.log(JSON.stringify(obj)+"^^^"+idx)
+                    //console.log(JSON.stringify(obj)+"^^^"+idx)
                     if (idx > -1) {
                         memIdTyping.value.splice(idx, 1)
                         memNmTyping.value.splice(idx, 1)
@@ -421,7 +421,7 @@
     }
 
     function chkTyping() {
-        console.log("chkTyping...........")
+        //console.log("chkTyping...........")
         let body = document.getElementById(editorId).innerText.trim() //innerHtml로 하면 다 지워도 <br>이 남아 있어서 innerText로 처리
         let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkTyping" }
         data.typing = (body.length > 0) ? true : false
