@@ -1094,7 +1094,7 @@
                 break
             }
         }
-        gst.realtime.closeNoti(chanId) //일단 여기만 처리했는데 사실 채널별로 처리하지 않고 모든 노티 지워도 무방하므로 코딩 개선이 필요함
+        //gst.realtime.closeNoti(chanId)
     }
 
     const onScrolling = (e) => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
@@ -1202,6 +1202,7 @@
             } else { 
                 deleteFromNewAdded(null, msgid, null)
             }
+            gst.realtime.closeNoti(chanId)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

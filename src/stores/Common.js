@@ -27,7 +27,7 @@ const hush = {
     },
 
     noti : {
-        winForNoti : null, 
+        winForNoti : {}, 
         rooms : {}
     },
     

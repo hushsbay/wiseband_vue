@@ -129,11 +129,14 @@ const GeneralStore = defineStore('General', () => {
             objNoti.subkind = row.SUBKIND
             //objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
             //objNoti.isNewWin = route.fullPath.includes('/body/msglist') ? true : false
+            hush.noti.winForNoti[objNoti.chanid] = window
             objNoti.onclick = function () {
-                if (!hush.noti.winForNoti.closed) {
+                //if (!hush.noti.winForNoti.closed) {
+                const win = hush.noti.winForNoti[objNoti.chanid]
+                if (win && !win.closed) {
                     sessionStorage.chanidFromNoti = objNoti.chanid
-                    sessionStorage.subkindFromNoti = objNoti.subkind
-                    hush.noti.winForNoti.focus()
+                    sessionStorage.subkindFromNoti = objNoti.subkind //WS or GS
+                    win.focus() //hush.noti.winForNoti.focus()
                     // if (objNoti.isNewWin) { //새창에서 알림을 받았으니 클릭하면 바로 그 창으로 열어 줘야 함
                     //     ///const url = util.getUrlForBodyListNewWin(objNoti.chanid, objNoti.msgid); window.open(url, '_blank')
                     //     hush.noti.winForNoti.focus() //바로 위와 같이 처리하면 기존 창이 열려 있더라도 새창이 열리게 되므로 focus()만 주면 됨
@@ -149,7 +152,7 @@ const GeneralStore = defineStore('General', () => {
                     alert("closed") //여기로 오는 경우는 없음 (해당 탭을 닫아도 다시 shown. 브라우저 닫아도 여기로 안옴)
                 }
             }
-            if (!hush.noti.winForNoti) hush.noti.winForNoti = window
+            //if (!hush.noti.winForNoti) hush.noti.winForNoti = window
             realtime.setObjToChan(row.CHANID, "noti", objNoti) //나중에 창이 열리게 되면 사용자가 클릭안해도 알림바가 닫히게 하려는 용도임
         },
         
