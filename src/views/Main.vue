@@ -237,13 +237,7 @@
                     }
                     if (gst.selSideMenu.substring(3).toLowerCase() == nm) {                         
                         //이미 사이드메뉴가 선택되어 있는 상태인 경우 해당 채널이 열려 있는지 먼저 체크 (열려 있으면 메시지 도착 버튼이 보일테구 아니라면 그 채널로 이동하면 됨)
-                        if (nm == "home") {
-                            await panelRef.value.procMainToPanel('procRows')
-                        } else {
-                            //dm일 경우는 안되는데 파악해보기 + 최소화시(hidden시) 다시 포커스 가게 해결해야 함 (잘안됨)
-                            console.log('focus1111: ' + sessionStorage.chanidFromNoti)
-                            await panelRef.value.procMainToPanel('procRows')
-                        }
+                        await panelRef.value.procMainToPanel('procRows')
                     } else {
                         await goRoute({ name: nm }) //home or dm
                     }                    
