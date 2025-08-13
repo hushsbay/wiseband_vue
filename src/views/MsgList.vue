@@ -80,21 +80,7 @@
         } else if (kind == "userprofile") {
             //이미지 변경할 데이터 찾기가 현재로선 조금 난항이라서 급한 것 마무리하고 진행하기로 함
         } else if (kind == "chkTyping") {
-            if (obj.roomid == chanId) {
-                if (obj.typing) {
-                    if (!memIdTyping.value.includes(obj.userid)) {
-                        memIdTyping.value.push(obj.userid)
-                        memNmTyping.value.push(obj.usernm)
-                    }
-                } else {
-                    const idx = memIdTyping.value.indexOf(obj.userid)
-                    //console.log(JSON.stringify(obj)+"^^^"+idx)
-                    if (idx > -1) {
-                        memIdTyping.value.splice(idx, 1)
-                        memNmTyping.value.splice(idx, 1)
-                    }
-                }
-            }
+            handleTypingInfo(obj)
         }
     }
 
@@ -464,7 +450,8 @@
     function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
         if (data.kind && data.data && data.data.ev) { //소켓통신 관련
             if (data.data.ev == "chkTyping") {
-                console.log(JSON.stringify(data)+"************")
+                //console.log(JSON.stringify(data)+"************")
+                handleTypingInfo(data.data)
             } else {
                 //여기로 오지 않고 Main.vue에서 data polling으로 처리 완료되는 경우임
             }
@@ -474,6 +461,23 @@
                 //그런데, chkDataLogEach() 바로 호출시 (동기화가 되어 있지 않기 때문에) 그 뒤에 따라오는 다음 순번 객체에 침해당할 수 있으므로, 막고 별도 배열에 추가하고 처리후 제거하는 아래 루틴 필요
                 fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
                 fifoLen.value = fifo.length
+            }
+        }
+    }
+
+    function handleTypingInfo(obj) {
+        if (obj.roomid == chanId) {
+            if (obj.typing) {
+                if (!memIdTyping.value.includes(obj.userid)) {
+                    memIdTyping.value.push(obj.userid)
+                    memNmTyping.value.push(obj.usernm)
+                }
+            } else {
+                const idx = memIdTyping.value.indexOf(obj.userid)
+                if (idx > -1) {
+                    memIdTyping.value.splice(idx, 1)
+                    memNmTyping.value.splice(idx, 1)
+                }
             }
         }
     }
