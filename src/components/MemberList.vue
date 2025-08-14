@@ -8,11 +8,23 @@
             
     const gst = GeneralStore()
 
-    defineExpose({ open, close }) //부모(예:HomePanel,DmPanel) => MemberList의 open(), close() 호출
+    defineExpose({ open, close, handleAliveInfo }) //부모(예:HomePanel,DmPanel) => MemberList의 open(), close() 호출
     const emits = defineEmits(["ev-from-member"]) //memberlist -> HomePanel or DmPanel
     
     function evToPanel(kind) { //말 그대로 패널에게 호출하는 것임
         emits("ev-from-member", chanId, kind)
+    }
+
+    function handleAliveInfo(data) {
+        const len = memberlist.value.length
+        for (let i = 0; i < len; i++) {
+            const row = memberlist.value[i]
+            if (data.userids.includes(row.USERID)) {
+                row.alive = true
+            } else {
+                row.alive = false
+            }
+        }
     }
 
     function open(strKind, strGrid, strChanid, strChannm, strChanimg) {
@@ -396,6 +408,9 @@
                                             <div class="coDotDot">
                                                 <span style="width:60px;margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
                                                 <span>{{ row.JOB }}</span>
+                                                <span class="aliveMark" :style="{ backgroundColor: row.alive ? 'var(--second-color)' : 'darkgray' }">
+                                                    {{ row.alive ? 'On' : 'Off' }}
+                                                </span>
                                             </div>
                                         </div>
                                         <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">
@@ -567,4 +582,5 @@
     .tdInput { width:calc(100% - 10px) }
     .tdValue { vertical-align:middle;border:none }
     .vipBtn { margin-left:5px;padding:1px 2px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
+    .aliveMark { margin-left:5px;padding:2px;font-size:10px;color:white;border-radius:10px }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated, onUnmounted } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated, onUnmounted, inject } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'    
     import hush from '/src/stores/Common.js'
@@ -10,7 +10,8 @@
     import PopupChanDm from "/src/components/PopupChanDm.vue"
     import MemberPiceach from "/src/components/MemberPiceach.vue"
     import MediaSearch from "/src/components/MediaSearch.vue"
-            
+    import MemberList from '/src/components/MemberList.vue'
+
     const router = useRouter()
     const route = useRoute()
     const gst = GeneralStore()
@@ -33,10 +34,10 @@
     let popupRefKind = ref('') //아래 ~PopupRef의 종류 설정
     const imgPopupRef = ref(null), imgParam = ref(null), imgPopupUrl = ref(null), imgPopupStyle = ref({}) //이미지팝업 관련
     const linkPopupRef = ref(null), linkText = ref(''), linkUrl = ref('')
-    const mediaPopupRef = ref(null), popupChanDmRef = ref(null)
+    const mediaPopupRef = ref(null), popupChanDmRef = ref(null), memberlistRef = ref(null)
         
     let subTitle = '', sideMenu, chanId, msgidInChan
-    let grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
+    let grid = ref(''), grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([]), chanType = ref('WS')
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
@@ -79,8 +80,11 @@
             chkDataLogEach(obj)
         } else if (kind == "userprofile") {
             //이미지 변경할 데이터 찾기가 현재로선 조금 난항이라서 급한 것 마무리하고 진행하기로 함
-        } else if (kind == "chkTyping") {
+        } else if (kind == "chkTyping") { //###05
             handleTypingInfo(obj)
+        } else if (kind == "chkAlive") { //###05
+            handleAliveInfo(obj)
+            if (memberlistRef.value) memberlistRef.value.handleAliveInfo(obj) //home과 dm에도 memberlistRef handleAliveInfo 호출하는 것 있음
         }
     }
 
@@ -395,34 +399,25 @@
         observerBottom.value.observe(observerBottomTarget.value)
     }
 
-    function sendSockObjToMain(obj) {
+    function sendSockObjToMain(obj) { //###01
         if (bc2) {
-            //console.log("chkTyping...........11")
-            //console.log("chkTyping..........."+JSON.stringify(obj))
             bc2.postMessage(obj)
         } else {
-            //console.log("chkTyping...........22")
             gst.sockToSend.push(obj)
         }
     }
 
-    function chkTyping() {
-        //console.log("chkTyping...........")
+    function chkMultiState() { //###01
+        //1) chkTyping :  뒤늦게 온라인으로 들어오는 멤버 고려하면 매번 소켓으로 전송하는 수 밖에 없어 보임 (원래는 입력중인데 멤버에 들어 있거나 입력중이지 않는데 멤버에도 들어 있지 않으면 굳이 알릴 필요없음)
         let body = document.getElementById(editorId).innerText.trim() //innerHtml로 하면 다 지워도 <br>이 남아 있어서 innerText로 처리
-        let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkTyping" }
+        let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkMultiState" }
         data.typing = (body.length > 0) ? true : false
-        //if (firstIn) { //뒤즌게 들어온 멤버를 위해 처음 한번은 무조건 가져와야 함 : 자기 것만 가져오므로 안됨
-        sendSockObjToMain({ kind: "room", data: data})
-        // } else {
-        //     if (data.typing && memIdTyping.value.includes(g_userid)) {
-        //         //입력중인데 멤버에 들어 있으면 굳이 알릴 필요없음
-        //     } else if (!data.typing && !memIdTyping.value.includes(g_userid)) {
-        //         //입력중이지 않는데 멤버에도 들어 있지 않으면 굳이 알릴 필요없음
-        //     } else {
-        //         sendSockObjToMain({ kind: "room", data: data})
-        //     }
-        // }
-        timerChkTyping = setTimeout(function() { chkTyping() }, 3000)
+        sendSockObjToMain({ sendTo: "room", data: data })
+        //2) ckhAlive
+        const userids = chandtl.value.map(item => item.USERID)
+        let data1 = { ev: "chkAlive", userids: userids, from: "chkMultiState" }
+        sendSockObjToMain({ sendTo: "myself", data: data1 })
+        timerChkTyping = setTimeout(function() { chkMultiState() }, 3000)
     }
 
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함
@@ -450,8 +445,10 @@
     function getBroadcast2(data) { //if (route.fullPath.includes('/body/msglist')) 일 경우만 채널 생성
         if (data.kind && data.data && data.data.ev) { //소켓통신 관련
             if (data.data.ev == "chkTyping") {
-                //console.log(JSON.stringify(data)+"************")
                 handleTypingInfo(data.data)
+            } else if (data.data.ev == "chkAlive") {
+                //console.log(JSON.stringify(data)+"************")
+                handleAliveInfo(data.data)
             } else {
                 //여기로 오지 않고 Main.vue에서 data polling으로 처리 완료되는 경우임
             }
@@ -480,6 +477,21 @@
                 }
             }
         }
+    }
+
+    function handleAliveInfo(obj) {
+        //console.log(JSON.stringify(obj), '##handleAliveInfo')
+        //if (obj.roomid == chanId) {
+            const len = chandtl.value.length
+            for (let i = 0; i < len; i++) {
+                const row = chandtl.value[i]
+                if (obj.userids.includes(row.USERID)) {
+                    chandtlObj.value[row.USERID].alive = true
+                } else {
+                    chandtlObj.value[row.USERID].alive = false
+                }
+            }
+        //}
     }
 
     onMounted(async () => {
@@ -537,7 +549,7 @@
                 bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue : Main.vue의 onMounted 주석 참조   
                 bc2.onmessage = (e) => { getBroadcast2(e.data) }
             }
-            chkTyping()
+            chkMultiState()
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -573,7 +585,7 @@
                         evToPanel({ kind: "selectRow", msgid: msgidInChan })
                     }
                 }
-                chkTyping()
+                chkMultiState()
             }            
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -632,10 +644,10 @@
                     const res = await axios.post("/chanmsg/deleteChanMember", rq)
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
-                    gst.sockToSend.push({ kind: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
+                    gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "chanCtxMenu" }})
                     //gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
                     await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조 
-                    evToPanel({ kind: "refreshPanel" })                   
+                    evToPanel({ kind: "refreshPanel" })
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
@@ -647,6 +659,7 @@
                     const res = await axios.post("/chanmsg/deleteChan", rq)
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
+                    gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChan", roomid: chanId, from: "chanCtxMenu" }})
                     await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조                    
                     evToPanel({ kind: "refreshPanel" })
                 } catch (ex) { 
@@ -698,6 +711,7 @@
     function setChanMstDtl(chanmstParam, chandtlParam) {
         try {
             document.title = chanmstParam.CHANNM + " [채널-" + subTitle + "]"
+            grid.value = chanmstParam.GR_ID
             grnm.value = chanmstParam.GR_NM
             chanNm.value = chanmstParam.CHANNM
             chanMasterId.value = chanmstParam.MASTERID
@@ -1067,7 +1081,7 @@
                     })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
-                    gst.sockToSend.push({ kind: "room", data: { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" }})
+                    gst.sockToSend.push({ sendTo: "room", data: { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "rowRight" }})
                     //gst.realtime.emit("room", { ev: "delMsg", roomid: chanId, msgid: row.MSGID, from: "delMsg" })
                     //msglist.value.splice(index, 1) //해당 메시지 배열 항목 삭제해야 함 (일단 삭제하는 사용자 화면 기준만 해당)
                 } catch (ex) { 
@@ -1178,7 +1192,7 @@
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //gst.sockToSend.push({ kind: "member", data: { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }})
+            //gst.sockToSend.push({ sendTo: "member", data: { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }})
             //gst.realtime.emit("member", { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }) 본인에게 보내는 건 polling부터 로직 다시 확인 필요
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (oldKind == "read" || oldKind == "unread") {
@@ -1198,7 +1212,7 @@
             const res = await axios.post("/chanmsg/updateNotyetToRead", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.sockToSend.push({ kind: "room", data: { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" }})
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" }})
             //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
@@ -1218,7 +1232,7 @@
             const res = await axios.post("/chanmsg/updateAllWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.sockToSend.push({ kind: "room", data: { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" }})
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" }})
             //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" })
             await listMsg('notyet')
             setTimeout(function() { window.close() }, 1000)
@@ -1539,7 +1553,7 @@
                 }
             }
             msgbody.value = ""
-            gst.sockToSend.push({ kind: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }})
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }})
             //gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" })
             editMsgId.value = null            
         } catch (ex) { 
@@ -2020,7 +2034,7 @@
             const res = await axios.post("/chanmsg/toggleReaction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.sockToSend.push({ kind: "room", data: { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" }})
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" }})
             //gst.realtime.emit("room", { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
         } catch (ex) { 
@@ -2035,7 +2049,7 @@
             const res = await axios.post("/chanmsg/forwardToChan", rq) //새로운 방으로 select and insert
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.sockToSend.push({ kind: "room", data: { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" }})
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" }})
             //gst.realtime.emit("room", { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" })
             const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
             window.open(url)
@@ -2126,6 +2140,14 @@
 
     function adminJob() {
         adminShowID.value = !adminShowID.value
+    }
+
+    function openMemberList() {
+        if (chanType == 'WS') {
+            memberlistRef.value.open("chan", grid.value, chanId, chanNm.value, chanImg.value)
+        } else { //GS
+            memberlistRef.value.open("dm", null, chanId)
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임 : 아직 미완성 !!!!!!!!!!!
@@ -2422,7 +2444,7 @@
                     <div v-if="!hasProp()" class="topMenu" style="padding:5px;margin-top:3px;margin-left:10px">
                         <!-- <span style="min-width:36px;margin:0 5px 5px 10px;color:dimgray">관리 :</span><span class="coDotDot" style="min-width:80px;margin:0 5px 5px 5px">{{ chanMasterNm }}</span> -->
                     </div>
-                    <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold">
+                    <div v-if="!hasProp()" class="topMenu" style="padding:3px;display:flex;align-items:center;border:1px solid lightgray;border-radius:5px;font-weight:bold" @click="openMemberList">
                         <div v-for="(row, idx) in chanmemUnder" style="width:24px;height:24px;display:flex;align-items:center;margin-right:2px">
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
                         </div>
@@ -2498,6 +2520,9 @@
                         <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
                         <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                         <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
+                        <span class="aliveMark" :style="{ backgroundColor: chandtlObj[row.AUTHORID].alive ? 'var(--second-color)' : 'darkgray' }">
+                            {{ chandtlObj[row.AUTHORID].alive ? 'On' : 'Off' }}
+                        </span>
                         <!-- <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">아직 안읽음 {{ row.firstNotYet == "child" ? "(댓글)" : "" }}</span> -->
                     </div>
                     <div style="width:100%;display:flex;margin:10px 0">
@@ -2714,6 +2739,7 @@
     </popup-common>
     <popup-chan-dm ref="popupChanDmRef" @ev-click-chandm="okChanDmPopup"></popup-chan-dm> 
     <media-search ref="mediaPopupRef"></media-search>
+    <member-list ref="memberlistRef"></member-list>
 </template>
 
 <style scoped>  
@@ -2816,5 +2842,6 @@
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
     /* .mynotyet { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:orange;color:white;font-size:12px;padding:4px;margin-left:10px } */
-    .vipMark { margin-left:5px;padding:1px 2px 2px 2px;font-size:10px;background:black;color:white;border-radius:5px }
+    .vipMark { margin-left:5px;padding:2px;font-size:10px;background:black;color:white;border-radius:5px }
+    .aliveMark { margin-left:5px;padding:2px;font-size:10px;color:white;border-radius:10px }
 </style>

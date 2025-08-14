@@ -300,6 +300,7 @@
             const res = await axios.post("/user/saveGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            gst.sockToSend.push({ sendTo: "all", data: { ev: "saveGroup", from: "saveGroup" }})
             if (grId == "new") {
                 grId = rs.data.grid
                 await getList()
@@ -319,6 +320,7 @@
             const res = await axios.post("/user/deleteGroup", rq)
             const rs = gst.util.chkAxiosCode(res.data)            
             if (!rs) return
+            gst.sockToSend.push({ sendTo: "all", data: { ev: "deleteGroup", from: "deleteGroup" }})
             evToPanel({ kind: "deleteGroup", grid: grId })
             orgRef.value.procFromParent("refresh")
             userlist.value = []

@@ -39,14 +39,20 @@
 
     function startSocket() {
         connectSock()
-        //console.log("##############")
         sock.socket.off("room").on("room", async (data) => {
-            if (data.ev == "chkTyping") {
-                //console.log(JSON.stringify(data)+"@@@@@@@")
-                if (panelRef.value && panelRef.value.procMainToMsglist) {
-                    panelRef.value.procMainToMsglist("chkTyping", data)
-                }
-                bc2.postMessage({ kind: "room", data: data }) //혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
+            if ("chkTyping".includes(data.ev)) { //###03
+                //console.log(JSON.stringify(data)+"@@@@@@@-----")
+                if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data) //###04
+                bc2.postMessage({ sendTo: "room", data: data }) //###04 혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
+            } else {
+                gst.realtime.set()
+            }
+        })
+        sock.socket.off("myself").on("myself", async (data) => {
+            if ("chkAlive".includes(data.ev)) { //###03
+                //console.log(JSON.stringify(data)+"@@@@@@@-----")
+                if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data) //###04
+                bc2.postMessage({ sendTo: "myself", data: data }) //###04 혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
             } else {
                 gst.realtime.set()
             }
@@ -55,6 +61,7 @@
             gst.realtime.set()
         })
         sock.socket.off("all").on("all", async (data) => {
+            console.log(JSON.stringify(data)+"@@@@@@@-----all")
             gst.realtime.set()
         })
         sock.socket.off("user").on("user", async (data) => {
@@ -180,11 +187,11 @@
         if (gst.chanIdActivted) gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", ps)
     }
 
-    function getBroadcast2(data) {
+    function getBroadcast2(data) { //###02
         console.log("chkTyping#########"+JSON.stringify(data))
         if (data.kind && data.data && data.data.ev) { //소켓통신 관련
-            if (data.data.ev == "chkTyping") {
-                sock.socket.emit(data.kind, data.data) //data polling 없음
+            if ("chkTyping,chkAlive".includes(data.data.ev)) {
+                sock.socket.emit(data.kind, data.data) //data polling 없이 별도 로직 필요함
             } else {
                 gst.realtime.emit(data.kind, data.data)
             }
@@ -285,12 +292,12 @@
         displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
     })
 
-    watch(() => gst.sockToSend, () => {
+    watch(() => gst.sockToSend, () => { //###02
         if (gst.sockToSend.length ==  0) return
         if (!sock.socket || !sock.socket.connected) return //while (gst.sockToSend.length > 0) {        
         const obj = gst.sockToSend[0]
-        if (obj.data.ev == "chkTyping") {
-            sock.socket.emit(obj.kind, obj.data) //data polling 없음
+        if ("chkTyping,chkAlive".includes(obj.data.ev)) {
+            sock.socket.emit(obj.kind, obj.data) //data polling 없이 별도 로직 필요함
         } else {
             gst.realtime.emit(obj.kind, obj.data)
         }
