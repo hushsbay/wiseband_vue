@@ -37,7 +37,8 @@
     const mediaPopupRef = ref(null), popupChanDmRef = ref(null), memberlistRef = ref(null)
         
     let subTitle = '', sideMenu, chanId, msgidInChan
-    let grid = ref(''), grnm = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref(''), vipStr = ref(''), pageData = ref('')
+    let grid = ref(''), chanNm = ref(''), chanMasterId = ref(''), chanMasterNm = ref(''), chanImg = ref('') //grnm = ref(''), 
+    let vipStr = ref(''), pageData = ref('')
     let chandtl = ref([]), chanmemUnder = ref([]), chandtlObj = ref({}), chanmemFullExceptMe = ref([]), chanType = ref('WS')
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
@@ -78,8 +79,14 @@
     async function procMainToMsglist(kind, obj) {
         if (kind == "realtime") {
             chkDataLogEach(obj)
-        } else if (kind == "userprofile") {
-            //이미지 변경할 데이터 찾기가 현재로선 조금 난항이라서 급한 것 마무리하고 진행하기로 함
+        } else if (kind == "updateProfile") {
+            console.log(obj.userid+"@@@@") 
+            if (!chandtlObj.value[obj.userid]) return //소켓 'all'을 통해 수신된 것이므로 해당 사용자아이디가 있는 경우만 처리하면 됨
+            console.log(obj.userid+"@@@@####") 
+            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
+            const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
+            if (!rs) return
+            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
         } else if (kind == "chkTyping") { //###05
             handleTypingInfo(obj)
         } else if (kind == "chkAlive") { //###05
@@ -253,7 +260,7 @@
                         if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
                             pageData.value = hush.cons.state_nodata
                         } else {
-                            grnm.value = row.grnm
+                            //grnm.value = row.grnm
                         }
                     }
                 } else { //채널이 다른 경우
@@ -290,7 +297,7 @@
         } else if (kind == "addChildFromBody") {
             await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
         } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
-            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId })
+            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
             if (!rs) return
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
@@ -712,7 +719,7 @@
         try {
             document.title = chanmstParam.CHANNM + " [채널-" + subTitle + "]"
             grid.value = chanmstParam.GR_ID
-            grnm.value = chanmstParam.GR_NM
+            //grnm.value = chanmstParam.GR_NM
             chanNm.value = chanmstParam.CHANNM
             chanMasterId.value = chanmstParam.MASTERID
             chanMasterNm.value = chanmstParam.MASTERNM
@@ -1047,7 +1054,7 @@
                 if (oldKind == "notyet" && newKind == "read") {
                     await updateNotyetToRead(row.MSGID)
                 } else {
-                    updateWithNewKind(row.MSGID, oldKind, newKind)
+                    await updateWithNewKind(row.MSGID, oldKind, newKind)
                 }
             }},
             { nm: "채널로 메시지 전달", disable: disableStr, func: function(item, idx) {
@@ -1186,14 +1193,13 @@
         }
     }
 
-    async function updateWithNewKind(msgid, oldKind, newKind) { //현재는 notyet->read 읽음처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
+    async function updateWithNewKind(msgid, oldKind, newKind) { //현재는 read<->unread 처리만 하므로 로킹 필요없으나 향후 추가시 로깅 처리 여부 체크 필요
         try {
             const rq = { chanid: chanId, msgid: msgid, oldKind: oldKind, newKind: newKind }
             const res = await axios.post("/chanmsg/updateWithNewKind", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //gst.sockToSend.push({ sendTo: "member", data: { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }})
-            //gst.realtime.emit("member", { ev: "toggleRead", roomid: chanId, msgid: msgid, memberid: g_userid, from: "updateWithNewKind" }) 본인에게 보내는 건 polling부터 로직 다시 확인 필요
+            gst.sockToSend.push({ sendTo: "user", data: { ev: "updateWithNewKind", userid: g_userid, from: "updateWithNewKind" }})
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (oldKind == "read" || oldKind == "unread") {
                 if (listMsgSel.value == "notyet" || listMsgSel.value == "unread") { //notyet은 실제로는 사용자가 이미 읽은 상태이므로 read로 변경되어 있을 것임
@@ -2079,7 +2085,7 @@
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            const work = rs.data.work
+            gst.sockToSend.push({ sendTo: "user", data: { ev: "changeAction", userid: g_userid, from: "changeAction" }})
             rs = await qryActionForUser({ msgid: msgid })
             if (rs == null) return
             const obj = msglist.value.find((item) => item.MSGID == msgid)
@@ -2437,7 +2443,8 @@
                     <div v-if="hasProp()" style="margin-right:5px" @click="adminJob">스레드</div>
                     <div v-else style="width:100%;display:flex;align-items:center">                    
                         <div v-if="chanType=='GS'" class="coDotDot">{{ chanmemFullExceptMe.length >= 1 ? chanmemFullExceptMe.join(", ") : "나에게" }}</div>
-                        <div v-else class="coDotDot"><span>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span></div>
+                        <!-- <div v-else class="coDotDot"><span>{{ chanNm }} {{ grnm ? "[" + grnm+ "]" : "" }}</span></div> 그룹명 변경시 소켓 적용 난항-->
+                         <div v-else class="coDotDot"><span>{{ chanNm }}</span></div>
                     </div>
                 </div>
                 <div class="chan_center_header_right">

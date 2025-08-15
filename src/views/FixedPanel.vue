@@ -26,6 +26,7 @@
         }
     }
 
+    const g_userid = gst.auth.getCookie("userid")
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
 
     let keepAliveRef = ref(null)
@@ -166,7 +167,7 @@
                 } else if (prevMsgMstCdt) {
                     //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
                 }
-                getCount()
+                //getCount()
             } else {
                 let len = listFixed.value.length //기존 데이터
                 const arr = rs.list //새로 읽어온 데이터                
@@ -200,6 +201,7 @@
                     }
                 }
             }
+            getCount()
             onGoingGetList = false
         } catch (ex) {
             onGoingGetList = false
@@ -260,6 +262,7 @@
             const res = await axios.post("/chanmsg/changeAction", rq)
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return //아래에서는 뭐가 되었던 현재 보이는 Fixed 패널 탭에서는 제거해야 함
+            gst.sockToSend.push({ sendTo: "user", data: { ev: "changeAction", userid: g_userid, from: "changeAction-FixedPanel" }})
             const idx = listFixed.value.findIndex((item) => item.MSGID == msgid)
             if (idx > -1) listFixed.value.splice(idx, 1)
             getCount() //화면에 갯수 업데이트
@@ -286,7 +289,7 @@
                 })
             }},
             { nm: "제거", color: "red", func: function(item, idx) {
-                changeAction('delete', row)                
+                changeAction('delfixed', row)                
             }}
         ]            
         gst.ctx.show(e)

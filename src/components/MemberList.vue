@@ -16,12 +16,14 @@
     }
 
     function handleAliveInfo(data) {
+        console.log("!@#" + JSON.stringify(data))
         const len = memberlist.value.length
         for (let i = 0; i < len; i++) {
             const row = memberlist.value[i]
-            if (data.userids.includes(row.USERID)) {
+            if (data.userids && data.userids.includes(row.USERID)) {
                 row.alive = true
             } else {
+                debugger
                 row.alive = false
             }
         }

@@ -57,14 +57,18 @@
                 gst.realtime.set()
             }
         })
-        sock.socket.off("member").on("member", async (data) => {
-            gst.realtime.set()
-        })
         sock.socket.off("all").on("all", async (data) => {
             console.log(JSON.stringify(data)+"@@@@@@@-----all")
-            gst.realtime.set()
+            if (data.ev == "updateProfile") {
+                if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("updateProfile", data)
+            } else {
+                gst.realtime.set()
+            }
         })
         sock.socket.off("user").on("user", async (data) => {
+            gst.realtime.set()
+        })
+        sock.socket.off("member").on("member", async (data) => {
             gst.realtime.set()
         })
     }
@@ -188,12 +192,12 @@
     }
 
     function getBroadcast2(data) { //###02
-        console.log("chkTyping#########"+JSON.stringify(data))
-        if (data.kind && data.data && data.data.ev) { //소켓통신 관련
+        //console.log("chkTyping#########"+JSON.stringify(data))
+        if (data.sendTo && data.data && data.data.ev) { //소켓통신 관련
             if ("chkTyping,chkAlive".includes(data.data.ev)) {
-                sock.socket.emit(data.kind, data.data) //data polling 없이 별도 로직 필요함
+                sock.socket.emit(data.sendTo, data.data) //data polling 없이 별도 로직 필요함
             } else {
-                gst.realtime.emit(data.kind, data.data)
+                gst.realtime.emit(data.sendTo, data.data)
             }
         }
     }
@@ -296,10 +300,11 @@
         if (gst.sockToSend.length ==  0) return
         if (!sock.socket || !sock.socket.connected) return //while (gst.sockToSend.length > 0) {        
         const obj = gst.sockToSend[0]
+        //console.log("@@@@@@@@@@@#########"+JSON.stringify(obj))
         if ("chkTyping,chkAlive".includes(obj.data.ev)) {
-            sock.socket.emit(obj.kind, obj.data) //data polling 없이 별도 로직 필요함
+            sock.socket.emit(obj.sendTo, obj.data) //data polling 없이 별도 로직 필요함
         } else {
-            gst.realtime.emit(obj.kind, obj.data)
+            gst.realtime.emit(obj.sendTo, obj.data)
         }
         gst.sockToSend.splice(0, 1) //console.log("gst.sockToSend: " + gst.sockToSend.length)
     }, { deep: true }) //gst.sockToSend가 Array이므로 deep=true 옵션이 필요함
@@ -440,7 +445,8 @@
 
     function handleEvFromUserProfile(userObj) {
         user.value = userObj
-        if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("userprofile", userObj)
+        sock.socket.emit("all", { ev: "updateProfile", userid: g_userid }) //data polling 없이 별도 로직 필요함
+        if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("updateProfile", userObj)
     }
 
     function showBottomMsgList() {

@@ -19,7 +19,9 @@
     async function procMainToMsglist(kind, obj) { //단순 전달
         if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
             await msglistRef.value.procMainToMsglist(kind, obj)
-            if (memberlistRef.value) memberlistRef.value.handleAliveInfo(obj) //msglist.vue에도 memberlistRef handleAliveInfo 호출하는 것 있음
+            if (obj.ev == "chkAlive" && memberlistRef.value) {
+                memberlistRef.value.handleAliveInfo(obj) //msglist.vue에도 memberlistRef handleAliveInfo 호출하는 것 있음
+            }
         }
     }
 
@@ -324,8 +326,8 @@
                 }}
             ]
         } else {
-            const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
-            const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
+            /*const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
+            const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"*/
             const disableStr = (row.STATE == "P") ? true : false
             //const disableRefresh = (!row.sel) ? true : false
             gst.ctx.menu = [                
@@ -344,14 +346,14 @@
                 { nm: "채널 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                     memberlistRef.value.open("chan", row.GR_ID, row.CHANID, row.CHANNM, row.nodeImg)
                 }},
-                { nm: "알림 " + notiStr, func: function(item, idx) { 
-                    const job = (row.NOTI == "X") ? "" : "X"
-                    toggleChanOption("noti", job, row)
-                }},
-                { nm: "북마크 " + bookmarkStr, func: function(item, idx) { 
-                    const job = (row.BOOKMARK == "Y") ? "" : "Y"
-                    toggleChanOption("bookmark", job, row)
-                }},
+                // { nm: "알림 " + notiStr, func: function(item, idx) { 
+                //     const job = (row.NOTI == "X") ? "" : "X"
+                //     toggleChanOption("noti", job, row)
+                // }},
+                // { nm: "북마크 " + bookmarkStr, func: function(item, idx) { 
+                //     const job = (row.BOOKMARK == "Y") ? "" : "Y"
+                //     toggleChanOption("bookmark", job, row)
+                // }},
                 { nm: "채널 링크 복사", disable: disableStr, func: function(item, idx) { //공개채널은 해당 그룹내 복사해서 보내면 클릭해서 볼 수 있으므로 활성화. 비공개(STATE=P)채널은 복사해도 쓸 일이 없음
                     const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/0?appType=home"
                     navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0

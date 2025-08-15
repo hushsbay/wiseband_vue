@@ -50,7 +50,7 @@
         }
     }
     
-    async function changeUserName() {
+    async function changeUserName() { //실사용도 가능한 것이지만 현실적으로 보면 테스트용에 가까움 (테스트시 아이디의 이름 변경하는 것임)
         try {
             if (!editmode.value) {
                 editmode.value = true
@@ -98,7 +98,7 @@
                     </div>
                     <div class="popupHeaderRight">
                         <span class="btn_basic" @click="changeUserName">이름변경</span>
-                        <input id="profile_upload" type=file hidden @change="uploadImgFile" />
+                        <input id="profile_upload" type=file hidden accept="image/*" @change="uploadImgFile" />
                         <label for="profile_upload"><span class="btn_basic">이미지변경</span></label>
                     </div>
                 </div>
