@@ -11,6 +11,7 @@
     const props = defineProps({ mode: String, kind: String, grid: String }) //kind=chan/dm
     const emits = defineEmits(["ev-click"])
 
+    const g_userid = gst.auth.getCookie("userid")
     let mode = ref('tree'), show = ref(true), searchText = ref(''), myteam = ref(''), mycomp = ref('')
     let depthToShow = ref(1), chkCnt = ref(0) //mygroup을 고려해서 depthToShow는 기본적으로는 반드시 1로 해야 함
     let maxLevel = 1
@@ -351,13 +352,14 @@
             })
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
+            gst.sockToSend.push({ sendTo: "user", data: { ev: "setVip", userid: g_userid, from: "setVip" }})
             list.forEach(item => {
                 const key = item.USERID + (item.GR_ID ? hush.cons.deli + item.GR_ID : "")
                 const idx = gst.util.getKeyIndex(orgRow, key)
                 orglist.value[idx].isVip = bool
             })
-            let msg = (bool ? "설정 완료" : "해제 완료") + " (" + rs.data.retCnt + "명)"
-            gst.util.setSnack(msg)
+            //let msg = (bool ? "설정 완료" : "해제 완료") + " (" + rs.data.retCnt + "명)"
+            //gst.util.setSnack(msg)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }

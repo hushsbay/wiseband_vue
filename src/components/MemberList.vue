@@ -23,7 +23,6 @@
             if (data.userids && data.userids.includes(row.USERID)) {
                 row.alive = true
             } else {
-                debugger
                 row.alive = false
             }
         }

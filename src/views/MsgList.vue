@@ -87,6 +87,11 @@
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
             if (!rs) return
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
+        } else if (kind == "setVip") {
+            const res = await axios.post("/user/getVip", null)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
         } else if (kind == "chkTyping") { //###05
             handleTypingInfo(obj)
         } else if (kind == "chkAlive") { //###05
@@ -1012,7 +1017,8 @@
                     })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
-                    if (bool) {
+                    gst.sockToSend.push({ sendTo: "user", data: { ev: "setVip", userid: g_userid, from: "setVip" }})
+                    if (bool) { //위 소켓으로 커버되나 일단 그대로 둠
                         vipStr.value += row.AUTHORID + ","
                     } else {                    
                         vipStr.value = vipStr.value.replace(row.AUTHORID + ",", "")
