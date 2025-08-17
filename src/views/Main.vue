@@ -54,6 +54,8 @@
                 //console.log(JSON.stringify(data)+"@@@@@@@-----")
                 if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data) //###04
                 bc2.postMessage({ sendTo: "myself", data: data }) //###04 혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
+            } else if (data.ev == "roomJoin") {
+                inviteMsg(data) //초대 메시지 전송
             } else {
                 gst.realtime.set()
             }
@@ -328,6 +330,19 @@
         }
         gst.sockToSend.splice(0, 1) //console.log("gst.sockToSend: " + gst.sockToSend.length)
     }, { deep: true }) //gst.sockToSend가 Array이므로 deep=true 옵션이 필요함
+
+    async function inviteMsg(data) {
+        try {
+            let body = "초대: " + data.memberIdAdded.join(",")
+            const rq = { crud: "C", chanid: data.roomid, msgid: null, replyto: null, body: body, bodytext: body }
+            const res = await axios.post("/chanmsg/saveMsg", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "inviteMsg", roomid: chanId, from: "inviteMsg" }})
+        } catch (ex) { 
+            gst.util.showEx(ex, true)
+        }
+    }
 
     function decideSeeMore() {
         try {

@@ -131,7 +131,7 @@
                 const ret = await saveChan()
                 if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
             }
-            const brr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열
+            const brr = [] //, crr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열 (brr=userid,crr=usernm)
             let warn = ""
             for (let i = 0; i < arr.length; i++) {
                 const row = arr[i]
@@ -141,19 +141,18 @@
                     warn = "[" + res.data.code + "] " + res.data.msg
                     break
                 } else {
-                    brr.push(row)
+                    brr.push(row.USERID)
+                    //crr.push(row.USERNM)
                 }
             }
-            if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
-                gst.realtime.emit("room", { ev: "saveChanMember", roomid: chanId, from: "applyToBody" })
+            if (brr.length > 0) { //예) 1개 이상 추가되었을 경우                
                 await getList()
                 await nextTick()
                 for (let i = 0; i < brr.length; i++) {
-                    const row = brr[i]
-                    const idx = gst.util.getKeyIndex(memberRow, row.USERID)
+                    const idx = gst.util.getKeyIndex(memberRow, brr[i])
                     if (idx > -1) memberlist.value[idx].chk = true
                 }
-                if (brr.length > 0) gst.util.scrollIntoView(memberRow, brr[0].USERID)
+                if (brr.length > 0) gst.util.scrollIntoView(memberRow, brr[0]) //첫번째 USERID
                 if (appType == "dm") evToPanel("update")
                 evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
             }
@@ -237,7 +236,8 @@
             const res = await axios.post("/chanmsg/saveChanMember", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.realtime.emit("room", { ev: "saveChanMember", roomid: chanId, from: "saveMember" })
+            //gst.realtime.emit("room", { ev: "saveChanMember", roomid: chanId, from: "saveMember" })
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "saveChanMember", roomid: chanId, from: "saveMember" }})
             memberlist.value.forEach(item => { //반영할 항목들이 많으면 아예 qry로 한행 읽어서 해당 배열 항목 한행만 새로고침하면 되나 여기서는 딱 한개 필드만 반영하면 되므로 아래와 같이 처리
                 if (item.USERID == row.USERID) {
                     item.KIND = rowKind.value
@@ -257,15 +257,28 @@
                 return
             }
             if (!confirm("선택한 행(" + arr.length + "건)을 삭제할까요?")) return
+            let brr = [], crr = []
             for (let i = 0; i < len; i++) {
                 const rq = { CHANID: chanId, USERID: arr[i].USERID }
                 const res = await axios.post("/chanmsg/deleteChanMember", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
-                //if (!rs) return
+                if (rs) {
+                    brr.push(arr[i].USERID)
+                    crr.push(arr[i].USERNM)
+                }
             }
-            gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
+            if (brr.length == 0) return
+            let body = "퇴장: " + crr.join(",")
+            const rq = { crud: "C", chanid: chanId, msgid: null, replyto: null, body: body, bodytext: body }
+            const res = await axios.post("/chanmsg/saveMsg", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            //gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
+            //gst.realtime.emit("room", { ev: "roomLeave", roomid: chanId, memberIdLeft: brr, memberNmLeft: crr, from: "deleteMember" })
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "roomLeave", roomid: chanId, memberIdLeft: brr, memberNmLeft: crr, from: "deleteMember" }})
             newMember()
-            await getList()
+            await getList()        
             if (appType == "dm") evToPanel("update")
             evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
         } catch (ex) { 
@@ -287,7 +300,8 @@
                 evToPanel("update")
                 evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
             }
-            gst.realtime.emit("room", { ev: "saveChan", roomid: chanId, from: "saveChan" })
+            //gst.realtime.emit("room", { ev: "saveChan", roomid: chanId, from: "saveChan" })
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "saveChan", roomid: chanId, from: "saveChan" }})
             return true
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -301,7 +315,8 @@
             const res = await axios.post("/chanmsg/deleteChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.realtime.emit("room", { ev: "deleteChan", roomid: chanId, from: "deleteChan" })
+            //gst.realtime.emit("room", { ev: "deleteChan", roomid: chanId, from: "deleteChan" })
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChan", roomid: chanId, from: "deleteChan" }})
             evToPanel("delete")
             setTimeout(function() { close() }, 500)
         } catch (ex) { 
@@ -311,9 +326,12 @@
 
     async function inviteToMember() { //메일 발송은 리얼타임 반영 없음 : 일단, 방멤버가 초대했다고 명시적으로 알리는 정도로 가름함
         try {
-            let arr = [] //const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
+            let arr = [], brr = [] //const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
             memberlist.value.forEach(item => {
-                if (item.chk) arr.push(item.USERID)
+                if (item.chk) {
+                    arr.push(item.USERID)
+                    brr.push(item.USERNM)
+                }
             })
             const len = arr.length
             if (len == 0) {
@@ -327,12 +345,13 @@
             } else {
                 channmStr = chanNm + (grnm ? "[" + grnm+ "]" : "")
             }
-
             const rq = { CHANID: chanId, CHANNM: channmStr, USERIDS: arr }
             const res = await axios.post("/chanmsg/inviteToMember", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.util.setSnack("메일 발송 완료")
+            //gst.realtime.emit("room", { ev: "roomJoin", roomid: chanId, memberIdAdded: arr, memberNmAdded: brr, from: "inviteToMember" })
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: arr, memberNmAdded: brr, from: "inviteToMember" }})
+            gst.util.setSnack("초대 완료")
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -463,21 +482,25 @@
                             </div>
                         </div>
                         <div v-show="memberlist.length > 0" class="chan_center_footer">
-                            <div style="padding-top:5px;display:flex;align-items:center;cursor:pointer">
-                                <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
-                                    <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
-                                    <span class="coImgSpn">저장</span>
+                            <div style="padding-top:5px;display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+                                <div style="display:flex;align-items:center">
+                                    <div v-if="singleMode!=''" class="coImgBtn" @click="saveMember()">
+                                        <img :src="gst.html.getImageUrl('white_save.png')" class="coImg20">
+                                        <span class="coImgSpn">저장</span>
+                                    </div>
+                                    <div class="coImgBtn" @click="deleteMember()">
+                                        <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
+                                        <span class="coImgSpn">삭제</span>
+                                    </div>
+                                    <span style="margin:0 5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
+                                    <span class="vipBtn" @click="clearAllChk()">해제</span>
                                 </div>
-                                <div class="coImgBtn" @click="deleteMember()">
-                                    <img :src="gst.html.getImageUrl('white_delete.png')" class="coImg20">
-                                    <span class="coImgSpn">삭제</span>
+                                <div style="display:flex;align-items:center">                                    
+                                    <div class="coImgBtn" @click="inviteToMember()">
+                                        <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg20">
+                                        <span class="coImgSpn">초대(메일/메시지)</span>
+                                    </div>
                                 </div>
-                                <div class="coImgBtn" @click="inviteToMember()">
-                                    <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg20">
-                                    <span class="coImgSpn">초대</span>
-                                </div>
-                                <span style="margin:0 5px;font-weight:bold">선택:</span><span style="margin-right:5px;font-weight:bold">{{ chkArr.length }}</span>
-                                <span class="vipBtn" @click="clearAllChk()">해제</span>
                             </div>
                             <div style="display:flex;align-items:center;cursor:pointer">
                                 <table>

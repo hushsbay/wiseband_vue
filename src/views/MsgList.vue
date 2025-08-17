@@ -661,8 +661,13 @@
                     const res = await axios.post("/chanmsg/deleteChanMember", rq)
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
-                    gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "chanCtxMenu" }})
-                    //gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
+                    let body = "퇴장: " + g_usernm
+                    const rq1 = { crud: "C", chanid: chanId, msgid: null, replyto: null, body: body, bodytext: body }
+                    const res1 = await axios.post("/chanmsg/saveMsg", rq1)
+                    const rs1 = gst.util.chkAxiosCode(res1.data)
+                    if (!rs1) return
+                    gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
+                    gst.sockToSend.push({ sendTo: "room", data: { ev: "roomLeave", roomid: chanId, memberIdLeft: [g_userid], memberNmLeft: [g_usernm], from: "deleteMember" }})
                     await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조 
                     evToPanel({ kind: "refreshPanel" })
                 } catch (ex) { 
