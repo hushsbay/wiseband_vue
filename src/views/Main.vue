@@ -225,6 +225,7 @@
             if (!rs1) return
             user.value = rs1.data
             setImgUrl(user.value.PICTURE)
+            
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
             sideClickOnLoop(null, true)

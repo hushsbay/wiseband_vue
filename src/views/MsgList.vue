@@ -420,16 +420,21 @@
     }
 
     function chkMultiState() { //###01
-        //1) chkTyping :  뒤늦게 온라인으로 들어오는 멤버 고려하면 매번 소켓으로 전송하는 수 밖에 없어 보임 (원래는 입력중인데 멤버에 들어 있거나 입력중이지 않는데 멤버에도 들어 있지 않으면 굳이 알릴 필요없음)
-        let body = document.getElementById(editorId).innerText.trim() //innerHtml로 하면 다 지워도 <br>이 남아 있어서 innerText로 처리
-        let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkMultiState" }
-        data.typing = (body.length > 0) ? true : false
-        sendSockObjToMain({ sendTo: "room", data: data })
-        //2) ckhAlive
-        const userids = chandtl.value.map(item => item.USERID)
-        let data1 = { ev: "chkAlive", userids: userids, from: "chkMultiState" }
-        sendSockObjToMain({ sendTo: "myself", data: data1 })
-        timerChkTyping = setTimeout(function() { chkMultiState() }, 3000)
+        try {
+            //1) chkTyping :  뒤늦게 온라인으로 들어오는 멤버 고려하면 매번 소켓으로 전송하는 수 밖에 없어 보임 (원래는 입력중인데 멤버에 들어 있거나 입력중이지 않는데 멤버에도 들어 있지 않으면 굳이 알릴 필요없음)
+            let body = document.getElementById(editorId).innerText.trim() //innerHtml로 하면 다 지워도 <br>이 남아 있어서 innerText로 처리
+            let data = { ev: "chkTyping", roomid: chanId, userid: g_userid, usernm: g_usernm, typing: null, from: "chkMultiState" }
+            data.typing = (body.length > 0) ? true : false
+            sendSockObjToMain({ sendTo: "room", data: data })
+            //2) ckhAlive
+            const userids = chandtl.value.map(item => item.USERID)
+            let data1 = { ev: "chkAlive", userids: userids, from: "chkMultiState" }
+            sendSockObjToMain({ sendTo: "myself", data: data1 })
+        } catch (ex) {
+            console.log("chkMultiState: " + ex.message) //skip
+        } finally {
+            timerChkTyping = setTimeout(function() { chkMultiState() }, 3000)
+        }
     }
 
     async function procRsObj() { //넘어오는 양에 비해 여기서 (오류발생 등으로) 처리가 안되면 계속 쌓여갈 수 있으므로 그 경우 경고가 필요함

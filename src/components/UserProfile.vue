@@ -12,6 +12,7 @@
     let show = ref(false)
     let editmode = ref(false)
     let user = ref(null), usernm = ref(''), pwdOld = ref(''), pwdNew = ref(''), pwdAgain = ref('')
+    let notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false)
 
     async function open() {
         show.value = true
@@ -21,6 +22,12 @@
         user.value = rs.data
         usernm.value = user.value.USERNM
         setImgUrl(user.value.PICTURE)
+        if (rs.list) { //여기서 list는 array가 아닌 object
+            const row = rs.list
+            notiOff.value = row.NOTI_OFF == "Y" ? true : false
+            bodyOff.value = row.BODY_OFF == "Y" ? true : false
+            authorOff.value = row.AUTHOR_OFF == "Y" ? true : false
+        }
     }
 
     function close() {
@@ -122,12 +129,21 @@
                     </div>
                     <div class="listItem"><span>원래 비번없이 테스트 가능한데 이 사용자아이디를 본인만 사용하고자 할 때</span></div>
                     <div class="listItem"><span>이름과 비번을 변경해 테스트를 진행합니다.</span></div>
+                    <div class="listItem" style="margin-top:20px;border-top:1px solid lightgray"></div>
+                    <div class="listItem" style="margin-top:10px">
+                        <input type="checkbox" id="notiOff" v-model="notiOff" @change="procNotiOff" />
+                        <label for="notiOff" style="">알림 받지 않기</label>
+                        <input type="checkbox" id="bodyOff" v-model="bodyOff" @change="procBodyOff" style="margin-left:20px"/>
+                        <label for="bodyOff" style="">알림시 본문내용 미표시</label>
+                        <input type="checkbox" id="authorOff" v-model="authorOff" @change="procAuthorOff" style="margin-left:20px"/>
+                        <label for="authorOff" style="">알림시 작성자 미표시</label>
+                    </div>
                 </div>
                 <div class="popupFooter">
-                    <div class="popupFooterLeft"></div>
-                    <div class="popupFooterLeft">
+                    <!-- <div class="popupFooterLeft"></div>
+                    <div class="popupFooterLeft"> -->
                         <div class="btn_basic" @click="close">닫기</div>
-                    </div>
+                    <!-- </div> -->
                 </div>      
             </div>
             <div class="overlay" @click="close"></div>
@@ -148,11 +164,11 @@
         position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index: 999;
     }
 
-    .popupMenu { /*top:0px;bottom:0px;height:380px; 3개는 props.popupPos로 표시 */
+    /* .popupMenu { /top:0px;bottom:0px;height:380px; 3개는 props.popupPos로 표시 /
         position:fixed;width:300px;left:60px;
         display:flex;flex-direction:column;z-index:9999;
         background:white;border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px gray
-    }
+    } */
 
     .popupHeader {
         width:calc(100% - 12px);height:70px;padding:6px;
@@ -177,19 +193,19 @@
     }
 
     .popupFooter {
-        width:calc(100% - 12px);height:30px;padding:6px;
-        display:flex;justify-content:space-between;align-items:center;        
+        width:calc(100% - 12px);height:30px;padding:15px 5px 0 0;
+        display:flex;justify-content:flex-end;align-items:center;border-top:1px solid lightgray        
     }
 
-    .popupFooterLeft {
+    /* .popupFooterLeft {
         padding-left:8px;
         display:flex;align-items:center;
         color:steelblue;font-weight:bold
-    }
+    } */
 
     .btn_basic { 
         height:28px;margin-left:10px;padding:0 8px;display:flex;justify-content:center;align-items:center;
-        border:1px solid dimgray;border-radius:4px;background-color:var(--primary-color);color:var(--second-select-color);cursor:pointer 
+        border-radius:4px;background-color:var(--primary-color);color:var(--second-select-color);cursor:pointer 
     }
     .btn_basic:hover { background:var(--second-hover-color) }
 </style>
