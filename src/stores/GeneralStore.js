@@ -20,7 +20,8 @@ const GeneralStore = defineStore('General', () => {
     const bottomMsg = ref(''),  bottomMsgList = ref([]), routeFrom = ref(''), routeTo = ref(''), routedToSamePanelFromMsgList = ref(false)
 
     let timerShort = ref(-1) //-1은 Long Timer를 운영하는 것이고 0부터 n까지(3초정도)는 Short Timer를 운영하는 것임 (Main.vue)
-    const sockToSend = ref([])
+    let sockToSend = ref([])
+    let user = ref({}), notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false) //usernm = ref(''), 
 
     const auth = {
 
@@ -107,12 +108,32 @@ const GeneralStore = defineStore('General', () => {
 
     const realtime = {
 
+        getUserInfo : async function() {
+            const res = await axios.post("/user/getUserInfo")
+            const rs = util.chkAxiosCode(res.data)
+            if (!rs) return false
+            user.value = rs.data
+            //usernm.value = user.value.USERNM
+            user.value.url = (user.value.PICTURE) ? hush.util.getImageBlobUrl(user.value.PICTURE.data) : null
+            if (rs.list) { //여기서 list는 array가 아닌 object
+                const row = rs.list
+                notiOff.value = row.NOTI_OFF == "Y" ? true : false
+                bodyOff.value = row.BODY_OFF == "Y" ? true : false
+                authorOff.value = row.AUTHOR_OFF == "Y" ? true : false
+            }
+        },
+
         setObjToChan : function(chanid, key, val) {
             if (!objByChanId.value[chanid]) objByChanId.value[chanid] = {}
             objByChanId.value[chanid][key] = val
         },
 
         procNoti : async function(row) { //알림바는 tag(=채널단위)로 groupby되어 show
+            debugger
+            if (notiOff.value) {
+                util.setToast("알림 도착시 Noti 없음 - 테스트 표시임")
+                return
+            }
             if (!hush.noti.rooms[row.CHANID]) {
                 const res = await axios.post("/chanmsg/qryMsg", { chanid: row.CHANID, msgid: row.MSGID })
                 const rs = util.chkAxiosCode(res.data, true)
@@ -120,8 +141,9 @@ const GeneralStore = defineStore('General', () => {
             }
             const room = hush.noti.rooms[row.CHANID] //오로지 CHANNM 가져오려고 서버 호출하는 것임
             const title = '[' + (room ? room.chanmst.CHANNM : hush.cons.appName) + ']'
-            const author = '작성자 : ' + row.USERNM + '\n'
-            const body = author + row.BODYTEXT //나중에 사용자 옵션에 따라 작성자와 본문을 보여줄지 말지 구현
+            const author = authorOff.value ? '' : '작성자 : ' + row.USERNM + '\n'
+            let body = author + (bodyOff.value ? '' : row.BODYTEXT) //나중에 사용자 옵션에 따라 작성자와 본문을 보여줄지 말지 구현
+            if (body == '') body = "메시지가 도착했습니다."
             const objNoti = new window.Notification(title, {
                 body : body, dir : "auto", lang : "EN", tag : row.CHANID, icon : html.getImageUrl('color_slacklogo.png'), requireInteraction : true 
             })           
@@ -129,7 +151,7 @@ const GeneralStore = defineStore('General', () => {
             objNoti.subkind = row.SUBKIND
             //objNoti.msgid = row.REPLYTO ? row.REPLYTO : row.MSGID //부모 메시지
             //objNoti.isNewWin = route.fullPath.includes('/body/msglist') ? true : false
-            hush.noti.winForNoti[objNoti.chanid] = window
+            hush.noti.winForNoti[row.CHANID] = window
             objNoti.onclick = function () {
                 //if (!hush.noti.winForNoti.closed) {
                 const win = hush.noti.winForNoti[objNoti.chanid]
@@ -209,7 +231,7 @@ const GeneralStore = defineStore('General', () => {
                 strStack = ex.stack
                 console.log(ex.stack)
             } else {
-                strMsg = "gst.util.setSnack - typeof error"
+                strMsg = "setSnack - typeof error"
             }
             if (!strMsg) {
                 snackBar.value.msg = ""
@@ -251,7 +273,7 @@ const GeneralStore = defineStore('General', () => {
             } else if (typeof ex == "object" && ex.stack) {
                 strMsg = ex.message
             } else {
-                strMsg = "gst.util.setToast - typeof error"
+                strMsg = "setToast - typeof error"
             }
             if (!strMsg) {
                 toast.value.msg = "" //this.toast.msg = ""
@@ -514,6 +536,7 @@ const GeneralStore = defineStore('General', () => {
     
     return { 
         objSaved, selSideMenu, chanIdActivted, objByChanId, timerShort, sockToSend, 
+        user, notiOff, bodyOff, authorOff, //usernm, 
         snackBar, toast, bottomMsg, bottomMsgList, routeFrom, routeTo, routedToSamePanelFromMsgList,
         auth, ctx, html, realtime, util
         //isDoc, paging, scrollPosRecall, docId, isRead, isEdit, isNew, listIndex, //예전에 파일럿으로 개발시 썼던 것이고 여기, WiSEBand에서는 사용하지 않는 변수들임

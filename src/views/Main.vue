@@ -16,7 +16,7 @@
 
     const g_userid = gst.auth.getCookie("userid")
 
-    const POPUPHEIGHT = 300, DATA_EV_LOGIC_NEEDED ="chkTyping,chkAlive,updateProfile,setVip"
+    const POPUPHEIGHT = 300, DATA_EV_LOGIC_NEEDED ="chkTyping,chkAlive,updateProfile,setVip,setNoti"
     const popupMenuOn = ref(false) //바로 아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top만 결정하면 됨) 
     const popupMenuPos = ref({ top: '0px', bottom: '0px', height: POPUPHEIGHT + 'px' })
     const popupData = ref({ id: '', lines: false })
@@ -28,7 +28,7 @@
     let prevX, prevY
     let keepAliveRef = ref(null)
     let mediaPopupRef = ref(null), searchText = ref('')
-    let userProfileRef = ref(null), user = ref(null)
+    let userProfileRef = ref(null) //, user = ref(null)
     let bottomMsgListPopupRef = ref(null)
 
     //리얼타임 반영
@@ -36,6 +36,7 @@
     let logdt = '', logdtDisp = ref(''), logdtColor = ref('yellow') //화면 표시용
     let panelRef = ref(null), notyetCntHome = ref(0), notyetCntDm = ref(0)
     let bc2, realtimeJobDone, pageShown = 'Y', timeoutShort, timeoutLong
+    //let notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false)
 
     function startSocket() {
         connectSock()
@@ -58,16 +59,24 @@
             }
         })
         sock.socket.off("all").on("all", async (data) => {
-            console.log(JSON.stringify(data)+"@@@@@@@-----all")
-            if (data.ev == "updateProfile") {
-                if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("updateProfile", data)
+            //console.log(JSON.stringify(data)+"@@@@@@@-----all")
+            if ("updateProfile".includes(data.ev)) { 
+                if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data)
             } else {
                 gst.realtime.set()
             }
         })
         sock.socket.off("user").on("user", async (data) => {
-            if (data.ev == "setVip") {
-                if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("setVip", data)
+            if ("setVip".includes(data.ev)) {
+                if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data)
+            } else if ("setNoti".includes(data.ev)) {
+                if (data.typ == "author") {
+                    authorOff.value = data.bool
+                } else if (data.typ == "body") {
+                    bodyOff.value = data.bool
+                } else {
+                    notiOff.value = data.bool
+                }
             } else {
                 gst.realtime.set()
             }
@@ -220,12 +229,18 @@
             listSel.value = rs.list.filter(x => x.USERID != null)
             listUnSel.value = rs.list.filter(x => x.USERID == null)
             window.addEventListener('resize', () => { decideSeeMore() })
-            const res1 = await axios.post("/user/getUserInfo")
-            const rs1 = gst.util.chkAxiosCode(res1.data)
-            if (!rs1) return
-            user.value = rs1.data
-            setImgUrl(user.value.PICTURE)
-            
+            // const res1 = await axios.post("/user/getUserInfo") //2군데 동일 코딩
+            // const rs1 = gst.util.chkAxiosCode(res1.data)
+            // if (!rs1) return
+            // user.value = rs1.data
+            // setImgUrl(user.value.PICTURE)
+            // if (rs1.list) { //여기서 list는 array가 아닌 object
+            //     const row = rs1.list
+            //     notiOff.value = row.NOTI_OFF == "Y" ? true : false
+            //     bodyOff.value = row.BODY_OFF == "Y" ? true : false
+            //     authorOff.value = row.AUTHOR_OFF == "Y" ? true : false
+            // }
+            gst.realtime.getUserInfo()
             await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
             decideSeeMore()
             sideClickOnLoop(null, true)
@@ -308,7 +323,7 @@
         console.log("@@@@@@@@@@@#########"+JSON.stringify(obj))
         if (DATA_EV_LOGIC_NEEDED.includes(obj.data.ev)) {
             sock.socket.emit(obj.sendTo, obj.data) //data polling 없이 별도 로직 필요함
-        } else {
+        } else { //아래는 함수내 gst.realtime.set()을 호출하는 루틴이 더 있음 (위는 단순 소켓 전송)
             gst.realtime.emit(obj.sendTo, obj.data)
         }
         gst.sockToSend.splice(0, 1) //console.log("gst.sockToSend: " + gst.sockToSend.length)
@@ -444,12 +459,12 @@
         userProfileRef.value.open("msg", '', '', '', searchText.value.trim())
     }   
     
-    function setImgUrl(pict) {
-        user.value.url = (pict) ? hush.util.getImageBlobUrl(pict.data) : null
-    }
+    // function setImgUrl(pict) {
+    //     user.value.url = (pict) ? hush.util.getImageBlobUrl(pict.data) : null
+    // }
 
     function handleEvFromUserProfile(userObj) {
-        user.value = userObj
+        gst.user = userObj
         gst.sockToSend.push({ sendTo: "all", data: { ev: "updateProfile", userid: g_userid, from: "handleEvFromUserProfile" }})
         if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("updateProfile", userObj)
     }
@@ -494,7 +509,7 @@
                 <div class="btn_basic" @click="openMsgSearch()"><span>통합검색으로이동</span></div>
             </div>
             <div style="display:flex;justify-content:flex-end;align-items:center;cursor:pointer">
-                <span style="margin-right:10px;color:whitesmoke">{{ user ? user.USERNM : '' }}</span>
+                <span style="margin-right:10px;color:whitesmoke">{{ gst.user ? gst.user.USERNM : '' }}</span>
                 <span style="color:whitesmoke;font-weight:bold" @click="logout">Logout</span>
             </div>
         </div>
@@ -525,7 +540,7 @@
                 </div>
                 <div class="sideBottom">
                     <div class="menu" style="margin:0 0 30px 0" @click="openUserProfile">
-                        <img v-if="user && user.url" :src="user.url" class="coImg32" style="border-radius:16px">
+                        <img v-if="gst.user && gst.user.url" :src="gst.user.url" class="coImg32" style="border-radius:16px">
                         <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32">
                     </div>
                 </div>

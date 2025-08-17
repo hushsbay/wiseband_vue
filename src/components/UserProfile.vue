@@ -9,34 +9,38 @@
     defineExpose({ open, close })
     const emits = defineEmits(["evToMain"])
 
+    const g_userid = gst.auth.getCookie("userid")
+
     let show = ref(false)
-    let editmode = ref(false)
-    let user = ref(null), usernm = ref(''), pwdOld = ref(''), pwdNew = ref(''), pwdAgain = ref('')
-    let notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false)
+    //let editmode = ref(false)
+    //let user = ref(null), usernm = ref(''), 
+    let pwdOld = ref(''), pwdNew = ref(''), pwdAgain = ref('')
+    //let notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false)
 
     async function open() {
         show.value = true
-        const res = await axios.post("/user/getUserInfo")
-        const rs = gst.util.chkAxiosCode(res.data)
-        if (!rs) return
-        user.value = rs.data
-        usernm.value = user.value.USERNM
-        setImgUrl(user.value.PICTURE)
-        if (rs.list) { //여기서 list는 array가 아닌 object
-            const row = rs.list
-            notiOff.value = row.NOTI_OFF == "Y" ? true : false
-            bodyOff.value = row.BODY_OFF == "Y" ? true : false
-            authorOff.value = row.AUTHOR_OFF == "Y" ? true : false
-        }
+        //gst.realtime.getUserInfo()
+        // const res = await axios.post("/user/getUserInfo") //2군데 동일 코딩
+        // const rs = gst.util.chkAxiosCode(res.data)
+        // if (!rs) return
+        // user.value = rs.data
+        // usernm.value = user.value.USERNM
+        // setImgUrl(user.value.PICTURE)
+        // if (rs.list) { //여기서 list는 array가 아닌 object
+        //     const row = rs.list
+        //     notiOff.value = row.NOTI_OFF == "Y" ? true : false
+        //     bodyOff.value = row.BODY_OFF == "Y" ? true : false
+        //     authorOff.value = row.AUTHOR_OFF == "Y" ? true : false
+        // }
     }
 
     function close() {
         show.value = false
     }
 
-    function setImgUrl(pict) {
-        user.value.url = (pict) ? hush.util.getImageBlobUrl(pict.data) : null
-    }
+    // function setImgUrl(pict) {
+    //     user.value.url = (pict) ? hush.util.getImageBlobUrl(pict.data) : null
+    // }
 
     async function changePwd() {
         try {
@@ -59,17 +63,17 @@
     
     async function changeUserName() { //실사용도 가능한 것이지만 현실적으로 보면 테스트용에 가까움 (테스트시 아이디의 이름 변경하는 것임)
         try {
-            if (!editmode.value) {
-                editmode.value = true
-            } else {
-                const res = await axios.post("/user/setUserInfo", { usernm: usernm.value })
+            //if (!editmode.value) {
+            //    editmode.value = true
+            //} else {
+                const res = await axios.post("/user/setUserInfo", { usernm: gst.user.USERNM })
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
-                user.value.USERNM = usernm.value
-                gst.auth.setCookie("usernm", usernm.value)
-                emits("evToMain", user.value)
-                editmode.value = false
-            }
+                //user.value.USERNM = usernm.value
+                gst.auth.setCookie("usernm", gst.user.USERNM)
+                emits("evToMain", gst.user)
+                //editmode.value = false
+            //}
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -84,11 +88,27 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             e.target.value = '' //clear하지 않으면 동일한 파일명이 바로 올라가지 않음 (change event 관련)
-            setImgUrl(rs.data.PICTURE)
-            emits("evToMain", user.value)
+            //setImgUrl(rs.data.PICTURE)
+            gst.user.url = (rs.data.PICTURE) ? hush.util.getImageBlobUrl(rs.data.PICTURE.data) : null
+            emits("evToMain", gst.user)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
+    }
+
+    async function setNoti(str) {
+        let bool
+        if (str == "body") {
+            bool = gst.bodyOff ? "Y" : "N"
+        } else if (str == "author") {
+            bool = gst.authorOff ? "Y" : "N"
+        } else {//noti
+            bool = gst.notiOff ? "Y" : "N"
+        }
+        const res = await axios.post("/user/setNoti", { kind : str, bool: bool })
+        const rs = gst.util.chkAxiosCode(res.data)
+        if (!rs) return
+        gst.sockToSend.push({ sendTo: "user", data: { ev: "setNoti", userid: g_userid, typ: str, bool: bool, from: "setNoti" }})
     }
 </script>
 
@@ -97,11 +117,12 @@
         <div v-if="show">
             <div class="popup">
                 <div class="popupHeader">
-                    <div v-if="user" class="popupHeaderLeft">
-                        <img v-if="user && user.url" :src="user.url" class="coImg64" style="border-radius:32px">
+                    <div v-if="gst.user" class="popupHeaderLeft">
+                        <img v-if="gst.user && gst.user.url" :src="gst.user.url" class="coImg64" style="border-radius:32px">
                         <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg64">
-                        <input v-if="editmode" type="text" style="width:200px;margin-left:9px" v-model="usernm" @keydown.enter="changeUserName" spellcheck="false"/>
-                        <span v-else style="margin-left:9px;font-size:16px;font-weight:bold">{{ user.USERNM }}</span>
+                        <!-- <input v-if="editmode" type="text" style="width:200px;margin-left:9px" v-model="gst.user.USERNM" @keydown.enter="changeUserName" spellcheck="false"/>
+                        <span v-else style="margin-left:9px;font-size:16px;font-weight:bold">{{ gst.user.USERNM }}</span> -->
+                        <input type="text" style="width:200px;margin-left:9px" v-model="gst.user.USERNM" @keydown.enter="changeUserName" spellcheck="false"/>
                     </div>
                     <div class="popupHeaderRight">
                         <span class="btn_basic" @click="changeUserName">이름변경</span>
@@ -131,11 +152,11 @@
                     <div class="listItem"><span>이름과 비번을 변경해 테스트를 진행합니다.</span></div>
                     <div class="listItem" style="margin-top:20px;border-top:1px solid lightgray"></div>
                     <div class="listItem" style="margin-top:10px">
-                        <input type="checkbox" id="notiOff" v-model="notiOff" @change="procNotiOff" />
+                        <input type="checkbox" id="notiOff" v-model="gst.notiOff" @change="setNoti('noti')" />
                         <label for="notiOff" style="">알림 받지 않기</label>
-                        <input type="checkbox" id="bodyOff" v-model="bodyOff" @change="procBodyOff" style="margin-left:20px"/>
+                        <input type="checkbox" id="bodyOff" v-model="gst.bodyOff" @change="setNoti('body')" style="margin-left:20px"/>
                         <label for="bodyOff" style="">알림시 본문내용 미표시</label>
-                        <input type="checkbox" id="authorOff" v-model="authorOff" @change="procAuthorOff" style="margin-left:20px"/>
+                        <input type="checkbox" id="authorOff" v-model="gst.authorOff" @change="setNoti('author')" style="margin-left:20px"/>
                         <label for="authorOff" style="">알림시 작성자 미표시</label>
                     </div>
                 </div>
