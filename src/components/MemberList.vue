@@ -259,8 +259,8 @@
             if (!confirm("선택한 행(" + arr.length + "건)을 삭제할까요?")) return
             let brr = [], crr = []
             for (let i = 0; i < len; i++) {
-                const rq = { CHANID: chanId, USERID: arr[i].USERID }
-                const res = await axios.post("/chanmsg/deleteChanMember", rq)
+                const rq = { CHANID: chanId, USERID: arr[i].USERID, chkOnly: true } //chkOnly: true 중요
+                const res = await axios.post("/chanmsg/deleteChanMember", rq) //1) 실제 삭제가 아닌 체크만 먼저 실행. 멤버 먼저 삭제시 퇴장을 위한 리얼타임 반영으로는 안됨 (data polling시 sql 조회X)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (rs) {
                     brr.push(arr[i].USERID)
@@ -268,19 +268,25 @@
                 }
             }
             if (brr.length == 0) return
-            let body = "퇴장: " + crr.join(",")
+            let body = hush.cons.roomLeftPrefix + crr.join(",") //2) 남아 있는 방멤버에게 메시지 전송
             const rq = { crud: "C", chanid: chanId, msgid: null, replyto: null, body: body, bodytext: body }
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //gst.realtime.emit("room", { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" })
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
-            //gst.realtime.emit("room", { ev: "roomLeave", roomid: chanId, memberIdLeft: brr, memberNmLeft: crr, from: "deleteMember" })
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "roomLeave", roomid: chanId, memberIdLeft: brr, memberNmLeft: crr, from: "deleteMember" }})
+            for (let i = 0; i < len; i++) {
+                const rq = { CHANID: chanId, USERID: arr[i].USERID } //3) 여기서 실제 멤버 삭제 : 그러면 퇴장을 위한 리얼타임 반영으로는 안되므로 아래 2)에서 소켓(roomLeave)으로 데이터 전달해 제거하도록 함
+                const res = await axios.post("/chanmsg/deleteChanMember", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+            }
+            gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomLeave", roomid: chanId, memberIdLeft: brr, memberNmLeft: crr, from: "deleteMember" }}) //4) 나간 멤버 leave room + 패널에서 노드 삭제 등 처리            
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }}) //5) 삭제(퇴장)한 당사자 제외한 나머지 멤버에게 리얼타임 반영
             newMember()
-            await getList()        
+            await getList()
             if (appType == "dm") evToPanel("update")
             evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
+            if (brr.includes(g_userid)) { //6) 본인을 삭제하는 경우는 나가기
+                setTimeout(function() { close() }, 500)
+            }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -308,15 +314,14 @@
         }
     }
 
-    async function deleteChan() {
+    async function deleteChan() { //메시지가 없어야 삭제 가능하므로 roomLeave 굳이 안해도 크게 무리 없음 (재접속시 roomJoin하지 않을 것임)
         try {
             if (!confirm("방 전체 삭제를 진행합니다. 계속할까요?")) return
             const rq = { CHANID: chanId }
             const res = await axios.post("/chanmsg/deleteChan", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //gst.realtime.emit("room", { ev: "deleteChan", roomid: chanId, from: "deleteChan" })
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChan", roomid: chanId, from: "deleteChan" }})
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChan", roomid: chanId, from: "deleteChan" }}) //멤버가 모두 퇴장했으므로 알려 주는 것이 불가능해 별 의미 없을 것임
             evToPanel("delete")
             setTimeout(function() { close() }, 500)
         } catch (ex) { 
@@ -338,19 +343,18 @@
                 gst.util.setSnack("선택한 행이 없습니다.")
                 return
             }
-            if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다.\n계속할까요?")) return
-            let channmStr = ""
-            if (appType == 'dm') {
-                channmStr = (chanmemFullExceptMe.value.length >= 1) ? chanmemFullExceptMe.value.join(", ") + ", " + g_usernm: g_usernm
-            } else {
-                channmStr = chanNm + (grnm ? "[" + grnm+ "]" : "")
-            }
-            const rq = { CHANID: chanId, CHANNM: channmStr, USERIDS: arr }
-            const res = await axios.post("/chanmsg/inviteToMember", rq)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            //gst.realtime.emit("room", { ev: "roomJoin", roomid: chanId, memberIdAdded: arr, memberNmAdded: brr, from: "inviteToMember" })
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: arr, memberNmAdded: brr, from: "inviteToMember" }})
+            // if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다.\n계속할까요?")) return
+            // let channmStr = ""
+            // if (appType == 'dm') {
+            //     channmStr = (chanmemFullExceptMe.value.length >= 1) ? chanmemFullExceptMe.value.join(", ") + ", " + g_usernm: g_usernm
+            // } else {
+            //     channmStr = chanNm + (grnm ? "[" + grnm+ "]" : "")
+            // }
+            // const rq = { CHANID: chanId, CHANNM: channmStr, USERIDS: arr }
+            // const res = await axios.post("/chanmsg/inviteToMember", rq)
+            // const rs = gst.util.chkAxiosCode(res.data)
+            // if (!rs) return
+            gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: arr, memberNmAdded: brr, from: "inviteToMember" }})
             gst.util.setSnack("초대 완료")
         } catch (ex) { 
             gst.util.showEx(ex, true)

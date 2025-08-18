@@ -50,12 +50,16 @@
             }
         })
         sock.socket.off("myself").on("myself", async (data) => {
-            if ("chkAlive".includes(data.ev)) { //###03
-                //console.log(JSON.stringify(data)+"@@@@@@@-----")
+            console.log(JSON.stringify(data)+"@@@@@@@-----")
+            if ("chkAlive".includes(data.ev)) { //###03                
                 if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data) //###04
                 bc2.postMessage({ sendTo: "myself", data: data }) //###04 혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
             } else if (data.ev == "roomJoin") {
                 inviteMsg(data) //초대 메시지 전송
+            } else if (data.ev == "roomLeave") {
+                if (data.memberIdLeft.includes(g_userid) && (gst.selSideMenu == "mnuHome" || gst.selSideMenu == "mnuDm")) {
+                    await panelRef.value.procMainToPanel('procRows') //해당 노드 제거
+                }
             } else {
                 gst.realtime.set()
             }
@@ -141,10 +145,11 @@
                         realShown = (objChanid.realShown == 'Y') ? 'Y' : 'N'
                     }
                     const len = arrForNotChanActivted.length
-                    for (let i = 0; i < len; i++) {                        
+                    for (let i = 0; i < len; i++) {      
                         const row = arrForNotChanActivted[i]
                         if (gst.selSideMenu == "mnuHome") { //채널 단위로 읽음처리 관련만 전달하면 됨
                             if (row.TYP == 'chan' || row.TYP == 'group') {
+                                console.log("6767")
                                 await panelRef.value.procMainToPanel('procRows')
                             } else {
                                 await panelRef.value.procMainToPanel('updateNotyetCnt', row)
@@ -333,7 +338,7 @@
 
     async function inviteMsg(data) {
         try {
-            let body = "초대: " + data.memberIdAdded.join(",")
+            let body = "초대: " + data.memberNmAdded.join(",")
             const rq = { crud: "C", chanid: data.roomid, msgid: null, replyto: null, body: body, bodytext: body }
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)

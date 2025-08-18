@@ -258,6 +258,9 @@
                     } else if (row.TYP == "chan") { //이미 모든 패널에는 Main.vue에서 처리하므로 여기선 MsgList 상단 채널명과 멤버이미지만 처리하면 됨
                         if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
                             pageData.value = hush.cons.state_nodata
+                        } else if (row.KIND == 'mem') { //채널관리에서 멤버추가든 삭제인 경우 패널에 해당 노드 반영 (반영후 소켓 join/leave 추가 실행)
+                            console.log("999999999988888")
+                            panelProcAll = true
                         } else {
                             setChanMstDtl(row.chanmst, row.chandtl)
                         }
@@ -653,41 +656,45 @@
             disableStr1 = true
             disableStr2 = true
         }
-        gst.ctx.menu = [            
-            { nm: "방 나가기", disable: disableStr1, func: async function(item, idx) {
+        gst.ctx.menu = [
+            { nm: "방 나가기", disable: disableStr1, func: async function(item, idx) { //MemberList.vue에서 삭제(퇴장)시 순서에 관한 주석 참조 요망
                 try {
-                    if (!confirm("퇴장시 방 관리자의 초대가 없으면 다시 들어올 수 없습니다. 계속할까요?")) return
-                    const rq = { CHANID: chanId, USERID: g_userid }
-                    const res = await axios.post("/chanmsg/deleteChanMember", rq)
+                    if (!confirm("퇴장후 방 관리자의 초대가 없으면 다시 들어올 수 없습니다. 계속할까요?")) return
+                    const rq = { CHANID: chanId, USERID: g_userid, chkOnly: true } //chkOnly: true 중요
+                    const res = await axios.post("/chanmsg/deleteChanMember", rq) //순서는 MemberList.vue의 deleteChanMember() 참조
                     const rs = gst.util.chkAxiosCode(res.data)
-                    if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
-                    let body = "퇴장: " + g_usernm
+                    if (!rs) return
+                    let body = hush.cons.roomLeftPrefix + g_usernm
                     const rq1 = { crud: "C", chanid: chanId, msgid: null, replyto: null, body: body, bodytext: body }
                     const res1 = await axios.post("/chanmsg/saveMsg", rq1)
                     const rs1 = gst.util.chkAxiosCode(res1.data)
                     if (!rs1) return
+                    const rq2 = { CHANID: chanId, USERID: g_userid }
+                    const res2 = await axios.post("/chanmsg/deleteChanMember", rq2)
+                    const rs2 = gst.util.chkAxiosCode(res2.data)
+                    if (!rs2) return
+                    gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomLeave", roomid: chanId, memberIdLeft: [g_userid], memberNmLeft: [g_usernm], from: "deleteMember" }})
                     gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChanMember", roomid: chanId, from: "deleteMember" }})
-                    gst.sockToSend.push({ sendTo: "room", data: { ev: "roomLeave", roomid: chanId, memberIdLeft: [g_userid], memberNmLeft: [g_usernm], from: "deleteMember" }})
                     await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조 
                     evToPanel({ kind: "refreshPanel" })
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
                 }
             }},
-            { nm: "방 삭제", disable: disableStr2, func: async function(item, idx) {
-                try {
-                    if (!confirm("방 전체 삭제를 진행합니다. 계속할까요?")) return
-                    const rq = { CHANID: chanId }
-                    const res = await axios.post("/chanmsg/deleteChan", rq)
-                    const rs = gst.util.chkAxiosCode(res.data)
-                    if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
-                    gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChan", roomid: chanId, from: "chanCtxMenu" }})
-                    await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조                    
-                    evToPanel({ kind: "refreshPanel" })
-                } catch (ex) { 
-                    gst.util.showEx(ex, true)
-                }
-            }}
+            // { nm: "방 삭제", disable: disableStr2, func: async function(item, idx) {
+            //     try {
+            //         if (!confirm("방 전체 삭제를 진행합니다. 계속할까요?")) return
+            //         const rq = { CHANID: chanId }
+            //         const res = await axios.post("/chanmsg/deleteChan", rq)
+            //         const rs = gst.util.chkAxiosCode(res.data)
+            //         if (!rs) return //evToPanel({ kind: "delete", chanid: chanId })
+            //         gst.sockToSend.push({ sendTo: "room", data: { ev: "deleteChan", roomid: chanId, from: "chanCtxMenu" }})
+            //         await router.replace({ name: appType + "_dumskel" }) //DummySkeleton.vue 설명 참조                    
+            //         evToPanel({ kind: "refreshPanel" })
+            //     } catch (ex) { 
+            //         gst.util.showEx(ex, true)
+            //     }
+            // }}
         ]
         gst.ctx.show(e)
     }
@@ -2543,8 +2550,8 @@
                         <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
                         <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                         <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
-                        <span class="aliveMark" :style="{ backgroundColor: chandtlObj[row.AUTHORID].alive ? 'var(--second-color)' : 'darkgray' }">
-                            {{ chandtlObj[row.AUTHORID].alive ? 'On' : 'Off' }}
+                        <span class="aliveMark" :style="{ backgroundColor: chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'var(--second-color)' : 'darkgray' }">
+                            {{ chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'On' : 'Off' }}
                         </span>
                         <!-- <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">아직 안읽음 {{ row.firstNotYet == "child" ? "(댓글)" : "" }}</span> -->
                     </div>

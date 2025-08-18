@@ -129,11 +129,7 @@ const GeneralStore = defineStore('General', () => {
         },
 
         procNoti : async function(row) { //알림바는 tag(=채널단위)로 groupby되어 show
-            debugger
-            if (notiOff.value) {
-                util.setToast("알림 도착시 Noti 없음 - 테스트 표시임")
-                return
-            }
+            if (notiOff.value || row.BODYTEXT.startsWith(hush.cons.roomLeftPrefix)) return //알림X : 퇴장 메시지
             if (!hush.noti.rooms[row.CHANID]) {
                 const res = await axios.post("/chanmsg/qryMsg", { chanid: row.CHANID, msgid: row.MSGID })
                 const rs = util.chkAxiosCode(res.data, true)

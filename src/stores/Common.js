@@ -24,6 +24,7 @@ const hush = {
         startOfData : "처음 데이터입니다.",
         endOfData : "마지막 데이터입니다.",
         picCnt : 4, //picCnt명까지만 사진 등 보여주기 (4명까지만 가능. 서버도 동일 설정)
+        roomLeftPrefix : "퇴장: ",
     },
 
     noti : {
