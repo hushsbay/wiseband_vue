@@ -10,14 +10,15 @@ import router from '/src/router'
 import hush from '/src/stores/Common.js'
 import GeneralStore from '/src/stores/GeneralStore.js'
 
-let hostnameStr = "", domainStr = ""
-if (location.href.startsWith("http://localhost")) {
-    hostnameStr = "localhost"
-    domainStr = location.protocol + "//" + hostnameStr + ":3000" //nest port
-} else {
-    hostnameStr = "hushsbay.com"
-    domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
-}
+// let hostnameStr = "", domainStr = ""
+// if (location.href.startsWith("http://localhost")) {
+//     hostnameStr = "localhost"
+//     domainStr = location.protocol + "//" + hostnameStr + ":3000" //nest port
+// } else {
+//     hostnameStr = "hushsbay.com"
+//     domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
+// }
+const [hostnameStr, domainStr] = hush.util.getHost()
 const MAX_LINES = 20
 
 const app = createApp(App) 

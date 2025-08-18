@@ -9,8 +9,10 @@ export const connected = ref(false) //연결 상태
 export const sock = { socket: null } //export는 immutable이므로 바로 변수로 처리하지 않고 object로 처리해야 문제가 없을 것임
 
 export function connectSock() {
+    const [hostnameStr, domainStr] = hush.util.getHost()
     const query = { token : VueCookies.get("token") } //hush.cons.appName은 namespace (서버와 동일하게 가져 가야 함)
-    sock.socket = io('http://localhost:3000/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query })
+    //sock.socket = io('http://localhost:3000/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query })
+    sock.socket = io(domainStr + '/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query })
     sock.socket.on("connect", () => {
         console.log("socket connected")
         connected.value = true

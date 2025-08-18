@@ -33,6 +33,17 @@ const hush = {
     },
     
     util : {
+        getHost : function() {
+            let hostnameStr = "", domainStr = ""
+            if (location.href.startsWith("http://localhost")) {
+                hostnameStr = "localhost"
+                domainStr = location.protocol + "//" + hostnameStr + ":3000" //nest port
+            } else {
+                hostnameStr = "hushsbay.com"
+                domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
+            }
+            return [hostnameStr, domainStr]
+        },
         isvoid : function(obj) { //대신 a ?? b로 사용하기 (a가 null도 아니고 undefined도 아니면 a 반환. a가 0이거나 false라도 a를 반환)
             if (typeof obj == "undefined" || obj == null || obj == "undefined") return true
             return false
