@@ -131,7 +131,7 @@
                 const ret = await saveChan()
                 if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
             }
-            const brr = [] //, crr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열 (brr=userid,crr=usernm)
+            const brr = [], crr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열 (brr=userid,crr=usernm)
             let warn = ""
             for (let i = 0; i < arr.length; i++) {
                 const row = arr[i]
@@ -142,10 +142,11 @@
                     break
                 } else {
                     brr.push(row.USERID)
-                    //crr.push(row.USERNM)
+                    crr.push(row.USERNM)
                 }
             }
-            if (brr.length > 0) { //예) 1개 이상 추가되었을 경우                
+            if (brr.length > 0) { //예) 1개 이상 추가되었을 경우
+                gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: brr, memberNmAdded: crr, from: "applyToBody" }})
                 await getList()
                 await nextTick()
                 for (let i = 0; i < brr.length; i++) {
@@ -155,6 +156,7 @@
                 if (brr.length > 0) gst.util.scrollIntoView(memberRow, brr[0]) //첫번째 USERID
                 if (appType == "dm") evToPanel("update")
                 evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
+                setTimeout(function() { gst.sockToSend.push({ sendTo: "room", data: { ev: "saveChanMember", roomid: chanId, from: "applyToBody" }}) }, 500) //roomJoin 대기
             }
             if (warn) gst.util.setSnack(warn, true) //경고있을 경우 사용자에게 알려야 함
         } catch (ex) {
@@ -236,13 +238,13 @@
             const res = await axios.post("/chanmsg/saveChanMember", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            //gst.realtime.emit("room", { ev: "saveChanMember", roomid: chanId, from: "saveMember" })
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "saveChanMember", roomid: chanId, from: "saveMember" }})
+            gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: [row.USERID], memberNmAdded: [row.USERNM], from: "inviteToMember" }})
             memberlist.value.forEach(item => { //반영할 항목들이 많으면 아예 qry로 한행 읽어서 해당 배열 항목 한행만 새로고침하면 되나 여기서는 딱 한개 필드만 반영하면 되므로 아래와 같이 처리
                 if (item.USERID == row.USERID) {
                     item.KIND = rowKind.value
                 }
             })
+            setTimeout(function() { gst.sockToSend.push({ sendTo: "room", data: { ev: "saveChanMember", roomid: chanId, from: "saveMember" }}) }, 500) //roomJoin 대기
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -301,13 +303,22 @@
             if (chanId == "new") {
                 chanId = rs.data.chanid
                 if (appType == "chan") await getList() //dm new일 땐 사용자가 아닌 자동 마스터 저장
+                let brr = [], crr = []
+                const len = memberlist.value.length
+                if (len > 0) {
+                    for (let i = 0; i < len; i++) {
+                        const row = memberlist.value[i]
+                        brr.push(row.USERID)
+                        crr.push(row.USERNM)
+                    }                    
+                    gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: brr, memberNmAdded: crr, from: "saveChan" }})
+                }
                 evToPanel("create")
             } else {
                 evToPanel("update")
                 evToPanel("forwardToBody") //패널 오른쪽의 MsgList의 채널 마스터/디테일 정보 업데이트
-            }
-            //gst.realtime.emit("room", { ev: "saveChan", roomid: chanId, from: "saveChan" })
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "saveChan", roomid: chanId, from: "saveChan" }})
+            }            
+            setTimeout(function() { gst.sockToSend.push({ sendTo: "room", data: { ev: "saveChan", roomid: chanId, from: "saveChan" }}) }, 500) //roomJoin 대기
             return true
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -331,30 +342,26 @@
 
     async function inviteToMember() { //메일 발송은 리얼타임 반영 없음 : 일단, 방멤버가 초대했다고 명시적으로 알리는 정도로 가름함
         try {
-            let arr = [], brr = [] //const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
+            let arr = [] //const arr = getCheckedArr() //memberlist.value.filter(item => item.chk)
             memberlist.value.forEach(item => {
-                if (item.chk) {
-                    arr.push(item.USERID)
-                    brr.push(item.USERNM)
-                }
+                if (item.chk) arr.push(item.USERID)
             })
             const len = arr.length
             if (len == 0) {
                 gst.util.setSnack("선택한 행이 없습니다.")
                 return
             }
-            // if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다.\n계속할까요?")) return
-            // let channmStr = ""
-            // if (appType == 'dm') {
-            //     channmStr = (chanmemFullExceptMe.value.length >= 1) ? chanmemFullExceptMe.value.join(", ") + ", " + g_usernm: g_usernm
-            // } else {
-            //     channmStr = chanNm + (grnm ? "[" + grnm+ "]" : "")
-            // }
-            // const rq = { CHANID: chanId, CHANNM: channmStr, USERIDS: arr }
-            // const res = await axios.post("/chanmsg/inviteToMember", rq)
-            // const rs = gst.util.chkAxiosCode(res.data)
-            // if (!rs) return
-            gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: arr, memberNmAdded: brr, from: "inviteToMember" }})
+            if (!confirm("선택한 행(" + arr.length + "건)에 대해 초대메일을 발송합니다.\n계속할까요?")) return
+            let channmStr = ""
+            if (appType == 'dm') {
+                channmStr = (chanmemFullExceptMe.value.length >= 1) ? chanmemFullExceptMe.value.join(", ") + ", " + g_usernm: g_usernm
+            } else {
+                channmStr = chanNm + (grnm ? "[" + grnm+ "]" : "")
+            }
+            const rq = { CHANID: chanId, CHANNM: channmStr, USERIDS: arr }
+            const res = await axios.post("/chanmsg/inviteToMember", rq)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return            
             gst.util.setSnack("초대 완료")
         } catch (ex) { 
             gst.util.showEx(ex, true)

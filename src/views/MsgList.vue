@@ -1519,14 +1519,19 @@
                     gst.util.setSnack("위 '기존 DM방 열기' 버튼을 이용하시기 바랍니다.")
                     return
                 }
-                const member = []
-                userAdded.value.forEach(item => { member.push({ USERID: item.USERID, USERNM: item.USERNM, SYNC: item.ORG_NM ? "Y" : "" }) })
+                const member = [], brr = [], crr = []
+                userAdded.value.forEach(item => { 
+                    member.push({ USERID: item.USERID, USERNM: item.USERNM, SYNC: item.ORG_NM ? "Y" : "" }) 
+                    brr.push(item.USERID)
+                    crr.push(item.USERNM)
+                })
                 const rq = { CHANID: "new", MEMBER: member } //신규 DM방 생성 (멤버도 함께 생성)
                 const res = await axios.post("/chanmsg/saveChan", rq)
                 const rs = gst.util.chkAxiosCode(res.data)
                 if (!rs) return
                 chanId = rs.data.chanid
                 localStorage.wiseband_lastsel_dmchanid = chanId
+                gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: brr, memberNmAdded: crr, from: "saveMsg" }})
             }
             let body = document.getElementById(editorId).innerHTML.trim()
             if (body == "") return
@@ -1582,8 +1587,7 @@
                 }
             }
             msgbody.value = ""
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }})
-            //gst.realtime.emit("room", { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" })
+            setTimeout(function() { gst.sockToSend.push({ sendTo: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }}) }, 500) 
             editMsgId.value = null            
         } catch (ex) { 
             gst.util.showEx(ex, true)
