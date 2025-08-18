@@ -50,7 +50,7 @@
             }
         })
         sock.socket.off("myself").on("myself", async (data) => {
-            console.log(JSON.stringify(data)+"@@@@@@@-----")
+            //console.log(JSON.stringify(data)+"@@@@@@@-----")
             if ("chkAlive".includes(data.ev)) { //###03                
                 if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data) //###04
                 bc2.postMessage({ sendTo: "myself", data: data }) //###04 혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
@@ -60,6 +60,10 @@
                 if (data.memberIdLeft.includes(g_userid) && (gst.selSideMenu == "mnuHome" || gst.selSideMenu == "mnuDm")) {
                     await panelRef.value.procMainToPanel('procRows') //해당 노드 제거
                 }
+            //} else if (data.ev == "qrySock") { //admin 전용            
+            //    console.log(JSON.stringify(data)+"^^^^^^^^^^^^^^^^^^^")
+            //    rsSock.value = data.list
+            //    debugger
             } else {
                 gst.realtime.set()
             }
@@ -508,7 +512,8 @@
     // }
 
     function test() { 
-        //test
+        const data = { ev: "qrySock", kind: "all" } //all or roomid or userid
+        sock.socket.emit("myself", data) //sock.socket.off("myself").on("myself")에 없이 바로 db table에 저장하고 완료됨
     }
 </script>
 
@@ -585,8 +590,11 @@
     <media-search ref="mediaPopupRef"></media-search>
     <user-profile ref="userProfileRef" @evToMain="handleEvFromUserProfile"></user-profile>
     <popup-common ref="bottomMsgListPopupRef" style="display:flex;flex-direction:column">
-         <div v-for="(row, idx) in gst.bottomMsgList" >
+        <!-- <div v-for="(row, idx) in gst.bottomMsgList" >
             <span style="margin:0px">{{ row }}</span>
+        </div> -->
+        <div v-for="(row, idx) in rsSock" >
+            <span style="margin:0px">{{ JSON.stringify(row) }}</span>
         </div>
     </popup-common>
 </template>
