@@ -511,9 +511,9 @@
     //     sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
     // }
 
-    function test() { 
-        const data = { ev: "qrySock", kind: "all" } //all or roomid or userid
-        sock.socket.emit("myself", data) //sock.socket.off("myself").on("myself")에 없이 바로 db table에 저장하고 완료됨
+    function procAllSocket() { //admin 전용
+        const data = { ev: "qrySock", kind: "all" } //all or roomid or userid (일단 db로 저장되므로 all만으로 query 모두 가능)
+        sock.socket.emit("myself", data) //sock.socket.on 없이 바로 db table에 저장
     }
 </script>
 
@@ -541,7 +541,7 @@
         <div class="body">
             <div class="side" id="main_side"> <!--main_side는 Home.vue에서 resizing에서 사용-->
                 <div class="sideTop" style="margin-top:8px">
-                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center" @click="test">
+                    <div style="margin-bottom:16px;display:flex;justify-content:center;align-items:center" @click="procAllSocket">
                         <img class="coImg32" src="/src/assets/images/color_slacklogo.png"/>
                     </div>
                     <div id="sideTop" class="sideTop">
