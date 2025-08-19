@@ -15,6 +15,7 @@
     const router = useRouter()
 
     const g_userid = gst.auth.getCookie("userid")
+    const g_usernm = gst.auth.getCookie("usernm")
 
     const POPUPHEIGHT = 300, DATA_EV_LOGIC_NEEDED ="chkTyping,chkAlive,updateProfile,setVip,setNoti"
     const popupMenuOn = ref(false) //바로 아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top만 결정하면 됨) 
@@ -342,12 +343,13 @@
 
     async function inviteMsg(data) {
         try {
+            if (data.memberIdAdded.length == 1 && data.memberIdAdded[0] == g_userid) return //맨 처음 방 만들때 본인을 추가하는데 이 때 본인이 본인을 초대하지 말기
             let body = "초대: " + data.memberNmAdded.join(",")
             const rq = { crud: "C", chanid: data.roomid, msgid: null, replyto: null, body: body, bodytext: body }
             const res = await axios.post("/chanmsg/saveMsg", rq)
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
-            gst.sockToSend.push({ sendTo: "room", data: { ev: "inviteMsg", roomid: chanId, from: "inviteMsg" }})
+            gst.sockToSend.push({ sendTo: "room", data: { ev: "inviteMsg", roomid: data.roomid, from: "inviteMsg" }})
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }

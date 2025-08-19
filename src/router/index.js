@@ -136,6 +136,11 @@ const router = createRouter({
                             path: 'group_body/:grid',
                             name: 'group_body',
                             component: UserList,
+                        },
+                        {
+                            path: 'dummy_skeleton',
+                            name: 'group_dumskel',
+                            component: DummySkeleton
                         }
                     ]                  
                 }

@@ -140,8 +140,9 @@
         }
     }
 
-    function newGroup() {
+    async function newGroup() {
         gst.util.deleteCacheFromKeepAlive(keepAliveRef, "/main/group/group_body/new") 
+        await router.replace({ name: "group_dumskel" }) //워크스페이스 제목 제거
         gst.util.goBodyList('group_body', { grid: "new" })
     }
 </script>

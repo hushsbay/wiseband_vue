@@ -509,7 +509,7 @@
                                 <div style="display:flex;align-items:center">                                    
                                     <div class="coImgBtn" @click="inviteToMember()">
                                         <img :src="gst.html.getImageUrl('white_mail.png')" class="coImg20">
-                                        <span class="coImgSpn">초대(메일/메시지)</span>
+                                        <span class="coImgSpn">초대(메일)</span>
                                     </div>
                                 </div>
                             </div>
