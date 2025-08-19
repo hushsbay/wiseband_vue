@@ -4,6 +4,7 @@ const hush = {
 
     cons : {
         appName : 'WiSEBand', //socket.io namespace로도 사용됨 (서버/클라이언트 동일해야 동작함)
+        hostname : 'hushsbay.com',
         OK : '0',
         NOT_OK : '-1',
         NOT_FOUND : '-100',
@@ -39,7 +40,7 @@ const hush = {
                 hostnameStr = "localhost"
                 domainStr = location.protocol + "//" + hostnameStr + ":3000" //nest port
             } else {
-                hostnameStr = "hushsbay.com"
+                hostnameStr = hush.cons.hostname
                 domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
             }
             return [hostnameStr, domainStr]
