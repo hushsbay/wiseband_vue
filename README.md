@@ -52,9 +52,8 @@
 
 # 리얼타임 데이터 반영 (socket.io/redis)
 
-- 현재는 테스트용도로 소켓접속 여부 표시
+- 현재는 테스트 용도로 소켓접속 여부 표시 
 - 각 탭의 Main.vue에서만 소켓 접속 (다른 vue로는 각 함수로 데이터 주고 받음)
-- 예로, 아래는 
 
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_06_realtime.png)
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_07_logdata.png)
