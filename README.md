@@ -64,6 +64,7 @@
   하므로 별도의 소켓 코딩이 필요한 경우였음 (별도소켓코딩)
 
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_06_realtime1.png)
+
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_07_realtime2.png)
     
 
