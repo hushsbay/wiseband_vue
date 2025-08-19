@@ -1,13 +1,12 @@
-- 개발 진척도 : 약 90% (2025.8.6 현재 소켓 관련 코딩중)<br>
+- 개발 진척도 : 약 90% (2025.8.19 현재 소켓 통신 로직 적용 완료 및 소스 정리중)<br>
 - 개발자 : 이상병 (hushsbay@gmail.com)<br>
 - 테스트 서버 : https://hushsbay.com:446/login (테스트용 아이디 제공)
 
 # wiseband_vue (프론트엔드) + wiseband_nest (백엔드)
 
-- Slack Clone 개발 건입니다. (Vue.js + Nest.js + MySql + socket.io)
+- Slack Clone 개발 건입니다. (Vue.js + Nest.js + MySql + Socket.io + Redis)
 - 현재 개발 서버에 배포/테스트중인 단계입니다.
-- 1차 개발 마지막 단계인 socket.io 및 에디터 적용은 8월~9월 동안 진행될 예정입니다.
-- 이 시기에 사내 ERP인 WiSE에 인사/조직 데이터 및 포털 임베딩 작업도 진행될 예정입니다.
+- 9월 이후 WiSE 인사/조직 데이터 및 포털 임베딩 작업 진행 예정입니다.
 
 
 # Structure / Flow
@@ -53,16 +52,13 @@
 
 # 리얼타임 데이터 반영 (socket.io/redis)
 
-- 동일한 브라우저내 (Same Domain) 단 하나의 접속 포인트만 유지하도록 함
-- 브라우저탭간에는 Broadcast Channel API 및 LocalStorage를 이용, 경합을 통해 마스터를 설정
-- 마스터가 닫히면 다른 탭이 마스터 역할을 이어 받음
-- 마스터에서만 데이터를 받아 나머지 탭들에게 데이터 전달
-- 실시간 데이터 반영을 위한 로깅 테이블 운영 (S_DATALOG_TBL)
+- 현재는 테스트용도로 소켓접속 여부 표시
+- 각 탭의 Main.vue에서만 소켓 접속 (다른 vue로는 각 함수로 데이터 주고 받음)
+- 예로, 아래는 
 
 ![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_06_realtime.png)
+![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_07_logdata.png)
     
-![image](https://github.com/hushsbay/wiseband_vue/blob/master/PT_07_logdata.png)    
-
 
 # 메시지 권한
 
@@ -95,7 +91,6 @@
 # 추가 개발 예정 항목 (슬랙 기능 구현 - 10월말까지)
 
 - Major<br>
-    . 소켓 통신<br>
     . 에디터<br>
     . 멘션<br>
     . MP4 스트리밍<br>
@@ -105,7 +100,6 @@
 
 - Minor<br>
     . MySql Indexing 및 메모리 확장<br>
-    . 사용자옵션 : 자리비움 설정, 알림 설정<br>
 
 
 # 미개발 항목 (향후 2차 개발시 검토 - 인수인계시 협의)
