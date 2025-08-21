@@ -2546,31 +2546,38 @@
                 <div v-for="(row, idx) in msglist" :id="row.MSGID" :key="row.MSGID" :ref="(ele) => { msgRow[row.MSGID] = ele }" :keyidx="idx" class="msg_body procMenu"
                     :style="{ borderBottom: row.hasSticker ? '' : '1px solid lightgray', background: row.background ? row.background : '' }"
                     @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)" @click="rowClick(row)">
-                    <div style="width:100%;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
+                    <div style="width:100%;padding-left:8px;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
                         <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
                             class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
                         <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
+                        <img :src="gst.html.getImageUrl(chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'online.png' : 'offline.png')" style="margin-top:-25px;margin-left:-8px">
                         <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
                         <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
                         <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                         <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
-                        <span class="aliveMark" :style="{ backgroundColor: chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'var(--second-color)' : 'darkgray' }">
+                        <!-- <span class="aliveMark" :style="{ backgroundColor: chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'var(--second-color)' : 'darkgray' }">
                             {{ chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'On' : 'Off' }}
-                        </span>
+                        </span> -->
                         <!-- <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">아직 안읽음 {{ row.firstNotYet == "child" ? "(댓글)" : "" }}</span> -->
                     </div>
                     <div style="width:100%;display:flex;margin:10px 0">
-                        <div style="width:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
+                        <div style="width:50px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
                             <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
-                            <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
-                            <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                            <!-- <div style="display:flex;align-items:center">
+                                <img v-if="row.act_later=='later'" class="coImg14"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
+                                <img v-if="row.act_fixed=='fixed'" class="coImg14"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                            </div> -->
                         </div>
-                        <div style="width:calc(100% - 40px);overflow-x:auto">
+                        <div style="width:calc(100% - 50px);overflow-x:auto">
                             <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
                         </div>
                     </div>
-                    <div v-if="row.UDT && row.CDT != row.UDT" style="margin-bottom:10px;margin-left:40px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
-                    <div class="msg_body_sub"><!-- 반응, 댓글 -->
+                    <div v-if="row.UDT && row.CDT != row.UDT" style="margin-bottom:10px;margin-left:50px;color:dimgray"><span>(편집: </span><span>{{ row.UDT.substring(0, 19) }})</span></div>
+                    <div class="msg_body_react_read"><!-- 반응, 댓글 -->
+                        <div style="min-width:50px;display:flex;justify-content:center;align-items:center">
+                            <img v-if="row.act_later=='later'" class="coImg18"  style="margin-top:0px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
+                            <img v-if="row.act_fixed=='fixed'" class="coImg18"  style="margin-top:0px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                        </div>
                         <div v-for="(row1, idx1) in row.msgdtl">
                             <div v-if="(row1.KIND == 'read' || row1.KIND == 'unread')">
                                 <div v-if="row1.KIND == 'unread' && (', ' + row1.ID + ',').includes(', ' + g_userid + ',')" class="msg_body_sub1" :title="'['+row1.KIND+ ']'" @click="toggleReaction(row.MSGID, row1.KIND)">
@@ -2807,8 +2814,11 @@
     .msg_body {
         position:relative;width:calc(100% - 20px);display:flex;flex-direction:column;margin:5px 0 0 0;cursor:pointer /*position:relative는 floating menu에 필요*/
     }
+    .msg_body_react_read {
+        min-height:30px;margin:0 0 0 0px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
+    }
     .msg_body_sub {
-        display:flex;margin:0 0 0 40px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
+        margin:0 0 0 50px;display:flex;flex-wrap:wrap;justify-content:flex-start;cursor:pointer
     }
     .msg_body_sub1 {
         margin-right:10px;padding:4px 8px;display:flex;align-items:center;background:#e6e7eb;border:1px solid #e6e7eb;border-radius:12px
@@ -2858,7 +2868,7 @@
     .replyAct { display:flex;align-items:center;cursor:pointer }
     .replyAct:hover { background:#e6e7eb;border-radius:12px }
     .replyAct:active { background:var(--active-color) }
-    .procMenu { padding:5px;margin-right:10px;border-radius:5px;cursor:text }
+    .procMenu { padding:5px 5px 5px 0;margin-right:10px;border-radius:5px;cursor:text }
     .procMenu:hover { background:whitesmoke }
     .procAct { padding:4px;margin-right:10px;border-radius:5px;background:white;cursor:pointer }
     .procAct:hover { background:lightgray }
@@ -2877,5 +2887,5 @@
     .btn:active { background:var(--active-color)}
     /* .mynotyet { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:orange;color:white;font-size:12px;padding:4px;margin-left:10px } */
     .vipMark { margin-left:5px;padding:2px;font-size:10px;background:black;color:white;border-radius:5px }
-    .aliveMark { margin-left:5px;padding:2px;font-size:10px;color:white;border-radius:10px }
+    /* .aliveMark { margin-left:5px;padding:2px;font-size:10px;color:white;border-radius:10px } */
 </style>
