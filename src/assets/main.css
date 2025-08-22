@@ -8,9 +8,7 @@
   --border-lg:1px solid lightgray;
   --hover-color:#e6f2e6;
   --active-color:#a6cfa6;
-  /* --active-btn:darkblue; */
-  /*--primary-btn-color:#3B693B; / https://uicolors.app/generate/3b693b */
-  --primary-btn-color:rgb(90, 46, 93);
+  --primary-btn-color:rgb(90, 46, 93); /* https://uicolors.app/generate/3b693b */
   --primary-btn-hover:rgb(106, 56, 114);
   --primary-btn-active:rgb(131, 56, 138);  
 }

@@ -1,22 +1,17 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onUnmounted } from 'vue' 
-    import { useRouter, useRoute } from 'vue-router'
+    import { ref, onMounted, nextTick, onActivated } from 'vue' 
+    import { useRoute } from 'vue-router'
     import axios from 'axios'    
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import MemberPiceach from "/src/components/MemberPiceach.vue"
     import OrgTree from "/src/components/OrgTree.vue"
             
-    const router = useRouter()
     const route = useRoute()
     const gst = GeneralStore()
 
     const emits = defineEmits(["ev-to-panel"]) //UserList -> GroupPanel
-        
-    function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
-        emits("ev-to-panel", param)
-    }
-
+    
     const orgRef = ref(null)
     const scrollArea = ref(null), userRow = ref({}) //userRow는 element를 동적으로 할당
     let onGoingGetList = false, prevScrollY        
@@ -336,6 +331,10 @@
         })
         chkEditRow()
         chkAll.value = false
+    }
+
+    function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
+        emits("ev-to-panel", param)
     }
 </script>
 

@@ -10,23 +10,20 @@
 
     defineExpose({ open, close, handleAliveInfo }) //부모(예:HomePanel,DmPanel) => MemberList의 open(), close() 호출
     const emits = defineEmits(["ev-from-member"]) //memberlist -> HomePanel or DmPanel
-    
-    function evToPanel(kind) { //말 그대로 패널에게 호출하는 것임
-        emits("ev-from-member", chanId, kind)
-    }
 
-    function handleAliveInfo(data) {
-        console.log("!@#" + JSON.stringify(data))
-        const len = memberlist.value.length
-        for (let i = 0; i < len; i++) {
-            const row = memberlist.value[i]
-            if (data.userids && data.userids.includes(row.USERID)) {
-                row.alive = true
-            } else {
-                row.alive = false
-            }
-        }
-    }
+    const g_userid = gst.auth.getCookie("userid")
+    const g_usernm = gst.auth.getCookie("usernm")
+
+    const orgRef = ref(null)
+    let show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null), state = ref(false)
+    const scrollArea = ref(null), memberRow = ref({}) //memberRow는 element를 동적으로 할당
+    let onGoingGetList = false
+        
+    let grId
+    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C'), stateSel = ref("A"), chkArr = ref([])
+    let memberlist = ref([]), chanmemFullExceptMe = ref([]), appType
+    let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
+    let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref(''), rowState = ref('')
 
     function open(strKind, strGrid, strChanid, strChannm, strChanimg) {
         show.value = true
@@ -57,21 +54,6 @@
     function close() {
         show.value = false
     }
-
-    const orgRef = ref(null)
-
-    const g_userid = gst.auth.getCookie("userid")
-    const g_usernm = gst.auth.getCookie("usernm")
-
-    let show = ref(false), chanId = '', chanNm = ref(''), chanImg = ref(null), state = ref(false)
-    const scrollArea = ref(null), memberRow = ref({}) //memberRow는 element를 동적으로 할당
-    let onGoingGetList = false
-        
-    let grId
-    let grnm = ref(''), masternm = ref(''), chkAll = ref(false), singleMode = ref('C'), stateSel = ref("A"), chkArr = ref([])
-    let memberlist = ref([]), chanmemFullExceptMe = ref([]), appType
-    let rowIssync = ref(''), rowUserid = ref(''), rowUsernm = ref(''), rowKind = ref('')
-    let rowOrg = ref(''), rowJob = ref(''), rowEmail = ref(''), rowTelno = ref(''), rowRmks = ref(''), rowState = ref('')
 
     function changeStateSel() {
         getList(stateSel.value) //여기서만 파라미터로 조회 (로컬스토리지도 필요없음. 사용자가 콤보선택시만 파라미터 사용)
@@ -374,6 +356,23 @@
         })
         chkEditRow()
         chkAll.value = false
+    }
+
+    function evToPanel(kind) { //말 그대로 패널에게 호출하는 것임
+        emits("ev-from-member", chanId, kind)
+    }
+
+    function handleAliveInfo(data) {
+        console.log("!@#" + JSON.stringify(data))
+        const len = memberlist.value.length
+        for (let i = 0; i < len; i++) {
+            const row = memberlist.value[i]
+            if (data.userids && data.userids.includes(row.USERID)) {
+                row.alive = true
+            } else {
+                row.alive = false
+            }
+        }
     }
 </script>
 

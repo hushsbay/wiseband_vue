@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, onActivated, onUnmounted, nextTick } from 'vue' 
-    import { useRouter, useRoute } from 'vue-router'
+    import { useRoute } from 'vue-router'
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
@@ -8,23 +8,10 @@
     import MemberPiceach from "/src/components/MemberPiceach.vue"
     import Resizer from "/src/components/Resizer.vue"
         
-    const router = useRouter()
     const route = useRoute()
     const gst = GeneralStore()
 
     defineExpose({ procMainToMsglist, procMainToPanel })
-
-    async function procMainToMsglist(kind, obj) { //단순 전달
-        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
-            await msglistRef.value.procMainToMsglist(kind, obj)
-        }
-    }
-
-    async function procMainToPanel(kind, obj) {
-        if (kind == "procRows") {
-            await procRows()
-        }
-    }
 
     let keepAliveRef = ref(null)
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
@@ -55,8 +42,7 @@
     }
 
     onMounted(async () => {
-        try {
-            //gst.util.chkOnMountedTwice(route, 'ActivityPanel')
+        try { //gst.util.chkOnMountedTwice(route, 'ActivityPanel')
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_notyet_activity == "Y") ? true : false
             kindActivity.value = localStorage.wiseband_lastsel_activity ? localStorage.wiseband_lastsel_activity : "all"
@@ -79,7 +65,7 @@
                 } else {
                     //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
                 }
-                observerBottomScroll()
+                //observerBottomScroll()
                 await procRows()
             }
         } catch (ex) {
@@ -332,6 +318,18 @@
     async function refreshPanel() {
         await getList(true)            
         activityClickOnLoop(true)
+    }
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
+            await msglistRef.value.procMainToMsglist(kind, obj)
+        }
+    }
+
+    async function procMainToPanel(kind, obj) {
+        if (kind == "procRows") {
+            await procRows()
+        }
     }
 
     async function handleEvFromMsgList(param) {

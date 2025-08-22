@@ -166,7 +166,6 @@
         row.expanded = expanded
         row.paddingleft = paddingLeft + "px"
         if (nodekind == "U") {
-            //if (row.USERNM == '박석현' || row.USERNM == '이상병') debugger
             row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, row.USERID)
             row.key = row.USERID + (row.GR_ID ? hush.cons.deli + row.GR_ID : "") 

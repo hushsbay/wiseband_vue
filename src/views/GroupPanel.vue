@@ -31,8 +31,7 @@
     //////////////////////////////////////////////////////////////////////////////////////
 
     onMounted(async () => {
-        try {
-            //gst.util.chkOnMountedTwice(route, 'GroupPanel')
+        try { //gst.util.chkOnMountedTwice(route, 'GroupPanel')
             setBasicInfo()
             await getList()
             groupClickOnLoop(true)

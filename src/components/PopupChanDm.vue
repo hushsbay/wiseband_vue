@@ -9,10 +9,6 @@
     defineExpose({ open, close })
     const emits = defineEmits(["ev-click-chandm"])
 
-    function setInfoToParent() {
-        emits("ev-click-chandm", kind.value, chanid.value, msgid.value)
-    }
-
     let show = ref(false), kind = ref('home'), chanid = ref(''), msgid = ref('')
 
     async function open(strKind, strMsgid) {
@@ -21,17 +17,21 @@
         msgid.value = strMsgid
     }
 
-    function changeKind(strKind) {
-        kind.value = strKind
-    }
-
     function close() {
         show.value = false
+    }
+
+    function changeKind(strKind) {
+        kind.value = strKind
     }
 
     function handleFromChanDm(strKind, strChanid) {
         kind.value = strKind
         chanid.value = strChanid
+    }
+
+    function setInfoToParent() {
+        emits("ev-click-chandm", kind.value, chanid.value, msgid.value)
     }
 </script>
 

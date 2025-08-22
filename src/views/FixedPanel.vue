@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, onActivated, onUnmounted, nextTick } from 'vue' 
-    import { useRouter, useRoute } from 'vue-router'
+    import { useRoute } from 'vue-router'
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
@@ -8,29 +8,15 @@
     import MemberPiceach from "/src/components/MemberPiceach.vue"
     import Resizer from "/src/components/Resizer.vue"
         
-    const router = useRouter()
     const route = useRoute()
     const gst = GeneralStore()
 
     defineExpose({ procMainToMsglist, procMainToPanel })
-    
-    async function procMainToMsglist(kind, obj) { //단순 전달
-        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
-            await msglistRef.value.procMainToMsglist(kind, obj)
-        }
-    }
-
-    async function procMainToPanel(kind, obj) {
-        if (kind == "procRows") {
-            await procRows()
-        }
-    }
-
+        
     const g_userid = gst.auth.getCookie("userid")
-    let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
 
-    let keepAliveRef = ref(null)
-    const msglistRef = ref(null)    
+    let keepAliveRef = ref(null), msglistRef = ref(null)    
+    let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     let scrollArea = ref(null), listFixed = ref([]), cntFixed = ref(0), msgRow = ref({}) //msgRow는 element를 동적으로 할당
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 내려갈 때마다 점점 작은 일시가 저장됨
     let mounting = true, onGoingGetList = false
@@ -57,8 +43,7 @@
     }
 
     onMounted(async () => {
-        try {
-            //gst.util.chkOnMountedTwice(route, 'FixedPanel')
+        try { //gst.util.chkOnMountedTwice(route, 'FixedPanel')
             setBasicInfo()
             await getList(true)            
             fixedClickOnLoop(true)
@@ -79,7 +64,7 @@
                 } else {
                     //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
                 }
-                observerBottomScroll()       
+                //observerBottomScroll()       
                 await procRows() 
             }
         } catch (ex) {
@@ -167,7 +152,6 @@
                 } else if (prevMsgMstCdt) {
                     //최신일자순으로 위에서부터 뿌리면서 스크롤 아래로 내릴 때 데이터 가져오는 것이므로 특별히 처리할 것 없음
                 }
-                //getCount()
             } else {
                 let len = listFixed.value.length //기존 데이터
                 const arr = rs.list //새로 읽어온 데이터                
@@ -308,6 +292,18 @@
     async function refreshPanel() {
         await getList(true)            
         fixedClickOnLoop(true)
+    }
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
+            await msglistRef.value.procMainToMsglist(kind, obj)
+        }
+    }
+
+    async function procMainToPanel(kind, obj) {
+        if (kind == "procRows") {
+            await procRows()
+        }
     }
 
     async function handleEvFromMsgList(param) {
