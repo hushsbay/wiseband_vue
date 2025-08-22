@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated, onUnmounted } from 'vue' 
+    import { ref, onMounted, nextTick, useTemplateRef, onActivated, onDeactivated, onUnmounted, inject } from 'vue' 
     import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'    
     import hush from '/src/stores/Common.js'
@@ -50,6 +50,7 @@
     let savPrevMsgMstCdt = hush.cons.cdtAtLast //가장 큰 일시(9999-99-99)로부터 시작해서 스크롤이 올라갈 때마다 점점 이전의 작은 일시가 저장됨
     let savNextMsgMstCdt = hush.cons.cdtAtFirst //가장 작은 일시(1111-11-11)로부터 시작해서 스크롤이 내려갈 때마다 점점 다음의 큰 일시가 저장됨   
     let onGoingGetList = false, prevScrollY = 0, prevScrollHeight //, getAlsoWhenDown = ""
+    //let onReading = false
 
     //dm 보내기 (신규)
     let showUserSearch = ref(false), userSearchedRef = useTemplateRef('userSearchedRef')
@@ -72,217 +73,32 @@
     let inEditor = useTemplateRef('editorRef') //editor = document.getElementById(editorId) editor 대신 inEditor (템플릿 참조) 사용
 
     //라우팅 관련 정리 : 현재는 부모(Main) > 자식(각종Panel) > 손자(MsgList) 구조임 : 스레드(댓글)용으로 손자안에 동일한 손자(MsgList)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
+    //keepalive때문에 back()시 이전에 열었던 상태 복원되나, 이전 스크롤위치는 구현 필요
 
-    const observerTopScroll = () => { //위로 스크롤하는 경우
-        observerTop.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) {
-                showTopObserver.value = true
-                if (scrollDir == 'up') { 
-                    await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
-                }
-                setTimeout(function() { showTopObserver.value = false }, 500)
-            } else {
-                return
-            }
-        }) //아래 observerTopTarget이 null로 나와서 오류 발생하는 것은 ##34처럼 vipStr에 데이터 담을 때 오류가 발생해 멈췄기 때문에 
-        observerTop.value.observe(observerTopTarget.value) //observerTopTarget 랜더링까지 실행이 되지 않아 발생하는 것일 수 있음
-    }
-
-    const observerBottomScroll = () => { //아래로 스크롤하는 경우 : https://0422.tistory.com/349
-        observerBottom.value = new IntersectionObserver(async (entry) => {
-            if (entry[0].isIntersecting) {                
-                showBottomObserver.value = true
-                if (scrollDir == 'down') { //하단에서 위로 스크롤시 자꾸 getList()를 호출해서.. down일 떄만 호출하도록 체크하는 것임
-                    await getList({ nextMsgMstCdt: savNextMsgMstCdt })
-                }
-                setTimeout(function() { showBottomObserver.value = false }, 500)
-            } else {
-                return
-            }
-        }, /*{ 
-            threshold: 0, (default 0)
-            root: document.querySelector("#chan_center_body")
-        }*/) //처음 가져와서 데이터가 딱 아래까지만 찼을 때 맨 아래 스크롤시 계속 빠르게 깜빡임 : 바로 위 getList() 계속 실행함 => 상단/하단 무한 스크롤 있는 MsgList.vue에서만 나타나는 현상
-        observerBottom.value.observe(observerBottomTarget.value)
-    }
-
-    onMounted(async () => {
-        try { //console.log(hasProp() + "MsgList Mounted.. " + route.fullPath) //if (!gst.util.chkOnMountedTwice(route, 'MsgList')) return
-            subTitle = hush.util.getRnd() + 'M'
-            const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
-            appType = arr[2] //home,dm,later,msglist..
-            if (appType == "msglist" && route.query.appType) appType = route.query.appType //새창에서열기 또는 링크복사시 arr[2]는 msglist이므로 appType을 다시 가져와야 함
-            if (hasProp()) {
-                setBasicInfoInProp()
-                await getList({ msgid: msgidInChan, kind: "withReply" })
-            } else {                
-                if (route.fullPath == "/main/dm/dm_body_new") {
-                    showUserSearch.value = true
-                } else {
-                    setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
-                    if (msgidInChan) { //예) 새창에서 열기하면서 메시지아이디가 붙어 있으면 atHome이 되는 것임
-                        await getList({ msgid: msgidInChan, kind: "atHome" })
-                        inEditor.value.focus() 
-                    } else if (tabForNewWin.value != "") {
-                        listMsg(tabForNewWin.value)
-                    } else {
-                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt }) //기본적인 조회 패턴임   
-                        inEditor.value.focus()               
-                    }
-                    observerTopScroll()
-                    observerBottomScroll()
-                }
-                if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가 (onMounted만 발생하고 onActivated는 없음)
-                    document.addEventListener("visibilitychange", () => {
-                        pageShown = (document.hidden) ? 'N' : 'Y'
-                        pageShownChanged(pageShown)
-                    }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
-                    window.addEventListener('focus', function() {
-                        pageShown = 'Y' 
-                        pageShownChanged(pageShown)                        
-                    })
-                    window.addEventListener('blur', function() {
-                        pageShown = 'N' 
-                        pageShownChanged(pageShown)
-                    })
-                    pageShownChanged(pageShown)
-                    procRsObj()
-                    window.focus() //focus()해야 blur()도 발생함
-                }                
-            }
-            if (route.fullPath.includes('/body/msglist')) {
-                bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue : Main.vue의 onMounted 주석 참조   
-                bc2.onmessage = (e) => { getBroadcast2(e.data) }
-            }
-            chkMultiState()
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    })
-
-    onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
-        try { //Main.vue가 없는 MsgList.vue는 keepalive가 안되므로 여기 onActivated 거치지 않음을 유의
-            if (!route.fullPath.includes("_body/")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
-            //console.log("MsgList Activated.. " + route.fullPath+'..'+mounting)
-            gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
-            if (mounting) { //맨 처음 onMounted직후 여기로 들어오게 됨 (mounting = true)
-                mounting = false
-            } else { //여기 else는 onMounted 직후 따라오는 onActivated에서는 실행이 안되고 onActivated 단독으로 실행될 때 처리되는 루틴임
-                subTitle = subTitle.replace("M", "A")
-                if (hasProp()) {
-                    setBasicInfoInProp()
-                } else {
-                    setBasicInfo()
-                    //observerTopScroll()
-                    //observerBottomScroll()
-                    pageShownChanged('Y')      
-                } //아래는 (mounting=true일 때도 할 필요없고 onMounted 거치지 않고 onActivated때만 실행해야 하는 (예: Back() 눌렀을 때) 루틴임 (그래서 아래 부분은 onMounted()에도 없음)
-                //Main.vue가 없는 MsgList.vue는 keepalive가 안되고 Back()도 불가능하므로 여기 onActivated를 아예 거치지 않음을 유의
-                const key = msgidInChan ? msgidInChan : sideMenu + chanId
-                if (gst.objSaved[key]) {
-                    if (scrollArea.value) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
-                }
-                if (gst.routedToSamePanelFromMsgList) { //아래는 사이드 메뉴 같은 경우만 실행됨 : 사용자가 방내 범위내에서 노드를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 안바뀌고 해당 패널내에서 라우팅하는 경우
-                    //console.log("MsgList Activated selectRow.." + appType + "==="+ chanId)
-                    if (appType == "home" || appType == "dm") {
-                        evToPanel({ kind: "selectRow", chanid: chanId })
-                    } else if (appType == "activity" || appType == "later" || appType == "fixed") {
-                        evToPanel({ kind: "selectRow", msgid: msgidInChan })
-                    }
-                }
-                chkMultiState()
-            }            
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    })
-
-    onDeactivated(() => {
-        pageShownChanged('N')
-        clearTimeout(timerChkTyping)
-    })
-
-    onUnmounted(() => {
-        if (observerTop && observerTop.value) observerTop.value.disconnect()
-        if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
-        pageShownChanged('N')
-        clearTimeout(timerChkTyping)
-        if (bc2) bc2.close()
-    })
-
-    function setBasicInfo() {
-        sideMenu = gst.selSideMenu
-        if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
-        if (route.params.chanid) chanId = route.params.chanid
-        const pMsgid = route.params.msgid        
-        if (pMsgid == hush.cons.state_nodata) {
-            pageData.value = pMsgid
-        } else if (pMsgid == "notyet" || pMsgid == "unread") { //스레드에서는 미사용
-            tabForNewWin.value = pMsgid //현재 열린 MsgList.vue에서 처리시 다시 메시지 탭을 누르면 처음부터 조회되는 등 문제가 많아 별도 창으로 분리
-        } else if (pMsgid == "0" || pMsgid == "nocache") { //현재 nocache는 사용처 없음
-            //skip
-        } else if (pMsgid) {
-            msgidInChan = pMsgid //댓글의 msgid일 수도 있음
+    /////////////////////////////////////////////////////////////////////////////////////1) 왼쪽 Panel -> MsgList 2) MsgList(부모) -> MsgList(자식)
+    async function procMainToMsglist(kind, obj) {
+        if (kind == "realtime") {
+            chkDataLogEach(obj)
+        } else if (kind == "updateProfile") {
+            console.log(obj.userid+"@@@@") 
+            if (!chandtlObj.value[obj.userid]) return //소켓 'all'을 통해 수신된 것이므로 해당 사용자아이디가 있는 경우만 처리하면 됨
+            console.log(obj.userid+"@@@@####") 
+            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
+            const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
+            if (!rs) return
+            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
+        } else if (kind == "setVip") {
+            const res = await axios.post("/user/getVip", null)
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
+        } else if (kind == "chkTyping") { //###05
+            handleTypingInfo(obj)
+        } else if (kind == "chkAlive") { //###05
+            handleAliveInfo(obj)
+            if (memberlistRef.value) memberlistRef.value.handleAliveInfo(obj) //home과 dm에도 memberlistRef handleAliveInfo 호출하는 것 있음
         }
     }
-
-    /////////////////////////////////////////////////////////////////////////////////////
-    //스레드(댓글) 관련 : 부모 MsgList와 자식 MsgList가 혼용되어 코딩되어 있으므로
-    //네이밍 규칙을 정해서, thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
-    //부모,자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개인데 hasProp() 맟 childbody로 구분해 사용
-
-    //const hasProp = computed(() => { if (props.data && props.data.msgid) return true; return false; }) //값이 변할때만 계산하므로 효율적이나
-    //computed대신 바로 아래 함수 사용. computed는 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
-    function hasProp() { //props 사용하는 것은 자식이므로 hasProp으로 명명. 위 computed 이용해 처리하고자 했으나 동작 이상 포기 : 캐싱없이 매번 계산하나 이 함수 사용
-        if (props.data && props.data.msgid) return true //자식이 열린 상태임을 의미
-        return false
-    }
-
-    const msglistRef = ref(null) //MsgList(부모)가 MsgList(자식)의 procFromParent()를 호출하기 위함
-    let listMsgSel = ref('all')
-    let thread = ref({ msgid: null, msgidChild: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
-    const editorId = hasProp() ? "msgContent_prop" : "msgContent"
-
-    function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
-        if (hasProp()) return
-        if (thread.value.msgid) handleEvFromChild({ type: "close" })
-        setTimeout(function() {
-            thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
-            thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
-            setWidthForThread()
-        }, 100)
-    }
-
-    async function handleEvFromChild(obj) { //부모에서만 사용. 자식에게서 전달받아 이벤트 처리하는 것임
-        if (obj.type == "close") {
-            thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
-            setWidthForThread(null, obj.type)
-        }
-    }
-
-    function setWidthForThread(openWith, type) { //openWith : 향후 마우스 드래그나 버튼 방식으로 넓이 조정 가능하도록 하기 위함
-        if (type == "close") {
-            widthChanRight.value = '0px'
-            widthChanCenter.value = 'calc(100% - 20px)'            
-        } else {
-            if (openWith) {
-                //위 설명 참조
-            } else {
-                widthChanRight.value = '500px'
-                widthChanCenter.value = 'calc(100% - 520px)'                
-            }
-        }
-    }
-
-    function setBasicInfoInProp() {
-        if (route.params.chanid) {
-            chanId = route.params.chanid
-        }
-        if (props.data.msgid) { //route가 아님을 유의
-            msgidInChan = props.data.msgid //댓글의 msgid일 수도 있음
-        }
-    }
-    /////////////////////////////////////////////////////////////////////////////////////
 
     async function chkDataLogEach(obj) { //전제조건은 logdt/realLastCdt 모두 같은 시계를 사용(여기서는, db datetime을 공유해 시각이 동기화)해야 하는데
         try { //서버의 chanmsg/qry()를 읽을 때 logdt(최초만)/realLastCdt가 동시에 정해지므로 아래에서 사용해도 로직에 문제가 없을 것임
@@ -443,6 +259,7 @@
                         if (row.KIND == 'mst' && row.CUD == 'D') { //삭제이므로 정보 없음
                             pageData.value = hush.cons.state_nodata
                         } else if (row.KIND == 'mem') { //채널관리에서 멤버추가든 삭제인 경우 패널에 해당 노드 반영 (반영후 소켓 join/leave 추가 실행)
+                            console.log("999999999988888")
                             panelProcAll = true
                         } else {
                             setChanMstDtl(row.chanmst, row.chandtl)
@@ -472,6 +289,129 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
+    }
+
+    async function procFromParent(kind, obj) { //리얼타임 반영시에도 아래를 호출하므로 아래는 지우지 말 것
+        if (kind == "refreshMsg") {
+            const rs = await getMsg({ msgid: obj.msgid })
+            if (rs == null) return
+            refreshWithGetMsg(rs, obj.msgid)
+        } else if (kind == "deleteMsg") {
+            const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
+            if (idx > -1) {
+                msglist.value.splice(idx, 1)
+                if (idx == 0) handleEvFromChild({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
+            }
+        } else if (kind == "addChildFromBody") {
+            await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
+        } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
+            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
+            const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
+            if (!rs) return
+            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    //스레드(댓글) 관련 : 부모 MsgList와 자식 MsgList가 혼용되어 코딩되어 있으므로
+    //네이밍 규칙을 정해서, thread라는 단어가 들어가면 거의 부모 / prop이라는 단어가 들어가면 거의 자식
+    //부모,자식 동시에 떠 있는 경우 문제되는 element는 파일업로드(file_upload)와 웹에디터(msgContent) 2개인데 hasProp() 맟 childbody로 구분해 사용
+
+    //const hasProp = computed(() => { if (props.data && props.data.msgid) return true; return false; }) //값이 변할때만 계산하므로 효율적이나
+    //computed대신 바로 아래 함수 사용. computed는 템플리트 밖<script setup>에선 반드시 true/false로만 비교해야 함. if (hasProp)으로 비교하면 안됨
+    function hasProp() { //props 사용하는 것은 자식이므로 hasProp으로 명명. 위 computed 이용해 처리하고자 했으나 동작 이상 포기 : 캐싱없이 매번 계산하나 이 함수 사용
+        if (props.data && props.data.msgid) return true //자식이 열린 상태임을 의미
+        return false
+    }
+
+    const msglistRef = ref(null) //MsgList(부모)가 MsgList(자식)의 procFromParent()를 호출하기 위함
+    let listMsgSel = ref('all')
+    let thread = ref({ msgid: null, msgidChild: null }) //부모에서만 사용 (컴포넌트에서 자식에게 data로 전달함)
+    const editorId = hasProp() ? "msgContent_prop" : "msgContent"
+
+    function openThread(msgid, msgidChild) { //부모에서만 사용. 라우터로 열지 않고 컴포넌트로 바로 열기
+        if (hasProp()) return
+        if (thread.value.msgid) handleEvFromChild({ type: "close" })
+        setTimeout(function() {
+            thread.value.msgid = msgid //메시지아이디를 전달해 자식에게 화면을 open하라고 전달하는 것임
+            thread.value.msgidChild = msgidChild //부모 아래 있는 댓글아이디를 찾을 때만 사용)
+            setWidthForThread()
+        }, 100)
+        
+    }
+
+    async function handleEvFromChild(obj) { //부모에서만 사용. 자식에게서 전달받아 이벤트 처리하는 것임
+        if (obj.type == "close") {
+            thread.value.msgid = null //메시지아이디를 null로 해서 자식에게 close하라고 전달하는 것임
+            setWidthForThread(null, obj.type)
+        }
+    }
+
+    function setWidthForThread(openWith, type) { //openWith : 향후 마우스 드래그나 버튼 방식으로 넓이 조정 가능하도록 하기 위함
+        if (type == "close") {
+            widthChanRight.value = '0px'
+            widthChanCenter.value = 'calc(100% - 20px)'            
+        } else {
+            if (openWith) {
+                //위 설명 참조
+            } else {
+                widthChanRight.value = '500px'
+                widthChanCenter.value = 'calc(100% - 520px)'                
+            }
+        }
+    }
+
+    function setBasicInfoInProp() {
+        if (route.params.chanid) {
+            chanId = route.params.chanid
+        }
+        if (props.data.msgid) { //route가 아님을 유의
+            msgidInChan = props.data.msgid //댓글의 msgid일 수도 있음
+        }
+    }
+
+    function evToParent(obj) { //자식에서만 사용됨
+        emits('ev-to-parent', obj)
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    
+    function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
+        if (route.fullPath.includes('/body/msglist')) return //패널이 없는 경우임
+        emits("ev-to-panel", param)
+    }   
+
+    const observerTopScroll = () => { //위로 스크롤하는 경우
+        observerTop.value = new IntersectionObserver(async (entry) => {
+            if (entry[0].isIntersecting) {
+                showTopObserver.value = true
+                if (scrollDir == 'up') { 
+                    await getList({ prevMsgMstCdt: savPrevMsgMstCdt })
+                }
+                setTimeout(function() { showTopObserver.value = false }, 500)
+            } else {
+                return
+            }
+        }) //아래 observerTopTarget이 null로 나와서 오류 발생하는 것은 ##34처럼 vipStr에 데이터 담을 때 오류가 발생해 멈췄기 때문에 
+        observerTop.value.observe(observerTopTarget.value) //observerTopTarget 랜더링까지 실행이 되지 않아 발생하는 것일 수 있음
+    }
+
+    const observerBottomScroll = () => { //아래로 스크롤하는 경우 : https://0422.tistory.com/349
+        observerBottom.value = new IntersectionObserver(async (entry) => {
+            if (entry[0].isIntersecting) {                
+                showBottomObserver.value = true
+                if (scrollDir == 'down') { //하단에서 위로 스크롤시 자꾸 getList()를 호출해서.. down일 떄만 호출하도록 체크하는 것임
+                    await getList({ nextMsgMstCdt: savNextMsgMstCdt })
+                }
+                setTimeout(function() { showBottomObserver.value = false }, 500)
+            } else {
+                return
+            }
+        }, /*{ 
+            threshold: 0, (default 0)
+            root: document.querySelector("#chan_center_body")
+        }*/) //처음 가져와서 데이터가 딱 아래까지만 찼을 때 맨 아래 스크롤시 계속 빠르게 깜빡임 : 바로 위 getList() 계속 실행함 => 상단/하단 무한 스크롤 있는 MsgList.vue에서만 나타나는 현상
+        observerBottom.value.observe(observerBottomTarget.value)
     }
 
     function sendSockObjToMain(obj) { //###01
@@ -526,7 +466,8 @@
         if (data.kind && data.data && data.data.ev) { //소켓통신 관련
             if (data.data.ev == "chkTyping") {
                 handleTypingInfo(data.data)
-            } else if (data.data.ev == "chkAlive") { //console.log(JSON.stringify(data))
+            } else if (data.data.ev == "chkAlive") {
+                //console.log(JSON.stringify(data)+"************")
                 handleAliveInfo(data.data)
             } else {
                 //여기로 오지 않고 Main.vue에서 data polling으로 처리 완료되는 경우임
@@ -538,6 +479,165 @@
                 fifo.push(data.obj) //data.obj(Array) => 배열에 다시 배열이 추가되는 모습으로서 그렇지 않으면 first in first out이 쉽지 않음
                 fifoLen.value = fifo.length
             }
+        }
+    }
+
+    function handleTypingInfo(obj) {
+        if (obj.roomid == chanId) {
+            if (obj.typing) {
+                if (!memIdTyping.value.includes(obj.userid)) {
+                    memIdTyping.value.push(obj.userid)
+                    memNmTyping.value.push(obj.usernm)
+                }
+            } else {
+                const idx = memIdTyping.value.indexOf(obj.userid)
+                if (idx > -1) {
+                    memIdTyping.value.splice(idx, 1)
+                    memNmTyping.value.splice(idx, 1)
+                }
+            }
+        }
+    }
+
+    function handleAliveInfo(obj) {
+        //console.log(JSON.stringify(obj), '##handleAliveInfo')
+        //if (obj.roomid == chanId) {
+            const len = chandtl.value.length
+            for (let i = 0; i < len; i++) {
+                const row = chandtl.value[i]
+                if (obj.userids.includes(row.USERID)) {
+                    chandtlObj.value[row.USERID].alive = true
+                } else {
+                    chandtlObj.value[row.USERID].alive = false
+                }
+            }
+        //}
+    }
+
+    onMounted(async () => {
+        try {
+            console.log(hasProp() + "...MsgList Mounted..... " + route.fullPath)
+            //if (!gst.util.chkOnMountedTwice(route, 'MsgList')) return
+            subTitle = hush.util.getRnd() + 'M'
+            const arr = route.fullPath.split("/") //무조건 길이는 2이상임 => /main/dm/dm_body
+            appType = arr[2] //home,dm,later,msglist..
+            if (appType == "msglist" && route.query.appType) appType = route.query.appType //새창에서열기 또는 링크복사시 arr[2]는 msglist이므로 appType을 다시 가져와야 함
+            if (hasProp()) {
+                setBasicInfoInProp()
+                await getList({ msgid: msgidInChan, kind: "withReply" })
+            } else {                
+                if (route.fullPath == "/main/dm/dm_body_new") {
+                    showUserSearch.value = true
+                } else {
+                    setBasicInfo() //여기는 패널로부터 호출되기도 하지만 새로고침시 (캐시제거 등) 비동기로 패널보다 MsgList가 먼저 호출되기도 할 수도 있을 것에 대비 (예: 패널의 선택 색상)
+                    if (msgidInChan) { //예) 새창에서 열기하면서 메시지아이디가 붙어 있으면 atHome이 되는 것임
+                        await getList({ msgid: msgidInChan, kind: "atHome" })
+                        inEditor.value.focus() 
+                    } else if (tabForNewWin.value != "") {
+                        listMsg(tabForNewWin.value)
+                    } else {
+                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt }) //기본적인 조회 패턴임   
+                        inEditor.value.focus()               
+                    }
+                    observerTopScroll()
+                    observerBottomScroll()
+                }
+                if (route.fullPath.includes('/body/msglist')) { //Main.vue가 있는 곳은 이미 아래 이벤트가 처리되고 있으므로 없는 곳에서만 추가 (onMounted만 발생하고 onActivated는 없음)
+                    //https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
+                    document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
+                        if (document.hidden) {
+                            pageShown = 'N'
+                        } else {
+                            pageShown = 'Y'
+                        }
+                        pageShownChanged(pageShown)
+                    }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
+                    window.addEventListener('focus', function() {
+                        pageShown = 'Y' 
+                        pageShownChanged(pageShown)                        
+                    })
+                    window.addEventListener('blur', function() {
+                        pageShown = 'N' 
+                        pageShownChanged(pageShown)
+                    })
+                    pageShownChanged(pageShown)
+                    procRsObj()
+                    window.focus() //focus()해야 blur()도 발생함
+                }                
+            }
+            if (route.fullPath.includes('/body/msglist')) {
+                bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue : Main.vue의 onMounted 주석 참조   
+                bc2.onmessage = (e) => { getBroadcast2(e.data) }
+            }
+            chkMultiState()
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    })
+
+    onActivated(async () => { // 초기 마운트 또는 캐시상태에서 다시 삽입될 때마다 호출 : onMounted -> onActivated 순으로 호출됨
+        try { //Main.vue가 없는 MsgList.vue는 keepalive가 안되므로 여기 onActivated 거치지 않음을 유의
+            if (!route.fullPath.includes("_body/")) return //MsgList인데 route.fullPath가 /main/home인 경우가 가끔 발생. 원인 파악 안되어 일단 차단
+            console.log("MsgList Activated..... " + route.fullPath+'...'+mounting)
+            gst.chanIdActivted = chanId //리얼타임 반영을 위해 Main.vue로 전달하는 값으로, 현재 화면에 떠 있는 채널아이디를 의미
+            if (mounting) { //맨 처음 onMounted직후 여기로 들어오게 됨 (mounting = true)
+                mounting = false
+            } else { //여기 else는 onMounted 직후 따라오는 onActivated에서는 실행이 안되고 onActivated 단독으로 실행될 때 처리되는 루틴임
+                subTitle = subTitle.replace("M", "A")
+                if (hasProp()) {
+                    setBasicInfoInProp()
+                } else {
+                    setBasicInfo()
+                    observerTopScroll()
+                    observerBottomScroll()
+                    pageShownChanged('Y')      
+                } //아래는 (mounting=true일 때도 할 필요없고 onMounted 거치지 않고 onActivated때만 실행해야 하는 (예: Back() 눌렀을 때) 루틴임 (그래서 아래 부분은 onMounted()에도 없음)
+                //Main.vue가 없는 MsgList.vue는 keepalive가 안되고 Back()도 불가능하므로 여기 onActivated를 아예 거치지 않음을 유의
+                const key = msgidInChan ? msgidInChan : sideMenu + chanId
+                if (gst.objSaved[key]) {
+                    if (scrollArea.value) scrollArea.value.scrollTop = gst.objSaved[key].scrollY
+                }
+                if (gst.routedToSamePanelFromMsgList) { //아래는 사이드 메뉴 같은 경우만 실행됨 : 사용자가 방내 범위내에서 노드를 클릭하거나 뒤로가기를 눌렀는데 사이드 메뉴가 안바뀌고 해당 패널내에서 라우팅하는 경우
+                    console.log("MsgList Activated selectRow..... " + appType + "==="+ chanId)
+                    if (appType == "home" || appType == "dm") {
+                        evToPanel({ kind: "selectRow", chanid: chanId })
+                    } else if (appType == "activity" || appType == "later" || appType == "fixed") {
+                        evToPanel({ kind: "selectRow", msgid: msgidInChan })
+                    }
+                }
+                chkMultiState()
+            }            
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    })
+
+    onDeactivated(() => {
+        pageShownChanged('N')
+        clearTimeout(timerChkTyping)
+    })
+
+    onUnmounted(() => {
+        if (observerTop && observerTop.value) observerTop.value.disconnect()
+        if (observerBottom && observerBottom.value) observerBottom.value.disconnect()
+        pageShownChanged('N')
+        clearTimeout(timerChkTyping)
+        //if (bc2) bc2.close()
+    })
+
+    function setBasicInfo() {
+        sideMenu = gst.selSideMenu
+        if (!sideMenu) sideMenu = "mnu" + appType.substring(0, 1).toUpperCase() + appType.substring(1)
+        if (route.params.chanid) chanId = route.params.chanid
+        const pMsgid = route.params.msgid        
+        if (pMsgid == hush.cons.state_nodata) {
+            pageData.value = pMsgid
+        } else if (pMsgid == "notyet" || pMsgid == "unread") { //스레드에서는 미사용
+            tabForNewWin.value = pMsgid //현재 열린 MsgList.vue에서 처리시 다시 메시지 탭을 누르면 처음부터 조회되는 등 문제가 많아 별도 창으로 분리
+        } else if (pMsgid == "0" || pMsgid == "nocache") { //현재 nocache는 사용처 없음
+            //skip
+        } else if (pMsgid) {
+            msgidInChan = pMsgid //댓글의 msgid일 수도 있음
         }
     }
 
@@ -581,7 +681,7 @@
                     gst.util.showEx(ex, true)
                 }
             }},
-            // { nm: "방 삭제", disable: disableStr2, func: async function(item, idx) { //소켓통신 데이터 전달 및 UI 측면에서도 여기서는 지원하지 않기로 함
+            // { nm: "방 삭제", disable: disableStr2, func: async function(item, idx) {
             //     try {
             //         if (!confirm("방 전체 삭제를 진행합니다. 계속할까요?")) return
             //         const rq = { CHANID: chanId }
@@ -616,6 +716,7 @@
     }
 
     let test_idx = 0
+
     async function stressTest(start) { //서버 chanmsg>qry 참조 : curdtObj.DT.replace('2025-', '1111-')
         if (start) test_idx = 0
         msgbody.value = test_idx.toString()
@@ -691,6 +792,7 @@
                 return
             }   
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
+            //const queryNotYetTrue = (route.query && route.query.notyet) ? true : false //query에 notyet=true이면 true
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
@@ -719,6 +821,7 @@
                         }
                     } else {
                         if (msgidParent && row.MSGID == msgidParent) {
+                            //if (queryNotYetTrue) row.firstNotYet = (msgidParent == msgidChild) ? "parent" : "child" //여기서부터 읽지 않은 메시지라고 안내해야 함
                             row.background = hush.cons.color_athome
                         }
                     }
@@ -1038,7 +1141,8 @@
                 }
                 break
             }
-        } //gst.realtime.closeNoti(chanId)
+        }
+        //gst.realtime.closeNoti(chanId)
     }
 
     const onScrolling = (e) => { //패널에 있는 onScrolling()에서와는 달리 여기서는 계속 onScrolling 반복되지 않아서 패널처럼 굳이 false 조건을 넣지 않음
@@ -1138,6 +1242,7 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.sockToSend.push({ sendTo: "room", data: { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" }})
+            //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, msgid: msgid, from: "updateNotyetToRead" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
             if (hasProp()) { //스레드에서 내가 안읽은 갯수를 Parent에도 전달해서 새로고침해야 함
                 deleteFromNewAdded(null, null, msgid)
@@ -1157,6 +1262,7 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.sockToSend.push({ sendTo: "room", data: { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" }})
+            //gst.realtime.emit("room", { ev: "readMsg", roomid: chanId, from: "updateAllWithNewKind" })
             await listMsg('notyet')
             setTimeout(function() { window.close() }, 1000)
         } catch (ex) { 
@@ -1212,6 +1318,8 @@
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
         try {
+            //if (onReading) return
+            //onReading = true
             if (showUserSearch.value) return //DM방 만들기에서는 무시
             const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
             if (!eleTop) {
@@ -1252,6 +1360,8 @@
             }
         } catch (ex) {
             console.log("readMsgToBeSeen ex: " + ex.message) //오류나도 넘어가기로 함
+        } finally {
+            //onReading = false
         }
     }
 
@@ -1547,6 +1657,33 @@
         gst.ctx.show(e)            
     }
 
+    // async function addEmoti() {
+    //     const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/;
+    //     const text = "https://wise.sbs.co.kr/wise/websquare/websquare.html?w2xPath=/gwlib/domino.xml&app=approv.main&dbpath=appro{yyyy}&__menuId=GWXA01&cchTag=1742267753337"
+    //     const text1 = "https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection?aaa=가나다"
+    //     const res = reg.exec(text)
+    //     const res1 = reg.exec(text1)
+    //     debugger
+    //     return
+
+    //     const exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' >
+    //     const exp01 = /<(strong|b)>/gi
+    //     const exp02 = /<(strong|b)[\s]/gi
+    //     const exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
+    //     const exp2 = /(font-weight)([\s:]+)([a-z0-9]+)([;]?)/gi //font-weight:  bold..
+    //     const str = "<B>style='color:red'><span style='font-weight: normal;; ;'>a<Br>aa</SPAN><B >"
+    //     const rs = exp.exec(str) //str.match(exp)
+    //     const rs01 = exp01.exec(str)
+    //     const rs02 = exp02.exec(str)
+    //     const rs1 = exp1.exec(str)
+    //     const rs2 = exp2.exec(str)
+    //     debugger
+    //     const result = str.replace(rs[1], "span")
+    //     const result1 = str.replace(rs1[0], "</span>")
+    //     const result2 = str.replace(rs2[0], "") //font-weight:normal로 변환 대신 제거
+    //     debugger
+    // }
+
     function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
         try {
             if (!chkEditorFocus()) return
@@ -1564,6 +1701,252 @@
             gst.util.showEx(ex, true)
         }
     }
+
+    // function wordStyleFailed(type) { //코딩 실패 케이스 (donotdelete)
+    //     if (!chkEditorFocus()) return
+    //     let exp, exp1, exp2
+    //     if (type == "B") {
+    //         exp = /<(strong|b)([^>rR]+)*>/gi //<strong이나 <b로 시작해서 >과 BR의 R 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
+    //         exp01 = /<(strong|b)([^>rR]+)*>/gi
+    //         exp1 = /<\/(strong|b)>/gi //</strong>이나 </b>
+    //         exp2 = /(font-weight)([\s:]+)(bold)/gi
+    //     } else if (type == "S") { //Strike
+    //         exp = /<s([^>pP]+)*>/gi //<s로 시작해서 >과 SPAN의 S 제외한 모든 글자나 빈칸 허용되고 >로 마치는 패턴
+    //         exp1 = /<\/s>/gi
+    //     }
+    //     /* 예를 들어, Bold는 아래와 같이 2가지 케이스가 있을 것음
+    //        1. <B>, <STRONG>의 경우 커서로 선택이 아래와 같을 수 있음
+    //           1) <B>XYZ</B> : XYZ를 선택했을 때 innerHTML => <B>와 </B>가 안보임 (#text)
+    //           2) X<B>YZ</B> : XYZ를 선택했을 때 innerHTML => <B>와 </B> 모두 보임
+    //           3) <B>XY</B>Z : XYZ를 선택했을 때 innerHTML => <B>와 </B> 모두 보임
+    //           4) X<B>Y</B>Z : XYZ를 선택했을 때 innerHTML => <B>와 </B> 모두 보임
+    //           따라서, 1)과 2)3)4) 두가지 경우로 나눠서 처리하면 됨. 2)3)4)의 경우 cloneContents()후엔 B가 하나뿐이더라도 앞뒤로 생겨남
+    //        2. stle="font-weight:bold"
+    //           마찬가지로 위 네가지 형태로 나올 것이나 font-weight:400 등과 같이 숫치는 무시하기로 함 */
+    //     let selection = window.getSelection()
+    //     if (selection.rangeCount == 0) return
+    //     const range = selection.getRangeAt(0)
+    //     let content1 = range.cloneContents() //content1,node1은 str로 받기 위한 단순 도구임
+    //     let node, node1 = document.createElement("span")
+    //     node1.append(content1)
+    //     let str = node1.innerHTML //예) <B>가 한쪽에 없이 선택해도 innerHTML에서는 <B>까지 들어가도록 함
+    //     const bool = chkSelectionInTagFailed(type) //1)~4) 모두 true 또는, 부모태그없이 XYZ만 있는 순수 텍스트인 경우는 false임
+    //     let specific = false
+    //     if (bool) {
+    //         if (exp.test(str)) { //위 2)3)4) 경우인데 매칭파트를 제거하면 됨
+    //             str = str.replace(exp, "").replace(exp1, "")
+    //         } else if (type == "B" && exp2.test(str)) { //볼드체의 경우, <b>, font-weight 둘 다 있으면 한번에 안됨
+    //             str = str.replace(exp2, "")
+    //         } else { //1) 케이스이므로 parentNode를 제거해야 함
+    //             chkSelectionInTagFailed(type, str) //true(제거옵션=>span으로변경(font-weight는제거))
+    //             specific = true
+    //         }
+    //         if (!specific) {
+    //             node = document.createElement("SPAN")
+    //             node.innerHTML = str
+    //         }
+    //     } else { //해당 selection에 대해 parentNode까지 추적해보니 없으므로 type를 추가하는 케이스가 됨
+    //         const content = range.cloneContents()
+    //         node = document.createElement(type)
+    //         node.append(content)
+    //     }
+    //     range.deleteContents()
+    //     if (!specific) {            
+    //         range.insertNode(node)
+    //         //collapse안하려면 range를 refresh해야 최신으로 반영됨. selection.removeAllRanges()는 모두 deselect하는 것임
+    //     }
+    //     range.collapse(false)
+    //     inEditor.value.focus()
+    //     //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
+    //     return
+    // }
+
+    // function wordStyleFailed_1(type) {
+
+    //     function procNodeRecursive(node1) {
+    //         let nodes = node1.children
+    //         for (let node of nodes) {
+    //             if (node.tagName == "BR") continue //console.log(node.outerHTML+"###")            
+    //             if (node.getAttribute("maker") == "hushsbay") {
+    //                 if (node.innerHTML == "") { //console.log("!!!"+node.outerHTML)
+    //                     delArr.push(node) //node.innerHTML = "!!!!!"
+    //                 } else { //console.log("^^^"+node.outerHTML)
+    //                     procNodeRecursive(node)
+    //                 }
+    //             } else { //console.log("******"+node.outerHTML)
+    //                 procNodeRecursive(node)
+    //             }
+    //         }    
+    //     }
+
+    //     function cleanGabageNode(node1) {
+    //         delArr = []
+    //         procNodeRecursive(node1) //console.log("@@@"+node1.innerHTML)
+    //         if (delArr.length == 0) return
+    //         for (let i = delArr.length - 1; i >= 0; i--) {
+    //             delArr[i].remove() //console.log("useless" + i)
+    //         }            
+    //         cleanGabageNode(node1)
+    //     }
+
+    //     if (!chkEditorFocus()) return
+    //     let selection = window.getSelection()
+    //     if (selection.rangeCount == 0) return
+    //     let exp01, exp02, exp1, exp2
+    //     if (type == "B") { //exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' > => .exec 사용시
+    //         exp01 = /<(strong|b)>/gi
+    //         exp02 = /<(strong|b)[\s]/gi
+    //         exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
+    //         exp2 = /(font-weight)([\s:]+)([a-z0-9]+)([;]?)/gi //font-weight: bold;..
+    //     } else if (type == "S") { //Strike //exp = /<(s)((>)|([\s]+)([^>]+)*>)/gi //<s> <s  style='' > => .exec 사용시
+    //         exp01 = /<(s)>/gi
+    //         exp02 = /<(s)[\s]/gi
+    //         exp1 = /<\/(s)([\s]+)*>/gi //</s> </s >
+    //         exp2 = /(text-decoration)([\s:]+)([a-z0-9]+)([;]?)/gi //text-decoration:  line-through..
+    //     }
+    //     const range = selection.getRangeAt(0)
+    //     debugger
+    //     let content1 = range.cloneContents()
+    //     let node1 = document.createElement("span") //단지 innerHTML에 담기 위해 생성하는 것임
+    //     node1.append(content1) //console.log("@@@"+node1.outerHTML)
+    //     //let html= '<span maker="hushsbay" style="font-weight: bold;"></span><span maker="hushsbay" style="font-weight: bold;"><span maker="hushsbay" style="">구</span><span maker="hushsbay" style="font-weight: normal;"><span maker="hushsbay" style=""></span><span maker="hushsbay" style="font-weight: bold;"><span maker="hushsbay" style="">름에</span> "달 <span>가</span><span maker="hushsbay" style=""><span>듯</span></span><span maker="hushsbay" style=""><span maker="hushsbay" style=""><span>이</span>" </span></span></span><span maker="hushsbay" style="font-weight: bold;"><span maker="hushsbay" style="">가는 <span maker="hushsbay" style="">나그네</span></span><span maker="hushsbay" style=""></span><br><span maker="hushsbay" style="font-weight: normal;">술익는 <span maker="hushsbay" style="">마</span><span maker="hushsbay" style=""><span maker="hushsbay" style="">을마다 </span><span style="color:red;">타는 저녁놀</span> <span maker="hushsbay" style="">하하</span></span></span><span maker="hushsbay" style=""><span maker="hushsbay" style=""></span></span></span><span maker="hushsbay" style=""><span maker="hushsbay" style=""></span></span></span><span maker="hushsbay" style="font-weight: normal;"><span maker="hushsbay" style=""></span></span><span maker="hushsbay" style=""></span></span><span maker="hushsbay" style="font-weight: bold;"></span>'
+    //     //node1.innerHTML = html //console.log("@@@"+node1.innerHTML)
+    //     let delArr = []
+    //     cleanGabageNode(node1) //console.log("@@@@@@@"+node1.innerHTML)
+    //     let str = node1.innerHTML
+    //     if (str == "") str = "&nbsp"
+    //     const strInnerText = node1.innerText
+    //     //위 cloneContents()와 innerHTML로 처리된 str에서는 맨 앞과 맨뒤는 엘레멘트노드가 아닌 항상 텍스트노드임
+    //     //또한, 사용자가 시작태그 또는 종료태그만 있도록 선택해도 자동으로 앞뒤 태그가 붙어서 문제없이 처리 가능함
+    //     //1) 볼드체 판단 : range.commonAncestorContainer를 시작으로 msgContent 전까지 B, Strong, font-weight:bold(bold대신숫자는무시) 체크해 define
+    //     //2) 볼드체 처리 : 추가하든 빼든, 일단 str 안에 있는 모든 볼드체 관련은 span/font-weight:bold로 변환후 (str: 텍스트 or 엘레먼트)
+    //     //- 볼드체를 추가하려면 <span style='font-weight:bold'> + str + </span>으로 변환함
+    //     //- 볼드체를 빼려면 <span style='font-weight:normal'> + str + </span>으로 변환함
+    //     //위가 아닌 다른 방식(예를 들어 chkSelectionInTagFailed - focusNode)으로 처리하려면 경우의 수가 너무 많아 100% 구현이 어려울 것임
+    //     //참고로, wordStyleFailed()와 chkSelectionInTagFailed()는 실패했어도 참고할 만한 코딩이 많으므로 지우지 말기로 함
+    //     let container = range.commonAncestorContainer //startContainer 및 endContainer를 가지는 최상위 노드를 리턴. text일 경우는 그 위 엘레먼트 노드를 구함
+    //     if (container.nodeName == "#text") container = container.parentNode
+    //     let currentNode = container //container와 currentNode 둘 다 필요하므로 분리
+    //     //debugger
+    //     const bool = chkCurTagType(currentNode, type)
+    //     //아래부터는 currentNode가 없어야 함 (위에서 체크용으로만 쓰임). 아래는 container(바로 위 엘레먼트 노드)임을 유의
+    //     //RegExp.$n deprecated. 배열[0]는 매칭 결과 전체 //const rs = exp.exec(str) //if (rs != null) str = str.replace(rs[1], "span")
+    //     str = str.replace(exp01, "<span>")
+    //     str = str.replace(exp02, "<span ")
+    //     str = str.replace(exp1, "</span>") //맨 뒤에 있어 앞의 text가 검색될 수도 있으므로 전체(rs1[0]) 변경 필요 //const rs1 = exp1.exec(str) //if (rs1 != null) str = str.replace(rs1[0], "</span>")
+    //     str = str.replace(exp2, "") //font-weight:~ 제거 //const rs2 = exp2.exec(str) //if (rs2 != null) str = str.replace(rs2[0], "") //rs2[0]는 전체이므로 바로 replace 가능
+    //     const containerInnerText = container.innerText.replace(/\n/g, "") //예) 구름에 \"달 가듯이\" 가는 나그네\n술익는 마을마다 타는 저녁놀 하하 => \n 제거
+    //     //containerInnerText가 strInnerText와 다른데 바로 아래 if를 타면 containerInnerText 모든 문장이 영향을 받는 것임
+    //     //debugger
+    //     if (strInnerText == containerInnerText && container.outerHTML.startsWith("<span maker=\"hushsbay\"")) {
+    //         //maker="hushsbay" 태그에는 다른 속성이나 여기에서 다루는 style말고는 없음. 그러나, 다른 태그의 속성이나 스타일은 추가로 있을 수 있으므로 다루기가 까다로울 것임
+    //         cleanGabageNode(container) //console.log("@@@@@@@"+container.innerHTML)
+    //         if (type == "B") {
+    //             container.style["font-weight"] = (bool) ? "normal" : "bold"
+    //         } else if (type == "S") {
+    //             container.style["text-decoration"] = (bool) ? "none" : "line-through"
+    //         }
+    //         container.innerHTML = container.innerHTML.replace(exp2, "") //전체를 적용하는 것이므로 없애도 될 것임
+    //     } else {
+    //         range.deleteContents()
+    //         let node = document.createElement("span")
+    //         node.innerHTML = str
+    //         if (type == "B") {
+    //             node.style["font-weight"] = (bool) ? "normal" : "bold"
+    //         } else if (type == "S") {
+    //             node.style["text-decoration"] = (bool) ? "none" : "line-through"
+    //         }
+    //         node.setAttribute("maker", "hushsbay")
+    //         range.insertNode(node)
+    //     }
+    //     range.collapse(false)
+    //     inEditor.value.focus()
+    //     //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
+    //     return
+    // }
+
+    // function wordStyle(type) {
+    //     if (!chkEditorFocus()) return
+    //     let selection = window.getSelection()
+    //     if (selection.rangeCount == 0) return
+    //     let exp01, exp02, exp1, exp2
+    //     if (type == "B") { //exp = /<(strong|b)((>)|([\s]+)([^>]+)*>)/gi //<strong> <b  style='' > => .exec 사용시
+    //         exp01 = /<(strong|b)>/gi
+    //         exp02 = /<(strong|b)[\s]/gi
+    //         exp1 = /<\/(strong|b)([\s]+)*>/gi //</strong> </b >
+    //         exp2 = /(font-weight)([\s:]+)([a-z0-9]+)([;]?)/gi //font-weight: bold;..
+    //     } else if (type == "S") { //Strike //exp = /<(s)((>)|([\s]+)([^>]+)*>)/gi //<s> <s  style='' > => .exec 사용시
+    //         exp01 = /<(s)>/gi
+    //         exp02 = /<(s)[\s]/gi
+    //         exp1 = /<\/(s)([\s]+)*>/gi //</s> </s >
+    //         exp2 = /(text-decoration)([\s:]+)([a-z0-9]+)([;]?)/gi //text-decoration:  line-through..
+    //     }
+    //     const range = selection.getRangeAt(0)
+    //     debugger
+    //     let content1 = range.cloneContents()
+    //     let node1 = document.createElement("span") //단지 innerHTML에 담기 위해 생성하는 것임
+    //     node1.append(content1) 
+    //     console.log(msgbody.value+"@@@"+node1.outerHTML)
+
+    //     const ele = document.getElementById(editorId)
+    //     let range1 = document.createRange()        
+    //     range1.setStart(ele, 0)
+    //     range1.setEnd(ele, 2)
+    //     range.removeAllRanges()
+    //     selection.addRange(range1)
+    //     debugger
+        
+    //     let str = node1.innerHTML
+    //     if (str == "") str = "&nbsp"
+    //     const strInnerText = node1.innerText
+    //     //위 cloneContents()와 innerHTML로 처리된 str에서는 맨 앞과 맨뒤는 엘레멘트노드가 아닌 항상 텍스트노드임
+    //     //또한, 사용자가 시작태그 또는 종료태그만 있도록 선택해도 자동으로 앞뒤 태그가 붙어서 문제없이 처리 가능함
+    //     //1) 볼드체 판단 : range.commonAncestorContainer를 시작으로 msgContent 전까지 B, Strong, font-weight:bold(bold대신숫자는무시) 체크해 define
+    //     //2) 볼드체 처리 : 추가하든 빼든, 일단 str 안에 있는 모든 볼드체 관련은 span/font-weight:bold로 변환후 (str: 텍스트 or 엘레먼트)
+    //     //- 볼드체를 추가하려면 <span style='font-weight:bold'> + str + </span>으로 변환함
+    //     //- 볼드체를 빼려면 <span style='font-weight:normal'> + str + </span>으로 변환함
+    //     //위가 아닌 다른 방식(예를 들어 chkSelectionInTagFailed - focusNode)으로 처리하려면 경우의 수가 너무 많아 100% 구현이 어려울 것임
+    //     //참고로, wordStyleFailed()와 chkSelectionInTagFailed()는 실패했어도 참고할 만한 코딩이 많으므로 지우지 말기로 함
+    //     let container = range.commonAncestorContainer //startContainer 및 endContainer를 가지는 최상위 노드를 리턴. text일 경우는 그 위 엘레먼트 노드를 구함
+    //     if (container.nodeName == "#text") container = container.parentNode
+    //     let currentNode = container //container와 currentNode 둘 다 필요하므로 분리
+    //     //debugger
+    //     const bool = chkCurTagType(currentNode, type)
+    //     //아래부터는 currentNode가 없어야 함 (위에서 체크용으로만 쓰임). 아래는 container(바로 위 엘레먼트 노드)임을 유의
+    //     //RegExp.$n deprecated. 배열[0]는 매칭 결과 전체 //const rs = exp.exec(str) //if (rs != null) str = str.replace(rs[1], "span")
+    //     str = str.replace(exp01, "<span>")
+    //     str = str.replace(exp02, "<span ")
+    //     str = str.replace(exp1, "</span>") //맨 뒤에 있어 앞의 text가 검색될 수도 있으므로 전체(rs1[0]) 변경 필요 //const rs1 = exp1.exec(str) //if (rs1 != null) str = str.replace(rs1[0], "</span>")
+    //     str = str.replace(exp2, "") //font-weight:~ 제거 //const rs2 = exp2.exec(str) //if (rs2 != null) str = str.replace(rs2[0], "") //rs2[0]는 전체이므로 바로 replace 가능
+    //     const containerInnerText = container.innerText.replace(/\n/g, "") //예) 구름에 \"달 가듯이\" 가는 나그네\n술익는 마을마다 타는 저녁놀 하하 => \n 제거
+    //     //containerInnerText가 strInnerText와 다른데 바로 아래 if를 타면 containerInnerText 모든 문장이 영향을 받는 것임
+    //     //debugger
+    //     if (strInnerText == containerInnerText && container.outerHTML.startsWith("<span maker=\"hushsbay\"")) {
+    //         //maker="hushsbay" 태그에는 다른 속성이나 여기에서 다루는 style말고는 없음. 그러나, 다른 태그의 속성이나 스타일은 추가로 있을 수 있으므로 다루기가 까다로울 것임
+    //         cleanGabageNode(container) //console.log("@@@@@@@"+container.innerHTML)
+    //         if (type == "B") {
+    //             container.style["font-weight"] = (bool) ? "normal" : "bold"
+    //         } else if (type == "S") {
+    //             container.style["text-decoration"] = (bool) ? "none" : "line-through"
+    //         }
+    //         container.innerHTML = container.innerHTML.replace(exp2, "") //전체를 적용하는 것이므로 없애도 될 것임
+    //     } else {
+    //         range.deleteContents()
+    //         let node = document.createElement("span")
+    //         node.innerHTML = str
+    //         if (type == "B") {
+    //             node.style["font-weight"] = (bool) ? "normal" : "bold"
+    //         } else if (type == "S") {
+    //             node.style["text-decoration"] = (bool) ? "none" : "line-through"
+    //         }
+    //         node.setAttribute("maker", "hushsbay")
+    //         range.insertNode(node)
+    //     }
+    //     range.collapse(false)
+    //     inEditor.value.focus()
+    //     //msgbody.value = document.getElementById(editorId).innerHTML //데이터가 필요시 처리하면 됨
+    //     return
+    // }
     
     async function okPopup(kind) {
         try {
@@ -1685,6 +2068,7 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.sockToSend.push({ sendTo: "room", data: { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" }})
+            //gst.realtime.emit("room", { ev: "toggleReact", roomid: chanId, msgid: msgid, from: "toggleReaction" })
             //await refreshMsgDtlWithQryAction(msgid) //await refreshMsgDtlWithQryAction(msgid, rs.data.msgdtl)
         } catch (ex) { 
             gst.util.showEx(ex, true)
@@ -1699,6 +2083,7 @@
             let rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             gst.sockToSend.push({ sendTo: "room", data: { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" }})
+            //gst.realtime.emit("room", { ev: "forwardToChan", roomid: strChanid, msgid: rs.data.newMsgid, from: "okChanDmPopup" })
             const url = gst.util.getUrlForBodyListNewWin(strChanid, rs.data.newMsgid, kind)
             window.open(url)
             /* 1안은 바로 위 window.open인데 사용자 입장에서도 무리없어 보임 (개발 관점에서 효율적이기도 함)
@@ -1798,6 +2183,7 @@
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////##0 아래는 에디터 관련임 : 아직 미완성 !!!!!!!!!!!
     //https://velog.io/@msdio/window%EC%9D%98-Selection%EA%B3%BC-range%EC%97%90-%EB%8C%80%ED%95%B4%EC%84%9C-%EC%95%8C%EC%95%84%EB%B3%B4%EC%9E%90
     //selection 타입 : none, range, caret. range는 유저가 선택한(드래그한) 범위 / caret은 범위가 아닌 특정 위치의 커서
     //collapse : 선택된 상태에서 선택해제 (range 상태에서 caret 상태로 변경)
@@ -1853,6 +2239,82 @@
             return false
         }
     }
+
+    function chkSelectionInTagFailed(tag, str) { //코딩 실패 케이스 (donotdelete)
+        let currentNode = window.getSelection().focusNode
+        while (currentNode && (currentNode.nodeName == '#text' || currentNode.id != editorId)) {
+            if (tag == "B") { //아래는 초창기에 생각한 해법이었으나 focusNode로는 해결이 안되었음
+                //결론은 selection/range내 노드는 여러개 있을 수 있으나 currentNode는 focusNode 기준이므로 한개만 추출됨
+                //예) <p>구름에 "달 <b>가듯이</b>" 가는 나그네<br>술익는 마을마다 <span style="color:red;font-weight:bold">타는 저녁놀</span> 하하</p>
+                //1) '저녁놀'만 선택해도 currentNode.textContent는 '타는 저녁놀' (return true)
+                //2) '저녁놀</span> '을 선택하면 currentNode.textContent는 ' 하하'로 나옴 (return false)
+                //3) '마을마다 <span style="color:red;font-weight:bold">타는 저녁놀'을 선택하면 currentNode.textContent는 '타는 저녁놀' (return true)
+                //4) '마다 <span style="color:red;font-weight:bold">타는 저녁놀</span> 하하'을 선택하면 currentNode.textContent는 '술익는 마을마다' (return false)
+                //결국은 selection의 방향에도 영향 받아서 마지막 커서를 뗀 그 때의 노드가 추출됨 (텍스트 역시 해당 노드의 텍스트임)
+                //그래서, 사용자 기준으로는 본인이 선택한 곳에 분명히 굵게 표시된 2)의 경우도 이 코딩으로는 '하하'로 볼드체가 아니므로 문제 있음
+                //그러나, 다시 생각해보니, 이 focusNode 기준으로 볼드체인지 아닌지만 판단해서 리턴해도 무방할 것으로 보이며
+                //다른 웹에디터도 그리 판단할 거라 보여짐. 다만 아래 remove()는 막고 다른 방안을 모색해야 할 것으로 판단됨
+                //=> 이 함수는 오로지 마지막 커서 기준으로 tag에 속하는지 알아보는 것으로만 사용하기                
+                if (currentNode.tagName === tag || currentNode.tagName === "STRONG" || 
+                    (currentNode.style && currentNode.style["font-weight"] === "bold")) { //#text인 경우는 .style 없음
+                    if (!hush.util.isvoid(str)) {
+                        let idxFound = 1
+                        const arr = currentNode.textContent.split(str), brr = [] //arr length는 무조건 2 (str은 빠지므로)
+                        brr.push(arr[0])
+                        brr.push(str) //str => idxFound = 1
+                        brr.push(arr[1])
+                        for (let i = 0; i < brr.length; i++) { //https://andreiglingeanu.me/rename-element-tag/
+                            if (brr[i] == "") continue
+                            const ele = document.createElement("SPAN") //태그 이름만 변경하기 (속성은 모두 복사)
+                            if (i != idxFound) {
+                                [...currentNode.attributes].map(({ name, value }) => {
+                                    ele.setAttribute(name, value)
+                                })
+                            } else {
+                                [...currentNode.attributes].map(({ name, value }) => {
+                                    ele.setAttribute(name, value)
+                                })
+                                ele.style["font-weight"] = "normal"
+                            }
+                            ele.textContent = brr[i]
+                            currentNode.parentNode.insertBefore(ele, currentNode)
+                        }
+                        currentNode.remove()
+                    }
+                    return true
+                }
+            } else if (tag == "S") {
+            }
+            currentNode = currentNode.parentNode		
+        }
+        return false
+    }
+
+    function chkCurTagType(currentNode, type) {
+        while (currentNode && currentNode.id != editorId) {
+            if (type == "B") {
+                if (currentNode.tagName == type || currentNode.tagName == "STRONG" || (currentNode.style && currentNode.style["font-weight"] === "bold")) {
+                    return true
+                } else if (currentNode.style && currentNode.style["font-weight"] && currentNode.style["font-weight"] != "bold") {
+                    return false
+                }
+            } else if (type == "S") {
+                if (currentNode.tagName == type || (currentNode.style && currentNode.style["text-decoration"] === "line-through")) {
+                    return true
+                } else if (currentNode.style && currentNode.style["text-decoration"] && currentNode.style["text-decoration"] != "text-decoration") {
+                    return false
+                }
+            }
+            currentNode = currentNode.parentNode
+        }
+        return false
+    }
+
+    function htmlView() {
+        showHtml.value = true
+        msgbody.value = document.getElementById(editorId).innerHTML
+    }
+    ////////////////////////////////////////////////////////////////////////////////////에디터 관련 끝
 
     async function procClearSearch() {
         if (searchText.value == "") userSearched.value = []
@@ -1946,93 +2408,6 @@
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
-    }
-
-    //1) 왼쪽 Panel -> MsgList 2) MsgList(부모) -> MsgList(자식)
-    async function procMainToMsglist(kind, obj) {
-        if (kind == "realtime") {
-            chkDataLogEach(obj)
-        } else if (kind == "updateProfile") {
-            console.log(obj.userid+"@@@@") 
-            if (!chandtlObj.value[obj.userid]) return //소켓 'all'을 통해 수신된 것이므로 해당 사용자아이디가 있는 경우만 처리하면 됨
-            console.log(obj.userid+"@@@@####") 
-            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
-            const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
-            if (!rs) return
-            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
-        } else if (kind == "setVip") {
-            const res = await axios.post("/user/getVip", null)
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
-        } else if (kind == "chkTyping") { //###05
-            handleTypingInfo(obj)
-        } else if (kind == "chkAlive") { //###05
-            handleAliveInfo(obj)
-            if (memberlistRef.value) memberlistRef.value.handleAliveInfo(obj) //home과 dm에도 memberlistRef handleAliveInfo 호출하는 것 있음
-        }
-    }
-
-    async function procFromParent(kind, obj) { //리얼타임 반영시에도 아래를 호출하므로 아래는 지우지 말 것
-        if (kind == "refreshMsg") {
-            const rs = await getMsg({ msgid: obj.msgid })
-            if (rs == null) return
-            refreshWithGetMsg(rs, obj.msgid)
-        } else if (kind == "deleteMsg") {
-            const idx = msglist.value.findIndex((item) => item.MSGID == obj.msgid)
-            if (idx > -1) {
-                msglist.value.splice(idx, 1)
-                if (idx == 0) handleEvFromChild({ type: "close" }) //부모글이 삭제된다는 것은 자식글이 없으므로 닫아도 된다는 것임 
-            }
-        } else if (kind == "addChildFromBody") {
-            await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
-        } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
-            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
-            const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
-            if (!rs) return
-            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
-        }
-    }
-
-    function evToPanel(param) { //말 그대로 패널에게 호출하는 것임 (자식에게 하는 것이 아님)
-        if (route.fullPath.includes('/body/msglist')) return //패널이 없는 경우임
-        emits("ev-to-panel", param)
-    }   
-
-    function evToParent(obj) { //자식에서만 사용됨
-        emits('ev-to-parent', obj)
-    }
-
-    function handleTypingInfo(obj) {
-        if (obj.roomid == chanId) {
-            if (obj.typing) {
-                if (!memIdTyping.value.includes(obj.userid)) {
-                    memIdTyping.value.push(obj.userid)
-                    memNmTyping.value.push(obj.usernm)
-                }
-            } else {
-                const idx = memIdTyping.value.indexOf(obj.userid)
-                if (idx > -1) {
-                    memIdTyping.value.splice(idx, 1)
-                    memNmTyping.value.splice(idx, 1)
-                }
-            }
-        }
-    }
-
-    function handleAliveInfo(obj) {
-        //console.log(JSON.stringify(obj), '##handleAliveInfo')
-        //if (obj.roomid == chanId) {
-            const len = chandtl.value.length
-            for (let i = 0; i < len; i++) {
-                const row = chandtl.value[i]
-                if (obj.userids.includes(row.USERID)) {
-                    chandtlObj.value[row.USERID].alive = true
-                } else {
-                    chandtlObj.value[row.USERID].alive = false
-                }
-            }
-        //}
     }
 </script>
 
@@ -2180,10 +2555,18 @@
                         <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
                         <span v-if="adminShowID" style="margin-left:9px;color:dimgray">{{ row.MSGID }}</span>
                         <span style="margin-left:9px;color:dimgray">{{ hush.util.displayDt(row.CDT) }}</span>
+                        <!-- <span class="aliveMark" :style="{ backgroundColor: chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'var(--second-color)' : 'darkgray' }">
+                            {{ chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'On' : 'Off' }}
+                        </span> -->
+                        <!-- <span v-if="row.firstNotYet" style="margin-left:9px;color:maroon;font-weight:bold">아직 안읽음 {{ row.firstNotYet == "child" ? "(댓글)" : "" }}</span> -->
                     </div>
                     <div style="width:100%;display:flex;margin:10px 0">
                         <div style="width:50px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
                             <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
+                            <!-- <div style="display:flex;align-items:center">
+                                <img v-if="row.act_later=='later'" class="coImg14"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_later.png')" title="나중에">
+                                <img v-if="row.act_fixed=='fixed'" class="coImg14"  style="margin-top:5px" :src="gst.html.getImageUrl('violet_fixed.png')" title="고정">
+                            </div> -->
                         </div>
                         <div style="width:calc(100% - 50px);overflow-x:auto">
                             <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
@@ -2289,6 +2672,7 @@
                 <div v-if="msglist.length == 0" style="height:100%;display:flex;justify-content:center;align-items:center" @click="procClearSearchWhenFocus">
                     <img style="width:100px;height:100px" src="/src/assets/images/color_slacklogo.png"/>
                 </div><!--observerBottomTarget은 color 및 minHeight 유의-->
+                <!-- <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" :style="{ minHeight: showBottomObserver ? '0px' : '0px', color:'red', backgroundColor: 'yellow' }">{{ hush.cons.endOfData }}</div> -->
                 <div v-show="afterScrolled" ref="observerBottomTarget" class="coObserverTarget" style="min-height:0px;color:transparent">{{ hush.cons.endOfData }}</div>
             </div>
             <div v-if="tabForNewWin==''" class="chan_center_footer">
