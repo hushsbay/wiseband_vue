@@ -11,8 +11,9 @@ export const sock = { socket: null } //export는 immutable이므로 바로 변�
 export function connectSock() {
     const [hostnameStr, domainStr] = hush.util.getHost()
     const query = { token : VueCookies.get("token") } //hush.cons.appName은 namespace (서버와 동일하게 가져 가야 함)
-    //sock.socket = io('http://localhost:3000/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query })
-    sock.socket = io(domainStr + '/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query })
+    //sock.socket = io('http://localhost:3000/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query })        
+    sock.socket = io(domainStr + '/' + hush.cons.appName, { forceNew: false, reconnection: true, query: query })
+    //autoConnect:false => connect()를 호출하기 전엔 서버 연결 시도하지 않음. reconnection:true => 연결이 끊겼을 때 자동으로 재연결 시도
     sock.socket.on("connect", () => {
         console.log("socket connected")
         connected.value = true
