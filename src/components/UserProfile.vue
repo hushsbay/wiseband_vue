@@ -12,35 +12,15 @@
     const g_userid = gst.auth.getCookie("userid")
 
     let show = ref(false)
-    //let editmode = ref(false)
-    //let user = ref(null), usernm = ref(''), 
     let pwdOld = ref(''), pwdNew = ref(''), pwdAgain = ref('')
-    //let notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false)
 
     async function open() {
         show.value = true
-        //gst.realtime.getUserInfo()
-        // const res = await axios.post("/user/getUserInfo") //2군데 동일 코딩
-        // const rs = gst.util.chkAxiosCode(res.data)
-        // if (!rs) return
-        // user.value = rs.data
-        // usernm.value = user.value.USERNM
-        // setImgUrl(user.value.PICTURE)
-        // if (rs.list) { //여기서 list는 array가 아닌 object
-        //     const row = rs.list
-        //     notiOff.value = row.NOTI_OFF == "Y" ? true : false
-        //     bodyOff.value = row.BODY_OFF == "Y" ? true : false
-        //     authorOff.value = row.AUTHOR_OFF == "Y" ? true : false
-        // }
     }
 
     function close() {
         show.value = false
     }
-
-    // function setImgUrl(pict) {
-    //     user.value.url = (pict) ? hush.util.getImageBlobUrl(pict.data) : null
-    // }
 
     async function changePwd() {
         try {
@@ -63,17 +43,11 @@
     
     async function changeUserName() { //실사용도 가능한 것이지만 현실적으로 보면 테스트용에 가까움 (테스트시 아이디의 이름 변경하는 것임)
         try {
-            //if (!editmode.value) {
-            //    editmode.value = true
-            //} else {
-                const res = await axios.post("/user/setUserInfo", { usernm: gst.user.USERNM })
-                const rs = gst.util.chkAxiosCode(res.data)
-                if (!rs) return
-                //user.value.USERNM = usernm.value
-                gst.auth.setCookie("usernm", gst.user.USERNM)
-                emits("evToMain", gst.user)
-                //editmode.value = false
-            //}
+            const res = await axios.post("/user/setUserInfo", { usernm: gst.user.USERNM })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            gst.auth.setCookie("usernm", gst.user.USERNM)
+            emits("evToMain", gst.user)
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
@@ -88,7 +62,6 @@
             const rs = gst.util.chkAxiosCode(res.data)
             if (!rs) return
             e.target.value = '' //clear하지 않으면 동일한 파일명이 바로 올라가지 않음 (change event 관련)
-            //setImgUrl(rs.data.PICTURE)
             gst.user.url = (rs.data.PICTURE) ? hush.util.getImageBlobUrl(rs.data.PICTURE.data) : null
             emits("evToMain", gst.user)
         } catch (ex) { 
@@ -120,8 +93,6 @@
                     <div v-if="gst.user" class="popupHeaderLeft">
                         <img v-if="gst.user && gst.user.url" :src="gst.user.url" class="coImg64" style="border-radius:32px">
                         <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg64">
-                        <!-- <input v-if="editmode" type="text" style="width:200px;margin-left:9px" v-model="gst.user.USERNM" @keydown.enter="changeUserName" spellcheck="false"/>
-                        <span v-else style="margin-left:9px;font-size:16px;font-weight:bold">{{ gst.user.USERNM }}</span> -->
                         <input type="text" style="width:200px;margin-left:9px" v-model="gst.user.USERNM" @keydown.enter="changeUserName" spellcheck="false"/>
                     </div>
                     <div class="popupHeaderRight">
@@ -161,10 +132,7 @@
                     </div>
                 </div>
                 <div class="popupFooter">
-                    <!-- <div class="popupFooterLeft"></div>
-                    <div class="popupFooterLeft"> -->
-                        <div class="btn_basic" @click="close">닫기</div>
-                    <!-- </div> -->
+                    <div class="btn_basic" @click="close">닫기</div>
                 </div>      
             </div>
             <div class="overlay" @click="close"></div>
@@ -184,12 +152,6 @@
     .overlay {
         position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index: 999;
     }
-
-    /* .popupMenu { /top:0px;bottom:0px;height:380px; 3개는 props.popupPos로 표시 /
-        position:fixed;width:300px;left:60px;
-        display:flex;flex-direction:column;z-index:9999;
-        background:white;border:1px solid var(--border-color);border-radius:8px;box-shadow:2px 2px 2px gray
-    } */
 
     .popupHeader {
         width:calc(100% - 12px);height:70px;padding:6px;
@@ -217,12 +179,6 @@
         width:calc(100% - 12px);height:30px;padding:15px 5px 0 0;
         display:flex;justify-content:flex-end;align-items:center;border-top:1px solid lightgray        
     }
-
-    /* .popupFooterLeft {
-        padding-left:8px;
-        display:flex;align-items:center;
-        color:steelblue;font-weight:bold
-    } */
 
     .btn_basic { 
         height:28px;margin-left:10px;padding:0 8px;display:flex;justify-content:center;align-items:center;

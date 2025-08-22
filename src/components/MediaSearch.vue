@@ -122,7 +122,7 @@
         gst.objSaved[tab.value].scrollY = posY
     }
 
-    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce가 필요없음 //import { debounce } from 'lodash'
+    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce 필요없음 //import { debounce } from 'lodash'
         const sTop = scrollArea.value.scrollTop     
         let which = (sTop <= prevScrollY) ? "up" : "down" //down만 필요하므로 stop,up은 필요없으므로 <=로 체크함
         prevScrollY = sTop

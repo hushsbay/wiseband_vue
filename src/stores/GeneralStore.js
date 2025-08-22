@@ -112,8 +112,7 @@ const GeneralStore = defineStore('General', () => {
             const res = await axios.post("/user/getUserInfo")
             const rs = util.chkAxiosCode(res.data)
             if (!rs) return false
-            user.value = rs.data
-            //usernm.value = user.value.USERNM
+            user.value = rs.data //usernm.value = user.value.USERNM
             user.value.url = (user.value.PICTURE) ? hush.util.getImageBlobUrl(user.value.PICTURE.data) : null
             if (rs.list) { //여기서 list는 array가 아닌 object
                 const row = rs.list

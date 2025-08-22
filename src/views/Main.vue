@@ -15,44 +15,194 @@
     const router = useRouter()
 
     const g_userid = gst.auth.getCookie("userid")
-    const g_usernm = gst.auth.getCookie("usernm")
 
     const POPUPHEIGHT = 300, DATA_EV_LOGIC_NEEDED ="chkTyping,chkAlive,updateProfile,setVip,setNoti"
     const popupMenuOn = ref(false) //바로 아래 popupMenuPos는 main_side내 팝업메뉴 (left는 고정. top만 결정하면 됨) 
     const popupMenuPos = ref({ top: '0px', bottom: '0px', height: POPUPHEIGHT + 'px' })
     const popupData = ref({ id: '', lines: false })
-    const seeMore = ref(false)
-    const listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel(사용자가 설정한 메뉴) + listUnSel(사용자가 설정하지 않은 메뉴)
-    let listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel(사용자가 설정하지 않은 메뉴) + listNotSeen(화면에서 육안으로 안보이는 메뉴) = 더보기에서의 수식
+    const seeMore = ref(false), listAll = ref([]), listSel = ref([]), listUnSel = ref([]) //listAll = listSel(사용자가 설정한 메뉴) + listUnSel(사용자가 설정하지 않은 메뉴)
+    const listNotSeen = ref([]), listPopupMenu = ref([]) //listPopupMenu = listUnSel(사용자가 설정하지 않은 메뉴) + listNotSeen(화면에서 육안으로 안보이는 메뉴) = 더보기에서의 수식
     //## 더보기를 누르면 사용자가 설정하지 않은 메뉴와 화면에서 육안으로 보이지 않는 메뉴가 (화면 사이즈가 변함에 따라) 실시간으로 보여져야 함
 
     let prevX, prevY
-    let keepAliveRef = ref(null)
-    let mediaPopupRef = ref(null), searchText = ref('')
-    let userProfileRef = ref(null) //, user = ref(null)
-    let bottomMsgListPopupRef = ref(null)
+    let keepAliveRef = ref(null), mediaPopupRef = ref(null), searchText = ref(''), userProfileRef = ref(null), bottomMsgListPopupRef = ref(null)
 
     //리얼타임 반영
-    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 30000 //TIMERSEC_LONG은 서버리스탓시 재접속을 위해서도 사용 //, cntChanActivted = ref(0), cntNotChanActivted = ref(0)
-    let logdt = '', logdtDisp = ref(''), logdtColor = ref('yellow') //화면 표시용
+    const TIMERSEC_SHORT = 1000, TIMERSEC_LONG = 30000, TIMER_SOCKET = 3 //TIMERSEC_LONG은 서버리스탓시 재접속을 위해서도 사용
+    let logdt = '', logdtDisp = ref(''), logdtColor = ref('yellow'), tmp = ref('') //화면 표시용
     let panelRef = ref(null), notyetCntHome = ref(0), notyetCntDm = ref(0)
     let bc2, realtimeJobDone, pageShown = 'Y', timeoutShort, timeoutLong
-    //let notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false)
-    let tmp = ref('')
 
-    function startSocket() {
+    onMounted(async () => {
+        try { //BroadcastChannel은 각 윈도우간의 통신이므로 onMounted가 한번만 일어나는 Main.vue 또는 Main.vue가 없는 MsgList.vue에서만 설정하기로 함
+            bc2 = new BroadcastChannel("wbRealtime2") //bc2는 탭의 Main.vue <=> 다른 탭의 MsgList.vue (Main.vue 없는 MsgList.vue에서의 bc2. 이 경우 윈도우탭별로 1개만 존재해야 하는 동작에 문제없음)
+            bc2.onmessage = (e) => { getBroadcast2(e.data) }
+            pageShownChanged(pageShown)
+            const res = await axios.post("/menu/qry", { kind : "side" })
+            const rs = gst.util.chkAxiosCode(res.data)
+            if (!rs) return
+            realtimeJobDone = 'Y'
+            logdt = rs.data.dbdt //로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
+            listAll.value = rs.list
+            listSel.value = rs.list.filter(x => x.USERID != null) //B.USERID가 있으면 내게 설정된 메뉴
+            listUnSel.value = rs.list.filter(x => x.USERID == null) //null이면 내게 설정되지 않은 메뉴
+            window.addEventListener('resize', () => { decideSeeMore() })
+            gst.realtime.getUserInfo()
+            await nextTick() //decideSeeMore()에서 .cntTarget가 읽히지 않아 추가
+            decideSeeMore()
+            sideClickOnLoop(null, true)
+            startSocket()
+            procTimerShort() 
+            procTimerLong()
+            document.addEventListener("visibilitychange", () => { //alt+tab이나 태스크바 클릭시 안먹힘
+                pageShown = (document.hidden) ? 'N' : 'Y'         
+                pageShownChanged(pageShown)                
+            }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 알림 등 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
+            window.addEventListener('focus', async function() {
+                pageShown = 'Y'
+                pageShownChanged(pageShown) //console.log('focus: ' + sessionStorage.chanidFromNoti)
+                if (sessionStorage.chanidFromNoti) { //알림(noti)바를 클릭한 경우임 - GeneralStore.js의 procNoti() 참조
+                    const nm = (sessionStorage.subkindFromNoti == "GS") ? "dm" : "home"
+                    if (nm == "home") {
+                        localStorage.wiseband_lastsel_chanid = sessionStorage.chanidFromNoti
+                    } else {
+                        localStorage.wiseband_lastsel_dmchanid = sessionStorage.chanidFromNoti
+                    }
+                    if (gst.selSideMenu.substring(3).toLowerCase() == nm) {                         
+                        //이미 사이드메뉴가 선택되어 있는 상태인 경우 해당 채널이 열려 있는지 먼저 체크 (열려 있으면 메시지 도착 버튼이 보일테구 아니라면 그 채널로 이동하면 됨)
+                        await panelRef.value.procMainToPanel('procRows')
+                    } else {
+                        await goRoute({ name: nm }) //home or dm
+                    }                    
+                    sessionStorage.chanidFromNoti = ''
+                    sessionStorage.subkindFromNoti = '' //sessionStorage.msgidFromNoti = '' //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
+                }
+            })
+            window.addEventListener('blur', function() {
+                pageShown = 'N'
+                pageShownChanged(pageShown) //console.log('blur: ' + sessionStorage.chanidFromNoti)
+            })
+            window.focus() //focus() 먼저 처리해야 blur()도 발생함
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    })
+
+    onUnmounted(() => {
+        pageShownChanged('N')
+        clearTimeout(timeoutShort)
+        clearTimeout(timeoutLong)
+        if (bc2) bc2.close()
+    })
+
+    watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조 //console.log("Main gst.selSideMenu.." + gst.selSideMenu)
+        displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
+    })
+
+    watch(() => gst.sockToSend, () => { //###02
+        if (gst.sockToSend.length ==  0) return
+        if (!sock.socket || !sock.socket.connected) return //while (gst.sockToSend.length > 0) {        
+        const obj = gst.sockToSend[0] //console.log("##"+JSON.stringify(obj))
+        if (DATA_EV_LOGIC_NEEDED.includes(obj.data.ev)) {
+            sock.socket.emit(obj.sendTo, obj.data) //별도 소켓 관련 로직 필요
+        } else { //아래는 함수내 gst.realtime.set()을 호출하는 루틴이 포함되어 있음
+            gst.realtime.emit(obj.sendTo, obj.data)
+        }
+        gst.sockToSend.splice(0, 1) //console.log("gst.sockToSend: " + gst.sockToSend.length)
+    }, { deep: true }) //gst.sockToSend가 Array이므로 deep=true 옵션이 필요함
+
+    function getBroadcast2(data) { //###02 //console.log("@@"+JSON.stringify(data))
+        if (data.sendTo && data.data && data.data.ev) {
+            if (DATA_EV_LOGIC_NEEDED.includes(data.data.ev)) {
+                sock.socket.emit(data.sendTo, data.data) //별도 소켓 관련 로직 필요
+            } else { //아래는 함수내 gst.realtime.set()을 호출하는 루틴이 포함되어 있음
+                gst.realtime.emit(data.sendTo, data.data)
+            }
+        }
+    }
+
+    function displayMenuAsSelected(popupId) {
+        for (let i = 0; i < listSel.value.length; i++) {
+            if (listSel.value[i].ID == popupId) {
+                listSel.value[i].sel = true
+            } else {
+                listSel.value[i].sel = false
+            }
+        }
+        localStorage.wiseband_lastsel_menu = popupId
+    }
+
+    function pageShownChanged(ps) { //ps=pageShown(Y or N) //이벤트 : visibilityChange, focus, blur, onMounted, OnUnmounted, onActivated, onDeactivated
+        if (gst.chanIdActivted) gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", ps)
+    }
+
+    function decideSeeMore() {
+        try {
+            listNotSeen.value = []
+            const sideTop = document.querySelector('#sideTop')
+            const sizeH = sideTop.offsetTop + sideTop.offsetHeight
+            let targetAll = document.querySelectorAll('.cntTarget') //더보기 제외 console.log(targetAll.length)
+            targetAll.forEach(menuDiv => {
+                if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) { //사이드바에서 육안으로 안보이면 listNotSeen에 추가
+                    const found = listAll.value.find((item) => item.ID == menuDiv.id.replace("Target", ""))
+                    if (found) listNotSeen.value.push(found) //console.log(menuDiv.id)
+                }
+            }) //이제 (사용자가 원래 선택하지 않은 메뉴 포함해 화면이 작아진 후) 안 보이는 메뉴가 있으면 더보기 버튼에서 확인 가능        
+            seeMore.value = (listUnSel.value.length > 0 || listNotSeen.value.length > 0) ? true : false
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function sideClickOnLoop(selMenu, onMounted) {
+        try {
+            let idx = -1    
+            let lastSelMenu = selMenu ? selMenu : localStorage.wiseband_lastsel_menu
+            if (lastSelMenu) {
+                idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
+            } else {
+                lastSelMenu = "mnuHome"
+            }
+            const idxReal = (idx == -1) ? 0 : idx
+            const row = listSel.value[idxReal]
+            sideClick(lastSelMenu, row, onMounted)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    //더보기 메뉴는 로컬에 저장하기 않는 전제임 (더보기 누르면 나오는 목록 클릭시 저장)
+    function sideClick(popupId, row, onMounted) { //row까지 argument로 받는 것은 좀 과하다 싶지만 일단 개발 편의 고려해 처리하고자 함
+        try {
+            popupMenuOn.value = false
+            const id = (popupId == "mnuSeeMore") ? row.ID : popupId //mnuSeeMore일 경우는 무조건 mnuHome
+            for (let i = 0; i < listSel.value.length; i++) {
+                if (listSel.value[i].sel) listSel.value[i].sel = false
+            }
+            row.sel = true
+            if (!onMounted && id == gst.selSideMenu) return //사용자 최초 시작시엔 무조건 HomePanel 호출
+            if (popupId != "mnuSeeMore") {
+                console.log("Main 메뉴 클릭 gst.selSideMenu.." + gst.selSideMenu)
+                gst.selSideMenu = id                
+                localStorage.wiseband_lastsel_menu = id
+            }
+            procMenu[id].call(null, row, onMounted)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function startSocket() { //아래 5가지(room,myself..)는 서버의 evnets.gateway.ts와 매칭됨
         connectSock()
         sock.socket.off("room").on("room", async (data) => {
-            if ("chkTyping".includes(data.ev)) { //###03
-                //console.log(JSON.stringify(data)+"@@@@@@@-----")
+            if ("chkTyping".includes(data.ev)) { //###03 //console.log(JSON.stringify(data)+"@@@@@@@-----")
                 if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data) //###04
                 bc2.postMessage({ sendTo: "room", data: data }) //###04 혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
             } else {
                 gst.realtime.set()
             }
         })
-        sock.socket.off("myself").on("myself", async (data) => {
-            //console.log(JSON.stringify(data)+"@@@@@@@-----")
+        sock.socket.off("myself").on("myself", async (data) => { //console.log(JSON.stringify(data)+"@@@@@@@-----")
             if ("chkAlive".includes(data.ev)) { //###03                
                 if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data) //###04
                 bc2.postMessage({ sendTo: "myself", data: data }) //###04 혹시 Main.vue없는 msgList.vue만의 창이 떠 있으면 그쪽으로 소켓수신데이터를 보내 처리하는 것임
@@ -62,16 +212,11 @@
                 if (data.memberIdLeft.includes(g_userid) && (gst.selSideMenu == "mnuHome" || gst.selSideMenu == "mnuDm")) {
                     await panelRef.value.procMainToPanel('procRows') //해당 노드 제거
                 }
-            //} else if (data.ev == "qrySock") { //admin 전용            
-            //    console.log(JSON.stringify(data)+"^^^^^^^^^^^^^^^^^^^")
-            //    rsSock.value = data.list
-            //    debugger
             } else {
                 gst.realtime.set()
             }
         })
-        sock.socket.off("all").on("all", async (data) => {
-            //console.log(JSON.stringify(data)+"@@@@@@@-----all")
+        sock.socket.off("all").on("all", async (data) => { //console.log(JSON.stringify(data)+"@@@@@@@-----all")
             if ("updateProfile".includes(data.ev)) { 
                 if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist(data.ev, data)
             } else {
@@ -93,14 +238,12 @@
                 gst.realtime.set()
             }
         })
-        sock.socket.off("member").on("member", async (data) => {
+        sock.socket.off("member").on("member", async (data) => { //현재까지 미사용. 서버의 evnets.gateway.ts 참조
             gst.realtime.set()
         })
     }
-
-    //pageShownChanged()가 들어갈 이벤트 : visibilityChange, focus, blur, onMounted, OnUnmounted, onActivated, onDeactivated
-    //Main.vue가 없는 별도 창의 MsgList.vue는 bc2로 데이터를 받은 후 그 창 독립적으로 알림수신여부를 판단해 처리하기로 함
-    async function chkDataLogEach() {
+    
+    async function chkDataLogEach() { //Main.vue가 없는 별도 창의 MsgList.vue는 bc2로 데이터를 받은 후 알림수신여부를 판단해 처리
         try {
             if (realtimeJobDone != 'Y') return
             realtimeJobDone = ''
@@ -108,16 +251,13 @@
             logdtColor.value = logdtColor.value == 'yellow' ? 'lightgreen' : 'yellow' //화면 표시용
             let arrForChanActivted = []
             let arrForNotChanActivted = []
-            //cntChanActivted.value = 0
-            //cntNotChanActivted.value = 0
             const res = await axios.post("/chanmsg/qryDataLogEach", { logdt : logdt, noMsg: true })
             let rs = gst.util.chkAxiosCode(res.data, true)
             if (!rs) {
                 realtimeJobDone = 'Y'
                 return
             }
-            gst.util.setSnack("")
-            //tmp.value = gst.auth.getCookie("token")
+            gst.util.setSnack("") //tmp.value = gst.auth.getCookie("token")
             if (rs.list.length > 0) bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
             const listByMenu = rs.data.listByMenu //GS와 WS의 notyet count 배열임
@@ -136,13 +276,11 @@
                 //'chan' TYP는 패널의 각 행에 대한 CUD처리를 위한 목적지인 Main(arrForNotChanActivted)에서도 해야 하고 
                 //MsgList 상단의 채널명/멤버이미지를 위해서도 (새창으로도) 열려 있는 MsgList(arrForChanActivted)로도 보내져야 함
                 if (gst.chanIdActivted) arrForChanActivted = rs.list.filter(x => {
-                    return (x.CHANID == gst.chanIdActivted) //x.TYP == 'group'인 경우는 여기로 오지 않으므로 MsgList의 그룹명은 현재 업데이트 안됨
+                    return (x.CHANID == gst.chanIdActivted) //x.TYP == 'group'인 경우는 여기로 오지 않음
                 }) //MsgList로 전달하는 것임
                 arrForNotChanActivted = rs.list.filter(x => { 
                     return (x.CHANID != gst.chanIdActivted || x.TYP == 'chan' || x.TYP == 'group')
                 }) //각 패널에 전달하는데 패널마다 채널 단위 또는 메시지 단위로 다르게 전달해야 함
-                //cntChanActivted.value = arrForChanActivted.length //화면 표시용
-                //cntNotChanActivted.value = arrForNotChanActivted.length //화면 표시용
                 if (arrForNotChanActivted.length > 0) { //MsgList에 열려 있지 않은 채널데이터들에 대한 리얼타임 반영
                     let realShown
                     const objChanid = gst.objByChanId[gst.chanIdActivted]
@@ -156,7 +294,6 @@
                         const row = arrForNotChanActivted[i]
                         if (gst.selSideMenu == "mnuHome") { //채널 단위로 읽음처리 관련만 전달하면 됨
                             if (row.TYP == 'chan' || row.TYP == 'group') {
-                                console.log("6767")
                                 await panelRef.value.procMainToPanel('procRows')
                             } else {
                                 await panelRef.value.procMainToPanel('updateNotyetCnt', row)
@@ -204,7 +341,7 @@
         if (gst.timerShort >= 0) {
             await chkDataLogEach()
             gst.timerShort += 1
-            if (gst.timerShort >= 3) gst.timerShort = -1 //3초정도만 리얼타임으로 처리하고 그 이후엔 다시 Long Timer로 전환
+            if (gst.timerShort >= TIMER_SOCKET) gst.timerShort = -1 //TIMER_SOCKET초정도만 리얼타임으로 처리하고 그 이후엔 다시 Long Timer로 전환
         }        
         timeoutShort = setTimeout(function() { procTimerShort() }, TIMERSEC_SHORT) //procTimerShort() }.bind(this)
     }
@@ -213,135 +350,6 @@
         if (gst.timerShort == -1) await chkDataLogEach()
         timeoutLong = setTimeout(function() { procTimerLong() }, TIMERSEC_LONG) //procTimerLong() }.bind(this)
     }
-
-    function pageShownChanged(ps) { //ps=pageShown
-        if (gst.chanIdActivted) gst.realtime.setObjToChan(gst.chanIdActivted, "realShown", ps)
-    }
-
-    function getBroadcast2(data) { //###02
-        //console.log("chkTyping#########"+JSON.stringify(data))
-        if (data.sendTo && data.data && data.data.ev) { //소켓통신 관련
-            if (DATA_EV_LOGIC_NEEDED.includes(data.data.ev)) {
-                sock.socket.emit(data.sendTo, data.data) //data polling 없이 별도 로직 필요함
-            } else { //아래는 함수내 gst.realtime.set()을 호출하는 루틴이 더 있음 (위는 단순 소켓 전송)
-                gst.realtime.emit(data.sendTo, data.data)
-            }
-        }
-    }
-
-    onMounted(async () => {
-        try { //BroadcastChannel은 각 윈도우간의 통신이므로 onMounted가 한번만 일어나는 Main.vue 또는 Main.vue가 없는 MsgList.vue에서만 설정하기로 함 (아래 bc2)
-            bc2 = new BroadcastChannel("wbRealtime2") //각 탭의 Main.vue <=> MsgList.vue (Main.vue 없는 MsgList.vue에서의 bc2이므로 이 경우도 윈도우탭별로 1개만 존재해야 하는 동작에 문제없음)
-            bc2.onmessage = (e) => { getBroadcast2(e.data) }
-            pageShownChanged(pageShown)
-            const res = await axios.post("/menu/qry", { kind : "side" })
-            const rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            realtimeJobDone = 'Y'
-            logdt = rs.data.dbdt //앱 로드후 최초로 /menu/qry 호출한 시각으로 그 직전까지 들어온 메시지는 별도로 안읽은 메시지로 가져오기로 함
-            listAll.value = rs.list
-            listSel.value = rs.list.filter(x => x.USERID != null)
-            listUnSel.value = rs.list.filter(x => x.USERID == null)
-            window.addEventListener('resize', () => { decideSeeMore() })
-            // const res1 = await axios.post("/user/getUserInfo") //2군데 동일 코딩
-            // const rs1 = gst.util.chkAxiosCode(res1.data)
-            // if (!rs1) return
-            // user.value = rs1.data
-            // setImgUrl(user.value.PICTURE)
-            // if (rs1.list) { //여기서 list는 array가 아닌 object
-            //     const row = rs1.list
-            //     notiOff.value = row.NOTI_OFF == "Y" ? true : false
-            //     bodyOff.value = row.BODY_OFF == "Y" ? true : false
-            //     authorOff.value = row.AUTHOR_OFF == "Y" ? true : false
-            // }
-            gst.realtime.getUserInfo()
-            await nextTick() //아니면 decideSeeMore()에서 .cntTarget가 읽히지 않아 문제 발생
-            decideSeeMore()
-            sideClickOnLoop(null, true)
-            startSocket()
-            procTimerShort() 
-            procTimerLong() //visibilitychange : https://stackoverflow.com/questions/28993157/visibilitychange-event-is-not-triggered-when-switching-program-window-with-altt
-            document.addEventListener("visibilitychange", () => { //alt+tab이나 태스트바 클릭시 안먹힘 https://fightingsean.tistory.com/52
-                if (document.hidden) {
-                    pageShown = 'N' 
-                } else {
-                    pageShown = 'Y'         
-                }
-                pageShownChanged(pageShown)                
-            }) //아래 2개는 듀얼 모니터로 테스트시에는 다른쪽에서 누르면 또 다른 한쪽은 항상 blur 상태이므로 관련 테스트가 제대로 안될 것임 (제대로 테스트하려면 2대를 놓고 해야 함)
-            window.addEventListener('focus', async function() {
-                pageShown = 'Y'
-                pageShownChanged(pageShown)
-                console.log('focus: ' + sessionStorage.chanidFromNoti)
-                if (sessionStorage.chanidFromNoti) { //알림(noti)바를 클릭한 경우임 - GeneralStore.js의 procNoti() 참조
-                    const nm = (sessionStorage.subkindFromNoti == "GS") ? "dm" : "home"
-                    if (nm == "home") {
-                        localStorage.wiseband_lastsel_chanid = sessionStorage.chanidFromNoti
-                    } else {
-                        localStorage.wiseband_lastsel_dmchanid = sessionStorage.chanidFromNoti
-                    }
-                    if (gst.selSideMenu.substring(3).toLowerCase() == nm) {                         
-                        //이미 사이드메뉴가 선택되어 있는 상태인 경우 해당 채널이 열려 있는지 먼저 체크 (열려 있으면 메시지 도착 버튼이 보일테구 아니라면 그 채널로 이동하면 됨)
-                        await panelRef.value.procMainToPanel('procRows')
-                    } else {
-                        await goRoute({ name: nm }) //home or dm
-                    }                    
-                    sessionStorage.chanidFromNoti = ''
-                    sessionStorage.subkindFromNoti = '' //sessionStorage.msgidFromNoti = '' //사실, msgid까지 특정해서 열지 않아 막음 (슬랙도 제공하지 않고 있음)
-                }
-            })
-            window.addEventListener('blur', function() {
-                pageShown = 'N'
-                pageShownChanged(pageShown)
-                console.log('blur: ' + sessionStorage.chanidFromNoti)
-            })
-            window.focus() //focus() 먼저 처리해야 blur()도 발생함
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    })
-
-    onUnmounted(() => {
-        pageShownChanged('N')
-        clearTimeout(timeoutShort)
-        clearTimeout(timeoutLong)
-        if (bc2) bc2.close()
-    })
-
-    function sideClickOnLoop(selMenu, onMounted) {
-        try {
-            let idx = -1    
-            let lastSelMenu = selMenu ? selMenu : localStorage.wiseband_lastsel_menu
-            if (lastSelMenu) {
-                idx = listSel.value.findIndex((item) => { return item.ID == lastSelMenu })
-            } else {
-                lastSelMenu = "mnuHome"
-            }
-            const idxReal = (idx == -1) ? 0 : idx
-            const row = listSel.value[idxReal]
-            sideClick(lastSelMenu, row, onMounted)
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
-
-    watch(() => gst.selSideMenu, () => { //Home.vue의 gst.selSideMenu = "mnuHome" 참조
-        console.log("Main gst.selSideMenu..... " + gst.selSideMenu)
-        displayMenuAsSelected(gst.selSideMenu) //Home >> DM >> Back()시 Home을 사용자가 선택한 것으로 표시해야 함
-    })
-
-    watch(() => gst.sockToSend, () => { //###02
-        if (gst.sockToSend.length ==  0) return
-        if (!sock.socket || !sock.socket.connected) return //while (gst.sockToSend.length > 0) {        
-        const obj = gst.sockToSend[0]
-        console.log("@@@@@@@@@@@#########"+JSON.stringify(obj))
-        if (DATA_EV_LOGIC_NEEDED.includes(obj.data.ev)) {
-            sock.socket.emit(obj.sendTo, obj.data) //data polling 없이 별도 로직 필요함
-        } else { //아래는 함수내 gst.realtime.set()을 호출하는 루틴이 더 있음 (위는 단순 소켓 전송)
-            gst.realtime.emit(obj.sendTo, obj.data)
-        }
-        gst.sockToSend.splice(0, 1) //console.log("gst.sockToSend: " + gst.sockToSend.length)
-    }, { deep: true }) //gst.sockToSend가 Array이므로 deep=true 옵션이 필요함
 
     async function inviteMsg(data) {
         try {
@@ -357,28 +365,6 @@
         }
     }
 
-    function decideSeeMore() {
-        try {
-            listNotSeen.value = []
-            const sideTop = document.querySelector('#sideTop')
-            const sizeH = sideTop.offsetTop + sideTop.offsetHeight
-            let targetAll = document.querySelectorAll('.cntTarget') //더보기 제외 console.log(targetAll.length)
-            targetAll.forEach(menuDiv => {
-                if ((menuDiv.offsetTop + menuDiv.offsetHeight) > sizeH) { //사이드바에서 육안으로 안보이면 listNotSeen에 추가
-                    const found = listAll.value.find((item) => item.ID == menuDiv.id.replace("Target", ""))
-                    if (found) listNotSeen.value.push(found) //console.log(menuDiv.id)
-                }
-            })        
-            if (listUnSel.value.length > 0 || listNotSeen.value.length > 0) { //(사용자가 원래 선택하지 않은 메뉴 포함해) (화면이 작아진 후) 안 보이는 메뉴가 있으면 더보기 버튼 필요
-                seeMore.value = true
-            } else {
-                seeMore.value = false
-            }
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
-
     function mouseEnter(e) {
         try {
             prevX = e.pageX
@@ -387,7 +373,7 @@
             if (menuDiv.id == "mnuSeeMore") {
                 listPopupMenu.value = [...listUnSel.value, ...listNotSeen.value] //위 ## 주석 참조
             } else {
-                return //더보기 말고 팝업표시하는 것은 육안으로는 화면이 더 복잡해져서 오히려 불편함을 느낌 (주관적) : 향후 필요시 return 빼고 아래 팝업 메뉴 추가하면 됨 (일단은 더보기에 대해서만 팝업 지원)
+                return //더보기 말고 팝업표시하는 것은 육안으로는 화면이 더 복잡해져서 오히려 불편함을 느낌 : 향후 필요시 return 빼고 아래 팝업 메뉴 추가하면 됨 (지금은 일단 더보기에 대해서만 팝업 지원하기로 함)
                 // const found = listAll.value.find((item) => item.ID == menuDiv.id)
                 // if (!found || found.POPUP != "Y") {
                 //     popupMenuOn.value = false //혹시 떠 있을 팝업 제거
@@ -427,39 +413,7 @@
             gst.util.showEx(ex, true)
         }
     }
-
-    //더보기 메뉴는 로컬에 저장하기 않는 전제임 (더보기 누르면 나오는 목록 클릭시 저장) : row까지 argument로 받는 것은 좀 과하다 싶지만 일단 개발 편의 고려해 처리하고자 함
-    function sideClick(popupId, row, onMounted) {
-        try {
-            popupMenuOn.value = false
-            const id = (popupId == "mnuSeeMore") ? row.ID : popupId //mnuSeeMore일 경우는 무조건 mnuHome
-            for (let i = 0; i < listSel.value.length; i++) {
-                if (listSel.value[i].sel) listSel.value[i].sel = false
-            }
-            row.sel = true
-            if (!onMounted && id == gst.selSideMenu) return //사용자 최초 시작시엔 무조건 HomePanel 호출
-            if (popupId != "mnuSeeMore") {
-                console.log("Main 메뉴 클릭 gst.selSideMenu..... " + gst.selSideMenu)
-                gst.selSideMenu = id                
-                localStorage.wiseband_lastsel_menu = id
-            }
-            procMenu[id].call(null, row, onMounted)
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
-
-    function displayMenuAsSelected(popupId) {
-        for (let i = 0; i < listSel.value.length; i++) {
-            if (listSel.value[i].ID == popupId) {
-                listSel.value[i].sel = true
-            } else {
-                listSel.value[i].sel = false
-            }
-        }
-        localStorage.wiseband_lastsel_menu = popupId
-    }
-
+    
     async function goRoute(obj, onMounted) {
         //Object.assign(obj, { query : { ver : Math.random() }}) //obj에 merge : 사이드메뉴 클릭시 (예:Home.vue 호출) 캐시 제거하고 호출해야 MsgList.vue 안뜨는 상황 방지될 것임
         if (onMounted) { //사이드메뉴 클릭시 맨 처음 로드시 push로 라우팅하면 오른쪽 공백이 생기므로 replace 필요
@@ -478,23 +432,19 @@
         ["mnuFixed"] : async (row, onMounted) => { await goRoute({ name: 'fixed' }, onMounted) },
         ["mnuGroup"] : async (row, onMounted) => { await goRoute({ name: 'group' }, onMounted) }
     }
+    
+    function handleEvFromUserProfile(userObj) {
+        gst.user = userObj
+        gst.sockToSend.push({ sendTo: "all", data: { ev: "updateProfile", userid: g_userid, from: "handleEvFromUserProfile" }})
+        if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("updateProfile", userObj)
+    }
 
     function openMsgSearch() {
         mediaPopupRef.value.open("msg", '', '', '', searchText.value.trim())
     }
 
     function openUserProfile() {
-        userProfileRef.value.open("msg", '', '', '', searchText.value.trim())
-    }   
-    
-    // function setImgUrl(pict) {
-    //     user.value.url = (pict) ? hush.util.getImageBlobUrl(pict.data) : null
-    // }
-
-    function handleEvFromUserProfile(userObj) {
-        gst.user = userObj
-        gst.sockToSend.push({ sendTo: "all", data: { ev: "updateProfile", userid: g_userid, from: "handleEvFromUserProfile" }})
-        if (panelRef.value && panelRef.value.procMainToMsglist) panelRef.value.procMainToMsglist("updateProfile", userObj)
+        userProfileRef.value.open()
     }
 
     function showBottomMsgList() {
@@ -507,18 +457,18 @@
         await goRoute({ name: 'login' }, true)
     }
 
+    function procAllSocket() { //admin 전용
+        const data = { ev: "qrySock", kind: "all" } //일단 db로 저장되므로 현재는 all만으로 query 모두 가능
+        sock.socket.emit("myself", data) //sock.socket.on 없이 바로 db table에 저장
+    }
+
     // function handleEvFromPanel(kind, menu) { //예) kind: "forwardToSide", menu: "home" => Home.vue의 onMounted() => MsgList.vue
     //     //현재 미사용. 지우지 말 것 (향후 사용가능성) : MsgList okChanDmPopup() 참조
     //     const menuStr = "mnu" + menu.substring(0, 1).toUpperCase() + menu.substring(1)
     //     const ka = keepAliveRef.value._.__v_cache
     //     ka.delete(menu) //const appType = route.fullPath.split("/")[2] //arr[2] = home,dm 등..
-    //     sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시지우기까지 처리해야 완벽함 (그 부분만 아직 미구현) 
+    //     sideClickOnLoop(menuStr) //여기까지 잘됨. 여기서 추가로 MsgList의 캐시제거까지 처리해야 완벽함 (그 부분만 아직 미구현) 
     // }
-
-    function procAllSocket() { //admin 전용
-        const data = { ev: "qrySock", kind: "all" } //all or roomid or userid (일단 db로 저장되므로 all만으로 query 모두 가능)
-        sock.socket.emit("myself", data) //sock.socket.on 없이 바로 db table에 저장
-    }
 </script>
 
 <template>
@@ -527,11 +477,8 @@
             <div style="display:flex;align-items:center;color:white">
                 <span>[</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ logdtDisp ? logdtDisp.substring(11, 19) : '' }}</span>
                 <span>{{ logdtDisp ? logdtDisp.substring(19) : '' }}]</span>
-                <!-- <span style="margin-left:5px">[A:</span><span style="font-weight:bold" :style="{ color: logdtColor }">{{ cntChanActivted }}</span><span>]</span>
-                <span style="margin-left:5px">[D:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span> -->
                 <div style="margin-left:20px"><ConnectionState/></div>
-                <span style="margin-left:20px">short : {{ gst.timerShort }}</span>
-                <!-- <span style="margin-left:20px">token : {{ tmp }}</span> -->
+                <span style="margin-left:20px">short : {{ gst.timerShort }}</span><!-- <span style="margin-left:20px">token : {{ tmp }}</span> -->
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>
@@ -576,7 +523,7 @@
                 </div>
             </div>
             <div class="main">
-                <div class="content"><!-- <component :is="Component" :key="$route.fullPath" />로 구현시 MsgList의 $route.fullPath이므로 unique하지 않음. @ev-to-side="handleEvFromPanel"-->
+                <div class="content"><!--$route.fullPath로는 keepalivew에 unique하지 않음-->
                     <router-view v-slot="{ Component }">
                         <keep-alive ref="keepAliveRef">
                             <component :is="Component" :key="$route.fullPath.split('/')[2]" ref="panelRef" />
@@ -595,11 +542,8 @@
     <media-search ref="mediaPopupRef"></media-search>
     <user-profile ref="userProfileRef" @evToMain="handleEvFromUserProfile"></user-profile>
     <popup-common ref="bottomMsgListPopupRef" style="display:flex;flex-direction:column">
-        <!-- <div v-for="(row, idx) in gst.bottomMsgList" >
-            <span style="margin:0px">{{ row }}</span>
-        </div> -->
-        <div v-for="(row, idx) in rsSock" >
-            <span style="margin:0px">{{ JSON.stringify(row) }}</span>
+        <div v-for="(row, idx) in gst.bottomMsgList" style="margin:0px 0px 5px 0;padding:3px 0;border-bottom:1px solid darkgray">
+            <span>{{ row }}</span>
         </div>
     </popup-common>
 </template>
@@ -621,7 +565,6 @@
         border:1px solid dimgray;border-radius:4px;background-color:var(--primary-color);color:var(--second-select-color);cursor:pointer 
     }
     .btn_basic:hover { background:var(--second-hover-color) }
-    /* .btn_basic:active { background:var(--active-btn) } */
     .side {
         min-width:70px;height:100%;
         display:flex;flex-direction:column;align-items:center;justify-content:space-between;
@@ -650,8 +593,6 @@
         display:flex;flex-direction:column;justify-content:center;align-items:center;
         color:white;cursor:pointer; 
     }
-    .menu32 { width:32px;height:32px; }
-    .menu32:hover { width:36px;height:36px; }
     .myNotYet { 
         width:13px;height:13px;padding:1px 2px 2px 2px;
         display:flex;align-items:center;justify-content:center;border-radius:12px;background-color:var(--active-color);color:black;font-size:10px
