@@ -1,41 +1,19 @@
 <script setup>
-    import { ref, onMounted, onActivated, nextTick } from 'vue' 
-    import { useRouter, useRoute } from 'vue-router'
+    import { ref, onMounted, onActivated } from 'vue' 
+    import { useRoute } from 'vue-router'
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
     import ContextMenu from "/src/components/ContextMenu.vue"
     import MemberList from '/src/components/MemberList.vue'
     import Resizer from "/src/components/Resizer.vue"
-            
-    const router = useRouter()
+
     const route = useRoute()
     const gst = GeneralStore()
 
     defineExpose({ procMainToMsglist, procMainToPanel })
     const props = defineProps({ fromPopupChanDm: String })
     const emits = defineEmits(["ev-click"])
-
-    async function procMainToMsglist(kind, obj) { //단순 전달
-        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
-            await msglistRef.value.procMainToMsglist(kind, obj)
-            if (obj.ev == "chkAlive" && memberlistRef.value) {
-                memberlistRef.value.handleAliveInfo(obj) //msglist.vue에도 memberlistRef handleAliveInfo 호출하는 것 있음
-            }
-        }
-    }
-
-    async function procMainToPanel(kind, obj) {
-        if (kind == "procRows") {
-            await procRows()
-        } else {
-            handleEvFromMsgList({ kind: kind, chanid: obj.CHANID }) //기존 함수 가져다 쓰기
-        }
-    }
-
-    function listRowClick(row) {
-        emits("ev-click", "home", row.CHANID)
-    }
 
     //1) Depth는 1,2 단계만 존재 : 1단계는 사용자그룹 (슬랙의 워크스페이스) 2단계는 채널
     //2) 트리노드는 펼치기/접기 상태 기억해 브라우저를 닫고 열어도 직전 상태를 유지 (예: 새로고침때도 기억)
@@ -56,14 +34,11 @@
     //////////////////////////////////////////////////////////////////////////////////////
 
     onMounted(async () => {
-        try {
-            console.log("Home Mounted..... " + route.fullPath)
-            //if (!gst.util.chkOnMountedTwice(route, 'HomePanel')) return            
+        try { //console.log("Home Mounted.. " + route.fullPath) //if (!gst.util.chkOnMountedTwice(route, 'HomePanel')) return            
             setBasicInfo()
             if (localStorage.wiseband_lastsel_home) kind.value = localStorage.wiseband_lastsel_home
             await getList()
-            if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
-                console.log("Home Mounted.....click.... " + route.fullPath)
+            if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당 //console.log("Home Mounted..click.. " + route.fullPath)
                 chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
             } else {
                 chanClickOnLoop(false)
@@ -74,15 +49,13 @@
     })
 
     onActivated(async () => {
-        try {
-            console.log("Home Activated..... " + route.fullPath)
+        try { //console.log("Home Activated.. " + route.fullPath)
             if (mounting) {
                 mounting = false
             } else { //아래는 onMounted()직후에는 실행되지 않도록 함 : Back()의 경우 onActivated() 바로 호출되고 onMounted()는 미호출됨
                 setBasicInfo()
                 if (route.path == "/main/home") { //사이드메뉴에서 클릭한 경우
-                    if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당
-                        console.log("Home Activated.....click.... " + route.fullPath)
+                    if (props.fromPopupChanDm != "Y") { //fromPopupChanDm은 home과 dm만 해당 //console.log("Home Activated.....click.... " + route.fullPath)
                         chanClickOnLoop(true) //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 실행되면 안됨
                     } else {
                         chanClickOnLoop(false)
@@ -97,12 +70,6 @@
         }
     })
 
-    async function changeKind() {
-        localStorage.wiseband_lastsel_home = kind.value
-        await getList()
-        chanClickOnLoop(true)
-    }
-
     function setBasicInfo() {
         if (props.fromPopupChanDm == "Y") { //fromPopupChanDm은 home과 dm만 해당
             //MsgList > PopupChanDm > HomePanel에서는 팝업이므로 gst.selSideMenu가 변경되면 안됨
@@ -112,10 +79,16 @@
         }
     }
 
+    async function changeKind() {
+        localStorage.wiseband_lastsel_home = kind.value
+        await getList()
+        chanClickOnLoop(true)
+    }
+
     async function procRows() {
         await getList(true)
     }
-
+    
     async function getList(forUpdate) {
         try { //모든 데이터 가져오기 (페이징/무한스크롤 없음)
             const res = await axios.post("/menu/qryChan", { kind : kind.value }) //my,other,all
@@ -294,25 +267,25 @@
         }
     }
 
-    async function toggleChanOption(kind, job, row) {
-        try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
-            const rq = { chanid: row.CHANID, kind: kind, job: job } //kind는 현재 상태, job은 바꿀 상태
-            const res = await axios.post("/chanmsg/toggleChanOption", rq)
-            let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            const item = listHome.value.find((item) => item.CHANID == row.CHANID)
-            if (item) {
-                if (kind == "noti") {
-                    item.NOTI = job
-                } else if (kind == "bookmark") {
-                    item.BOOKMARK = job
-                }
-                procChanRowImg(item)
-            }
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function toggleChanOption(kind, job, row) { //지우지 말 것
+    //     try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
+    //         const rq = { chanid: row.CHANID, kind: kind, job: job } //kind는 현재 상태, job은 바꿀 상태
+    //         const res = await axios.post("/chanmsg/toggleChanOption", rq)
+    //         let rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return
+    //         const item = listHome.value.find((item) => item.CHANID == row.CHANID)
+    //         if (item) {
+    //             if (kind == "noti") {
+    //                 item.NOTI = job
+    //             } else if (kind == "bookmark") {
+    //                 item.BOOKMARK = job
+    //             }
+    //             procChanRowImg(item)
+    //         }
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     async function mouseRight(e, row) { //채널 우클릭시 채널에 대한 컨텍스트 메뉴 팝업. row는 해당 채널 Object
         //const img = row.nodeImg.replace(hush.cons.color_light, hush.cons.color_dark)        
@@ -326,10 +299,11 @@
                 }}
             ]
         } else {
-            /*const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
+            /* 지우지 말 것
+            const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
             const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"*/
-            const disableStr = (row.STATE == "P") ? true : false
             //const disableRefresh = (!row.sel) ? true : false
+            const disableStr = (row.STATE == "P") ? true : false            
             gst.ctx.menu = [                
                 /* 아래는 아직 미사용 : 정확히 어디에 사용할 지 아직 미결정. 주요 소스이므로 지우지 말 것 (향후 실시간 반영때 다시 고민. 현재는 아래 개선점도 있음)
                 { nm: "메시지목록 새로고침", disable: disableRefresh, func: async function(item, idx) { //disable의 의미는 선택된 노드가 route.fullPath와 동일한 채널임을 보장함
@@ -346,14 +320,15 @@
                 { nm: "채널 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                     memberlistRef.value.open("chan", row.GR_ID, row.CHANID, row.CHANNM, row.nodeImg)
                 }},
-                // { nm: "알림 " + notiStr, func: function(item, idx) { 
-                //     const job = (row.NOTI == "X") ? "" : "X"
-                //     toggleChanOption("noti", job, row)
-                // }},
-                // { nm: "북마크 " + bookmarkStr, func: function(item, idx) { 
-                //     const job = (row.BOOKMARK == "Y") ? "" : "Y"
-                //     toggleChanOption("bookmark", job, row)
-                // }},
+                /* 지우지 말 것
+                { nm: "알림 " + notiStr, func: function(item, idx) {
+                    const job = (row.NOTI == "X") ? "" : "X"
+                    toggleChanOption("noti", job, row)
+                }},
+                { nm: "북마크 " + bookmarkStr, func: function(item, idx) { 
+                    const job = (row.BOOKMARK == "Y") ? "" : "Y"
+                    toggleChanOption("bookmark", job, row)
+                }},*/
                 { nm: "채널 링크 복사", disable: disableStr, func: function(item, idx) { //공개채널은 해당 그룹내 복사해서 보내면 클릭해서 볼 수 있으므로 활성화. 비공개(STATE=P)채널은 복사해도 쓸 일이 없음
                     const url = location.protocol + "//" + location.host + "/body/msglist/" + row.CHANID + "/0?appType=home"
                     navigator.clipboard.writeText(url).then(() => { //http://localhost:5173/body/msglist/20250122084532918913033403/0
@@ -375,6 +350,10 @@
     function mouseLeave(row) {
         if (row.sel) return
         row.hover = false
+    }
+
+    function listRowClick(row) {
+        emits("ev-click", "home", row.CHANID)
     }
 
     async function refreshPanel() {
@@ -412,6 +391,23 @@
             await refreshPanel()
         }
     }
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
+            await msglistRef.value.procMainToMsglist(kind, obj)
+            if (obj.ev == "chkAlive" && memberlistRef.value) {
+                memberlistRef.value.handleAliveInfo(obj) //msglist.vue에도 memberlistRef handleAliveInfo 호출하는 것 있음
+            }
+        }
+    }
+
+    async function procMainToPanel(kind, obj) {
+        if (kind == "procRows") {
+            await procRows()
+        } else {
+            handleEvFromMsgList({ kind: kind, chanid: obj.CHANID }) //기존 함수 가져다 쓰기
+        }
+    }
 </script>
 
 <template>
@@ -446,8 +442,8 @@
                     </div>
                     <div class="nodeRight">
                         <span :class="row.DEPTH == '1' || row.mynotyetCnt == 0 ? '' : 'coMyNotYet'">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
-                        <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
-                        <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
+                        <!-- <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
+                        <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크"> -->
                         <img v-if="row.otherImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.otherImg)" title="다른 채널">
                     </div>
                 </div>

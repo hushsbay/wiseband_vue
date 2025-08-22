@@ -17,26 +17,6 @@
     const props = defineProps({ fromPopupChanDm: String })
     const emits = defineEmits(["ev-click"]) //, "ev-to-side"])
 
-    async function procMainToMsglist(kind, obj) { //단순 전달
-        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
-            await msglistRef.value.procMainToMsglist(kind, obj)
-            if (memberlistRef.value) memberlistRef.value.handleAliveInfo(obj) //msglist.vue에도 memberlistRef handleAliveInfo 호출하는 것 있음
-        }        
-    }
-
-    async function procMainToPanel(kind, obj) {
-        if (kind == "procRows") {
-            await procRows()
-            dmClickOnLoop(true)
-        } else {
-            await handleEvFromMsgList({ kind: kind, chanid: obj.CHANID }) //기존 함수 가져다 쓰기
-        }
-    }
-
-    function listRowClick(row) {
-        emits("ev-click", "dm", row.CHANID)
-    }
-
     let keepAliveRef = ref(null)
     let observerBottom = ref(null), observerBottomTarget = ref(null), afterScrolled = ref(false)
     let notyetChk = ref(false), searchWord = ref('') 
@@ -67,8 +47,7 @@
     }
 
     onMounted(async () => {
-        try {
-            //if (!gst.util.chkOnMountedTwice(route, 'DmPanel')) return
+        try { //if (!gst.util.chkOnMountedTwice(route, 'DmPanel')) return
             setBasicInfo()
             notyetChk.value = (localStorage.wiseband_lastsel_dm == "notyet") ? true : false
             await getList(true)
@@ -98,7 +77,7 @@
                 } else {
                     //MsgList가 라우팅되는 루틴이며 MsgList로부터 처리될 것임
                 }
-                observerBottomScroll()
+                //observerBottomScroll()
                 await procRows()
             }
         } catch (ex) {
@@ -329,30 +308,30 @@
         }
     }
 
-    async function toggleChanOption(kind, job, row) {
-        try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
-            const rq = { chanid: row.CHANID, kind: kind, job: job } //kind는 현재 상태, job은 바꿀 상태
-            const res = await axios.post("/chanmsg/toggleChanOption", rq)
-            let rs = gst.util.chkAxiosCode(res.data)
-            if (!rs) return
-            const idx = listDm.value.findIndex((item) => item.CHANID == row.CHANID)
-            if (idx > -1) {
-                if (kind == "noti") {
-                    listDm.value[idx].NOTI = job
-                } else if (kind == "bookmark") {
-                    listDm.value[idx].BOOKMARK = job
-                }
-                procChanRowImg(listDm.value[idx])
-            }
-        } catch (ex) { 
-            gst.util.showEx(ex, true)
-        }
-    }
+    // async function toggleChanOption(kind, job, row) { //지우지 말 것
+    //     try { //처리된 내용을 본인만 보면 되므로 소켓으로 타인에게 전달할 필요는 없음
+    //         const rq = { chanid: row.CHANID, kind: kind, job: job } //kind는 현재 상태, job은 바꿀 상태
+    //         const res = await axios.post("/chanmsg/toggleChanOption", rq)
+    //         let rs = gst.util.chkAxiosCode(res.data)
+    //         if (!rs) return
+    //         const idx = listDm.value.findIndex((item) => item.CHANID == row.CHANID)
+    //         if (idx > -1) {
+    //             if (kind == "noti") {
+    //                 listDm.value[idx].NOTI = job
+    //             } else if (kind == "bookmark") {
+    //                 listDm.value[idx].BOOKMARK = job
+    //             }
+    //             procChanRowImg(listDm.value[idx])
+    //         }
+    //     } catch (ex) { 
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     async function mouseRight(e, row) {
+        //const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
+        //const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
         gst.ctx.data.header = ""
-        const notiStr = (row.NOTI == "X") ? "켜기" : "끄기"
-        const bookmarkStr = (row.BOOKMARK == "Y") ? "해제" : "표시"
         gst.ctx.menu = [
             { nm: "새창에서 열기", func: async function(item, idx) {
                 let url = await gst.util.getUrlForOneMsgNotYet(row.CHANID)
@@ -361,6 +340,7 @@
             { nm: "DM 관리", deli: true, img: "color_slacklogo.png", func: function(item, idx) {
                 memberlistRef.value.open("dm", null, row.CHANID)
             }},
+            /* 지우지 말 것
             { nm: "알림 " + notiStr, func: function(item, idx) {
                 const job = (row.NOTI == "X") ? "" : "X"
                 toggleChanOption("noti", job, row)
@@ -368,7 +348,7 @@
             { nm: "북마크 " + bookmarkStr, deli:true, func: function(item, idx) {
                 const job = (row.BOOKMARK == "Y") ? "" : "Y"
                 toggleChanOption("bookmark", job, row)
-            }}
+            }}*/
             //'DM링크 복사' 메뉴는 '채널링크 복사' 메뉴가 비공개인 경우와 마찬가지로, 아직 쓰임새가 안보여 지원하지 않음
         ]
         gst.ctx.show(e)
@@ -384,6 +364,10 @@
         row.hover = false
     }
 
+    function listRowClick(row) {
+        emits("ev-click", "dm", row.CHANID)
+    }
+
     async function newDm(manage) {
         if (manage) {
             memberlistRef.value.open("dm", null, "new")
@@ -394,6 +378,22 @@
                 item.hover = false
             })
             await router.push({ name: "dm_body_new" })
+        }
+    }
+
+    async function procMainToMsglist(kind, obj) { //단순 전달
+        if (msglistRef.value && msglistRef.value.procMainToMsglist) { //없을 수도 있으므로 체크 필요
+            await msglistRef.value.procMainToMsglist(kind, obj)
+            if (memberlistRef.value) memberlistRef.value.handleAliveInfo(obj) //msglist.vue에도 memberlistRef handleAliveInfo 호출하는 것 있음
+        }        
+    }
+
+    async function procMainToPanel(kind, obj) {
+        if (kind == "procRows") {
+            await procRows()
+            dmClickOnLoop(true)
+        } else {
+            await handleEvFromMsgList({ kind: kind, chanid: obj.CHANID }) //기존 함수 가져다 쓰기
         }
     }
 
@@ -496,8 +496,8 @@
                     </div>
                     <div style="display:flex;align-items:center;color:lightgray">
                         <span :class="row.mynotyetCnt == 0 ? '' : 'coMyNotYet'">{{ row.mynotyetCnt == 0 ? "" : row.mynotyetCnt }}</span>
-                        <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
-                        <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크">
+                        <!-- <img v-if="row.notioffImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.notioffImg)" title="알림Off">
+                        <img v-if="row.bookmarkImg" class="coImg14" style="margin-left:5px" :src="gst.html.getImageUrl(row.bookmarkImg)" title="북마크"> -->
                         <span style="margin-left:5px">{{ row.REPLYTO ? '댓글' : '' }}</span>
                         <span style="margin-left:5px">{{ hush.util.displayDt(row.LASTMSGDT, false) }}</span>
                     </div>
