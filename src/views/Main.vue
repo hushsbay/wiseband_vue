@@ -38,6 +38,7 @@
     let panelRef = ref(null), notyetCntHome = ref(0), notyetCntDm = ref(0)
     let bc2, realtimeJobDone, pageShown = 'Y', timeoutShort, timeoutLong
     //let notiOff = ref(false), bodyOff = ref(false), authorOff = ref(false)
+    let tmp = ref('')
 
     function startSocket() {
         connectSock()
@@ -116,6 +117,7 @@
                 return
             }
             gst.util.setSnack("")
+            //tmp.value = gst.auth.getCookie("token")
             if (rs.list.length > 0) bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
             const listByMenu = rs.data.listByMenu //GS와 WS의 notyet count 배열임
@@ -529,6 +531,7 @@
                 <span style="margin-left:5px">[D:</span><span style="font-weight:bold" :style="{ color: logdtColor }" >{{ cntNotChanActivted }}</span><span>]</span> -->
                 <div style="margin-left:20px"><ConnectionState/></div>
                 <span style="margin-left:20px">short : {{ gst.timerShort }}</span>
+                <!-- <span style="margin-left:20px">token : {{ tmp }}</span> -->
             </div>
             <div style="display:flex;justify-content:center;align-items:center">
                 <input type="search" v-model="searchText" @keyup.enter="openMsgSearch()" class="search" placeholder="통합검색키워드"/>
