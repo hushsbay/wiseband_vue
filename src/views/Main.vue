@@ -28,7 +28,7 @@
     let keepAliveRef = ref(null), mediaPopupRef = ref(null), searchText = ref(''), userProfileRef = ref(null), bottomMsgListPopupRef = ref(null)
 
     //리얼타임 반영
-    const TIMERSEC_SHORT = 500, TIMERSEC_LONG = 3000, TIMER_SOCKET = 6 //TIMERSEC_LONG은 서버리스탓시 재접속을 위해서도 사용 = TIMERSEC_SHORT * TIMER_SOCKET / 1000 = 3초 동안 run
+    const TIMERSEC_SHORT = 500, TIMERSEC_LONG = 30000, TIMER_SOCKET = 6 //TIMERSEC_LONG은 서버리스탓시 재접속을 위해서도 사용 = TIMERSEC_SHORT * TIMER_SOCKET / 1000 = 3초 동안 run
     let logdt = '', logdtDisp = ref(''), logdtColor = ref('yellow'), tmp = ref('') //화면 표시용
     let panelRef = ref(null), notyetCntHome = ref(0), notyetCntDm = ref(0)
     let bc2, realtimeJobDone, pageShown = 'Y', timeoutShort, timeoutLong
