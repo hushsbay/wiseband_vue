@@ -2192,13 +2192,11 @@
                 <div v-if="tabForNewWin=='notyet'"class="coImgBtn" @click="updateAllWithNewKind('notyet', 'read')" style="margin:0 0 4px 12px">
                     <span class="coImgSpn">모두읽음처리</span>
                 </div>
-                <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu list_msg_unsel" @click="stressTest(true)">
-                    <span style="margin-left:5px;font-weight:bold">StressTest</span> 
-                </div>
+                <!-- <div v-show="!thread.msgid && tabForNewWin==''" class="topMenu list_msg_unsel" @click="stressTest(true)"><span style="margin-left:5px;font-weight:bold">StressTest</span></div> -->
                 <span v-show="route.fullPath.includes('/body/msglist')">
                     <span style="margin-left:20px">fifoLen : {{ fifoLen }}</span>
                 </span>
-            </div> 
+            </div>
             <div class="chan_center_body" id="chan_center_body" :childbody="hasProp() ? true : false" ref="scrollArea" @scroll="onScrolling" @scrollend="onScrollEnd">
                 <div v-show="afterScrolled" ref="observerTopTarget" class="coObserverTarget" :style="{ minHeight: showTopObserver ? '10px' : '0px', color:'transparent' }">{{ hush.cons.startOfData }}</div>
                 <!--바로 아래 id는 읽음처리(readMsgToBeSeen)에 필요한 부분이므로 제거하면 안됨. 위 id(chan_center_body)도 그대로 두기-->
