@@ -190,7 +190,7 @@
                         evToPanel({ kind: "selectRow", msgid: msgidInChan })
                     }
                 }
-                chkMultiState()
+                //chkMultiState()
             }            
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -1077,11 +1077,11 @@
                 const idxFound = newParentAdded.value.findIndex(item => item.MSGID == msgidToProc)
                 if (idxFound > -1) newParentAdded.value.splice(idxFound, 1)
                 //아래는 원래 없었는데 다음과 같은 문제해결을 위해 추가된 것임. 창이 2개 이상 같은 채널이 열려 있을 때 하나만이라도 pageShown일 경우는 다른 창이 숨겨져 있어도 pageShown=Y로 보기로 함
-                //그렇지 않으면, '도착 메시지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리 등후 자동으로 숨기는 기능 구현이 어렵게 됨
+                //그렇지 않으면, '도착 메시지'는 수동으로만 제거 가능하고 pageShown을 각 탭별로 별도로 인지하면 각각 관리가 되긴 하지만 이 경우는 읽음처리후 자동으로 숨기는 기능 구현이 어렵게 됨
                 //첫행의 원안대로 하면, 동일 채널 창이 둘 다 숨겨져 있는 상태에서 메시지가 가서 하나를 열면 다른 하나의 '도착 메시지'버튼이 사라지면서 메시지가 추가되지 않는데 그걸 아래로 해결함
                 //대신, 중간에 보려고 스크롤하는데 톡이 오면 아래로 내려가 버리는 현상이 생길 것임 - 동일 채널일 경우 해결 필요. 다만, 다른 채널끼리 열려 있으면 아무 문제없이 사용 가능함
                 if (newParentAdded.value.length == 0) { //이 방안은 문제가 많아 개선이 필요함 : '메시지 도착'이 나타났다가 바로 사라지는 원인도 되므로 일단 막고 고민
-                    console.log('has to be fixed out.')
+                    //console.log('has to be fixed out.')
                     //await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom" }) //특정 싯점 다음부터 현재까지 새로 도착한 메시지를 가져옴
                 }
             } else { //자식메시지
@@ -1185,13 +1185,14 @@
         try {
             let msgid, cdtAtFirst
             if (strKind == "P") { //Parent : 신규 부모글
-                if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
+                //if (newParentAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
                 msgid = newParentAdded.value[0].MSGID //가장 오래된 부모메시지부터 조회하도록 해야 사용자가 안놓침
                 cdtAtFirst = newParentAdded.value[0].CDT
                 chkProcScrollToBottom(cdtAtFirst, msgid) //여기서는 부모메시지만 있으므로 특정 싯점 이후로 추가해도 순서가 흐트러지지 않고 문제없음
                 gst.realtime.closeNoti(chanId)
+                newParentAdded.value = []
             } else { //Child : 신규 댓글
-                if (newChildAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
+                //if (newChildAdded.value.length == 0) return //사실 0이면 버튼이 안보일 것임
                 //가장 오래된 자식메시지의 부모아이디부터 조회하도록 해야 사용자가 안놓침
                 const arr = newChildAdded.value //그런데, 그게 인덱스 0가 아닐 수도 있으므로 아래처럼 처리하고자 함
                 arr.sort((a, b) => a.CDT.localeCompare(b.CDT)) //오름차순 정렬
@@ -1204,64 +1205,97 @@
                     //vue.js로 랜더링하는 바로 아래 class는 안읽혀서 vue.js 아녀도 바로 뿌려주는 class(chan_center_body)로 잡음
                     //하지만, 굳이 onload 필요없는게 newChildAdded.length가 0이면 어차피 안보이게 될 것이므로 있으면 보이고 없으면 안보이는게 더 좋음
                 }
+                newChildAdded.value = []
             }
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
     }
 
+    function getElementsInViewportByClass(className) { //클래스에 해당하는 element가 너무 많으면 루프 돌리는데 부담이 될 것임
+        const elements = document.querySelectorAll(`.${className}`)
+        const elementsInViewport = []
+        elements.forEach(element => {
+            const rect = element.getBoundingClientRect()
+            const isVisible = (
+                rect.top >= 0 && //rect.left >= 0 &&
+                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) //&& rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            )
+            if (isVisible) elementsInViewport.push(element)
+        })
+        return elementsInViewport
+    }
+
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
-        try {
-            if (showUserSearch.value) return //DM방 만들기에서는 무시
-            const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
-            if (!eleTop) {
-                return
-            } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
-                setTimeout(function() { readMsgToBeSeen() }, 500) //토스트를 bottomMsg로 대체해서 여기 올 경우는 없을 것이나 그대로 둠
-            } else {
-                const idTop = eleTop.id
-                const idx = gst.util.getKeyIndex(msgRow, idTop) //let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
-                if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
-                    const len = msglist.value.length
-                    const start = (idx - 10 < 0) ? 0 : idx - 10
-                    const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
-                    const childbodyAttr = hasProp() ? true : false
-                    const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
-                    const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
-                    const eleHeaderHeight = eleHeader ? eleHeader.offsetHeight : 0 //Main.vue가 없는 msglist 라우팅의 경우도 있을 수 있음
-                    const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
-                    const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
-                    const topFrom = eleHeader1.offsetHeight + eleHeaderHeight + (hasProp() ? 0 : eleNav.offsetHeight)
-                    for (let i = start; i <= end; i++) {
-                        const msgdtlArr = msglist.value[i].msgdtl
-                        const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
-                        const msgid = msglist.value[i].MSGID
-                        if (msgdtlRow) { 
-                            //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
-                        } else {
-                            const ele = msgRow.value[msgid]
-                            if (ele) {
-                                const rect = ele.getBoundingClientRect()
-                                if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
-                                    await updateNotyetToRead(msgid) //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
-                                }
-                            }
-                        }
-                    }
+        const eleInView = getElementsInViewportByClass("msg_body")
+        for (let ele of eleInView) {
+            const idx = gst.util.getKeyIndex(msgRow, ele.id)
+            if (idx > -1) {
+                const msgdtlArr = msglist.value[idx].msgdtl
+                const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+                if (msgdtlRow) { //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
+                    //console.log(ele.id + " already read")
+                } else {
+                    const msgid = msglist.value[idx].MSGID
+                    await updateNotyetToRead(msgid)
+                    console.log(ele.id + " notyet")
                 }
             }
-        } catch (ex) {
-            console.log("readMsgToBeSeen ex: " + ex.message) //오류나도 넘어가기로 함
-        }
+        }        
     }
+
+    // async function readMsgToBeSeen() { //getTopMsgBody()를 사용하면 id가 msgid인 element를 정확하게 가져와야 하는데 많은 노력이 필요함
+    //     try {
+    //         if (showUserSearch.value) return //DM방 만들기에서는 무시
+    //         const eleTop = getTopMsgBody() //메시지 목록 맨 위에 육안으로 보이는 첫번째 row 가져오기 
+    //         if (!eleTop) {
+    //             return
+    //         } else if (!eleTop.id) { //토스트메시지가 덮고 있을 경우일 수 있는데 엎어질 때까지 계속 Try하는데 스레드에서 try하면 Parent의 ele로 getTopMsgBody() 찾음
+    //             setTimeout(function() { readMsgToBeSeen() }, 500) //토스트를 bottomMsg로 대체해서 여기 올 경우는 없을 것이나 그대로 둠
+    //         } else {
+    //             const idTop = eleTop.id
+    //             const idx = gst.util.getKeyIndex(msgRow, idTop) //let idx = msglist.value.findIndex(function(row) { return row.MSGID == idTop })
+    //             if (idx > -1) { //오름차순/내림차순 혼재되어 있는 상황이므로 단순화해서 그냥 앞뒤로 20개씩 전후로 모두 읽어서 화면에 보이는 것만 읽음 처리 (이미 읽었으면 처리할 필요 없음)
+    //                 const len = msglist.value.length
+    //                 const start = (idx - 10 < 0) ? 0 : idx - 10
+    //                 const end = (idx + 10 > len - 1) ? len - 1 : idx + 10
+    //                 const childbodyAttr = hasProp() ? true : false
+    //                 const eleParent = document.querySelector("#chan_center_body[childbody=" + childbodyAttr + "]")
+    //                 const eleHeader = document.getElementById("header") //Main.vue 참조 //높이 고정이므로 onMounted()로 빼도 됨
+    //                 const eleHeaderHeight = eleHeader ? eleHeader.offsetHeight : 0 //Main.vue가 없는 msglist 라우팅의 경우도 있을 수 있음
+    //                 const eleHeader1 = document.getElementById("chan_center_header") //높이 고정이므로 onMounted()로 빼도 됨
+    //                 const eleNav = document.getElementById("chan_center_nav") //높이 고정이므로 onMounted()로 빼도 됨 (스레드에서는 안보임)
+    //                 const topFrom = eleHeader1.offsetHeight + eleHeaderHeight + (hasProp() ? 0 : eleNav.offsetHeight)
+    //                 for (let i = start; i <= end; i++) {
+    //                     const msgdtlArr = msglist.value[i].msgdtl
+    //                     const msgdtlRow = msgdtlArr.find(item => (item.KIND == "read" || item.KIND == "unread") && item.ID.includes(g_userid))
+    //                     const msgid = msglist.value[i].MSGID
+    //                     if (msgdtlRow) { 
+    //                         //사용자인 내가 이미 읽은 메시지이므로 읽음처리할 것이 없음
+    //                     } else {
+    //                         const ele = msgRow.value[msgid]
+    //                         if (ele) {
+    //                             const rect = ele.getBoundingClientRect()
+    //                             if ((rect.top - topFrom + 60) >= 0 && (rect.top - topFrom + 70) <= eleParent.offsetHeight) {
+    //                                 await updateNotyetToRead(msgid) //알파값 60만큼 위에서 더 내려오거나 70만큼은 아래에서 더 올라와야 육안으로 보인다고 할 수 있음
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     } catch (ex) {
+    //         console.log("readMsgToBeSeen ex: " + ex.message) //오류나도 넘어가기로 함
+    //     }
+    // }
 
     const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
         try {
             const childbodyAttr = hasProp() ? true : false
             const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
             if (!rect) return null
-            const xx = rect.left + 1 //MSGID를 갖고 있는 div는 margin/padding이 각각 5px이므로 xx, yy에 그 안의 값을 더하면 구할 수 있음
-            let yy = rect.top + 6
+            const xx = rect.left + 100 //MSGID를 갖고 있는 div는 margin 및 좌표 고려해 xx, yy에 그 안의 값을 더하면 구할 수 있음
+            let yy = rect.top + 60
             const ele = document.elementFromPoint(xx, yy)
             return ele
         } catch (ex) {
@@ -2492,16 +2526,11 @@
     .editorMenu { display:flex;align-items:center;padding:5px;margin-left:5px;border-radius:5px;cursor:pointer }
     .editorMenu:hover { background:lightgray }
     .editorMenu:active { background:var(--active-color) }
-    /*.saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:darkgreen;border-radius:5px }
-    .saveMenu:hover { opacity:0.5 }
-    .saveMenu:active { background:darkblue;opacity:1.0 }*/
     .saveMenu { display:flex;align-items:center;padding:5px;margin:0 10px 0 5px;background:#3B693B;border-radius:5px }
     .saveMenu:hover { opacity:0.8 }
     .saveMenu:active { opacity:0.6 }
     .btn { padding:3px 6px;display:flex;align-items:center;color:dimgray;border:1px solid dimgray;border-radius:5px;cursor:pointer }
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
-    /* .mynotyet { width:12px;height:12px;display:flex;align-items:center;justify-content:center;border-radius:8px;background-color:orange;color:white;font-size:12px;padding:4px;margin-left:10px } */
     .vipMark { margin-left:5px;padding:2px;font-size:10px;background:black;color:white;border-radius:5px }
-    /* .aliveMark { margin-left:5px;padding:2px;font-size:10px;color:white;border-radius:10px } */
 </style>

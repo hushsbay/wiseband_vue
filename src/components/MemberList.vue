@@ -363,7 +363,8 @@
     }
 
     function handleAliveInfo(data) {
-        console.log("!@#" + JSON.stringify(data))
+        if (!show.value) return
+        console.log("!@##" + JSON.stringify(data))
         const len = memberlist.value.length
         for (let i = 0; i < len; i++) {
             const row = memberlist.value[i]
@@ -431,6 +432,7 @@
                                 </div>
                                 <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
                                     <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                                    <img :src="gst.html.getImageUrl(row.alive ? 'online.png' : 'offline.png')" style="margin-top:-25px;margin-left:-8px">
                                 </div>
                                 <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
                                     <div style="width:100%;height:24px;display:flex;align-items:center;justify-content:space-between">
@@ -438,9 +440,6 @@
                                             <div class="coDotDot">
                                                 <span style="width:60px;margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
                                                 <span>{{ row.JOB }}</span>
-                                                <span class="aliveMark" :style="{ backgroundColor: row.alive ? 'var(--second-color)' : 'darkgray' }">
-                                                    {{ row.alive ? 'On' : 'Off' }}
-                                                </span>
                                             </div>
                                         </div>
                                         <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">
@@ -616,5 +615,4 @@
     .tdInput { width:calc(100% - 10px) }
     .tdValue { vertical-align:middle;border:none }
     .vipBtn { margin-left:5px;padding:1px 2px;font-size:12px;background:var(--primary-btn-color);color:white;border-radius:5px;cursor:pointer }
-    .aliveMark { margin-left:5px;padding:2px;font-size:10px;color:white;border-radius:10px }
 </style>
