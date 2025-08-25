@@ -1436,6 +1436,79 @@
         }
     }
 
+    function getCaretPosition(editableDiv) {
+        var caretPos = 0, sel, range;
+        if (window.getSelection) {
+            sel = window.getSelection();
+            if (sel.rangeCount) {
+                range = sel.getRangeAt(0)
+                if (range.commonAncestorContainer.parentNode == editableDiv) {
+                    caretPos = range.endOffset
+                }
+            }
+        } else if (document.selection && document.selection.createRange) {
+            range = document.selection.createRange();
+            if (range.parentElement() == editableDiv) {
+                var tempEl = document.createElement("span")
+                editableDiv.insertBefore(tempEl, editableDiv.firstChild)
+                var tempRange = range.duplicate()
+                tempRange.moveToElementText(tempEl)
+                tempRange.setEndPoint("EndToEnd", range)
+                caretPos = tempRange.text.length
+            }
+        }
+        return caretPos
+    }
+
+    function setCaretPos(el, sPos) {
+        var charIndex = 0, range = document.createRange()
+        range.setStart(el, 0)
+        range.collapse(true)
+        var nodeStack = [el], node, foundStart = false, stop = false
+        while (!stop && (node = nodeStack.pop())) {
+            if (node.nodeType == 3) {
+                var nextCharIndex = charIndex + node.length
+                if (!foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+                    range.setStart(node, sPos - charIndex)
+                    foundStart = true
+                }
+                if (foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+                    range.setEnd(node, sPos - charIndex)
+                    stop = true
+                }
+                charIndex = nextCharIndex
+            } else {
+                var i = node.childNodes.length
+                while (i--) {
+                    nodeStack.push(node.childNodes[i])
+                }
+            }
+        }
+        let selection = window.getSelection()
+        selection.removeAllRanges()
+        selection.addRange(range)
+    }
+
+    function whenKeyPress(e) { //한개는 OK. 여러개 실패함 => @ 프람프트는 포기하고 saveMsg()때 @이상병, @정일영영턱스 등을 읽어서 사용자로 하여금 @이상병, @정일영으로 처리하도록 팝업을 주는 것으로 하기
+        if (e.key == "@") {
+            const pos = getCaretPosition(e.target)
+            let selection = window.getSelection() //let offset = selection.focusOffset //let focus = selection.focusNode
+            const range = selection.getRangeAt(0)
+            let node = document.createElement('span')
+            node.style.color = "steelblue"
+            node.style.background = "yellow"
+            node.append("@이상병")
+            range.insertNode(node)
+            range.collapse(true)
+            setTimeout(function() { //const pos = getCaretPosition(e.target) //위에서 미리 set pos해야 함
+                //keypress때 넣은 @가 setTimeout이전에는 노출되지 않아 여기서 @빼고 커서 그 다음으로 넣음
+                e.target.innerHTML = e.target.innerHTML.substring(0, pos) + e.target.innerHTML.substring(pos + 1) + "<span color:black;background:white>&nbsp</span>"
+                let newPos = pos + 5
+                setTimeout(function() { setCaretPos(e.target, newPos) }, 500)
+            }, 100)
+        }
+    }
+
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
         try { //파일,이미지,링크가 있다면 미리 업로드된 상태이며 crud가 C일 때만 업로드 되며 U일 때는 슬랙과 동일하게 업로드되지 않음 (본문만 수정저장됨)
             if (appType == "dm" && showUserSearch.value) { //DM방 새로 만들기
@@ -1645,6 +1718,12 @@
             gst.util.showEx(ex, true)
         }
     }
+
+    function htmlView() {
+        showHtml.value = true
+        msgbody.value = document.getElementById(editorId).innerHTML
+    }
+
 
     function openLink(url) { 
         window.open(url, "_blank") //popup not worked for 'going back' navigation
@@ -2377,7 +2456,7 @@
                     @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
                 <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)" @keypress="whenKeyPress">
                 </div>
                 <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
                 <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
