@@ -113,6 +113,13 @@
                 const ret = await saveChan()
                 if (!ret) return //DM은 마스터에 저장할 내용이 없으므로 사용자가 행을 먼저 추가하더라도 백엔드에서 마스터를 먼저 저장해야 함
             }
+            for (let i = 0; i < arr.length; i++) { //chkOnly로 미리 체크해야 사용자 입장에서는 혼란이 없음. deleteChanMember()에서도 동일+다른 목적으로 사용중
+                const row = arr[i]
+                const rq = { crud: "C", CHANID: chanId, USERID: row.USERID, USERNM: row.USERNM, KIND: "member", SYNC: row.SYNC, chkOnly: true }
+                const res = await axios.post("/chanmsg/saveChanMember", rq)
+                const rs = gst.util.chkAxiosCode(res.data)
+                if (!rs) return
+            }
             const brr = [], crr = [] //추가시 중복된 멤버 빼고 추가 성공한 멤버 배열 (brr=userid,crr=usernm)
             let warn = ""
             for (let i = 0; i < arr.length; i++) {
@@ -431,7 +438,7 @@
                                     <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                                 </div>
                                 <div style="width:20px;padding-right:10px;display:flex;justify-content:center;align-items:center">
-                                    <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
+                                    <member-piceach :picUrl="row.url" sizeName="wh32"></member-piceach>
                                     <img :src="gst.html.getImageUrl(row.alive ? 'online.png' : 'offline.png')" style="margin-top:-25px;margin-left:-8px">
                                 </div>
                                 <div style="width:calc(100% - 60px);display:flex;flex-direction:column">
@@ -439,7 +446,7 @@
                                         <div style="width:calc(100% - 100px);display:flex;align-items:center">
                                             <div class="coDotDot">
                                                 <span style="width:60px;margin-right:10px;font-weight:bold">{{ row.USERNM }}</span>
-                                                <span>{{ row.JOB }}</span>
+                                                <span>{{ row.JOB }}</span>  
                                             </div>
                                         </div>
                                         <div style="min-width:100px;display:flex;justify-content:flex-end;align-items:center">

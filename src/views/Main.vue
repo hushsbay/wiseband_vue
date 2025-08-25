@@ -256,8 +256,8 @@
             if (!rs) {
                 realtimeJobDone = 'Y'
                 return
-            }
-            gst.util.setSnack("") //tmp.value = gst.auth.getCookie("token")
+            } //tmp.value = gst.auth.getCookie("token")
+            //gst.util.setSnack("") //true로 계속 띄우던 것이 기본 sec으로 변경되므로 여기서 사용하려면 다른 고민이 필요
             if (rs.list.length > 0) bc2.postMessage({ code: 'pollingToMsgList', obj: rs.list })
             let notyetCntHomeTmp = 0, notyetCntDmTmp = 0
             const listByMenu = rs.data.listByMenu //GS와 WS의 notyet count 배열임

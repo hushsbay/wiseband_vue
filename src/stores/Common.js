@@ -19,7 +19,7 @@ const hush = {
         color_athome : "#e6f2e6", //--hover-color in main.css //"lightsteelblue", //color_act_later : "lightsteelblue",
         uploadLimitSize : 10 * 1024 * 1024, //10MB
         uploadMaxCount : 10,
-        toastSec : 2,
+        toastSec : 3,
         toastMsg : "처리중..",
         moreData : "조회중..",
         startOfData : "처음 데이터입니다.",

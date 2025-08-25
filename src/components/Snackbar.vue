@@ -6,7 +6,9 @@
 
     watchEffect(() => {
         const { msg, toastSec } = gst.snackBar
-        if (msg && Number.isInteger(toastSec) && toastSec > 0) setTimeout(() => closeBar(), toastSec * 1000)    
+        if (msg && Number.isInteger(toastSec) && toastSec > 0) {
+            setTimeout(() => closeBar(), toastSec * 1000)    
+        }
     })
 
     function closeBar() {
