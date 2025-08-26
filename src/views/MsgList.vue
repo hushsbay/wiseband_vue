@@ -783,8 +783,7 @@
                 }
                 if (row.CDT > savNextMsgMstCdt) savNextMsgMstCdt = row.CDT
                 if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
-            }
-            console.log("1111111111111111111111111111111111")
+            }            
             realLastCdt = rs.list.length > 0 ? rs.list[0].CDT : "" //SELECT MSGID, CDT FROM S_MSGMST_TBL WHERE CHANID = ? AND REPLYTO = '' ORDER BY CDT DESC LIMIT 1
             imgBlobArr.value = []
             for (let item of rs.data.tempimagelist) {
