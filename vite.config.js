@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
         },
         publicPath: mode == 'production' ? '/' : '/',
         server: {
-            port: mode == 'production' ? '84' : '84'
+            port: mode == 'production' ? '447' : '447'
         },
     }
 })
