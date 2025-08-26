@@ -1548,7 +1548,7 @@
             let crud = (editMsgId.value) ? "U" : "C"
             const rq = { 
                 crud: crud, chanid: chanId, msgid: editMsgId.value, replyto: hasProp() ? props.data.msgid : null,
-                body: msgbody.value, bodytext: bodytext,
+                body: body, bodytext: bodytext, //body: msgbody.value, bodytext: bodytext,
                 num_file: (editMsgId.value) ? 0 : fileBlobArr.value.length, 
                 num_image: (editMsgId.value) ? 0 : imgBlobArr.value.length, 
                 num_link: (editMsgId.value) ? 0 : linkArr.value.length
