@@ -24,7 +24,10 @@ app.mount('#app')
 
 const gst = GeneralStore() //app위로 올리지 말기
 
-axios.defaults.baseURL = domainStr //https://cokes.tistory.com/123, https://inpa.tistory.com/entry/AXIOS-%F0%9F%93%9A-CORS-%EC%BF%A0%ED%82%A4-%EC%A0%84%EC%86%A1withCredentials-%EC%98%B5%EC%85%98
+console.log("domainStr: " + domainStr)
+
+//https://cokes.tistory.com/123, https://inpa.tistory.com/entry/AXIOS-%F0%9F%93%9A-CORS-%EC%BF%A0%ED%82%A4-%EC%A0%84%EC%86%A1withCredentials-%EC%98%B5%EC%85%98
+axios.defaults.baseURL = domainStr
 axios.defaults.withCredentials = true //localhost 2개의 다른 포트시 쿠키 전송안되는 것은 nest main.ts enableCors()도 필요
 axios.interceptors.request.use(
     function (config) { //console.log("main.js axios config : " + config.url + " ::: " + JSON.stringify(config.data))

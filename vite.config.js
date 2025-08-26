@@ -29,10 +29,21 @@ export default defineConfig(({ mode }) => {
             '@': fileURLToPath(new URL('./src', import.meta.url))
             }
         },
-        //publicPath: mode == 'production' ? '/' : '/',
+        publicPath: mode == 'production' ? '/' : '/',
         // server: {
         //     port: mode == 'production' ? '447' : '447'
         // },
-        base: '/vue/dist'
+        //base: '/vue/dist'
+        // server: {
+        //     proxy: {
+        //       '/api': {
+        //         target: 'https://hushsbay.com:446', // Your backend API server
+        //         changeOrigin: true,
+        //         pathRewrite: {
+        //           '^/api': '' // Remove '/api' prefix when forwarding to backend
+        //         }
+        //       }
+        //     }
+        // },
     }
 })
