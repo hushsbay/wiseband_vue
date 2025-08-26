@@ -29,9 +29,10 @@ export default defineConfig(({ mode }) => {
             '@': fileURLToPath(new URL('./src', import.meta.url))
             }
         },
-        publicPath: mode == 'production' ? '/' : '/',
-        server: {
-            port: mode == 'production' ? '447' : '447'
-        },
+        //publicPath: mode == 'production' ? '/' : '/',
+        // server: {
+        //     port: mode == 'production' ? '447' : '447'
+        // },
+        base: '/vue/dist'
     }
 })
