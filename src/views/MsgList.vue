@@ -690,8 +690,8 @@
                 onGoingGetList = false                
                 return
             }   
-            vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
-            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
+//            vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
+//            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
                 //MsgList내에서 이 목록 배열을 초기화하면 고통이 따르는데 MsgList.vue가 onMounted() 된다는 것임 : 아직 동작 원리는 이해하지 못함
