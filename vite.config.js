@@ -29,6 +29,9 @@ export default defineConfig(({ mode }) => {
             '@': fileURLToPath(new URL('./src', import.meta.url))
             }
         },
-        publicPath: mode == 'production' ? '/' : '/'
+        publicPath: mode == 'production' ? '/' : '/',
+        server: {
+            port: 84,
+        },
     }
 })
