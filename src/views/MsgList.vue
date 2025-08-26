@@ -93,7 +93,7 @@
             if (entry[0].isIntersecting) {                
                 showBottomObserver.value = true
                 if (scrollDir == 'down') { //하단에서 위로 스크롤시 자꾸 getList()를 호출해서.. down일 떄만 호출하도록 체크하는 것임
-                    await getList({ nextMsgMstCdt: savNextMsgMstCdt })
+                    //await getList({ nextMsgMstCdt: savNextMsgMstCdt })
                 }
                 setTimeout(function() { showBottomObserver.value = false }, 500)
             } else {
@@ -115,7 +115,7 @@
             if (hasProp()) {
                 setBasicInfoInProp()
                 await getList({ msgid: msgidInChan, kind: "withReply" })
-            } else {                
+            } else {   
                 if (route.fullPath == "/main/dm/dm_body_new") {
                     showUserSearch.value = true
                 } else {

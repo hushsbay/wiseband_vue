@@ -12,6 +12,7 @@ export function connectSock() { //autoConnect:false => connect()를 호출하기
     const [hostnameStr, domainStr] = hush.util.getHost()
     const query = { token : VueCookies.get("token") } //hush.cons.appName은 namespace (서버와 동일하게 가져 가야 함)
     sock.socket = io(domainStr + '/' + hush.cons.appName, { forceNew: false, reconnection: true, query: query })
+    //sock.socket = io('https://hushsbay.com:3051/' + hush.cons.appName, { forceNew: false, reconnection: true, query: query })
     sock.socket.on("connect", () => { //console.log("socket connected")
         connected.value = true
     })
