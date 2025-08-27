@@ -126,7 +126,9 @@
                     } else if (tabForNewWin.value != "") {
                         listMsg(tabForNewWin.value)
                     } else {
-                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt }) //기본적인 조회 패턴임   
+                        console.log("getList Start - onMounted")
+                        await getList({ prevMsgMstCdt: savPrevMsgMstCdt }) //기본적인 조회 패턴임
+                        console.log("getList End - onMounted")
                         inEditor.value.focus()               
                     }
                     observerTopScroll()
@@ -684,7 +686,9 @@
                 savNextMsgMstCdt = hush.cons.cdtAtFirst
                 savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
+            console.log("getList 000")
             const res = await axios.post("/chanmsg/qry", param)
+            console.log("getList 111")
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
                 onGoingGetList = false                
@@ -807,6 +811,7 @@
                 }
                 linkArr.value.push({ hover: false, text: text, url: url, cdt: item.CDT })
             }
+            console.log("getList 222")
             await nextTick()
             if (msgidParent && kind == "atHome") { //msgid가 댓글인 경우 부모의 msgid가 필요함 (msgidParent)
                 if (msgRow.value[msgidParent]) { //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
@@ -839,6 +844,7 @@
                 if (!afterScrolled.value) readMsgToBeSeen()
             }, 1000) //클릭해도 읽음 처리됨
             onGoingGetList = false
+            console.log("getList 333")
         } catch (ex) {
             onGoingGetList = false
             gst.util.showEx(ex, true)
