@@ -51,7 +51,7 @@
             await nextTick() //decideSeeMore()에서 .cntTarget가 읽히지 않아 추가
             decideSeeMore()
             sideClickOnLoop(null, true)
-            startSocket()
+            //startSocket()                       
             procTimerShort() 
             procTimerLong()
             document.addEventListener("visibilitychange", () => { //alt+tab이나 태스크바 클릭시 안먹힘
