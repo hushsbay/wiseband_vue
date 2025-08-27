@@ -686,7 +686,7 @@
                 savNextMsgMstCdt = hush.cons.cdtAtFirst
                 savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
-            console.log("getList 000")
+            console.log("getList 000 : " + JSON.stringify(param))
             const res = await axios.post("/chanmsg/qry", param)
             console.log("getList 111")
             const rs = gst.util.chkAxiosCode(res.data) 
