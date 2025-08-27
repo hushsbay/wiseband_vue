@@ -7,7 +7,7 @@
     import ContextMenu from "/src/components/ContextMenu.vue"
     import MemberList from '/src/components/MemberList.vue'
     import Resizer from "/src/components/Resizer.vue"
-
+                                    
     const route = useRoute()
     const gst = GeneralStore()
 
