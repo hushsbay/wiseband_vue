@@ -5,7 +5,7 @@
 # wiseband_vue (프론트엔드) + wiseband_nest (백엔드)
 
 - Slack Clone 개발 건입니다. (Vue.js + Nest.js + MySql + Socket.io + Redis)
-- 현재 개발 서버에 배포/테스트중인 단계입니다.
+- 현재 개발 서버에 배포/테스트중인 단계입니다. (현재 서버 속도 이슈 파악중...)
 - 9월 이후 WiSE 인사/조직 데이터 및 포털 임베딩 작업 진행 예정입니다.
 
 
