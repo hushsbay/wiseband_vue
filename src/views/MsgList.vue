@@ -654,8 +654,9 @@
             for (let i = 0; i < len; i++) {
                 const row = chandtlParam[i]
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
-                //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                //if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+                /* 이미지는 아래 비동기콜백으로 처리해야 속도 이슈가 없음
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })*/
                 chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함                
                 gst.realtime.getUserImg(row.USERID, function(uid, data) {
                     const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
@@ -698,9 +699,11 @@
             if (!rs) {
                 onGoingGetList = false                
                 return
-            }   
+            }
             vipStr.value = ("," + rs.data.vipStr + ",") ?? "none" //데이터 없어서 null일 수도 있음 ##34
-            setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
+            if (savNextMsgMstCdt == hush.cons.cdtAtFirst || (msgid && kind == "atHome")) {
+                setChanMstDtl(rs.data.chanmst, rs.data.chandtl) //2)중에서도 맨처음만 처리 그리고 5) 경우에도 처리함 : 다른 경우에도 처리시 유저이미지가 계속 번쩍거리게 될 것임
+            }
             if (msgid && (kind == "atHome" || kind == "withReply")) {
                 msglist.value = [] //홈에서 열기를 선택해서 열린 것이므로 목록을 초기화함
                 //MsgList내에서 이 목록 배열을 초기화하면 고통이 따르는데 MsgList.vue가 onMounted() 된다는 것임 : 아직 동작 원리는 이해하지 못함
@@ -2076,10 +2079,8 @@
     async function procMainToMsglist(kind, obj) {
         if (kind == "realtime") {
             chkDataLogEach(obj)
-        } else if (kind == "updateProfile") {
-            console.log(obj.userid+"@@@@") 
+        } else if (kind == "updateProfile") { //console.log(obj.userid+"@@@@") 
             if (!chandtlObj.value[obj.userid]) return //소켓 'all'을 통해 수신된 것이므로 해당 사용자아이디가 있는 경우만 처리하면 됨
-            console.log(obj.userid+"@@@@####") 
             const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
             if (!rs) return
@@ -2110,7 +2111,7 @@
             }
         } else if (kind == "addChildFromBody") {
             await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
-        } else if (kind == "forwardToBody") { //from HomePanel or DmPanel
+        } else if (kind == "forwardToBody") { //from HomePanel or DmPanel : 예) MemberList.vue에서 applyToBody() 
             const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
             if (!rs) return
