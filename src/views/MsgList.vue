@@ -652,11 +652,16 @@
             chanmemFullExceptMe.value = []
             const len = chandtlParam.length
             for (let i = 0; i < len; i++) {
-                const row = chandtlParam[i]    
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함
-                if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+                const row = chandtlParam[i]
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
+                //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                //if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })
+                chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함                
+                gst.realtime.getUserImg(row.USERID, function(uid, data) {
+                    const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                    chandtlObj.value[uid].url = url
+                    if (chanmemUnder.value.length < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: url })
+                })
             }
             chandtl.value = chandtlParam
         } catch (ex) {

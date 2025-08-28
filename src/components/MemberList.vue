@@ -81,9 +81,17 @@
             const len = rs.data.chandtl.length
             for (let i = 0; i < len; i++) {
                 const row = rs.data.chandtl[i]
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null                
                 memberlist.value.push(row)
+                gst.realtime.getUserImg(row.USERID, function(uid, data) {
+                    const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                    memberlist.value.forEach(item => { 
+                        if (item.USERID == uid) {
+                            item.url = url
+                        }
+                    })
+                })
             }
             onGoingGetList = false
             if (rs.data.chanidAlready) gst.util.setSnack("동일한 멤버로 구성된 DM방이 이미 존재합니다. 방을 삭제하거나 멤버를 변경해 주시기 바랍니다.", true)

@@ -47,7 +47,7 @@
             listSel.value = rs.list.filter(x => x.USERID != null) //B.USERID가 있으면 내게 설정된 메뉴
             listUnSel.value = rs.list.filter(x => x.USERID == null) //null이면 내게 설정되지 않은 메뉴
             window.addEventListener('resize', () => { decideSeeMore() })
-            gst.realtime.getUserInfo()
+            gst.realtime.getUserInfo() //이미지 포함되어 있으므로 속도 유의
             await nextTick() //decideSeeMore()에서 .cntTarget가 읽히지 않아 추가
             decideSeeMore()
             sideClickOnLoop(null, true)

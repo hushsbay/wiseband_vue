@@ -121,6 +121,15 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
+        getUserImg : function(uid, callback) {
+            axios.post("/user/getUserInfo", { uid: uid, pictureOnly: true })
+            .then(function(res) {
+                callback(uid, res.data.data)
+            }).catch(function(err) {
+                console.log(err)
+            })
+        },
+
         setObjToChan : function(chanid, key, val) {
             if (!objByChanId.value[chanid]) objByChanId.value[chanid] = {}
             objByChanId.value[chanid][key] = val
