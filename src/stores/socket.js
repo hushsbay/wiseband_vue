@@ -9,10 +9,9 @@ export const connected = ref(false) //연결 상태
 export const sock = { socket: null } //export는 immutable이므로 바로 변수로 처리하지 않고 object로 처리해야 문제가 없을 것임
 
 export function connectSock() { //autoConnect:false => connect()를 호출하기 전엔 서버 연결 시도하지 않음. reconnection:true => 연결이 끊겼을 때 자동으로 재연결 시도
-    const [hostnameStr, domainStr] = hush.util.getHost()
-    const query = { token : VueCookies.get("token") } //hush.cons.appName은 namespace (서버와 동일하게 가져 가야 함)
-    //sock.socket = io(domainStr + '/' + hush.cons.appName, { forceNew: false, reconnection: true, query: query })
-    sock.socket = io('https://hushsbay.com:8080/' + hush.cons.appName, { forceNew: false, reconnection: false, query: query })
+    const [hostnameStr, domainStr] = hush.util.getHost(true)
+    const query = { token : VueCookies.get("token") } //hush.cons.appName은 namespace (서버와 동일하게 가져 가야 함)    
+    sock.socket = io(domainStr + '/' + hush.cons.appName, { forceNew: false, reconnection: true, query: query })    
     sock.socket.on("connect", () => { //console.log("socket connected")
         connected.value = true
     })

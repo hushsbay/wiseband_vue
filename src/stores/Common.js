@@ -4,7 +4,8 @@ const hush = {
 
     cons : {
         appName : 'WiSEBand', //socket.io namespace로도 사용됨 (서버/클라이언트 동일해야 동작함)
-        hostname : 'hushsbay.com',
+        localNestPort: '3000', //서버의 common.ts 주석 참조
+        sockPort: '3052', //AWS CLB에 등록된 PORT. 서버의 common.ts 주석 참조
         OK : '0',
         NOT_OK : '-1',
         NOT_FOUND : '-100',
@@ -34,15 +35,10 @@ const hush = {
     },
     
     util : {
-        getHost : function() {
-            let hostnameStr = "", domainStr = ""
-            if (location.href.startsWith("http://localhost")) {
-                hostnameStr = "localhost"
-                domainStr = location.protocol + "//" + hostnameStr + ":3000" //nest port
-            } else {
-                hostnameStr = hush.cons.hostname
-                domainStr = location.protocol + "//" + hostnameStr + ":" + location.port
-            }
+        getHost : function(forSocket) {
+            const hostnameStr = location.hostname //port 제거된 호스트명 //const exp = /^(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi //const arr = location.href.match(exp) //match 사용시 반드시 g 옵션 쓰기로 함
+            const restPort = location.href.startsWith("http://localhost") ? hush.cons.localNestPort : location.port
+            const domainStr = location.protocol + "//" + hostnameStr + ":" + (forSocket ? hush.cons.sockPort : restPort)
             return [hostnameStr, domainStr]
         },
         isvoid : function(obj) { //대신 a ?? b로 사용하기 (a가 null도 아니고 undefined도 아니면 a 반환. a가 0이거나 false라도 a를 반환)
