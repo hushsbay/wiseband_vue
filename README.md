@@ -5,7 +5,7 @@
 # wiseband_vue (프론트엔드) + wiseband_nest (백엔드)
 
 - Slack Clone 개발 건입니다. (Vue.js + Nest.js + MySql + Socket.io + Redis)
-- 9월부터 웹에디터, 맨션 및 개선보완사항 해결 진행해 10월까지는 (최종)구축완료 계획입니다.
+- 9월부터 웹에디터, 맨션 및 개선보완사항 진행해 10월까지는 (최종)구축완료 계획입니다.
 
 
 # Structure / Flow
