@@ -17,7 +17,7 @@ const app = createApp(App)
 app.config.globalProperties.axios = axios //global로 설정했음에도 각 .vue마다 axios import하지 않고는 axios or this.axios로 호출시 오류 발생!?
 app.use(createPinia())
 app.use(router)
-//app.use(VueCookies, { path : '/', domain : hostnameStr, secure : true, sameSite : 'none' }) //domain : hostnameStr 아래에서 제외 (sendjay와 동일하게 운영)
+//app.use(VueCookies, { path : '/', domain : hostnameStr, secure : false, sameSite : 'none' }) //domain : hostnameStr 아래에서 제외 (sendjay와 동일하게 운영하려면 domain 제외하기)
 app.use(VueCookies, { path : '/', secure : true, sameSite : 'none' }) //none(모든 도메인에 쿠키가 전송), strict(동일한 사이트 내의 요청에만 전송)
 //const overridenOptions = { allowedTags: ['span'] } //app.use(Vue3Sanitize, overridenOptions)
 app.mount('#app')
