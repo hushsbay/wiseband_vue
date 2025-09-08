@@ -1537,7 +1537,9 @@
             }
         } else if (e.key == "@") {
             setTimeout(() => { checkForMention() }, 10)
-        }
+        } else { //if (e.key == "Escape") {
+            if (!e.shiftKey) closeMentionDropdown() //@는 shiftKey가 먼저 발생함
+        } 
     }
 
     const checkForMention = () => {  
@@ -1548,6 +1550,16 @@
         selectedMentionIndex.value = 0
         updateMentionPosition()
         console.log('checkForMention: Dropdown shown, filtered users:', filteredUsers.value.length)
+    }
+
+    const closeMentionDropdown = () => {
+        setTimeout(() => {
+            if (showMentionDropdown.value) {
+                showMentionDropdown.value = false
+                selectedMentionIndex.value = 0
+                filteredUsers.value = []
+            }
+        }, 500)
     }
 
     async function procSearch(searchText) {
@@ -1574,11 +1586,32 @@
         if (!selection.rangeCount) return        
         const range = selection.getRangeAt(0)
         const rect = range.getBoundingClientRect()
-        const editorRect = inEditor.value.getBoundingClientRect()   
+        //const editorRect = inEditor.value.getBoundingClientRect()   
         mentionPosition.value = {
-            top: editorRect.top - 200, //rect.bottom - editorRect.top + 350,
-            left: rect.left//- editorRect.left
+            top: rect.bottom - 200, //editorRect.top - 200, //rect.bottom - editorRect.top + 350,
+            left: rect.left + 20 //- editorRect.left
         }
+    }
+
+    const selectMention = (user) => {
+        if (!user) return
+        inEditor.value.focus()    
+        const range = restoreCursorPosition()
+        const node1 = range.startContainer
+        if (node1.nodeType === Node.TEXT_NODE) { //@가 반드시 한칸앞에 존재하므로 @를 포함해 select해서 replace하는 것임
+            range.setStart(node1, range.startOffset - 1)
+        }
+        let node = document.createElement('span')
+        node.classList.add("mention", "clickable")
+        node.setAttribute("data-user-id", user.USERID)
+        node.setAttribute("data-user-name", user.USERNM)
+        node.setAttribute("contenteditable", "false")
+        node.setAttribute("data-click-attached", "true")
+        node.append("@" + user.USERNM)
+        range.deleteContents()
+        range.insertNode(node)
+        range.collapse(false)
+        closeMentionDropdown()
     }
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
@@ -1602,8 +1635,9 @@
                 localStorage.wiseband_lastsel_dmchanid = chanId
                 gst.sockToSend.push({ sendTo: "myself", data: { ev: "roomJoin", roomid: chanId, memberIdAdded: brr, memberNmAdded: crr, from: "saveMsg" }})
             }
+            let body1 = document.getElementById(editorId).innerText.trim()
+            if (body1 == "") return
             let body = document.getElementById(editorId).innerHTML.trim()
-            if (body == "") return
             let bodytext = document.getElementById(editorId).innerText.trim()
             const reg = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z가-힣0-9@:%_\+.~#(){}?&//=]*)/
             const result = reg.exec(body)
@@ -1689,6 +1723,7 @@
     function editorFocused(bool) {
         editorIn.value = bool
         if (!bool) editorBlurDt = Date.now()
+        closeMentionDropdown()
     }
 
     function chkEditorFocus() {
@@ -2529,10 +2564,10 @@
                     @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)" @keypress="whenKeyPress">
                 </div>-->
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
                 <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)">
                 </div>
                 <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
                 <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
@@ -2712,4 +2747,22 @@
     .mention-info { flex:1;min-width:0 }
     .mention-name { font-weight:500;color:#333;font-size:14px;margin-bottom:2px }
     .mention-username { color:#6c757d;font-size:12px }
+    /* .editor_body:deep(.mention) {
+        margin:0 1px;padding:2px 6px;
+        background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
+    }
+    .editor_body:deep(.mention.clickable) { cursor:pointer;user-select:none }
+    .editor_body:deep(.mention.clickable:hover) {
+        background:#bbdefb;color:#0d47a1;transform:translateY(-1px);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)
+    }
+    .editor_body:deep(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) } */
+    .editor_body.mention {
+        margin:0 1px;padding:2px 6px;
+        background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
+    }
+    .editor_body.clickable { cursor:pointer;user-select:none }
+    /* .editor_body.(.mention.clickable:hover) {
+        background:#bbdefb;color:#0d47a1;transform:translateY(-1px);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)
+    }
+    .editor_body(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) } */
 </style>
