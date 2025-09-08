@@ -2747,7 +2747,7 @@
     .mention-info { flex:1;min-width:0 }
     .mention-name { font-weight:500;color:#333;font-size:14px;margin-bottom:2px }
     .mention-username { color:#6c757d;font-size:12px }
-    /* .editor_body:deep(.mention) {
+    .editor_body:deep(.mention) {
         margin:0 1px;padding:2px 6px;
         background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
     }
@@ -2755,14 +2755,5 @@
     .editor_body:deep(.mention.clickable:hover) {
         background:#bbdefb;color:#0d47a1;transform:translateY(-1px);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)
     }
-    .editor_body:deep(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) } */
-    .editor_body.mention {
-        margin:0 1px;padding:2px 6px;
-        background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
-    }
-    .editor_body.clickable { cursor:pointer;user-select:none }
-    /* .editor_body.(.mention.clickable:hover) {
-        background:#bbdefb;color:#0d47a1;transform:translateY(-1px);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)
-    }
-    .editor_body(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) } */
+    .editor_body:deep(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) }
 </style>
