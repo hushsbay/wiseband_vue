@@ -76,10 +76,10 @@ const GeneralStore = defineStore('General', () => {
 
         menu : [],    
         
-        show : async function(e) {
+        show : async function(e) { //e.left와 e.top은 MsgList.vue의 procMention() 관련임
             this.on = false //child 메뉴 없애지 않으면 child 떠 있는채로 right click 먹히게 됨
-            this.data.posX = e.clientX
-            this.data.posY = e.clientY
+            this.data.posX = e.clientX ? e.clientX : e.left
+            this.data.posY = e.clientY ? e.clientY : e.top
             this.on = true
         },
 

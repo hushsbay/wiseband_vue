@@ -1607,6 +1607,13 @@
         node.setAttribute("data-user-name", user.USERNM)
         node.setAttribute("contenteditable", "false")
         node.setAttribute("data-click-attached", "true")
+        if (node._mentionClickHandler) node.removeEventListener('click', node._mentionClickHandler)
+        node._mentionClickHandler = (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            procMention(e, user)
+        }
+        node.addEventListener('click', node._mentionClickHandler)
         node.append("@" + user.USERNM)
         range.deleteContents()
         range.insertNode(node)
@@ -1758,7 +1765,13 @@
                 
             }}
         ]
-        gst.ctx.show(e)            
+        gst.ctx.show(e)
+    }
+
+    function clickMention(top, left, uid, unm) { //procMention()으로 보내기 위한 전달 역할
+        const pos = { top: top, left: left }
+        const row = { USERID: uid, USERNM: unm }
+        procMention(pos, row)
     }
 
     function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
@@ -2747,6 +2760,8 @@
     .mention-info { flex:1;min-width:0 }
     .mention-name { font-weight:500;color:#333;font-size:14px;margin-bottom:2px }
     .mention-username { color:#6c757d;font-size:12px }
+    /* 아래 deep은 원해 하위컴포넌트에 영향을 주기 위한 vue3.0의 기법으로 이해하고 있는데 
+    MsgList.vue에서 사용하지 않으면 mention clickable 클래스가 먹히지 않고 있음 */
     .editor_body:deep(.mention) {
         margin:0 1px;padding:2px 6px;
         background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
