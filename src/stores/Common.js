@@ -4,7 +4,7 @@ const hush = {
 
     cons : {
         appName : 'WiSEBand', //socket.io namespace로도 사용됨 (서버/클라이언트 동일해야 동작함)
-        localNestPort: '3000', //서버의 common.ts 주석 참조
+        localNestPort: '3001', //서버의 common.ts 주석 참조
         sockPort: '3052', //AWS CLB에 등록된 PORT. 서버의 common.ts 주석 참조
         OK : '0',
         NOT_OK : '-1',

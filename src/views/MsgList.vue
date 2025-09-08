@@ -63,6 +63,11 @@
     let bc2, fifo = [], fifoLen = ref(0) //fifoLen은 화면 표시용 (나중에 제거)
     let timerChkTyping
 
+    //멘션 
+    const showMentionDropdown = ref(false), mentionQuery = ref('')
+    const mentionPosition = ref({ top: 0, left: 0 })
+    const selectedMentionIndex = ref(0), filteredUsers = ref([])
+
     //##0 웹에디터 https://ko.javascript.info/selection-range
     //https://velog.io/@longroadhome/%EB%AA%A8%EB%8D%98JS-%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80-Range%EC%99%80-Selection
     //https://stefan.petrov.ro/inserting-an-element-at-cursor-position-in-a-content-editable-div/ => 목적이 다르고 헛점도 많이 보이지만 참고할 만한 내용도 많음
@@ -1442,84 +1447,137 @@
         }
     }
 
-    function keyDownEnter(e) { //keyUpEnter가 아님
-        if (e.shiftKey) {
-            //나중에 옵션 주기
-        } else {
-            saveMsg() //일단 줄바꿈으로 동작하게 하기
-        }
-    }
+    //function keyDownEnter(e) { //keyUpEnter가 아님
+    //    if (e.shiftKey) {
+    //        //나중에 옵션 주기
+    //    } else {
+    //        saveMsg() //일단 줄바꿈으로 동작하게 하기
+    //    }
+    //}
 
-    function getCaretPosition(editableDiv) {
-        var caretPos = 0, sel, range;
-        if (window.getSelection) {
-            sel = window.getSelection();
-            if (sel.rangeCount) {
-                range = sel.getRangeAt(0)
-                if (range.commonAncestorContainer.parentNode == editableDiv) {
-                    caretPos = range.endOffset
-                }
-            }
-        } else if (document.selection && document.selection.createRange) {
-            range = document.selection.createRange();
-            if (range.parentElement() == editableDiv) {
-                var tempEl = document.createElement("span")
-                editableDiv.insertBefore(tempEl, editableDiv.firstChild)
-                var tempRange = range.duplicate()
-                tempRange.moveToElementText(tempEl)
-                tempRange.setEndPoint("EndToEnd", range)
-                caretPos = tempRange.text.length
-            }
-        }
-        return caretPos
-    }
+    // function getCaretPosition(editableDiv) {
+    //     var caretPos = 0, sel, range;
+    //     if (window.getSelection) {
+    //         sel = window.getSelection();
+    //         if (sel.rangeCount) {
+    //             range = sel.getRangeAt(0)
+    //             if (range.commonAncestorContainer.parentNode == editableDiv) {
+    //                 caretPos = range.endOffset
+    //             }
+    //         }
+    //     } else if (document.selection && document.selection.createRange) {
+    //         range = document.selection.createRange();
+    //         if (range.parentElement() == editableDiv) {
+    //             var tempEl = document.createElement("span")
+    //             editableDiv.insertBefore(tempEl, editableDiv.firstChild)
+    //             var tempRange = range.duplicate()
+    //             tempRange.moveToElementText(tempEl)
+    //             tempRange.setEndPoint("EndToEnd", range)
+    //             caretPos = tempRange.text.length
+    //         }
+    //     }
+    //     return caretPos
+    // }
 
-    function setCaretPos(el, sPos) {
-        var charIndex = 0, range = document.createRange()
-        range.setStart(el, 0)
-        range.collapse(true)
-        var nodeStack = [el], node, foundStart = false, stop = false
-        while (!stop && (node = nodeStack.pop())) {
-            if (node.nodeType == 3) {
-                var nextCharIndex = charIndex + node.length
-                if (!foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
-                    range.setStart(node, sPos - charIndex)
-                    foundStart = true
-                }
-                if (foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
-                    range.setEnd(node, sPos - charIndex)
-                    stop = true
-                }
-                charIndex = nextCharIndex
+    // function setCaretPos(el, sPos) {
+    //     var charIndex = 0, range = document.createRange()
+    //     range.setStart(el, 0)
+    //     range.collapse(true)
+    //     var nodeStack = [el], node, foundStart = false, stop = false
+    //     while (!stop && (node = nodeStack.pop())) {
+    //         if (node.nodeType == 3) {
+    //             var nextCharIndex = charIndex + node.length
+    //             if (!foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+    //                 range.setStart(node, sPos - charIndex)
+    //                 foundStart = true
+    //             }
+    //             if (foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+    //                 range.setEnd(node, sPos - charIndex)
+    //                 stop = true
+    //             }
+    //             charIndex = nextCharIndex
+    //         } else {
+    //             var i = node.childNodes.length
+    //             while (i--) {
+    //                 nodeStack.push(node.childNodes[i])
+    //             }
+    //         }
+    //     }
+    //     let selection = window.getSelection()
+    //     selection.removeAllRanges()
+    //     selection.addRange(range)
+    // }
+
+    // function whenKeyPress(e) { //한개는 OK. 여러개 실패함 => @ 프람프트는 포기하고 saveMsg()때 @이상병, @정일영영턱스 등을 읽어서 사용자로 하여금 @이상병, @정일영으로 처리하도록 팝업을 주는 것으로 하기
+    //     if (e.key == "@") {
+    //         const pos = getCaretPosition(e.target)
+    //         let selection = window.getSelection() //let offset = selection.focusOffset //let focus = selection.focusNode
+    //         const range = selection.getRangeAt(0)
+    //         let node = document.createElement('span')
+    //         node.style.color = "steelblue"
+    //         node.style.background = "yellow"
+    //         node.append("@이상병")
+    //         range.insertNode(node)
+    //         range.collapse(true)
+    //         setTimeout(function() { //const pos = getCaretPosition(e.target) //위에서 미리 set pos해야 함
+    //             //keypress때 넣은 @가 setTimeout이전에는 노출되지 않아 여기서 @빼고 커서 그 다음으로 넣음
+    //             e.target.innerHTML = e.target.innerHTML.substring(0, pos) + e.target.innerHTML.substring(pos + 1) + "<span color:black;background:white>&nbsp</span>"
+    //             let newPos = pos + 5
+    //             setTimeout(function() { setCaretPos(e.target, newPos) }, 500)
+    //         }, 100)
+    //     }
+    // }
+
+    function keyDown(e) { //keyUpEnter가 아님
+        if (e.key == "Enter") {
+            if (e.shiftKey) {
+                //나중에 옵션 주기
             } else {
-                var i = node.childNodes.length
-                while (i--) {
-                    nodeStack.push(node.childNodes[i])
-                }
+                saveMsg() //일단 줄바꿈으로 동작하게 하기
             }
+        } else if (e.key == "@") {
+            setTimeout(() => { checkForMention() }, 10)
         }
-        let selection = window.getSelection()
-        selection.removeAllRanges()
-        selection.addRange(range)
     }
 
-    function whenKeyPress(e) { //한개는 OK. 여러개 실패함 => @ 프람프트는 포기하고 saveMsg()때 @이상병, @정일영영턱스 등을 읽어서 사용자로 하여금 @이상병, @정일영으로 처리하도록 팝업을 주는 것으로 하기
-        if (e.key == "@") {
-            const pos = getCaretPosition(e.target)
-            let selection = window.getSelection() //let offset = selection.focusOffset //let focus = selection.focusNode
-            const range = selection.getRangeAt(0)
-            let node = document.createElement('span')
-            node.style.color = "steelblue"
-            node.style.background = "yellow"
-            node.append("@이상병")
-            range.insertNode(node)
-            range.collapse(true)
-            setTimeout(function() { //const pos = getCaretPosition(e.target) //위에서 미리 set pos해야 함
-                //keypress때 넣은 @가 setTimeout이전에는 노출되지 않아 여기서 @빼고 커서 그 다음으로 넣음
-                e.target.innerHTML = e.target.innerHTML.substring(0, pos) + e.target.innerHTML.substring(pos + 1) + "<span color:black;background:white>&nbsp</span>"
-                let newPos = pos + 5
-                setTimeout(function() { setCaretPos(e.target, newPos) }, 500)
-            }, 100)
+    const checkForMention = () => {  
+        storeCursorPosition() //@를 누를 때만 나오도록 되어 있으므로 그전에 window.getSelection()을 가져올 필요없음
+        console.log('checkForMention: Mention query:', mentionQuery.value)
+        procSearch()
+        showMentionDropdown.value = true
+        selectedMentionIndex.value = 0
+        updateMentionPosition()
+        console.log('checkForMention: Dropdown shown, filtered users:', filteredUsers.value.length)
+    }
+
+    async function procSearch(searchText) {
+        try {
+            const param = { searchText: '이상' } //searchText
+            const res = await axios.post("/user/procOrgSearch", param)
+            const rs = gst.util.chkAxiosCode(res.data) 
+            if (!rs) return
+            filteredUsers.value = []            
+            for (let i = 0; i < rs.list.length; i++) {
+                const row = rs.list[i]
+                row.nodekind = "U"
+                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+                row.key = row.USERID
+                filteredUsers.value.push(row)
+            }
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    const updateMentionPosition = () => {
+        const selection = window.getSelection()
+        if (!selection.rangeCount) return        
+        const range = selection.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+        const editorRect = inEditor.value.getBoundingClientRect()   
+        mentionPosition.value = {
+            top: editorRect.top - 200, //rect.bottom - editorRect.top + 350,
+            left: rect.left//- editorRect.left
         }
     }
 
@@ -2464,11 +2522,17 @@
                         <div class="coDotDot"><span>{{ memNmTyping.join(',') }}</span></div>
                     </div>
                 </div>
-                <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                <!--<div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
                     @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
+                </div>--> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
+                <!--<div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)" @keypress="whenKeyPress">
+                </div>-->
+                <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
+                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
                 <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)" @keypress="whenKeyPress">
+                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)">
                 </div>
                 <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
                 <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
@@ -2506,6 +2570,17 @@
         <div class="chan_right" v-if="thread.msgid" :style="{ width: widthChanRight }">
             <msg-list :data="thread" @ev-to-parent="handleEvFromChild" ref="msglistRef"></msg-list>
         </div>        
+    </div>
+    <div v-if="showMentionDropdown && filteredUsers.length > 0" 
+        class="mention-dropdown" :style="{ top: mentionPosition.top + 'px', left: mentionPosition.left + 'px' }">
+        <div v-for="(user, index) in filteredUsers" :key="user.USERID" class="mention-item" 
+            :class="{ selected: index == selectedMentionIndex }" @click="selectMention(user)">
+            <div class="mention-avatar">{{ user.USERNM.charAt(0).toUpperCase() }}</div>
+            <div class="mention-info">
+                <div class="mention-name">{{ user.USERNM }}</div>
+                <div class="mention-username">@{{ user.USERNM }}</div>
+            </div>
+        </div>
     </div>
     <context-menu @ev-menu-click="gst.ctx.proc"></context-menu>
     <popup-image ref="imgPopupRef" :param="imgParam">
@@ -2622,4 +2697,19 @@
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
     .vipMark { margin-left:5px;padding:2px;font-size:10px;background:black;color:white;border-radius:5px }
+    .mention-dropdown {
+        position:absolute;min-width:200px;max-height:200px;
+        background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.15);
+        overflow-y:auto;z-index:1000;
+    }
+    .mention-item { display:flex;align-items:center;padding:8px 12px;cursor:pointer;transition: background-color 0.2s }
+    .mention-item:hover, .mention-item.selected { background:#f8f9fa }
+    .mention-avatar { 
+        width:32px;height:32px;margin-right:12px;
+        display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        border-radius:50%;background:#007bff;color:white;font-weight:bold;font-size:14px 
+    }
+    .mention-info { flex:1;min-width:0 }
+    .mention-name { font-weight:500;color:#333;font-size:14px;margin-bottom:2px }
+    .mention-username { color:#6c757d;font-size:12px }
 </style>
