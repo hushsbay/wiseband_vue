@@ -739,13 +739,13 @@
                             row.background = hush.cons.color_athome
                         }
                     }
-                    let tempBody = row.BODY, replaced = false
-                    for (let item of row.msgdtlmention) {
-                        let exp = new RegExp("@" + item.USERNM, "g")
-                        tempBody = tempBody.replace(exp, "<span wiseband=true style='font-weight:bold'>@" + item.USERNM + "</span>")
-                        replaced = true
-                    }
-                    if (replaced) row.BODY = tempBody
+                    //let tempBody = row.BODY, replaced = false
+                    // for (let item of row.msgdtlmention) {
+                    //     let exp = new RegExp("@" + item.USERNM, "g")
+                    //     tempBody = tempBody.replace(exp, "<span wiseband=true style='font-weight:bold'>@" + item.USERNM + "</span>")
+                    //     replaced = true
+                    // }
+                    // if (replaced) row.BODY = tempBody
                     gst.util.handleMsgSub(row)
                     //동일한 작성자가 1분이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장) - 구현하긴 했지만 과연 이게 더 깔끔하고 사용자 친화적인가 의문
                     //stickToPrev = 이전 메시지에 현재 메시지가 붙어 있는 모습 (1분이내 같은 사용자)
@@ -826,6 +826,19 @@
             }
             console.log("getList 222")
             await nextTick()
+            const tagArr = document.querySelectorAll(".clickable")
+            tagArr.forEach(item => {
+                const zuserid = item.getAttribute("data-userid")
+                const zusernm = item.getAttribute("data-usernm")
+                const user = { USERID: zuserid, USERNM: zusernm }
+                if (item._mentionClickHandler) item.removeEventListener('click', item._mentionClickHandler)
+                item._mentionClickHandler = (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    procMention(e, user)
+                }
+                item.addEventListener('click', item._mentionClickHandler)
+            })
             if (msgidParent && kind == "atHome") { //msgid가 댓글인 경우 부모의 msgid가 필요함 (msgidParent)
                 if (msgRow.value[msgidParent]) { //자식에서는 atHome에서는 1개이므로 문제가 없고 withReply에서는 msgid가 화면에 2개 중복될 수도 있으나 맨위로 가므로 문제없을 것임
                     msgRow.value[msgidParent].scrollIntoView()
@@ -889,7 +902,7 @@
                 item.act_later = rs.act_later
                 item.act_fixed = rs.act_fixed
                 item.msgdtl = rs.msgdtl
-                item.msgdtlmention = rs.msgdtlmention
+                item.msgdtlmention = rs.msgdtlmention //response로 받긴 하지만 정보로서 참조만 할 것임 (육안으로 보이는 것은 msgdtl이 아닌 메시지안의 내용임)
                 item.msgfile = rs.msgfile
                 item.msgimg = rs.msgimg
                 item.msglink = rs.msglink
@@ -1603,10 +1616,10 @@
         }
         let node = document.createElement('span')
         node.classList.add("mention", "clickable")
-        node.setAttribute("data-user-id", user.USERID)
-        node.setAttribute("data-user-name", user.USERNM)
+        node.setAttribute("data-userid", user.USERID)
+        node.setAttribute("data-usernm", user.USERNM)
         node.setAttribute("contenteditable", "false")
-        node.setAttribute("data-click-attached", "true")
+        //node.setAttribute("data-click-attached", "true")
         if (node._mentionClickHandler) node.removeEventListener('click', node._mentionClickHandler)
         node._mentionClickHandler = (e) => {
             e.preventDefault()
@@ -1743,15 +1756,15 @@
         //참고로, let currentNode = window.getSelection().focusNode에서 parent로 올라가면 에디터 노드를 만날 수 있음
     }
 
-    function mentionEnter(row, row1) {
-        let exp = new RegExp("@" + row1.USERNM, "g")
-        row.BODY = row.BODY.replace(exp, "<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>")
-    }
+    // function mentionEnter(row, row1) {
+    //     let exp = new RegExp("@" + row1.USERNM, "g")
+    //     row.BODY = row.BODY.replace(exp, "<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>")
+    // }
 
-    function mentionLeave(row, row1) {
-        let exp = new RegExp("<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>", "g")
-        row.BODY = row.BODY.replace(exp, "@" + row1.USERNM)
-    }
+    // function mentionLeave(row, row1) {
+    //     let exp = new RegExp("<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>", "g")
+    //     row.BODY = row.BODY.replace(exp, "@" + row1.USERNM)
+    // }
 
     function procMention(e, row) {
         const userObj = chandtlObj.value[row.USERID]
@@ -1766,12 +1779,6 @@
             }}
         ]
         gst.ctx.show(e)
-    }
-
-    function clickMention(top, left, uid, unm) { //procMention()으로 보내기 위한 전달 역할
-        const pos = { top: top, left: left }
-        const row = { USERID: uid, USERNM: unm }
-        procMention(pos, row)
     }
 
     function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
@@ -2414,7 +2421,7 @@
                         <div style="width:50px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:dimgray;cursor:pointer">
                             <span v-show="row.stickToPrev" style="color:lightgray">{{ hush.util.displayDt(row.CDT, true) }}</span>
                         </div>
-                        <div style="width:calc(100% - 50px);overflow-x:auto">
+                        <div class="msgHtml" style="width:calc(100% - 50px);overflow-x:auto">
                             <div v-html="row.BODY" @copy="(e) => msgCopied(e)"></div>
                         </div>
                     </div>
@@ -2457,14 +2464,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="msg_body_sub"><!-- Mention -->
+                    <!-- <div class="msg_body_sub">Mention
                         <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
                             <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
                             @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
                                 @{{ row1.USERNM }}
                             </span>
                         </div>
-                    </div>
+                    </div> -->
                     <div v-if="row.msgimg.length > 0" class="msg_body_sub"><!-- 이미지 -->
                         <div v-for="(row5, idx5) in row.msgimg" class="msg_image_each" 
                             @mouseenter="rowEnter(row5)" @mouseleave="rowLeave(row5)" @click="showImage(row5, row.MSGID)">
@@ -2762,7 +2769,7 @@
     .mention-username { color:#6c757d;font-size:12px }
     /* 아래 deep은 원해 하위컴포넌트에 영향을 주기 위한 vue3.0의 기법으로 이해하고 있는데 
     MsgList.vue에서 사용하지 않으면 mention clickable 클래스가 먹히지 않고 있음 */
-    .editor_body:deep(.mention) {
+    /* .editor_body:deep(.mention) {
         margin:0 1px;padding:2px 6px;
         background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
     }
@@ -2770,5 +2777,16 @@
     .editor_body:deep(.mention.clickable:hover) {
         background:#bbdefb;color:#0d47a1;transform:translateY(-1px);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)
     }
-    .editor_body:deep(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) }
+    .editor_body:deep(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) } */
+    .editor_body:deep(.mention), .msgHtml:deep(.mention) {
+        margin:0 1px;padding:2px 6px;
+        background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
+    }
+    .editor_body:deep(.mention.clickable), .msgHtml:deep(.mention.clickable) { cursor:pointer;user-select:none }
+    .editor_body:deep(.mention.clickable:hover), .msgHtml:deep(.mention.clickable:hover) {
+        background:#bbdefb;color:#0d47a1 /*transform:translateY(-1px)*/
+    }
+    /* .editor_body:deep(.mention.clickable:active), .msgHtml:deep(.mention.clickable:active) { 
+        transform:translateY(0) 
+    } */
 </style>
