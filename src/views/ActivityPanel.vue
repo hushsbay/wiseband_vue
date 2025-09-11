@@ -92,10 +92,10 @@
     }
 
     function procQuery(kind) {
-        if (kind == "mention") {
-            alert("웹에디터와 같이 개발 진행 예정")
-            return
-        }
+        //if (kind == "mention") {
+        //    alert("웹에디터와 같이 개발 진행 예정")
+        //    return
+        //}
         kindActivity.value = kind
         localStorage.wiseband_lastsel_activity = kind
         getList(true)

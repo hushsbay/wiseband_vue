@@ -835,7 +835,7 @@
                 item._mentionClickHandler = (e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    procMention(e, user)
+                    memProfile(e, user)
                 }
                 item.addEventListener('click', item._mentionClickHandler)
             })
@@ -928,23 +928,25 @@
         }
     }
 
-    function memProfile(e, row) {
-        const userObj = chandtlObj.value[row.AUTHORID]
+    function memProfile(e, row) { //mention시 넘어오는 user.USERID와 user.USERNM을 이 함수에서도 받아 같이 사용함
+        const zid = row.AUTHORID ? row.AUTHORID : row.USERID
+        const znm = row.AUTHORNM ? row.AUTHORNM : row.USERNM
+        const userObj = chandtlObj.value[zid]
         const imgUrl = (userObj && userObj.url) ? userObj.url : gst.html.getImageUrl('user.png')
-        gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.AUTHORNM
-        const displayStr = vipStr.value.includes(',' + row.AUTHORID + ',') ? "해제" : "설정"
-        const bool = vipStr.value.includes(',' + row.AUTHORID + ',') ? false : true
+        gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + znm
+        const displayStr = vipStr.value.includes(',' + zid + ',') ? "해제" : "설정"
+        const bool = vipStr.value.includes(',' + zid + ',') ? false : true
         gst.ctx.menu = [
             { nm: "DM 보내기", func: async function() { //1대1은 새창에서 여는 게 효율적일 수도 ..
                 //1) DM의 newDm()을 호출하려면 dm 라우팅을 타야 함 2) 홈패널의 MsgList에서 DM 라우팅하면 MsgList가 수회 반복되는 문제 발생함 (Dm 패널로 가서 처리하려면 Main.vue까지 가서 Dm을 불러야 함)
                 try {
-                    const res = await axios.post("/menu/qryDmChkExist", { member: [row.AUTHORID] })
+                    const res = await axios.post("/menu/qryDmChkExist", { member: [zid] })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return null
                     let chanid = rs.data.chanid
                     if (!chanid) { //둘만의 방이 없으므로 새로 추가해야 함
-                        const SYNC = chandtlObj.value[row.AUTHORID] ? chandtlObj.value[row.AUTHORID].SYNC : "Y"
-                        const rq = { CHANID: "new", MEMBER: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM, SYNC: SYNC }] } //신규 DM방 생성 (멤버도 함께 생성)
+                        const SYNC = chandtlObj.value[zid] ? chandtlObj.value[zid].SYNC : "Y"
+                        const rq = { CHANID: "new", MEMBER: [{ USERID: zid, USERNM: znm, SYNC: SYNC }] } //신규 DM방 생성 (멤버도 함께 생성)
                         const res = await axios.post("/chanmsg/saveChan", rq)
                         const rs = gst.util.chkAxiosCode(res.data)
                         if (!rs) return
@@ -959,15 +961,15 @@
             { nm: "VIP " + displayStr, func: async function(item, idx) {
                 try {
                     const res = await axios.post("/user/setVip", { 
-                        list: [{ USERID: row.AUTHORID, USERNM: row.AUTHORNM }], bool: bool
+                        list: [{ USERID: zid, USERNM: znm }], bool: bool
                     })
                     const rs = gst.util.chkAxiosCode(res.data)
                     if (!rs) return
                     gst.sockToSend.push({ sendTo: "user", data: { ev: "setVip", userid: g_userid, from: "setVip" }})
                     if (bool) { //위 소켓으로 커버되나 일단 그대로 둠
-                        vipStr.value += row.AUTHORID + ","
+                        vipStr.value += zid + ","
                     } else {                    
-                        vipStr.value = vipStr.value.replace(row.AUTHORID + ",", "")
+                        vipStr.value = vipStr.value.replace(zid + ",", "")
                     }
                 } catch (ex) { 
                     gst.util.showEx(ex, true)
@@ -1624,7 +1626,7 @@
         node._mentionClickHandler = (e) => {
             e.preventDefault()
             e.stopPropagation()
-            procMention(e, user)
+            memProfile(e, user)
         }
         node.addEventListener('click', node._mentionClickHandler)
         node.append("@" + user.USERNM)
@@ -1766,20 +1768,20 @@
     //     row.BODY = row.BODY.replace(exp, "@" + row1.USERNM)
     // }
 
-    function procMention(e, row) {
-        const userObj = chandtlObj.value[row.USERID]
-        const imgUrl = (userObj && userObj.url) ? userObj.url : gst.html.getImageUrl('user.png')
-        gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.USERNM
-        gst.ctx.menu = [
-            { nm: "DM 보내기", func: function() {
+    // function procMention(e, row) {
+    //     const userObj = chandtlObj.value[row.USERID]
+    //     const imgUrl = (userObj && userObj.url) ? userObj.url : gst.html.getImageUrl('user.png')
+    //     gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.USERNM
+    //     gst.ctx.menu = [
+    //         { nm: "DM 보내기", func: function() {
                 
-            }},
-            { nm: "VIP 설정", func: function() {
+    //         }},
+    //         { nm: "VIP 설정", func: function() {
                 
-            }}
-        ]
-        gst.ctx.show(e)
-    }
+    //         }}
+    //     ]
+    //     gst.ctx.show(e)
+    // }
 
     function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
         try {
@@ -2409,8 +2411,8 @@
                     @mouseenter="rowEnter(row)" @mouseleave="rowLeave(row)" @mousedown.right="(e) => rowRight(e, row, idx)" @click="rowClick(row)">
                     <div style="width:100%;padding-left:8px;display:flex;align-items:center;cursor:pointer" v-show="!row.stickToPrev">
                         <img v-if="chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].url" :src="chandtlObj[row.AUTHORID].url" 
-                            class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row, chandtlObj[row.AUTHORID].url)">
-                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row, gst.html.getImageUrl('user.png'))">
+                            class="coImg32 maintainContextMenu" style="border-radius:16px" @click="(e) => memProfile(e, row)"><!--, chandtlObj[row.AUTHORID].url-->
+                        <img v-else :src="gst.html.getImageUrl('user.png')" class="coImg32 maintainContextMenu" @click="(e) => memProfile(e, row)"><!--, gst.html.getImageUrl('user.png')-->
                         <img :src="gst.html.getImageUrl(chandtlObj[row.AUTHORID] && chandtlObj[row.AUTHORID].alive ? 'online.png' : 'offline.png')" style="margin-top:-25px;margin-left:-8px">
                         <span style="margin-left:9px;font-weight:bold">{{ row.AUTHORNM }}</span>
                         <span v-if="vipStr.includes(',' + row.AUTHORID + ',')" class="vipMark">VIP</span>
