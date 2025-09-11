@@ -65,7 +65,7 @@
 
     //멘션 
     const showMentionDropdown = ref(false), mentionQuery = ref('')
-    const mentionPosition = ref({ top: 0, left: 0 })
+    const mentionPosition = ref({ top: 0, left: 0 }), userToSearch = ref(''), userToSearchFocused = ref(false), userToSearchRef = useTemplateRef('userToSearchInput')
     const selectedMentionIndex = ref(0), filteredUsers = ref([])
 
     //##0 웹에디터 https://ko.javascript.info/selection-range
@@ -98,7 +98,7 @@
             if (entry[0].isIntersecting) {                
                 showBottomObserver.value = true
                 if (scrollDir == 'down') { //하단에서 위로 스크롤시 자꾸 getList()를 호출해서.. down일 떄만 호출하도록 체크하는 것임
-//임시막음                    await getList({ nextMsgMstCdt: savNextMsgMstCdt })
+//임시막음 : 로드시+여기 두번 호출                    await getList({ nextMsgMstCdt: savNextMsgMstCdt })
                 }
                 setTimeout(function() { showBottomObserver.value = false }, 500)
             } else {
@@ -697,9 +697,9 @@
                 savNextMsgMstCdt = hush.cons.cdtAtFirst
                 savPrevMsgMstCdt = hush.cons.cdtAtLast
             }
-            console.log("getList 000 : " + JSON.stringify(param))
+            //console.log("getList 000 : " + JSON.stringify(param))
             const res = await axios.post("/chanmsg/qry", param)
-            console.log("getList 111")
+            //console.log("getList 111")
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
                 onGoingGetList = false                
@@ -739,13 +739,6 @@
                             row.background = hush.cons.color_athome
                         }
                     }
-                    //let tempBody = row.BODY, replaced = false
-                    // for (let item of row.msgdtlmention) {
-                    //     let exp = new RegExp("@" + item.USERNM, "g")
-                    //     tempBody = tempBody.replace(exp, "<span wiseband=true style='font-weight:bold'>@" + item.USERNM + "</span>")
-                    //     replaced = true
-                    // }
-                    // if (replaced) row.BODY = tempBody
                     gst.util.handleMsgSub(row)
                     //동일한 작성자가 1분이내 작성한 메시지는 프로필없이 바로 위 메시지에 붙이기 (자식/부모 각각 입장) - 구현하긴 했지만 과연 이게 더 깔끔하고 사용자 친화적인가 의문
                     //stickToPrev = 이전 메시지에 현재 메시지가 붙어 있는 모습 (1분이내 같은 사용자)
@@ -824,7 +817,7 @@
                 }
                 linkArr.value.push({ hover: false, text: text, url: url, cdt: item.CDT })
             }
-            console.log("getList 222")
+            //console.log("getList 222")
             await nextTick()
             const tagArr = document.querySelectorAll(".clickable")
             tagArr.forEach(item => {
@@ -902,7 +895,7 @@
                 item.act_later = rs.act_later
                 item.act_fixed = rs.act_fixed
                 item.msgdtl = rs.msgdtl
-                item.msgdtlmention = rs.msgdtlmention //response로 받긴 하지만 정보로서 참조만 할 것임 (육안으로 보이는 것은 msgdtl이 아닌 메시지안의 내용임)
+                //item.msgdtlmention = rs.msgdtlmention //지우지는 말고 참고로 두기로 함
                 item.msgfile = rs.msgfile
                 item.msgimg = rs.msgimg
                 item.msglink = rs.msglink
@@ -1323,19 +1316,19 @@
     //     }
     // }
 
-    const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
-        try {
-            const childbodyAttr = hasProp() ? true : false
-            const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
-            if (!rect) return null
-            const xx = rect.left + 100 //MSGID를 갖고 있는 div는 margin 및 좌표 고려해 xx, yy에 그 안의 값을 더하면 구할 수 있음
-            let yy = rect.top + 60
-            const ele = document.elementFromPoint(xx, yy)
-            return ele
-        } catch (ex) {
-            gst.util.showEx(ex, true)
-        }
-    }
+    // const getTopMsgBody = () => { //육안으로 보이는 맨 위 MSGID의 div (msgbody 및 procMenu 클래스 보유) 찾기
+    //     try {
+    //         const childbodyAttr = hasProp() ? true : false
+    //         const rect = hush.util.getRect("#chan_center_body[childbody=" + childbodyAttr + "]")
+    //         if (!rect) return null
+    //         const xx = rect.left + 100 //MSGID를 갖고 있는 div는 margin 및 좌표 고려해 xx, yy에 그 안의 값을 더하면 구할 수 있음
+    //         let yy = rect.top + 60
+    //         const ele = document.elementFromPoint(xx, yy)
+    //         return ele
+    //     } catch (ex) {
+    //         gst.util.showEx(ex, true)
+    //     }
+    // }
 
     const getBottomMsgBody = () => { //육안으로 보이는 맨 아래 MSGID의 div 찾기
         try {
@@ -1564,11 +1557,13 @@
         showMentionDropdown.value = true
         selectedMentionIndex.value = 0
         updateMentionPosition()
+        setTimeout(function() { userToSearchRef.value.focus() }, 500)
         console.log('checkForMention: Dropdown shown, filtered users:', filteredUsers.value.length)
     }
 
     const closeMentionDropdown = () => {
         setTimeout(() => {
+            if (userToSearchFocused.value) return
             if (showMentionDropdown.value) {
                 showMentionDropdown.value = false
                 selectedMentionIndex.value = 0
@@ -1600,10 +1595,9 @@
         const selection = window.getSelection()
         if (!selection.rangeCount) return        
         const range = selection.getRangeAt(0)
-        const rect = range.getBoundingClientRect()
-        //const editorRect = inEditor.value.getBoundingClientRect()   
+        const rect = range.getBoundingClientRect() //const editorRect = inEditor.value.getBoundingClientRect()   
         mentionPosition.value = {
-            top: rect.bottom - 200, //editorRect.top - 200, //rect.bottom - editorRect.top + 350,
+            top: rect.bottom - 240, //editorRect.top - 200, //rect.bottom - editorRect.top + 350,
             left: rect.left + 20 //- editorRect.left
         }
     }
@@ -1620,8 +1614,7 @@
         node.classList.add("mention", "clickable")
         node.setAttribute("data-userid", user.USERID)
         node.setAttribute("data-usernm", user.USERNM)
-        node.setAttribute("contenteditable", "false")
-        //node.setAttribute("data-click-attached", "true")
+        node.setAttribute("contenteditable", "false") //node.setAttribute("data-click-attached", "true")
         if (node._mentionClickHandler) node.removeEventListener('click', node._mentionClickHandler)
         node._mentionClickHandler = (e) => {
             e.preventDefault()
@@ -1757,31 +1750,6 @@
         //2) blur되어도 클릭하는 순간의 갭이 짧기때문에 그걸 체크해서 disabled/enabled 효과를 내는 것임
         //참고로, let currentNode = window.getSelection().focusNode에서 parent로 올라가면 에디터 노드를 만날 수 있음
     }
-
-    // function mentionEnter(row, row1) {
-    //     let exp = new RegExp("@" + row1.USERNM, "g")
-    //     row.BODY = row.BODY.replace(exp, "<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>")
-    // }
-
-    // function mentionLeave(row, row1) {
-    //     let exp = new RegExp("<span wiseband=true style='color:steelblue'>@" + row1.USERNM + "</span>", "g")
-    //     row.BODY = row.BODY.replace(exp, "@" + row1.USERNM)
-    // }
-
-    // function procMention(e, row) {
-    //     const userObj = chandtlObj.value[row.USERID]
-    //     const imgUrl = (userObj && userObj.url) ? userObj.url : gst.html.getImageUrl('user.png')
-    //     gst.ctx.data.header = "<img src='" + imgUrl + "' class='coImg32' style='margin-right:5px;border-radius:16px'>" + row.USERNM
-    //     gst.ctx.menu = [
-    //         { nm: "DM 보내기", func: function() {
-                
-    //         }},
-    //         { nm: "VIP 설정", func: function() {
-                
-    //         }}
-    //     ]
-    //     gst.ctx.show(e)
-    // }
 
     function makeLink() { //문자를 링크로 변환하는 것이며 addlink(별도 추가)와는 다름
         try {
@@ -2466,7 +2434,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- <div class="msg_body_sub">Mention
+                    <!-- <div class="msg_body_sub">
                         <div v-for="(row1, idx1) in row.msgdtlmention" style="margin-top:10px">
                             <span class="maintainContextMenu" style="margin-right:5px;padding:3px;font-weight:bold;color:steelblue;background:beige" 
                             @mouseenter="mentionEnter(row, row1)" @mouseleave="mentionLeave(row, row1)" @click="(e) => procMention(e, row1)">
@@ -2579,12 +2547,6 @@
                         <div class="coDotDot"><span>{{ memNmTyping.join(',') }}</span></div>
                     </div>
                 </div>
-                <!--<div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)">
-                </div>--> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
-                <!--<div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown.enter="keyDownEnter" @focusin="editorFocused(true)" @blur="editorFocused(false)" @keypress="whenKeyPress">
-                </div>-->
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
                     @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
@@ -2628,14 +2590,18 @@
             <msg-list :data="thread" @ev-to-parent="handleEvFromChild" ref="msglistRef"></msg-list>
         </div>        
     </div>
-    <div v-if="showMentionDropdown && filteredUsers.length > 0" 
-        class="mention-dropdown" :style="{ top: mentionPosition.top + 'px', left: mentionPosition.left + 'px' }">
-        <div v-for="(user, index) in filteredUsers" :key="user.USERID" class="mention-item" 
-            :class="{ selected: index == selectedMentionIndex }" @click="selectMention(user)">
-            <div class="mention-avatar">{{ user.USERNM.charAt(0).toUpperCase() }}</div>
-            <div class="mention-info">
-                <div class="mention-name">{{ user.USERNM }}</div>
-                <div class="mention-username">@{{ user.USERNM }}</div>
+    <div v-if="showMentionDropdown && filteredUsers.length > 0" class="mention-popup" :style="{ top: mentionPosition.top + 'px', left: mentionPosition.left + 'px' }">
+        <div style="width:100%;border:0px solid red">
+            <input v-model="userToSearch" ref="userToSearchInput" @focus="userToSearchFocused=true" @blur="userToSearchFocused=false"
+                style="width:calc(100% - 6px);height:28px;padding-left:5px;border:0px solid lightgray" placeholder="사용자검색" spellcheck="false" />
+        </div>
+        <div class="mention-dropdown" style="display:flex">
+            <div v-for="(user, index) in filteredUsers" :key="user.USERID" class="mention-item" :class="{ selected: index == selectedMentionIndex }" @click="selectMention(user)">
+                <div class="mention-avatar">{{ user.USERNM.charAt(0).toUpperCase() }}</div>
+                <div class="mention-info">
+                    <div class="mention-name">{{ user.USERNM }}</div>
+                    <div class="mention-username">@{{ user.USERNM }}</div>
+                </div>
             </div>
         </div>
     </div>
@@ -2754,12 +2720,22 @@
     .btn:hover { background:lightgray}
     .btn:active { background:var(--active-color)}
     .vipMark { margin-left:5px;padding:2px;font-size:10px;background:black;color:white;border-radius:5px }
-    .mention-dropdown {
-        position:absolute;min-width:200px;max-height:200px;
-        background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.15);
-        overflow-y:auto;z-index:1000;
+    .mention-popup {
+        position:absolute;width:200px;height:240px;display:flex;flex-direction:column;
+        background:white;border:1px solid #ddd;border-radius:8px;/*box-shadow:0 4px 12px rgba(0, 0, 0, 0.15);*/
+        z-index:1000;
     }
-    .mention-item { display:flex;align-items:center;padding:8px 12px;cursor:pointer;transition: background-color 0.2s }
+    .mention-dropdown {
+        width:100%;height:100%;display:flex;flex-direction:column; /* position:absolute;min-width:200px;max-height:200px; */
+        background:white;
+        /* border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0, 0, 0, 0.15); */
+        /* z-index:1000; */
+        overflow-y:scroll /*overflow-y:auto; */
+    }
+    .mention-item { 
+        display:flex;align-items:center;padding:8px 12px;cursor:pointer;transition: background-color 0.2s;
+        flex:1; /* 추가 */
+    }
     .mention-item:hover, .mention-item.selected { background:#f8f9fa }
     .mention-avatar { 
         width:32px;height:32px;margin-right:12px;
@@ -2771,15 +2747,6 @@
     .mention-username { color:#6c757d;font-size:12px }
     /* 아래 deep은 원해 하위컴포넌트에 영향을 주기 위한 vue3.0의 기법으로 이해하고 있는데 
     MsgList.vue에서 사용하지 않으면 mention clickable 클래스가 먹히지 않고 있음 */
-    /* .editor_body:deep(.mention) {
-        margin:0 1px;padding:2px 6px;
-        background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
-    }
-    .editor_body:deep(.mention.clickable) { cursor:pointer;user-select:none }
-    .editor_body:deep(.mention.clickable:hover) {
-        background:#bbdefb;color:#0d47a1;transform:translateY(-1px);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)
-    }
-    .editor_body:deep(.mention.clickable:active) { transform:translateY(0);box-shadow:0 1px 2px rgba(0, 0, 0, 0.1) } */
     .editor_body:deep(.mention), .msgHtml:deep(.mention) {
         margin:0 1px;padding:2px 6px;
         background:#e3f2fd;color:#1976d2;border-radius:4px;font-weight:500;display:inline-block;transition:all 0.2s ease
@@ -2788,7 +2755,4 @@
     .editor_body:deep(.mention.clickable:hover), .msgHtml:deep(.mention.clickable:hover) {
         background:#bbdefb;color:#0d47a1 /*transform:translateY(-1px)*/
     }
-    /* .editor_body:deep(.mention.clickable:active), .msgHtml:deep(.mention.clickable:active) { 
-        transform:translateY(0) 
-    } */
 </style>
