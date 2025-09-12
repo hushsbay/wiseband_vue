@@ -65,7 +65,7 @@
             onGoingGetList = true
             stateSel.value = sel ? sel : "A"
             let param = { chanid: chanId, state: stateSel.value }
-            const res = await axios.post("/chanmsg/qryChanMstDtl", param)
+            const res = await axios.post("/chanmsg/qryChanMstDtl", param) //MsgList.vue에서도 사용
             const rs = gst.util.chkAxiosCode(res.data) 
             if (!rs) {
                 onGoingGetList = false                

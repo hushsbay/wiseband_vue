@@ -1552,13 +1552,15 @@
 
     const checkForMention = () => {  
         storeCursorPosition() //@를 누를 때만 나오도록 되어 있으므로 그전에 window.getSelection()을 가져올 필요없음
-        console.log('checkForMention: Mention query:', mentionQuery.value)
-        procSearch()
+        //console.log('checkForMention: Mention query:', mentionQuery.value)
+        procSearch("")
         showMentionDropdown.value = true
         selectedMentionIndex.value = 0
         updateMentionPosition()
-        setTimeout(function() { userToSearchRef.value.focus() }, 500)
-        console.log('checkForMention: Dropdown shown, filtered users:', filteredUsers.value.length)
+        setTimeout(function() { 
+            userToSearchRef.value.focus() 
+        }, 500)
+        //console.log('checkForMention: Dropdown shown, filtered users:', filteredUsers.value.length)
     }
 
     const closeMentionDropdown = () => {
@@ -1567,23 +1569,39 @@
             if (showMentionDropdown.value) {
                 showMentionDropdown.value = false
                 selectedMentionIndex.value = 0
+                userToSearchFocused.value = false
                 filteredUsers.value = []
             }
-        }, 500)
+        }, 200)
     }
 
     async function procSearch(searchText) {
         try {
-            const param = { searchText: '이상' } //searchText
-            const res = await axios.post("/user/procOrgSearch", param)
-            const rs = gst.util.chkAxiosCode(res.data) 
+            let res, rs
+            if (searchText.trim() == "") {
+                res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //세군데 사용 + MemberList.vue에서도 사용
+                //setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
+            } else {
+                const param = { searchText: searchText, onlyAllUsers: true }
+                res = await axios.post("/user/procOrgSearch", param)
+            }
+            rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action
             if (!rs) return
+            if (searchText.trim() == "") rs.list = rs.data.chandtl
             filteredUsers.value = []            
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
-                row.nodekind = "U"
+                let orgnm, toporgnm, job //row.EMAIL
+                if (row.ORG) {
+                    orgnm = row.ORG.trim()
+                    toporgnm = ""
+                } else {
+                    orgnm = row.ORG_NM ? row.ORG_NM + "/" : ""
+                    toporgnm = row.TOP_ORG_NM ?? ""
+                }
+                job = row.JOB ? row.JOB.trim() + "/" : ""
+                row.userInfo = job + orgnm + toporgnm
                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
-                row.key = row.USERID
                 filteredUsers.value.push(row)
             }
         } catch (ex) {
@@ -1625,8 +1643,35 @@
         node.append("@" + user.USERNM)
         range.deleteContents()
         range.insertNode(node)
-        range.collapse(false)
+        range.collapse(false)        
         closeMentionDropdown()
+        userToSearch.value = ""
+    }
+
+    function procUserToSearchFocused(bool) {
+        //setTimeout(function() {
+            userToSearchFocused.value = bool
+        //}, 100) //closeMentionDropdown()가 500이므로 더 작게 설정
+    }
+
+    function handleInput(e) {
+        const inputText = e.target.value
+        procSearch(inputText)
+    }
+
+    const keydownInput = (e) => {
+        if (!showMentionDropdown.value) return
+        e.preventDefault()
+        if (e.key == 'ArrowDown') {
+            selectedMentionIndex.value = Math.min(selectedMentionIndex.value + 1, filteredUsers.value.length - 1)
+        } else if (e.key == 'ArrowUp') {
+            selectedMentionIndex.value = Math.max(selectedMentionIndex.value - 1, 0)
+        } else if (e.key == 'Enter') {
+            selectMention(filteredUsers.value[selectedMentionIndex.value])
+        } else if (e.key == 'Escape') {
+            userToSearchFocused.value = false
+            closeMentionDropdown()
+        }
     }
 
     async function saveMsg() { //파일 및 이미지 업로드만 FormData 사용하고 nest.js에서는 multer npm으로 처리
@@ -2164,7 +2209,7 @@
             chkDataLogEach(obj)
         } else if (kind == "updateProfile") { //console.log(obj.userid+"@@@@") 
             if (!chandtlObj.value[obj.userid]) return //소켓 'all'을 통해 수신된 것이므로 해당 사용자아이디가 있는 경우만 처리하면 됨
-            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
+            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //세군데 사용 + MemberList.vue에서도 사용
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
             if (!rs) return
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
@@ -2195,7 +2240,7 @@
         } else if (kind == "addChildFromBody") {
             await getList({ nextMsgMstCdt: savNextMsgMstCdt, kind: "scrollToBottom", msgidReply: obj.msgidReply })
         } else if (kind == "forwardToBody") { //from HomePanel or DmPanel : 예) MemberList.vue에서 applyToBody() 
-            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //두군데 동일한 코딩
+            const res = await axios.post("/chanmsg/qryChanMstDtl", { chanid: chanId }) //세군데 사용 + MemberList.vue에서도 사용
             const rs = gst.util.chkAxiosCode(res.data, true) //오류시 No Action 
             if (!rs) return
             setChanMstDtl(rs.data.chanmst, rs.data.chandtl)
@@ -2590,17 +2635,19 @@
             <msg-list :data="thread" @ev-to-parent="handleEvFromChild" ref="msglistRef"></msg-list>
         </div>        
     </div>
-    <div v-if="showMentionDropdown && filteredUsers.length > 0" class="mention-popup" :style="{ top: mentionPosition.top + 'px', left: mentionPosition.left + 'px' }">
-        <div style="width:100%;border:0px solid red">
-            <input v-model="userToSearch" ref="userToSearchInput" @focus="userToSearchFocused=true" @blur="userToSearchFocused=false"
-                style="width:calc(100% - 6px);height:28px;padding-left:5px;border:0px solid lightgray" placeholder="사용자검색" spellcheck="false" />
+    <div v-if="showMentionDropdown" class="mention-popup" :style="{ top: mentionPosition.top + 'px', left: mentionPosition.left + 'px' }">
+        <div style="width:100%;display:flex;justify-content:space-between;align-items:center;border:1px solid lightgray">
+            <input v-model="userToSearch" ref="userToSearchInput" 
+                @focus="procUserToSearchFocused(true)" @blur="procUserToSearchFocused(false)" @input="handleInput" @keydown="keydownInput"
+                style="width:calc(100% - 30px);height:28px;padding-left:5px;border:0px solid lightgray" placeholder="사용자 검색" spellcheck="false" />
+            <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click.stop="closeMentionDropdown" style="margin:0 3px">
         </div>
         <div class="mention-dropdown" style="display:flex">
             <div v-for="(user, index) in filteredUsers" :key="user.USERID" class="mention-item" :class="{ selected: index == selectedMentionIndex }" @click="selectMention(user)">
                 <div class="mention-avatar">{{ user.USERNM.charAt(0).toUpperCase() }}</div>
                 <div class="mention-info">
                     <div class="mention-name">{{ user.USERNM }}</div>
-                    <div class="mention-username">@{{ user.USERNM }}</div>
+                    <div class="mention-userinfo">{{ user.userInfo }}</div>
                 </div>
             </div>
         </div>
@@ -2621,6 +2668,7 @@
 </template>
 
 <style scoped>  
+    input:focus { outline:1px solid lightgray }
     .chan_main { /* 원래는 각 패널에 있다가 msglist 라우팅(새창에서열기) 때문에 여기로 이동 - 댓글 관련 */
         width:100%;height:100%;display:flex;
         background:white;border-top-right-radius:10px;border-bottom-right-radius:10px;
@@ -2721,7 +2769,7 @@
     .btn:active { background:var(--active-color)}
     .vipMark { margin-left:5px;padding:2px;font-size:10px;background:black;color:white;border-radius:5px }
     .mention-popup {
-        position:absolute;width:200px;height:240px;display:flex;flex-direction:column;
+        position:absolute;width:300px;height:240px;display:flex;flex-direction:column;
         background:white;border:1px solid #ddd;border-radius:8px;/*box-shadow:0 4px 12px rgba(0, 0, 0, 0.15);*/
         z-index:1000;
     }
@@ -2733,8 +2781,8 @@
         overflow-y:scroll /*overflow-y:auto; */
     }
     .mention-item { 
-        display:flex;align-items:center;padding:8px 12px;cursor:pointer;transition: background-color 0.2s;
-        flex:1; /* 추가 */
+        min-height:40px;max-height:40px;display:flex;padding:8px 12px;cursor:pointer;transition: background-color 0.2s;
+        flex:1;overflow-x:hidden /* 추가 */
     }
     .mention-item:hover, .mention-item.selected { background:#f8f9fa }
     .mention-avatar { 
@@ -2742,9 +2790,9 @@
         display:flex;align-items:center;justify-content:center;flex-shrink:0;
         border-radius:50%;background:#007bff;color:white;font-weight:bold;font-size:14px 
     }
-    .mention-info { flex:1;min-width:0 }
+    /* .mention-info { flex:1;min-width:0 } */
     .mention-name { font-weight:500;color:#333;font-size:14px;margin-bottom:2px }
-    .mention-username { color:#6c757d;font-size:12px }
+    .mention-userinfo { color:#6c757d;font-size:12px }
     /* 아래 deep은 원해 하위컴포넌트에 영향을 주기 위한 vue3.0의 기법으로 이해하고 있는데 
     MsgList.vue에서 사용하지 않으면 mention clickable 클래스가 먹히지 않고 있음 */
     .editor_body:deep(.mention), .msgHtml:deep(.mention) {
