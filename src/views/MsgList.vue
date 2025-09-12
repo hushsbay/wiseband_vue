@@ -43,7 +43,7 @@
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
-    let msgbody = ref("") //ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
+    let msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 <a href='https://naver.com'>네이버</a>마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
@@ -75,6 +75,7 @@
     let prevRange //let cursorPos = { node: null, startOffset: 0, endOffset: 0 } curPos 말고 prevRange로 기억하면 훨씬 간편해서 막음 (코딩은 그대로 둠)
     let editorIn = ref(false), editorBlurDt = Date.now()
     let inEditor = useTemplateRef('editorRef') //editor = document.getElementById(editorId) editor 대신 inEditor (템플릿 참조) 사용
+    let stateBold = ref(false)
 
     //라우팅 관련 정리 : 현재는 부모(Main) > 자식(각종Panel) > 손자(MsgList) 구조임 : 스레드(댓글)용으로 손자안에 동일한 손자(MsgList)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
 
@@ -1547,7 +1548,14 @@
             setTimeout(() => { checkForMention() }, 10)
         } else { //if (e.key == "Escape") {
             if (!e.shiftKey) closeMentionDropdown() //@는 shiftKey가 먼저 발생함
+            if (e.ctrlKey && (e.key == "x" || e.key == "v" || e.key == "X" || e.key == "V")) chkWordStyle()
         } 
+    }
+
+    function keyUp(e) { //keyDown에서 Bold, Strike 처리하니 제대로 안먹혀 keyUp으로 처리함. ctrl+X/ctrl+V는 또 여기서 안되서 keyup에서 처리
+        if (e.key == "ArrowUp" || e.key == "ArrowRight" || e.key == "ArrowDown" || e.key == "ArrowLeft" || e.key == "Delete" || e.key == "Backspace") {
+            chkWordStyle()
+        }
     }
 
     const checkForMention = () => {  
@@ -1572,7 +1580,7 @@
                 userToSearchFocused.value = false
                 filteredUsers.value = []
             }
-        }, 200)
+        }, 10)
     }
 
     async function procSearch(searchText) {
@@ -1861,11 +1869,63 @@
         }
     }
 
+    function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike)
+        try {
+            if (!chkEditorFocus()) return
+            let selection = window.getSelection()
+            if (selection.rangeCount == 0) return
+            const range = selection.getRangeAt(0) 
+            let content = range.cloneContents()
+            let node = document.createElement('span')
+            node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
+            let text = node.innerHTML
+            //const exp = //1) <로 시작해서 >끝나는 완전한 html 이거나 그 안에 완전한 tag가 들어 있는 경우 innerHTML 수정 2) 아닌 경우는 insert 처리
+            //node.remove()
+            storeCursorPosition()
+            if (kind == 'B') {
+                stateBold.value = !stateBold.value
+            } else {
+
+            }
+            inEditor.value.focus()
+            const range1 = restoreCursorPosition()
+            //let node1 = document.createElement('span')
+            //node1.setAttribute(hush.cons.appName, 'Y')
+            if (kind == 'B') {
+                node.innerHTML = node.innerHTML.replace('bold', 'normal')
+                node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+            } else {
+
+            }
+            //node1.append(node)
+            debugger
+            range1.deleteContents()
+            range1.insertNode(node)
+            range1.collapse(false)
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function chkWordStyle() {
+        const selection = window.getSelection()
+        const range = selection.getRangeAt(0)
+        const currentNode = range.startContainer.parentNode
+        const computedStyle = window.getComputedStyle(currentNode)
+        const fontWeight = computedStyle.fontWeight
+        if (fontWeight == 'bold' || fontWeight == 'bolder' || parseInt(fontWeight) >= 700) {
+            console.log("111111111"+stateBold.value)
+            if (!stateBold.value) stateBold.value = true
+        } else {
+            console.log("1111111112222222"+stateBold.value)
+            if (stateBold.value) stateBold.value = false
+        }
+    }
+
     function htmlView() {
         showHtml.value = true
         msgbody.value = document.getElementById(editorId).innerHTML
     }
-
 
     function openLink(url) { 
         window.open(url, "_blank") //popup not worked for 'going back' navigation
@@ -2572,9 +2632,9 @@
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_makelink.png')" title="링크로변환"
                             :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="makeLink()">
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게"
-                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('B')">
+                            :style="{ border: stateBold ? '1px solid dimgray' : '1px solid whitesmoke' }" @click="procWordStyle('B')">
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
-                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="wordStyle('S')">
+                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="procWordStyle('S')">
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
                             @click="htmlView()"><!--개발자 사용-->
                     </div>
@@ -2589,14 +2649,17 @@
                         </div>
                     </div>
                     <div style="width:100%;height:100%;margin-left:10px;display:flex;align-items:center" class="coDotDot">
-                        <div class="coDotDot"><span>{{ memNmTyping.join(',') }}</span></div>
+                        <div class="coDotDot">
+                            <span v-show="memNmTyping.length > 0">{{ memNmTyping.join(',') }}</span>
+                            <span v-show="memNmTyping.length == 0">줄바꿈 : Shift+Enter</span>
+                        </div>
                     </div>
                 </div>
-                <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)">
+                <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef"
+                    @paste="pasteData" @keydown="keyDown" @keyup="keyUp" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)" @mouseup="chkWordStyle">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
-                <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef" 
-                    @paste="pasteData" @keydown="keyDown" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)">
+                <div v-else id="msgContent" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef"
+                    @paste="pasteData" @keydown="keyDown" @keyup="keyUp" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)" @mouseup="chkWordStyle">
                 </div>
                 <div v-if="showHtml" class="editor_body" style="background:beige">{{ msgbody }}</div>
                 <div v-if="imgBlobArr.length > 0 && !editMsgId" class="msg_body_blob">
