@@ -1874,12 +1874,23 @@
             if (!chkEditorFocus()) return
             let selection = window.getSelection()
             if (selection.rangeCount == 0) return
-            const range = selection.getRangeAt(0) 
+            const range = selection.getRangeAt(0)
+            let anchorNode = window.getSelection().anchorNode
+            let parentNode = anchorNode.parentNode
+            debugger
+            let text2 = parentNode.innerHTML
+            let text3 = parentNode.outerHTML
             let content = range.cloneContents()
             let node = document.createElement('span')
             node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
             let text = node.innerHTML
-            //const exp = //1) <로 시작해서 >끝나는 완전한 html 이거나 그 안에 완전한 tag가 들어 있는 경우 innerHTML 수정 2) 아닌 경우는 insert 처리
+            let text1 = node.outerHTML
+            //1) <로 시작해서 >끝나는 완전한 html인 경우는 innerHTML 수정만 해서 완료 처리 (insertNode하지 않음)
+            //2) 그 안에 완전한 tag가 들어 있는 경우 innerHTML 수정해서 insertNode 처리 : tag밖의 bold 여부를 파악하기 힘듬 
+            //3) tag가 아예 없는 경우도 insertNode 처리 (cloneContents()로 처리한 것이므로 tag가 한쪽만 있는 경우는 없음)
+            const exp = /<.+>/gs //s는 .(모든 문자를 줄이 바뀌어도(\n) 매칭시켜줌)
+            const matchArr = [...text.matchAll(exp)]
+            debugger
             //node.remove()
             storeCursorPosition()
             if (kind == 'B') {
