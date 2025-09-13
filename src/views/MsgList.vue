@@ -1875,41 +1875,55 @@
             let selection = window.getSelection()
             if (selection.rangeCount == 0) return
             const range = selection.getRangeAt(0)
-            let anchorNode = window.getSelection().anchorNode
-            let parentNode = anchorNode.parentNode
-            debugger
-            let text2 = parentNode.innerHTML
-            let text3 = parentNode.outerHTML
+            const parentNode = range.startContainer.parentNode
+            let parentInnerHtml = parentNode.innerHTML
+            let parentOuterHtml = parentNode.outerHTML            
             let content = range.cloneContents()
             let node = document.createElement('span')
             node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
-            let text = node.innerHTML
-            let text1 = node.outerHTML
-            //1) <로 시작해서 >끝나는 완전한 html인 경우는 innerHTML 수정만 해서 완료 처리 (insertNode하지 않음)
-            //2) 그 안에 완전한 tag가 들어 있는 경우 innerHTML 수정해서 insertNode 처리 : tag밖의 bold 여부를 파악하기 힘듬 
-            //3) tag가 아예 없는 경우도 insertNode 처리 (cloneContents()로 처리한 것이므로 tag가 한쪽만 있는 경우는 없음)
-            const exp = /<.+>/gs //s는 .(모든 문자를 줄이 바뀌어도(\n) 매칭시켜줌)
-            const matchArr = [...text.matchAll(exp)]
-            debugger
-            //node.remove()
-            storeCursorPosition()
+            let childInnerHtml = node.innerHTML
+            //예) <p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 <a href='https://naver.com'>네이버</a>마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>
+            //childInnerHtml에는 <으로 시작하는 경우는 없음 (하다못해 <앞에 빈칸 하나라도 들어가는 경우는 있음)
+            //따라서, childInnerHtml에 <가 포함되는지 체크부터 해야 함 (&lt;가 아닌 < 태그임)
+            //1. <가 포함되면 그 안에 해당 스타일이 있다면 제거후 스타일링한 태그를 추가(insertNode) : 예) 마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하
+            //2. <가 없다면 childInnerHtml과 parentInnerHtml을 비교해
+            //   1) 같지 않다면, childInnerHtml에 스타일링한 태그를 추가(insertNode) : 예) 나그네
+            //   2) 같은 경우, a) parentOuterHtml에 해당 스타일이 있으면 그 부분만 변경하고 : 예) 타는 저녁놀
+            //                b) 없으면 해당 text값에 스타일을 입혀 추가(insertNode)하기 : 예) 나그네 (에디터에 html없이 나그네라는 글자만 있는 경우)
+            //      이 때 해당 스타일유무 체크는 computedStyle로 해보기로 함 (추가는 RegEx로 처리)
+            //예1) const exp = /<.+>/gs //s는 .(모든 문자를 줄이 바뀌어도(\n) 매칭시켜줌)
+            //예2) const match = str.match(exp); 또는 const matchAll = str.matchAll(exp); const matchArr = Array.from(matchAll) 또는 const matchArr = [...str.matchAll(exp)]
+            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/g //예) font-weight:bold,font-weight:500,font-weight:;font-weight  :  bold  ;
+            const expBold1 = /(<[bB]>)(.*)(<\/[bB]>)/gs //s는 .(모든 문자를 줄이 바뀌어도(\n) 매칭시켜줌) //<b>~</b>
             if (kind == 'B') {
                 stateBold.value = !stateBold.value
             } else {
 
             }
+            if (/</.test(childInnerHtml)) { //위 1. 케이스
+                const str = "aa<b>하하하\n가나다</b>style='color:red;font-weight:700'>bb<b>후후후</b>style='color:red;font-weight:bold'>"
+                const matchArr = [...str.matchAll(expBold)]
+                const matchArr1 = [...str.matchAll(expBold1)]
+                //const brr = str1.split(matchArr(0))
+                //const str3 = brr[0] + matchArr(2) + brr[1] //matchArr의 1과 3을 제거하고 2만 적용
+
+                debugger
+                node.innerHTML = childInnerHtml.replace(expBold, "")
+                node.style.fontWeight = stateBold.value ? 'bold' : 'normal' //node.innerHTML = "<span style=font-weight:bold>" + str + "</span>"
+            } else {
+                if (childInnerHtml != parentInnerHtml) { //위 2.1) 케이스
+                    node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                } else { //위 2.2) 케이스
+                    if (expBold.test(parentOuterHtml)) { //위 2.1)a) 케이스
+                        parentNode.style.fontWeight = stateBold.value ? 'bold' : 'normal' //parentNode를 변경하는 것이므로 추가(insertNode)가 아님
+                    } else { //위 2.1)b) 케이스
+                        node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                    }
+                }
+            }
+            storeCursorPosition()
             inEditor.value.focus()
             const range1 = restoreCursorPosition()
-            //let node1 = document.createElement('span')
-            //node1.setAttribute(hush.cons.appName, 'Y')
-            if (kind == 'B') {
-                node.innerHTML = node.innerHTML.replace('bold', 'normal')
-                node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
-            } else {
-
-            }
-            //node1.append(node)
-            debugger
             range1.deleteContents()
             range1.insertNode(node)
             range1.collapse(false)
@@ -1925,10 +1939,8 @@
         const computedStyle = window.getComputedStyle(currentNode)
         const fontWeight = computedStyle.fontWeight
         if (fontWeight == 'bold' || fontWeight == 'bolder' || parseInt(fontWeight) >= 700) {
-            console.log("111111111"+stateBold.value)
             if (!stateBold.value) stateBold.value = true
         } else {
-            console.log("1111111112222222"+stateBold.value)
             if (stateBold.value) stateBold.value = false
         }
     }
