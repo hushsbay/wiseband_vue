@@ -43,7 +43,7 @@
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
-    let msgbody = ref("<p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 <a href='https://naver.com'>네이버</a>마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>")
+    let msgbody = ref("<p>강나루 \"건너서\" <span style='font-weight:bold'>밀밭 <b>길을</b></span> 구름에 달 가듯이 가는 나그네<span style='font-weight:800'><br>길은 외줄기</span> 남도 삼백리 술익는 <span style='color:blue'>마을마다</span> <span style='color:red;font-weight:bold'>타는 저녁놀</span> 구름에 \"달 <B>가듯이</B>\" 가는 나그네</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
@@ -1869,54 +1869,236 @@
         }
     }
 
+    function toggleBold() {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const selectedText = range.extractContents(); // Extracts content and removes it from DOM
+
+        // Check if the selected text is already within a <b> or <strong> tag
+        const isBold = range.commonAncestorContainer.closest('b, strong');
+
+        if (isBold) {
+            // Unwrap: Move children of <b>/<strong> to its parent
+            const parent = isBold.parentNode;
+            while (isBold.firstChild) {
+                parent.insertBefore(isBold.firstChild, isBold);
+            }
+            parent.removeChild(isBold);
+        } else {
+            // Wrap: Create a new <b> tag and insert the content
+            const boldTag = document.createElement('b');
+            boldTag.appendChild(selectedText);
+            range.insertNode(boldTag);
+        }
+
+        // Restore selection (simplified, might need more complex logic for partial selections)
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
     function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike)
         try {
             if (!chkEditorFocus()) return
             let selection = window.getSelection()
             if (selection.rangeCount == 0) return
             const range = selection.getRangeAt(0)
-            const parentNode = range.startContainer.parentNode
+            const parentNode = range.startContainer.parentNode 
+            const commonParentNode = range.commonAncestorContainer
             let parentInnerHtml = parentNode.innerHTML
-            let parentOuterHtml = parentNode.outerHTML            
-            let content = range.cloneContents()
+            let parentOuterHtml = parentNode.outerHTML
+            let content = range.cloneContents() //range.extract~로 처리하면 코딩이 복잡해져서 clone~으로 대체함 (아래에서 deleteContents()해야 할 경우와 하지 않아야 할 경우가 있음)         
             let node = document.createElement('span')
             node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
             let childInnerHtml = node.innerHTML
-            //예) <p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 <a href='https://naver.com'>네이버</a>마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>
-            //childInnerHtml에는 <으로 시작하는 경우는 없음 (하다못해 <앞에 빈칸 하나라도 들어가는 경우는 있음)
-            //따라서, childInnerHtml에 <가 포함되는지 체크부터 해야 함 (&lt;가 아닌 < 태그임)
-            //1. <가 포함되면 그 안에 해당 스타일이 있다면 제거후 스타일링한 태그를 추가(insertNode) : 예) 마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하
-            //2. <가 없다면 childInnerHtml과 parentInnerHtml을 비교해
-            //   1) 같지 않다면, childInnerHtml에 스타일링한 태그를 추가(insertNode) : 예) 나그네
-            //   2) 같은 경우, a) parentOuterHtml에 해당 스타일이 있으면 그 부분만 변경하고 : 예) 타는 저녁놀
-            //                b) 없으면 해당 text값에 스타일을 입혀 추가(insertNode)하기 : 예) 나그네 (에디터에 html없이 나그네라는 글자만 있는 경우)
-            //      이 때 해당 스타일유무 체크는 computedStyle로 해보기로 함 (추가는 RegEx로 처리)
-            //예1) const exp = /<.+>/gs //s는 .(모든 문자를 줄이 바뀌어도(\n) 매칭시켜줌)
-            //예2) const match = str.match(exp); 또는 const matchAll = str.matchAll(exp); const matchArr = Array.from(matchAll) 또는 const matchArr = [...str.matchAll(exp)]
-            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/g //예) font-weight:bold,font-weight:500,font-weight:;font-weight  :  bold  ;
-            const expBold1 = /(<[bB]>)(.*)(<\/[bB]>)/gs //s는 .(모든 문자를 줄이 바뀌어도(\n) 매칭시켜줌) //<b>~</b>
+            console.log("parentInnerHtml---- " + parentInnerHtml)
+            console.log("parentOuterHtml---- " + parentOuterHtml)
+            console.log("childInnerHtml ---- " + childInnerHtml)
+            console.log("commonParentNode.innerHTML @@ " + commonParentNode.innerHTML)
+            console.log("commonParentNode.outerHTML @@ " + commonParentNode.outerHTML)
+            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight  :  bold  ; 모두 찾기
+            const expBold1 = /(<b>).*?(<\/b>)/gis //<b>~</b> 모두 찾기
             if (kind == 'B') {
                 stateBold.value = !stateBold.value
             } else {
 
             }
-            if (/</.test(childInnerHtml)) { //위 1. 케이스
-                const str = "aa<b>하하하\n가나다</b>style='color:red;font-weight:700'>bb<b>후후후</b>style='color:red;font-weight:bold'>"
-                const matchArr = [...str.matchAll(expBold)]
-                const matchArr1 = [...str.matchAll(expBold1)]
+            if (!commonParentNode.innerHTML) { //if (!/</.test(childInnerHtml)과 동일한 케이스 (<br>도 제외시켜야 함)
+                //commonParentNode.innerHTML이 undefined면 선택된 노드는 단일 노드(Text or Html)이며 tag는 안들어가 있음
+                if (childInnerHtml != parentInnerHtml) { //1) <span>타는 저녁놀</span>중에 '저녁놀'만 선택 2) '나그네'처럼 아예 Text => 가비지만 정리 필요
+                    node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                    storeCursorPosition()
+                    inEditor.value.focus()
+                    const range1 = restoreCursorPosition()
+                    range1.deleteContents()
+                    range1.insertNode(node)
+                    range1.collapse(false)
+                } else { //이 경우는 parentOuterHtml이 <span style="color:red;font-weight:bold">타는 저녁놀</span>이나 <b>가듯이</b> 등으로 되어 있는 경우인데
+                    //range.startContainer와 range.endContainer의 parentNode가 동일한 상황이므로 parentOuterHtml로 핸들링해도 문제없을 것임
+                    //parentOuterHtml을 RegEx로 stateBold.value에 따라 모두 찾아 업데이트하면 될 것임 => 가비지도 없고 추가 태그도 발생하지 않음
+                    parentOuterHtml = parentOuterHtml.replaceAll(expBold, "font-weight:" + (stateBold.value ? 'bold' : 'normal'))
+                    console.log("00 " + parentOuterHtml)
+                    const matchArr = [...parentOuterHtml.matchAll(expBold1)]
+                    for (let matchBrr of matchArr) {
+                        const srcStr = matchBrr[0]
+                        const destStr = matchBrr[0].replace(matchBrr[1], (stateBold.value ? '<b>' : '')).replace(matchBrr[2], (stateBold.value ? '</b>' : ''))
+                        parentOuterHtml = parentOuterHtml.replace(srcStr, destStr)
+                        console.log("1111 " + parentOuterHtml) 
+                    }
+                    parentNode.outerHTML = parentOuterHtml
+                    inEditor.value.focus()
+                    range.collapse(false) //끝점으로 접는데 끝점이 없어져서 안먹혀 처음으로 접히는데 크게 문제는 없을 것임
+                    node.remove()
+                    return //중요
+                }
+            } else { //다중 노드가 들어 있는 상태이며 무조건 childInnerHtml를 처리해야 하므로 위 node 객체로 핸들링하면 됨 
+                //node에 있는 모든 관련 스타일을 제거후 마지막에 node.style로 처리 => 가비지 및 추가 태그 처리해야 함
+                //예1) <span style="font-weight:bold">밑밭 <b>길을</b></span> => '밭 <b>길'만 bold 해제하면 마지막 '을'에 대해서는 자동으로 '<b>을</을>'로 만들어줌 
+                //예2) <span style="color:blue">마을마다</span> <span style="color:red;font-weight:bold">타는 저녁놀</span> 둘 다 선택시
+                childInnerHtml = childInnerHtml.replaceAll(expBold, "")
+                console.log("00 " + childInnerHtml)
+                const matchArr = [...childInnerHtml.matchAll(expBold1)]
+                for (let matchBrr of matchArr) {
+                    const srcStr = matchBrr[0]
+                    const destStr = matchBrr[0].replace(matchBrr[1], "").replace(matchBrr[2], "")
+                    childInnerHtml = childInnerHtml.replace(srcStr, destStr)
+                    console.log("1111 " + childInnerHtml) 
+                }
+                node.innerHTML = childInnerHtml
+                node.id = "wiseband" + hush.util.getRnd()
+                node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                storeCursorPosition()
+                inEditor.value.focus()
+                const range1 = restoreCursorPosition()
+                range1.deleteContents()
+                range1.insertNode(node)
+                range1.collapse(false)
+                const ele = document.querySelector("#" + node.id)
+                if (ele && ele.parentNode) { //다중 노드의 경우 insertNode(node)가 실행되어서 같은 범위를 선택해서 계속 처리할 경우
+                    //동일 tag로 계속 추가로 감싸게 되는데 미리 막지 못해 insertNode(node)이후 여기서 방금 추가한 ele의 부모node를 찾아
+                    //거기에 wiseband 아이디가 있으면 innerHTML을 이용해 제거하면 계속 작업해도 한개의 wisebnd id만 존재하게 되므로 그나마 OK
+                    const pNode = ele.parentNode
+                    if (pNode.id.startsWith("wiseband")) {
+                        pNode.outerHTML = pNode.innerHTML
+                    }
+                }
+            }
+
+        } catch (ex) {
+            gst.util.showEx(ex, true)
+        }
+    }
+
+    function procWordStyle11111(kind) { //kind=B(Bold),kind=S(Strike)
+        try {
+            if (!chkEditorFocus()) return
+            //toggleBold()
+            //return
+            let selection = window.getSelection()
+            if (selection.rangeCount == 0) return
+            const range = selection.getRangeAt(0)
+            const parentNode = range.startContainer.parentNode 
+            const commonParentNode = range.commonAncestorContainer
+            let parentInnerHtml = parentNode.innerHTML
+            let parentOuterHtml = parentNode.outerHTML       
+            //const node = range.extractContents()     
+            let content = range.cloneContents()            
+            //const textContent = document.createTextNode("This is some dynamic text.");
+            let node = document.createElement('span')
+            node.append(content) //content에 html로 읽어오는 메소드는 없고 cloneContents()로만 가능한데 append 하지 않으면 읽지 못함
+            let childInnerHtml = node.innerHTML
+            //예) <p>구름에 \"달 <B>가듯이</B>\" 가는 나그네<br>술익는 <a href='https://naver.com'>네이버</a>마을마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하</p>
+            //childInnerHtml에는 <으로 시작하는 경우도 있음. childInnerHtml에 <가 포함되는지 체크부터 해야 함 (&lt;가 아닌 < 태그임)
+            //1. <가 포함되면 그 안에 해당 스타일이 있다면 모두 제거후 : 예) 마다 <span style='color:red;font-weight:bold'>타는 저녁놀</span>하하
+            //   1) <로 시작하면 그 부분만 변경하고 
+            //   2) 아니면 스타일링한 태그를 추가(insertNode)
+            //2. <가 없다면 childInnerHtml과 parentInnerHtml을 비교해
+            //   1) 같지 않다면, childInnerHtml에 스타일링한 태그를 추가(insertNode) : 예) 나그네
+            //   2) 같은 경우, a) parentOuterHtml에 해당 스타일이 있으면 그 부분만 변경하고 : 예) 타는 저녁놀
+            //                b) 없으면 해당 text값에 스타일을 입혀 추가(insertNode)하기 : 예) 나그네 (에디터에 html없이 나그네라는 글자만 있는 경우)
+            //      이 때 해당 스타일 유무 체크는 computedStyle로 해보기로 함 (추가는 RegEx로 처리)
+            /*## parentNode.childNodes는 text 및 tag를 모두 가져오는 NodeList (배열) : 읽기전용임
+              ## parentNode.children은 tag만 가져오는 HTMLCollection (배열) : 읽기전용임
+              읽기전용으로 모두 읽어서 새로운 구조를 추가로 만들어 대체하려 했는데 쉽지 않고
+              parentNode로 시작해서 parentNode.childNodes나 parentNode.children으로 시작하면 읽어오는 전체 데이터가 childInnerHtml보다 더 큰 범위의 텍스트를 읽어오는 경우가 많아 안됨 (아래 코딩)
+            let childNodes = parentNode.childNodes
+            for (let tag of childNodes) {
+                if (tag.nodeName == "#text") {
+                    console.log("tag.text: " + tag.nodeValue)
+                } else {
+                    console.log("tag.innerHTML: " + tag.innerHTML)
+                    console.log("tag.outerHTML: " + tag.outerHTML)
+                    let childNodes1 = tag.childNodes
+                    for (let tag1 of childNodes1) {
+                        if (tag1.nodeName == "#text") {
+                            console.log("tag1.text: " + tag1.nodeValue)
+                        } else {
+                            console.log("tag1.innerHTML: " + tag1.innerHTML)
+                            console.log("tag1.outerHTML: " + tag1.outerHTML)
+                        }
+                    }
+                }
+            }*/
+            //따라서, 처음 시작의 기준은 childInnerHtml으로 해서 parentInnerHtml,parentOuterHtml을 체크해 처리하기로 함
+            console.log("range.anchorOffset---- " + range.anchorOffset)
+            console.log("parentInnerHtml---- " + parentInnerHtml)
+            console.log("parentOuterHtml---- " + parentOuterHtml)
+            console.log("childInnerHtml ---- " + childInnerHtml)
+            console.log("commonParentNode @@ " + commonParentNode.innerHTML)
+            console.log("commonParentNode startOffset@@ " + range.startOffset)
+            //예1) const exp = /<.+>/gs //s는 .(모든 문자를 줄이 바뀌어도(\n) 매칭시켜줌)
+            //예2) const match = str.match(exp); 또는 const matchAll = str.matchAll(exp); const matchArr = Array.from(matchAll) 또는 const matchArr = [...str.matchAll(exp)]
+            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight  :  bold  ; 모두 찾기
+            const expBold1 = /(<b>).*?(<\/b>)/gis //<b>~</b> 모두 찾기
+            if (kind == 'B') {
+                stateBold.value = !stateBold.value
+            } else {
+
+            }
+            if (/</.test(childInnerHtml)) { //위 1. 케이스 => 나중에 <br>은 제거해야 함
+                //const matchArr = [...childInnerHtml.matchAll(expBold)]
+                //const matchArr = [...childInnerHtml.matchAll(expBold1)]
                 //const brr = str1.split(matchArr(0))
                 //const str3 = brr[0] + matchArr(2) + brr[1] //matchArr의 1과 3을 제거하고 2만 적용
-
-                debugger
-                node.innerHTML = childInnerHtml.replace(expBold, "")
-                node.style.fontWeight = stateBold.value ? 'bold' : 'normal' //node.innerHTML = "<span style=font-weight:bold>" + str + "</span>"
-            } else {
+                childInnerHtml = childInnerHtml.replaceAll(expBold, "")
+                console.log("00 " + childInnerHtml)
+                const matchArr = [...childInnerHtml.matchAll(expBold1)]
+                for (let matchBrr of matchArr) {
+                    const srcStr = matchBrr[0]
+                    const destStr = matchBrr[0].replace(matchBrr[1], "").replace(matchBrr[2], "")
+                    childInnerHtml = childInnerHtml.replace(srcStr, destStr)
+                    console.log("1111 " + childInnerHtml) 
+                }              
+                node.innerHTML = childInnerHtml
+                node.id = 'xxx'
+                //node.style.fontWeight = stateBold.value ? 'bold' : 'normal'    
+                
+                storeCursorPosition()                
+                const range1 = restoreCursorPosition()
+                range1.deleteContents()
+                range1.insertNode(node)
+                range1.collapse(false) 
+                const xx = document.querySelector('#xxx')
+                xx.outerHTML = xx.innerHTML
+                inEditor.value.focus()
+                return  
+                // debugger
+                // if (/^</.test(childInnerHtml)) {
+                //     //태그로 시작되는 경우이므로 다른 태그로 감쌀 이유가 없음
+                //     debugger
+                //     return
+                // } else {
+                    //node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                //}
+            } else { //테스트 완료 (OK)
                 if (childInnerHtml != parentInnerHtml) { //위 2.1) 케이스
                     node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
                 } else { //위 2.2) 케이스
-                    if (expBold.test(parentOuterHtml)) { //위 2.1)a) 케이스
+                    if (expBold.test(parentOuterHtml)) { //위 2.2)a) 케이스
                         parentNode.style.fontWeight = stateBold.value ? 'bold' : 'normal' //parentNode를 변경하는 것이므로 추가(insertNode)가 아님
-                    } else { //위 2.1)b) 케이스
+                        return
+                    } else { //위 2.2)b) 케이스
                         node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
                     }
                 }
@@ -1924,7 +2106,7 @@
             storeCursorPosition()
             inEditor.value.focus()
             const range1 = restoreCursorPosition()
-            range1.deleteContents()
+            range1.extractContents() //range1.deleteContents()
             range1.insertNode(node)
             range1.collapse(false)
         } catch (ex) {
