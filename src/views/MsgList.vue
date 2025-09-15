@@ -1464,58 +1464,58 @@
     //    }
     //}
 
-    // function getCaretPosition(editableDiv) {
-    //     var caretPos = 0, sel, range;
-    //     if (window.getSelection) {
-    //         sel = window.getSelection();
-    //         if (sel.rangeCount) {
-    //             range = sel.getRangeAt(0)
-    //             if (range.commonAncestorContainer.parentNode == editableDiv) {
-    //                 caretPos = range.endOffset
-    //             }
-    //         }
-    //     } else if (document.selection && document.selection.createRange) {
-    //         range = document.selection.createRange();
-    //         if (range.parentElement() == editableDiv) {
-    //             var tempEl = document.createElement("span")
-    //             editableDiv.insertBefore(tempEl, editableDiv.firstChild)
-    //             var tempRange = range.duplicate()
-    //             tempRange.moveToElementText(tempEl)
-    //             tempRange.setEndPoint("EndToEnd", range)
-    //             caretPos = tempRange.text.length
-    //         }
-    //     }
-    //     return caretPos
-    // }
+    function getCaretPos(editableDiv) {
+        var caretPos = 0, sel, range;
+        if (window.getSelection) {
+            sel = window.getSelection();
+            if (sel.rangeCount) {
+                range = sel.getRangeAt(0)
+                if (range.commonAncestorContainer.parentNode == editableDiv) {
+                    caretPos = range.endOffset
+                }
+            }
+        } else if (document.selection && document.selection.createRange) {
+            range = document.selection.createRange();
+            if (range.parentElement() == editableDiv) {
+                var tempEl = document.createElement("span")
+                editableDiv.insertBefore(tempEl, editableDiv.firstChild)
+                var tempRange = range.duplicate()
+                tempRange.moveToElementText(tempEl)
+                tempRange.setEndPoint("EndToEnd", range)
+                caretPos = tempRange.text.length
+            }
+        }
+        return caretPos
+    }
 
-    // function setCaretPos(el, sPos) {
-    //     var charIndex = 0, range = document.createRange()
-    //     range.setStart(el, 0)
-    //     range.collapse(true)
-    //     var nodeStack = [el], node, foundStart = false, stop = false
-    //     while (!stop && (node = nodeStack.pop())) {
-    //         if (node.nodeType == 3) {
-    //             var nextCharIndex = charIndex + node.length
-    //             if (!foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
-    //                 range.setStart(node, sPos - charIndex)
-    //                 foundStart = true
-    //             }
-    //             if (foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
-    //                 range.setEnd(node, sPos - charIndex)
-    //                 stop = true
-    //             }
-    //             charIndex = nextCharIndex
-    //         } else {
-    //             var i = node.childNodes.length
-    //             while (i--) {
-    //                 nodeStack.push(node.childNodes[i])
-    //             }
-    //         }
-    //     }
-    //     let selection = window.getSelection()
-    //     selection.removeAllRanges()
-    //     selection.addRange(range)
-    // }
+    function setCaretPos(el, sPos) {
+        var charIndex = 0, range = document.createRange()
+        range.setStart(el, 0)
+        range.collapse(true)
+        var nodeStack = [el], node, foundStart = false, stop = false
+        while (!stop && (node = nodeStack.pop())) {
+            if (node.nodeType == 3) {
+                var nextCharIndex = charIndex + node.length
+                if (!foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+                    range.setStart(node, sPos - charIndex)
+                    foundStart = true
+                }
+                if (foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+                    range.setEnd(node, sPos - charIndex)
+                    stop = true
+                }
+                charIndex = nextCharIndex
+            } else {
+                var i = node.childNodes.length
+                while (i--) {
+                    nodeStack.push(node.childNodes[i])
+                }
+            }
+        }
+        let selection = window.getSelection()
+        selection.removeAllRanges()
+        selection.addRange(range)
+    }
 
     // function whenKeyPress(e) { //한개는 OK. 여러개 실패함 => @ 프람프트는 포기하고 saveMsg()때 @이상병, @정일영영턱스 등을 읽어서 사용자로 하여금 @이상병, @정일영으로 처리하도록 팝업을 주는 것으로 하기
     //     if (e.key == "@") {
@@ -1898,7 +1898,7 @@
         selection.addRange(range);
     }
 
-    function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike)
+    async function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike)
         try {
             if (!chkEditorFocus()) return
             let selection = window.getSelection()
@@ -1983,8 +1983,19 @@
                         pNode.outerHTML = pNode.innerHTML
                     }
                 }
-            }
-
+            } //아래는 가비지 정리 (정리후 커서 위치 기억 해결해야 함 - 현재 안되고 있음)
+            await nextTick()
+            const ele = document.getElementById(editorId)
+            const pos = getCaretPos(ele) //storeCursorPosition()
+            debugger
+            let str = ele.innerHTML
+            const expBlank = /<span[^>]*?><\/span>/gi 
+            str = str.replaceAll(expBlank, "") //const blankArr = [...str.matchAll(expBlank)]
+            msgbody.value = str
+            //inEditor.value.focus()
+            //const range1 = restoreCursorPosition()
+            //range1.collapse()            
+            setCaretPos(ele, pos)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
