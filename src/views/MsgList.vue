@@ -1871,7 +1871,7 @@
 
     //parentNode.childNodes는 text 및 tag를 모두 가져오는 NodeList (배열) : 읽기전용임
     //parentNode.children은 tag만 가져오는 HTMLCollection (배열) : 읽기전용임
-    //따라서, 처음 시작은 childInnerHtml으로 처리하기로 함
+    //따라서, 처음 시작은 childInnerHtml으로 처리하기로 함 (document.execCommand-deprecated로 처리하는 것이 아님)
     async function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike)
         try {
             if (!chkEditorFocus()) return
