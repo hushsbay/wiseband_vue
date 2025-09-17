@@ -43,7 +43,7 @@
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
-    let msgbody = ref("<p>강나루 \"건너서\" <span style='font-weight:bold'>밀밭 <b>길을</b></span> 구름에 달 가듯이 가는 나그네<span style='font-weight:800'><br>길은 외줄기</span> 남도 삼백리 술익는 <span style='color:blue'>마을마다</span> <span style='color:red;font-weight:bold'>타는 저녁놀</span> 구름에 \"달 <B>가듯이</B>\" 가는 나그네</p>")
+    let msgbody = ref("<p>강나루 \"건너서\" <span style='font-weight:bold;text-decoration:line-through'>밀밭 <b>길을</b></span> 구름에 달 <del>가듯이</del> 가는 나그네<span style='font-weight:800'><br>길은 외줄기</span> 남도 삼백리 술익는 <span style='color:blue'>마을마다</span> <span style='color:red;font-weight:bold'>타는 저녁놀</span> 구름에 \"달 <strong>가듯이</Strong>\" 가는 나그네</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
@@ -75,7 +75,7 @@
     let prevRange //let cursorPos = { node: null, startOffset: 0, endOffset: 0 } curPos 말고 prevRange로 기억하면 훨씬 간편해서 막음 (코딩은 그대로 둠)
     let editorIn = ref(false), editorBlurDt = Date.now()
     let inEditor = useTemplateRef('editorRef') //editor = document.getElementById(editorId) editor 대신 inEditor (템플릿 참조) 사용
-    let stateBold = ref(false)
+    let stateBold = ref(false), stateStrike = ref(false)
 
     //라우팅 관련 정리 : 현재는 부모(Main) > 자식(각종Panel) > 손자(MsgList) 구조임 : 스레드(댓글)용으로 손자안에 동일한 손자(MsgList)가 있는데 그건 컴포넌트로 바로 처리 (라우팅 아님)
 
@@ -1872,7 +1872,7 @@
     //parentNode.childNodes는 text 및 tag를 모두 가져오는 NodeList (배열) : 읽기전용임
     //parentNode.children은 tag만 가져오는 HTMLCollection (배열) : 읽기전용임
     //따라서, 처음 시작은 childInnerHtml으로 처리하기로 함 (document.execCommand-deprecated로 처리하는 것이 아님)
-    async function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike)
+    async function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike,Del)
         try {
             if (!chkEditorFocus()) return
             let selection = window.getSelection()
@@ -1889,13 +1889,14 @@
             console.log("parentInnerHtml---- " + parentInnerHtml)
             console.log("parentOuterHtml---- " + parentOuterHtml)
             console.log("childInnerHtml ---- " + childInnerHtml)
-            console.log("commonParentNode.innerHTML @@ " + commonParentNode.innerHTML)
-            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight : bold ; 모두 찾기
-            const expBold1 = /(<b>).*?(<\/b>)/gis //<b>~</b> 모두 찾기
+            console.log("commonParentNode.innerHTML @@ " + commonParentNode.innerHTML) //아래 s는 줄바꿈에서도 매칭 찾음
+            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight : normal ; 모두 찾기
+            const expBold1 = /(<b>|<strong>).*?(<\/b>|<\/strong>)/gis //<b>~</b> 모두 찾기
+
             if (kind == 'B') {
                 stateBold.value = !stateBold.value
-            } else {
-
+            } else if (kind == 'S') {
+                stateStrike.value = !stateStrike.value
             }
             if (!commonParentNode.innerHTML) { //if (!/</.test(childInnerHtml)과 동일한 케이스 (<br>도 제외시켜야 함)
                 //commonParentNode.innerHTML이 undefined면 선택된 노드는 단일 노드(Text or Html)이며 tag는 안 들어가 있으므로 크게 어려운 부분 없음
@@ -1983,11 +1984,19 @@
         const range = selection.getRangeAt(0)
         const currentNode = range.startContainer.parentNode
         const computedStyle = window.getComputedStyle(currentNode)
+        //1) B 체크
         const fontWeight = computedStyle.fontWeight
         if (fontWeight == 'bold' || fontWeight == 'bolder' || parseInt(fontWeight) >= 700) {
             if (!stateBold.value) stateBold.value = true
         } else {
             if (stateBold.value) stateBold.value = false
+        }
+        //2) S 체크
+        const textDecoration = computedStyle.textDecoration
+        if (textDecoration.includes('line-through')) { //line-through rgb(0, 0, 0) / text-decoration: underline wavy blue 2px / text-decoration-line: line-through;
+            if (!stateStrike.value) stateStrike.value = true
+        } else {
+            if (stateStrike.value) stateStrike.value = false
         }
     }
 
@@ -2703,7 +2712,7 @@
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_bold.png')" title="굵게"
                             :style="{ border: stateBold ? '1px solid dimgray' : '1px solid whitesmoke' }" @click="procWordStyle('B')">
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_strike.png')" title="취소"
-                            :style="{ opacity: editorIn ? 1.0 : 0.5 }" @click="procWordStyle('S')">
+                            :style="{ border: stateStrike ? '1px solid dimgray' : '1px solid whitesmoke' }" @click="procWordStyle('S')">
                         <img class="coImg20 editorMenu" :src="gst.html.getImageUrl('dimgray_html.png')" title="HTMLView" 
                             @click="htmlView()"><!--개발자 사용-->
                     </div>
