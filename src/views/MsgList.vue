@@ -1464,58 +1464,58 @@
     //    }
     //}
 
-    function getCaretPos(editableDiv) {
-        var caretPos = 0, sel, range;
-        if (window.getSelection) {
-            sel = window.getSelection();
-            if (sel.rangeCount) {
-                range = sel.getRangeAt(0)
-                if (range.commonAncestorContainer.parentNode == editableDiv) {
-                    caretPos = range.endOffset
-                }
-            }
-        } else if (document.selection && document.selection.createRange) {
-            range = document.selection.createRange();
-            if (range.parentElement() == editableDiv) {
-                var tempEl = document.createElement("span")
-                editableDiv.insertBefore(tempEl, editableDiv.firstChild)
-                var tempRange = range.duplicate()
-                tempRange.moveToElementText(tempEl)
-                tempRange.setEndPoint("EndToEnd", range)
-                caretPos = tempRange.text.length
-            }
-        }
-        return caretPos
-    }
+    // function getCaretPos(editableDiv) {
+    //     var caretPos = 0, sel, range;
+    //     if (window.getSelection) {
+    //         sel = window.getSelection();
+    //         if (sel.rangeCount) {
+    //             range = sel.getRangeAt(0)
+    //             if (range.commonAncestorContainer.parentNode == editableDiv) {
+    //                 caretPos = range.endOffset
+    //             }
+    //         }
+    //     // } else if (document.selection && document.selection.createRange) {
+    //     //     range = document.selection.createRange();
+    //     //     if (range.parentElement() == editableDiv) {
+    //     //         var tempEl = document.createElement("span")
+    //     //         editableDiv.insertBefore(tempEl, editableDiv.firstChild)
+    //     //         var tempRange = range.duplicate()
+    //     //         tempRange.moveToElementText(tempEl)
+    //     //         tempRange.setEndPoint("EndToEnd", range)
+    //     //         caretPos = tempRange.text.length
+    //     //     }
+    //     }
+    //     return caretPos
+    // }
 
-    function setCaretPos(el, sPos) {
-        var charIndex = 0, range = document.createRange()
-        range.setStart(el, 0)
-        range.collapse(true)
-        var nodeStack = [el], node, foundStart = false, stop = false
-        while (!stop && (node = nodeStack.pop())) {
-            if (node.nodeType == 3) {
-                var nextCharIndex = charIndex + node.length
-                if (!foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
-                    range.setStart(node, sPos - charIndex)
-                    foundStart = true
-                }
-                if (foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
-                    range.setEnd(node, sPos - charIndex)
-                    stop = true
-                }
-                charIndex = nextCharIndex
-            } else {
-                var i = node.childNodes.length
-                while (i--) {
-                    nodeStack.push(node.childNodes[i])
-                }
-            }
-        }
-        let selection = window.getSelection()
-        selection.removeAllRanges()
-        selection.addRange(range)
-    }
+    // function setCaretPos(el, sPos) {
+    //     var charIndex = 0, range = document.createRange()
+    //     range.setStart(el, 0)
+    //     range.collapse(true)
+    //     var nodeStack = [el], node, foundStart = false, stop = false
+    //     while (!stop && (node = nodeStack.pop())) {
+    //         if (node.nodeType == 3) {
+    //             var nextCharIndex = charIndex + node.length
+    //             if (!foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+    //                 range.setStart(node, sPos - charIndex)
+    //                 foundStart = true
+    //             }
+    //             if (foundStart && sPos >= charIndex && sPos <= nextCharIndex) {
+    //                 range.setEnd(node, sPos - charIndex)
+    //                 stop = true
+    //             }
+    //             charIndex = nextCharIndex
+    //         } else {
+    //             var i = node.childNodes.length
+    //             while (i--) {
+    //                 nodeStack.push(node.childNodes[i])
+    //             }
+    //         }
+    //     }
+    //     let selection = window.getSelection()
+    //     selection.removeAllRanges()
+    //     selection.addRange(range)
+    // }
 
     // function whenKeyPress(e) { //한개는 OK. 여러개 실패함 => @ 프람프트는 포기하고 saveMsg()때 @이상병, @정일영영턱스 등을 읽어서 사용자로 하여금 @이상병, @정일영으로 처리하도록 팝업을 주는 것으로 하기
     //     if (e.key == "@") {
@@ -1890,7 +1890,7 @@
             console.log("parentOuterHtml---- " + parentOuterHtml)
             console.log("childInnerHtml ---- " + childInnerHtml)
             console.log("commonParentNode.innerHTML @@ " + commonParentNode.innerHTML)
-            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight  :  bold  ; 모두 찾기
+            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight : bold ; 모두 찾기
             const expBold1 = /(<b>).*?(<\/b>)/gis //<b>~</b> 모두 찾기
             if (kind == 'B') {
                 stateBold.value = !stateBold.value
@@ -1899,7 +1899,7 @@
             }
             if (!commonParentNode.innerHTML) { //if (!/</.test(childInnerHtml)과 동일한 케이스 (<br>도 제외시켜야 함)
                 //commonParentNode.innerHTML이 undefined면 선택된 노드는 단일 노드(Text or Html)이며 tag는 안 들어가 있으므로 크게 어려운 부분 없음
-                if (childInnerHtml != parentInnerHtml) { //1) <span>타는 저녁놀</span>중에 '저녁놀'만 선택 2) '나그네'처럼 아예 Text => ## 가비지만 정리 필요
+                if (childInnerHtml != parentInnerHtml) { //1) <span>타는 저녁놀</span>중에 '저녁놀'만 선택 2) '나그네'처럼 아예 Text => ## 가비지도 없고 추가 태그도 발생하지 않음
                     node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
                     storeCursorPosition()
                     inEditor.value.focus()
@@ -1910,20 +1910,22 @@
                 } else { //이 경우는 parentOuterHtml이 <span style="color:red;font-weight:bold">타는 저녁놀</span>이나 <b>가듯이</b> 등으로 되어 있는 경우인데
                     //range.startContainer와 range.endContainer의 parentNode가 동일한 상황이므로 parentOuterHtml로 핸들링해도 문제없을 것임
                     //parentOuterHtml을 RegEx로 stateBold.value에 따라 모두 찾아 업데이트하면 될 것임 => ## 가비지도 없고 추가 태그도 발생하지 않음
-                    parentOuterHtml = parentOuterHtml.replaceAll(expBold, "font-weight:" + (stateBold.value ? 'bold' : 'normal'))
+                    /*지우지말것 parentOuterHtml = parentOuterHtml.replaceAll(expBold, "font-weight:" + (stateBold.value ? 'bold' : 'normal'))
                     const matchArr = [...parentOuterHtml.matchAll(expBold1)]
                     for (let matchBrr of matchArr) {
                         const srcStr = matchBrr[0]
                         const destStr = matchBrr[0].replace(matchBrr[1], (stateBold.value ? '<b>' : '')).replace(matchBrr[2], (stateBold.value ? '</b>' : ''))
                         parentOuterHtml = parentOuterHtml.replace(srcStr, destStr)
                     }
-                    parentNode.outerHTML = parentOuterHtml
+                    parentNode.outerHTML = parentOuterHtml 위처럼 정규식으로 하면 style이 없는 경우까지 고려해야 하는 복잡한 코딩이 되므로 아래 2행으로 커버하기로 함 */
+                    parentNode.style.fontWeight = 'normal' //parentNode를 감싸는 부분이 bold일 수도 있음을 고려
+                    if (stateBold.value) parentNode.style.fontWeight = 'bold'
                     inEditor.value.focus()
                     range.collapse(false) //끝점으로 접는데 끝점이 없어져서 안먹혀 처음으로 접히는데 크게 문제는 없을 것임
                     node.remove()
                     return //중요
                 }
-            } else { //다중 노드가 들어 있는 상태이며 무조건 childInnerHtml를 처리해야 하므로 위 node 객체로 핸들링하면 됨 
+            } else { //다중 노드가 들어 있는 상태이며 무조건 childInnerHtml을 처리해야 하므로 위 node 객체로 핸들링하면 됨 
                 //node에 있는 모든 관련 스타일을 제거후 마지막에 node.style로 처리 => ## 가비지 및 추가 태그 처리해야 함
                 //예1) <span style="font-weight:bold">밑밭 <b>길을</b></span> => '밭 <b>길'만 bold 해제하면 마지막 '을'에 대해서는 자동으로 '<b>을</을>'로 만들어줌 
                 //예2) <span style="color:blue">마을마다</span> <span style="color:red;font-weight:bold">타는 저녁놀</span> 둘 다 선택시
@@ -1950,21 +1952,27 @@
                     const pNode = ele.parentNode
                     if (pNode.id.startsWith("wiseband")) {
                         pNode.outerHTML = pNode.innerHTML
-                    }
+                    } //아래는 가비지 정리 (태그의 일부를 선택해 deleteContents()하면 innerHTML이 없는 ParentNode가 남는 경우가 있는데 그걸 제거하는 것임)
+                    if (parentNode.innerHTML == "") parentNode.remove() 
+                    const sNode = ele.nextSibling //아래는 가비지 정리 (태그의 일부를 선택해 deleteContents()하면 innerHTML이 없는 SiblingNode가 남는 경우가 있는데 그걸 제거하는 것임)
+                    if (sNode && sNode.innerHTML == "") sNode.remove()
                 }
-            } //아래는 가비지 정리 (정리후 커서 위치 기억 해결해야 함 - 현재 안되고 있음) @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+            } /* 아래는 가비지 정리인데 정리후 커서 위치 기억이 쉽지 않아 바로 위에서 해결함 (지우지 말 것)
             await nextTick()
             const ele = document.getElementById(editorId)
+            selection = window.getSelection()
+            if (selection.rangeCount == 0) return
             const pos = getCaretPos(ele) //storeCursorPosition()
-            debugger
             let str = ele.innerHTML
             const expBlank = /<span[^>]*?><\/span>/gi 
             str = str.replaceAll(expBlank, "") //const blankArr = [...str.matchAll(expBlank)]
             msgbody.value = str
-            //inEditor.value.focus()
+            await nextTick()
+            inEditor.value.focus()
             //const range1 = restoreCursorPosition()
-            //range1.collapse()            
-            setCaretPos(ele, pos)
+            //range1.collapse()
+            setCaretPos(ele, pos)*/
+        range.collapse(true)
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -2715,7 +2723,7 @@
                             <span v-show="memNmTyping.length == 0">줄바꿈 : Shift+Enter</span>
                         </div>
                     </div>
-                </div>
+                </div><!--향후 tiptap editor npm for vue.js 사용도 고려해보기로 함-->
                 <div v-if="hasProp()" id="msgContent_prop" class="editor_body" contenteditable="true" spellcheck="false" v-html="msgbody" ref="editorRef"
                     @paste="pasteData" @keydown="keyDown" @keyup="keyUp" @focusin="editorFocused(true)" @blur="editorFocused(false)" @mousedown="editorFocused(true)" @mouseup="chkWordStyle">
                 </div> <!--@keyup.enter="keyUpEnter" 로 처리시 prevent는 필요없지만 newline이 생김 : @keydown.enter.prevent로 대체-->
