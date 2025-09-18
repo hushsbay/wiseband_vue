@@ -1,12 +1,13 @@
-- 개발 진척도 : 약 90% (2025.8.29 현재 소켓 통신 환경 안정화 및 로직 적용 완료)<br>
-- 개발자 : 이상병 (hushsbay@gmail.com)<br>
+- 개발 진척도 : 약 90%
+- 개발자 : 이상병 (hushsbay@gmail.com)
 - 테스트 서버 : https://hushsbay.com:446/login (테스트용 아이디 제공)
 
 # wiseband_vue (프론트엔드) + wiseband_nest (백엔드)
 
 - Slack Clone 개발 건입니다. (Vue.js + Nest.js + MySql + Socket.io + Redis)
-- 9월부터 웹에디터, 맨션 및 개선보완사항 진행해 10월까지는 (최종)구축완료 계획입니다.
-
+- 9월부터 웹에디터(심플버전), 맨션 및 개선보완사항 진행해 10월까지는 (최종)구축완료 계획입니다.
+- 예1) 웹에디터는 '굵게' 및 '취소선'을 구현했으나 미세한 부분에서 동작되지 않는 부분이 생겨 TipTap 라이브러리 적용 검토중입니다.  
+- 예2) 맨션은 현재 1차 개발 완료해 적용했으며 팝업 검색후 keyUp/KeyDown/Enter/Esc 추가 적용시 충돌 현상을 해결해야 합니다. 
 
 # Structure / Flow
 
