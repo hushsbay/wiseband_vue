@@ -186,7 +186,7 @@
 
     function procClearSearch() { //@input="procClearSearch" 이벤트 추가하니 타이핑마다 아래 debugger > reset()이 실행되는 문제 발생해 이벤트 일단 제거함
         if (searchText.value == "") {
-            debugger
+            debugger             
             reset("tree")
         }
     }
