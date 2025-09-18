@@ -1667,7 +1667,7 @@
         procSearch(inputText)
     }
 
-    const keydownInput = (e) => {
+    const keydownInput = (e) => { //@keydown="keydownInput" => 바로 위 handleInput 옆에 두었던 이벤트 메소드인데 (키보딩이 안되어서 일단 막음)
         if (!showMentionDropdown.value) return
         e.preventDefault()
         if (e.key == 'ArrowDown') {
@@ -2809,8 +2809,7 @@
     </div>
     <div v-if="showMentionDropdown" class="mention-popup" :style="{ top: mentionPosition.top + 'px', left: mentionPosition.left + 'px' }">
         <div style="width:100%;display:flex;justify-content:space-between;align-items:center;border:1px solid lightgray">
-            <input v-model="userToSearch" ref="userToSearchInput" 
-                @focus="procUserToSearchFocused(true)" @blur="procUserToSearchFocused(false)" @input="handleInput" @keydown="keydownInput"
+            <input v-model="userToSearch" ref="userToSearchInput" @focus="procUserToSearchFocused(true)" @blur="procUserToSearchFocused(false)" @input="handleInput"
                 style="width:calc(100% - 30px);height:28px;padding-left:5px;border:0px solid lightgray" placeholder="사용자 검색" spellcheck="false" />
             <img class="coImg24" :src="gst.html.getImageUrl('close.png')" @click.stop="closeMentionDropdown" style="margin:0 3px">
         </div>
