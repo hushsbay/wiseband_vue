@@ -43,7 +43,7 @@
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
-    let msgbody = ref("<p>강나루 \"건너서\" <span style='font-weight:bold;text-decoration:line-through'>밀밭 <b>길이</b></span> <span style='text-decoration:line-through'>구름에</span> 달 <del>가듯이</del> 가는 나그네<span style='font-weight:800'><br>길은 외줄기</span> 남도 삼백리 술익는 <span style='color:blue'>마을마다</span> <span style='color:red;font-weight:bold'>타는 저녁놀</span> 구름에 \"달 <strong>가듯이</Strong>\" 가는 나그네</p>")
+    let msgbody = ref('') //ref("<p>강나루 \"건너서\" <span style='font-weight:bold;text-decoration:line-through'>밀밭 <b>길이</b></span> <span style='text-decoration:line-through'>구름에</span> 달 <del>가듯이</del> 가는 나그네<span style='font-weight:800'><br>길은 외줄기</span> 남도 삼백리 술익는 <span style='color:blue'>마을마다</span> <span style='color:red;font-weight:bold'>타는 저녁놀</span> 구름에 \"달 <strong>가듯이</Strong>\" 가는 나그네</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
