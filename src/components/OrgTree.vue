@@ -112,6 +112,9 @@
                         const item = userlist[j]
                         orglist.value.push(item)
                         procNode(item, null, 'user', vips)
+                        gst.realtime.getUserImg(item.USERID, function(uid, data) { //이미지는 비동기콜백으로 처리해야 속도 이슈 없음
+                            item.url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                        })
                     }
                 } else {
                     if (i == rs.list.length - 1) {
@@ -166,7 +169,7 @@
         row.expanded = expanded
         row.paddingleft = paddingLeft + "px"
         if (nodekind == "U") {
-            row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+            //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
             row.isVip = chkVips(vips, row.USERID)
             row.key = row.USERID + (row.GR_ID ? hush.cons.deli + row.GR_ID : "") 
             //vue의 loop에서의 :key는 unique해야 하는데 워크스페이스는 워크스페이스마다 같은 userid가 들어 있을 수 있으므로 grid로 추가 구분함

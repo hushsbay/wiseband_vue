@@ -98,8 +98,8 @@
         observerBottom.value = new IntersectionObserver(async (entry) => {
             if (entry[0].isIntersecting) {                
                 showBottomObserver.value = true
-                if (scrollDir == 'down') { //하단에서 위로 스크롤시 자꾸 getList()를 호출해서.. down일 떄만 호출하도록 체크하는 것임
-//임시막음 : 로드시+여기 두번 호출                    await getList({ nextMsgMstCdt: savNextMsgMstCdt })
+                if (scrollDir == 'down') { //하단에서 위로 스크롤시 자꾸 getList()를 호출해서 down일 떄만 호출하도록 체크하는 것임
+                    await getList({ nextMsgMstCdt: savNextMsgMstCdt }) //현재 두번 호출되는 문제 해결 필요
                 }
                 setTimeout(function() { showBottomObserver.value = false }, 500)
             } else {
@@ -660,7 +660,7 @@
             for (let i = 0; i < len; i++) {
                 const row = chandtlParam[i]
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
-                /* 이미지는 아래 비동기콜백으로 처리해야 속도 이슈가 없음
+                /* 이미지는 아래 비동기콜백으로 처리해야 속도 이슈 없음
                 row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 if (i < MAX_PICTURE_CNT) chanmemUnder.value.push({ url: row.url })*/
                 chandtlObj.value[row.USERID] = row //chandtl은 array로 쓰이는 곳이 훨씬 많을테고 메시지작성자의 blobUrl은 object로 관리하는 것이 효율적이므로 별도 추가함                
