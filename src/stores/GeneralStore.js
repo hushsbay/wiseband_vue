@@ -121,13 +121,20 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
-        getUserImg : function(uid, callback) {
-            axios.post("/user/getUserInfo", { uid: uid, pictureOnly: true })
-            .then(function(res) {
-                callback(uid, res.data.data)
-            }).catch(function(err) {
-                console.log(err)
-            })
+        getUserImg : function(obj, callback) { //getUserImg : function(uid, callback) {
+            const uid = obj.USERID
+            const hasPict = obj.HASPICT
+            const dataNull = { PICTURE: null }
+            if (hasPict == "Y") {
+                axios.post("/user/getUserInfo", { uid: uid, pictureOnly: true })
+                .then(function(res) {
+                    callback(uid, res.data.data)
+                }).catch(function(err) {
+                    callback(uid, dataNull) //console.log(err)
+                })
+            } else {
+                callback(uid, dataNull)
+            }
         },
 
         setObjToChan : function(chanid, key, val) {
