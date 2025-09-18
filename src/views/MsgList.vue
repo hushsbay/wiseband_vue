@@ -43,7 +43,7 @@
     let msglist = ref([]), threadReply = ref({}), tabForNewWin = ref('')
 
     let editMsgId = ref(''), prevEditData = "", showHtml = ref(false)
-    let msgbody = ref("<p>강나루 \"건너서\" <span style='font-weight:bold;text-decoration:line-through'>밀밭 <b>길을</b></span> 구름에 달 <del>가듯이</del> 가는 나그네<span style='font-weight:800'><br>길은 외줄기</span> 남도 삼백리 술익는 <span style='color:blue'>마을마다</span> <span style='color:red;font-weight:bold'>타는 저녁놀</span> 구름에 \"달 <strong>가듯이</Strong>\" 가는 나그네</p>")
+    let msgbody = ref("<p>강나루 \"건너서\" <span style='font-weight:bold;text-decoration:line-through'>밀밭 <b>길이</b></span> <span style='text-decoration:line-through'>구름에</span> 달 <del>가듯이</del> 가는 나그네<span style='font-weight:800'><br>길은 외줄기</span> 남도 삼백리 술익는 <span style='color:blue'>마을마다</span> <span style='color:red;font-weight:bold'>타는 저녁놀</span> 구름에 \"달 <strong>가듯이</Strong>\" 가는 나그네</p>")
     let uploadFileProgress = ref([]), uploadImageProgress = ref([]) //파일, 이미지 업로드시 진행바 표시 (현재는 용량 작게 제한하므로 거의 보이지도 않음)
     let linkArr = ref([]), fileBlobArr = ref([]), imgBlobArr = ref([]) //파일객체(ReadOnly)가 아님. hover 속성 등 추가 관리 가능
 
@@ -1868,10 +1868,11 @@
             gst.util.showEx(ex, true)
         }
     }
-
+    
     //parentNode.childNodes는 text 및 tag를 모두 가져오는 NodeList (배열) : 읽기전용임
     //parentNode.children은 tag만 가져오는 HTMLCollection (배열) : 읽기전용임
     //따라서, 처음 시작은 childInnerHtml으로 처리하기로 함 (document.execCommand-deprecated로 처리하는 것이 아님)
+    //##############아래에서 bold는 문제없는데 line-through(취소선)는 중첩시 해제가 안됨
     async function procWordStyle(kind) { //kind=B(Bold),kind=S(Strike,Del)
         try {
             if (!chkEditorFocus()) return
@@ -1890,9 +1891,12 @@
             console.log("parentOuterHtml---- " + parentOuterHtml)
             console.log("childInnerHtml ---- " + childInnerHtml)
             console.log("commonParentNode.innerHTML @@ " + commonParentNode.innerHTML) //아래 s는 줄바꿈에서도 매칭 찾음
-            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight : normal ; 모두 찾기
-            const expBold1 = /(<b>|<strong>).*?(<\/b>|<\/strong>)/gis //<b>~</b> 모두 찾기
-
+            const expBold = /font\-weight\s*:[\s(\w|\d)]*;?/gis //font-weight:bold,font-weight:500,font-weight:;font-weight : normal ; 등 모두 찾기
+            const expBold1 = /(<b>|<strong>).*?(<\/b>|<\/strong>)/gis //<b>~</b> 등 모두 찾기
+            const expStrike = /text\-decoration((\-line)?)\s*:[\s(\w|\d|\-)]*;?/gis //text-decoration:line-through red,text-decoration-line:line-through 등 모두 찾기
+            const expStrike1 = /(<s>|<del>).*?(<\/s>|<\/edl>)/gis //<s>~</s> 등 모두 찾기
+            //const xxx = "span style='text-decoration:none; zzzzz text-decoration-line:none;'"
+            //const matchTest = [...xxx.matchAll(expStrike)] debugger
             if (kind == 'B') {
                 stateBold.value = !stateBold.value
             } else if (kind == 'S') {
@@ -1901,7 +1905,11 @@
             if (!commonParentNode.innerHTML) { //if (!/</.test(childInnerHtml)과 동일한 케이스 (<br>도 제외시켜야 함)
                 //commonParentNode.innerHTML이 undefined면 선택된 노드는 단일 노드(Text or Html)이며 tag는 안 들어가 있으므로 크게 어려운 부분 없음
                 if (childInnerHtml != parentInnerHtml) { //1) <span>타는 저녁놀</span>중에 '저녁놀'만 선택 2) '나그네'처럼 아예 Text => ## 가비지도 없고 추가 태그도 발생하지 않음
-                    node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                    if (kind == 'B') {
+                        node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                    } else if (kind == 'S') {
+                        node.style.textDecoration = stateStrike.value ? 'line-through' : 'none'
+                    }
                     storeCursorPosition()
                     inEditor.value.focus()
                     const range1 = restoreCursorPosition()
@@ -1919,8 +1927,13 @@
                         parentOuterHtml = parentOuterHtml.replace(srcStr, destStr)
                     }
                     parentNode.outerHTML = parentOuterHtml 위처럼 정규식으로 하면 style이 없는 경우까지 고려해야 하는 복잡한 코딩이 되므로 아래 2행으로 커버하기로 함 */
-                    parentNode.style.fontWeight = 'normal' //parentNode를 감싸는 부분이 bold일 수도 있음을 고려
-                    if (stateBold.value) parentNode.style.fontWeight = 'bold'
+                    if (kind == 'B') {
+                        parentNode.style.fontWeight = 'normal' //parentNode를 감싸는 부분이 bold일 수도 있음을 고려
+                        if (stateBold.value) parentNode.style.fontWeight = 'bold'
+                    } else if (kind == 'S') {
+                        parentNode.style.textDecoration = 'none' //parentNode를 감싸는 부분이 bold일 수도 있음을 고려
+                        if (stateStrike.value) parentNode.style.textDecoration = 'line-through'
+                    }
                     inEditor.value.focus()
                     range.collapse(false) //끝점으로 접는데 끝점이 없어져서 안먹혀 처음으로 접히는데 크게 문제는 없을 것임
                     node.remove()
@@ -1930,16 +1943,34 @@
                 //node에 있는 모든 관련 스타일을 제거후 마지막에 node.style로 처리 => ## 가비지 및 추가 태그 처리해야 함
                 //예1) <span style="font-weight:bold">밑밭 <b>길을</b></span> => '밭 <b>길'만 bold 해제하면 마지막 '을'에 대해서는 자동으로 '<b>을</을>'로 만들어줌 
                 //예2) <span style="color:blue">마을마다</span> <span style="color:red;font-weight:bold">타는 저녁놀</span> 둘 다 선택시
-                childInnerHtml = childInnerHtml.replaceAll(expBold, "")
-                const matchArr = [...childInnerHtml.matchAll(expBold1)]
-                for (let matchBrr of matchArr) {
-                    const srcStr = matchBrr[0]
-                    const destStr = matchBrr[0].replace(matchBrr[1], "").replace(matchBrr[2], "")
-                    childInnerHtml = childInnerHtml.replace(srcStr, destStr)
+                if (kind == 'B') {
+                    childInnerHtml = childInnerHtml.replaceAll(expBold, "")
+                    const matchArr = [...childInnerHtml.matchAll(expBold1)]
+                    for (let matchBrr of matchArr) {
+                        const srcStr = matchBrr[0]
+                        const destStr = matchBrr[0].replace(matchBrr[1], "").replace(matchBrr[2], "")
+                        childInnerHtml = childInnerHtml.replace(srcStr, destStr)
+                    }
+                } else if (kind == 'S') {
+                    childInnerHtml = childInnerHtml.replaceAll(expStrike, "")
+                    const matchArr = [...childInnerHtml.matchAll(expStrike1)]
+                    for (let matchBrr of matchArr) {
+                        const srcStr = matchBrr[0]
+                        const destStr = matchBrr[0].replace(matchBrr[1], "").replace(matchBrr[2], "")
+                        childInnerHtml = childInnerHtml.replace(srcStr, destStr)
+                    }
                 }
                 node.innerHTML = childInnerHtml
                 node.id = "wiseband" + hush.util.getRnd()
-                node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                if (kind == 'B') {
+                    node.style.fontWeight = stateBold.value ? 'bold' : 'normal'
+                } else if (kind == 'S') {
+                    node.style.textDecoration = stateStrike.value ? 'line-through' : 'none'
+                    //##2 문제는 아래와 같이 중첩시 bold는 해제되는데 line-through는 해제되지 않고 그대로 취소선이 표시되고 있음 (테스트 완료)
+                    //<span style="font-weight:bold;text-decoration:line-through">
+                    //  <span style="font-weight:normal;text-decoration:none">통합검색으로이동</span>일부만적용
+                    //</span>
+                }
                 storeCursorPosition()
                 inEditor.value.focus()
                 const range1 = restoreCursorPosition()
@@ -1972,8 +2003,8 @@
             inEditor.value.focus()
             //const range1 = restoreCursorPosition()
             //range1.collapse()
-            setCaretPos(ele, pos)*/
-        range.collapse(true)
+            setCaretPos(ele, pos)
+            range.collapse(true)*/
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
