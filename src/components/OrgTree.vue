@@ -184,12 +184,16 @@
         }
     }
 
-    function procClearSearch() {
-        if (searchText.value == "") reset("tree")
+    function procClearSearch() { //@input="procClearSearch" 이벤트 추가하니 타이핑마다 아래 debugger > reset()이 실행되는 문제 발생해 이벤트 일단 제거함
+        if (searchText.value == "") {
+            debugger
+            reset("tree")
+        }
     }
 
     async function procSearch() {
         try {
+            debugger
             mode.value = "search"
             const param = { searchText: searchText.value.trim() }
             const res = await axios.post("/user/procOrgSearch", param)
@@ -215,6 +219,7 @@
     }
 
     function reset(strMode) {
+        searchText.value = ""
         if (strMode == "tree" || strMode == "search") {
             searchText.value = ""
             procQuery("tree")
@@ -410,7 +415,7 @@
             <div class="chan_center">
                 <div class="chan_center_header">
                     <div class="chan_center_header_left">
-                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" @input="procClearSearch" style="width:100px" spellcheck="false" />
+                        <input v-show="mode == 'tree' | mode == 'search'" type="search" v-model="searchText" @keyup.enter="procSearch()" style="width:100px" spellcheck="false" />
                         <div v-show="mode == 'tree' | mode == 'search'" class="coImgBtn" @click="selectOne()">
                             <img :src="gst.html.getImageUrl('white_search.png')" class="coImg16">
                         </div>
