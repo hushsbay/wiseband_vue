@@ -84,7 +84,7 @@
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
                 //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null //이미지는 아래 비동기콜백으로 처리해야 속도 이슈가 없음
                 memberlist.value.push(row)
-                gst.realtime.getUserImg(row.USERID, function(uid, data) {
+                gst.realtime.getUserImg(row, function(uid, data) {
                     const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
                     memberlist.value.forEach(item => { 
                         if (item.USERID == uid) {

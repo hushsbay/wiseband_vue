@@ -170,7 +170,7 @@
         row.expanded = expanded
         row.paddingleft = paddingLeft + "px"
         if (nodekind == "U") {
-            //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+            //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null //비동기로 별도 처리
             row.isVip = chkVips(vips, row.USERID)
             row.key = row.USERID + (row.GR_ID ? hush.cons.deli + row.GR_ID : "") 
             //vue의 loop에서의 :key는 unique해야 하는데 워크스페이스는 워크스페이스마다 같은 userid가 들어 있을 수 있으므로 grid로 추가 구분함
@@ -193,7 +193,6 @@
 
     async function procSearch() {
         try {
-            debugger
             mode.value = "search"
             const param = { searchText: searchText.value.trim() }
             const res = await axios.post("/user/procOrgSearch", param)

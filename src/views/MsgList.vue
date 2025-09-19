@@ -1609,7 +1609,6 @@
                 }
                 job = row.JOB ? row.JOB.trim() + "/" : ""
                 row.userInfo = job + orgnm + toporgnm
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 filteredUsers.value.push(row)
             }
         } catch (ex) {
@@ -2278,7 +2277,7 @@
         }
     }
 
-    async function procClearSearch() {
+    async function procClearSearch() { //@input="procClearSearch"는 키보딩때마다 동작해서 일단 배제
         if (searchText.value == "") userSearched.value = []
     }
 
@@ -2303,7 +2302,6 @@
                     } else {
                         row.userInfo = row.USERNM + "/" + row.JOB.trim() + "/" + row.ORG_NM + "/" + row.TOP_ORG_NM
                     }
-                    row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                     arr.push(row)
                 }
                 if (rs.list.length == 1) {
@@ -2482,7 +2480,7 @@
                     <div style="min-width:48px;display:flex;align-items:center;font-weight:bold">추가 :</div>
                     <div>
                         <input type="search" ref="searchInput" v-model="searchText"  spellcheck="false" style="width:402px" placeholder="이름을 넣고 Enter를 누르십시오."
-                               @keyup="(e) => procInput(e)" @input="procClearSearch" @focus="procClearSearchWhenFocus" />
+                               @keyup="(e) => procInput(e)" @focus="procClearSearchWhenFocus" />
                     </div>
                     <div style="margin-left:10px;display:flex;align-items:center">(멤버 : {{ userAdded.length }})</div>
                 </div>
@@ -2503,9 +2501,10 @@
                     <div style="width:48px"></div>
                     <div ref="userSearchedRef" tabindex="1" 
                         style="width:390px;min-height:60px;max-height:180px;padding:5px;border:1px solid dimgray;background:whitesmoke;z-index:1000;overflow-y:scroll;overflow-x:hidden">
-                        <div v-for="(row, idx) in userSearched" @click="addUserToDm(row)" class="coHover" style="width:100%;min-height:30px;display:flex;align-items:center">
-                            <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                            <div class="coDotDot" :title="row.userInfo" style="margin-left:5px">{{ row.userInfo }}</div>
+                        <div v-for="(row, idx) in userSearched" @click="addUserToDm(row)" class="coHover" style="width:100%;min-height:40px;display:flex;align-items:center">
+                            <!-- <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach> -->
+                             <div class="mention-avatar">{{ row.USERNM.charAt(0).toUpperCase() }}</div>
+                            <div class="coDotDot" :title="row.userInfo" style="margin-left:0px">{{ row.userInfo }}</div>
                         </div>                            
                     </div>
                 </div>
