@@ -160,8 +160,9 @@
                 afterScrolled.value = false
                 for (let i = 0; i < rs.list.length; i++) {
                     const row = rs.list[i]
-                    setRowPicture(row)
                     listActivity.value.push(row)
+                    const item1 = listActivity.value[listActivity.value.length - 1]
+                    setRowPicture(item1)
                     if (row.DT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.DT
                 }
                 await nextTick()
@@ -195,13 +196,15 @@
                                 }
                             }
                             if (updated) {
-                                setRowPicture(item)
                                 listActivity.value[i] = item //MsgList에 반영되어야 함 OK
+                                const item1 = listActivity.value[i]
+                                setRowPicture(item1)
                             }                       
                         } else {
                             if (row.CHKDT != item.CHKDT || row.BODYTEXT != item.BODYTEXT || row.LASTMSG != item.LASTMSG) {
-                                setRowPicture(item)
                                 listActivity.value[i] = item //MsgList에 반영되어야 함 OK
+                                const item1 = listActivity.value[i]
+                                setRowPicture(item1)
                             }
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
@@ -220,8 +223,9 @@
                 for (let i = len - 1; i >= 0; i--) {
                     const item = arr[i]
                     if (!item.checkedForUpdate) { //신규로 추가된 것인데 배열의 맨위로 넣으면 됨
-                        setRowPicture(item)
                         listActivity.value.unshift(item) //최초 생성된 것인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
+                        const item1 = listActivity.value[0] 
+                        setRowPicture(item1)
                     }
                 }
             }
@@ -232,8 +236,11 @@
         }
     }
 
-    function setRowPicture(row) {
-        row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+    function setRowPicture(row) { //가지고 오는 이미지가 DmPanel과는 다름
+        const obj = { USERID: row.AUTHORID, HASPICT: row.HASPICT }
+        gst.realtime.getUserImg(obj, function(uid, data) {
+            row.url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+        })
         if (row.TITLE == "vip") {
             row.title = "VIP"
         } else if (row.TITLE == "mention") {

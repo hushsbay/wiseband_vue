@@ -174,9 +174,10 @@
                 afterScrolled.value = false
                 for (let i = 0; i < rs.list.length; i++) {
                     const row = rs.list[i]
-                    setRowPicture(row)      
                     procChanRowImg(row)
                     listDm.value.push(row)
+                    const item1 = listDm.value[listDm.value.length - 1]
+                    setRowPicture(item1)
                     if (row.LASTMSGDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.LASTMSGDT //CDT가 아님을 유의
                 }
                 await nextTick()
@@ -194,8 +195,9 @@
                     if (idx > -1) {
                         const item = arr[idx]
                         if (row.LASTMSGDT != item.LASTMSGDT || row.CHANDTL_UDT != item.CHANDTL_UDT || row.CHANMST_UDT != item.CHANMST_UDT || row.mynotyetCnt != item.mynotyetCnt) {
-                            setRowPicture(item)
                             listDm.value[i] = item //MsgList에 반영되어야 함 OK
+                            const item1 = listDm.value[i]
+                            setRowPicture(item1)
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
@@ -214,8 +216,9 @@
                 for (let i = len - 1; i >= 0; i--) {
                     const item = arr[i]
                     if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
-                        setRowPicture(item)
                         listDm.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
+                        const item1 = listDm.value[0] 
+                        setRowPicture(item1)
                     }
                 }
             }
@@ -226,12 +229,15 @@
         }
     }
 
-    function setRowPicture(row) {
-        for (let i = 0; i < row.picture.length; i++) {
-            if (row.picture[i] == null) {
+    function setRowPicture(row) { //가지고 오는 이미지가 ActivityPanel, LaterPanel, FixedPanel과는 다름
+        for (let i = 0; i < row.haspict.length; i++) {
+            if (row.haspict[i] != "Y") {
                 row.url[i] = null
             } else {
-                row.url[i] = hush.util.getImageBlobUrl(row.picture[i].data)
+                const obj = { USERID: row.memid[i], HASPICT: row.haspict[i] }
+                gst.realtime.getUserImg(obj, function(uid, data) {
+                    row.url[i] = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                })
             }
         }
     }
@@ -247,8 +253,8 @@
                 return
             }
             const row = rs.list[0]
-            setRowPicture(row)
-            procChanRowImg(row)            
+            procChanRowImg(row)       
+            setRowPicture(row)     
             onGoingGetList = false
             return row
         } catch (ex) {

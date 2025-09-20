@@ -149,8 +149,9 @@
                 afterScrolled.value = false
                 for (let i = 0; i < rs.list.length; i++) {
                     const row = rs.list[i]
-                    setRowPicture(row)
                     listLater.value.push(row)
+                    const item1 = listLater.value[listLater.value.length - 1]
+                    setRowPicture(item1)
                     if (row.CDT < savPrevMsgMstCdt) savPrevMsgMstCdt = row.CDT
                 }
                 await nextTick()
@@ -169,8 +170,9 @@
                     if (idx > -1) {
                         const item = arr[idx]    
                         if (row.BODYTEXT != item.BODYTEXT) {
-                            setRowPicture(item)
                             listLater.value[i] = item //MsgList에 반영되어야 함 OK
+                            const item1 = listLater.value[i]
+                            setRowPicture(item1)
                         }
                         item.checkedForUpdate = true //새로운 배열에서 구배열과의 비교를 완료했다는 표시 (아래에서 이것 빼고 추가할 것임)
                     } else { //구배열의 항목이 새배열에 없으면 아예 삭제해야 함
@@ -188,8 +190,9 @@
                 for (let i = len - 1; i >= 0; i--) {
                     const item = arr[i]
                     if (!item.checkedForUpdate) { //신규로 추가된 방인데 배열의 맨위로 넣으면 됨
-                        setRowPicture(item)
                         listLater.value.unshift(item) //최초 생성된 방인데 (알림바를 누르면 패널에 추가되어 보여야 하고) MsgList에 메시지도 보여야 함 OK
+                        const item1 = listLater.value[0] 
+                        setRowPicture(item1)
                     }
                 }
             }
@@ -201,8 +204,11 @@
         }
     }
 
-    function setRowPicture(row) {
-        row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
+    function setRowPicture(row) { //가지고 오는 이미지가 DmPanel과는 다름
+        const obj = { USERID: row.AUTHORID, HASPICT: row.HASPICT }
+        gst.realtime.getUserImg(obj, function(uid, data) {
+            row.url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+        })
     }
 
     function laterClickOnLoop(clickNode, msgid) { //clickNode는 노드를 클릭하지 않고 단지 선택된 노드를 색상으로 표시하는 경우 false. msgid는 명시적으로 해당 노드를 지정해서 처리하는 것임

@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
         },
         publicPath: mode == 'production' ? '/' : '/',
         // server: {
-        //     port: mode == 'production' ? '447' : '447'
+        //     port: 5174 //mode == 'production' ? '447' : '447'
         // },
         //base: '/vue/dist'
         // server: {

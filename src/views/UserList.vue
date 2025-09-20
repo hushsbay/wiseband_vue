@@ -81,8 +81,12 @@
             const len = grdtl.length
             for (let i = 0; i < len; i++) {
                 const row = grdtl[i]
-                row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 userlist.value.push(row)
+                const item1 = userlist.value[userlist.value.length - 1]
+                gst.realtime.getUserImg(row, function(uid, data) {
+                    const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                    item1.url = url //userlist.value.forEach(item => { if (item.USERID == uid) item.url = url })
+                })
             }
             onGoingGetList = false
         } catch (ex) {

@@ -82,15 +82,11 @@
             for (let i = 0; i < len; i++) {
                 const row = rs.data.chandtl[i]
                 if (row.USERID != g_userid) chanmemFullExceptMe.value.push(row.USERNM)
-                //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null //이미지는 아래 비동기콜백으로 처리해야 속도 이슈가 없음
                 memberlist.value.push(row)
+                const item1 = memberlist.value[memberlist.value.length - 1]
                 gst.realtime.getUserImg(row, function(uid, data) {
                     const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
-                    memberlist.value.forEach(item => { 
-                        if (item.USERID == uid) {
-                            item.url = url
-                        }
-                    })
+                    item1.url = url //memberlist.value.forEach(item => { if (item.USERID == uid) item.url = url })
                 })
             }
             onGoingGetList = false

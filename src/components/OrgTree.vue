@@ -114,7 +114,8 @@
                         const item1 = orglist.value[orglist.value.length - 1]
                         procNode(item, null, 'user', vips)
                         gst.realtime.getUserImg(item1, function(uid, data) { //이미지는 비동기콜백으로 처리해야 속도 이슈 없음
-                            item1.url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                            const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                            item1.url = url //orglist.value.forEach(item => { if (item.USERID == uid) item.url = url })
                         })
                     }
                 } else {
@@ -203,13 +204,13 @@
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
                 row.nodekind = "U"
-                //row.url = (row.PICTURE) ? hush.util.getImageBlobUrl(row.PICTURE.data) : null
                 row.key = row.USERID
                 row.isVip = chkVips(vips, row.USERID)
                 orglist.value.push(row)
                 const item1 = orglist.value[orglist.value.length - 1]
-                gst.realtime.getUserImg(item1, function(uid, data) { //이미지는 비동기콜백으로 처리해야 속도 이슈 없음
-                    item1.url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                gst.realtime.getUserImg(item1, function(uid, data) {
+                    const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                    item1.url = url //orglist.value.forEach(item => { if (item.USERID == uid) item.url = url })
                 })
             }
         } catch (ex) {
