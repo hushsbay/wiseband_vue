@@ -107,7 +107,7 @@ const GeneralStore = defineStore('General', () => {
 
     const realtime = {
 
-        getUserInfo : async function() {
+        getUserInfo : async function() { //POST
             const res = await axios.post("/user/getUserInfo")
             const rs = util.chkAxiosCode(res.data)
             if (!rs) return false
@@ -121,12 +121,12 @@ const GeneralStore = defineStore('General', () => {
             }
         },
 
-        getUserImg : function(obj, callback) { //getUserImg : function(uid, callback) {
+        getUserImg : function(obj, callback) { //GET : 이미지 비동기 다운로드 (캐시처리를 위한 Get 요청)
             const uid = obj.USERID
             const hasPict = obj.HASPICT
             const dataNull = { PICTURE: null }
             if (hasPict == "Y") {
-                axios.post("/user/getUserInfo", { uid: uid, pictureOnly: true })
+                axios.get("/user/getUserInfo?uid=" + uid + "&pictureOnly=Y")
                 .then(function(res) {
                     callback(uid, res.data.data)
                 }).catch(function(err) {

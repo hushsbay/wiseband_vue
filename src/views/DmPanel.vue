@@ -229,7 +229,7 @@
         }
     }
 
-    function setRowPicture(row) { //가지고 오는 이미지가 ActivityPanel, LaterPanel, FixedPanel과는 다름
+    function setRowPicture(row) { //가지고 오는 이미지가 ActivityPanel, LaterPanel, FixedPanel과는 다름 (여기서는 멤버 일부 가져오기)
         for (let i = 0; i < row.haspict.length; i++) {
             if (row.haspict[i] != "Y") {
                 row.url[i] = null
