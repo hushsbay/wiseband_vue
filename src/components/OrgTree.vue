@@ -466,14 +466,14 @@
                             style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
                             <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
-                            <div style="margin-left:5px">{{ row.orgnm + '//' + row.key }}</div>
+                            <div style="margin-left:5px">{{ row.orgnm }}</div>
                             <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
                         </div>
                         <div v-else class="coDotDot" :title="row.JOB + '/' + row.TELNO + '/' + row.EMAIL"
                             :style="{ paddingLeft: row.paddingleft }" style="width:100%;height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                            <div style="margin-left:5px;font-weight:bold">{{ row.USERNM + '//' + row.key  }}</div>
+                            <div style="margin-left:5px;font-weight:bold">{{ row.USERNM }}</div>
                             <span v-if="row.isVip" class="vipMark">VIP</span>
                             <div style="margin-left:5px">{{ row.ORG }}</div>
                             <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>                            
