@@ -111,12 +111,12 @@
                     for (let j = 0; j < userlist.length; j++) { //org에 userlist가 있으면 루프돌면서 추가
                         const item = userlist[j]
                         orglist.value.push(item)
-                        const item1 = orglist.value[orglist.value.length - 1]
+                        //const item1 = orglist.value[orglist.value.length - 1]
                         procNode(item, null, 'user', vips)
-                        gst.realtime.getUserImg(item1, function(uid, data) { //이미지는 비동기콜백으로 처리해야 속도 이슈 없음
-                            const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
-                            item1.url = url //orglist.value.forEach(item => { if (item.USERID == uid) item.url = url })
-                        })
+                        // gst.realtime.getUserImg(item1, function(uid, data) { //이미지는 비동기콜백으로 처리해야 속도 이슈 없음
+                        //     const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                        //     item1.url = url //orglist.value.forEach(item => { if (item.USERID == uid) item.url = url })
+                        // })
                     }
                 } else {
                     if (i == rs.list.length - 1) {
@@ -125,7 +125,8 @@
                         procNode(row, rs.list[i + 1], 'org')
                     }
                 }
-            } /* ###9(로직 개선 필요. 서버 참조)
+            } 
+            /* ###9(로직 개선 필요. 서버 참조)
             const myOrgArr = rs.data.myOrgArr //예) ['O3UC01', 'O3AA01', 'S']의 코드가 들어간 오브젝트임
             if (myOrgArr && myOrgArr.length > 0) { //마지막이 회사코드, 처음이 본인 소속부서임
                 for (let j = myOrgArr.length - 1; j >= 0; j--) {
@@ -144,6 +145,8 @@
                 await nextTick()
                 orgRow.value[myOrgArr[0].ORG_CD].scrollIntoView(true) //true 필요. true=scrollIntoViewOptions: {block: "start", inline: "nearest"}와 동일
             }*/
+            await nextTick()
+            onScrollEnd() //if (!hush.util.hasVerticalScrollbar("#orgTreeList")) 없어도 됨
         } catch (ex) {
             gst.util.showEx(ex, true)
         }
@@ -187,7 +190,6 @@
 
     function procClearSearch() { //@input="procClearSearch" 이벤트 추가하니 타이핑마다 아래 debugger > reset()이 실행되는 문제 발생해 이벤트 일단 제거함
         if (searchText.value == "") {
-            debugger             
             reset("tree")
         }
     }
@@ -204,17 +206,36 @@
             for (let i = 0; i < rs.list.length; i++) {
                 const row = rs.list[i]
                 row.nodekind = "U"
+                row.dispstate = "flex" //아래 getUserImg()처리때문에 넣은 것임 (검색시엔 항상 dispstate=flex임)
                 row.key = row.USERID
                 row.isVip = chkVips(vips, row.USERID)
                 orglist.value.push(row)
-                const item1 = orglist.value[orglist.value.length - 1]
-                gst.realtime.getUserImg(item1, function(uid, data) {
-                    const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
-                    item1.url = url //orglist.value.forEach(item => { if (item.USERID == uid) item.url = url })
-                })
+                // const item1 = orglist.value[orglist.value.length - 1]
+                // gst.realtime.getUserImg(item1, function(uid, data) {
+                //     const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                //     item1.url = url //orglist.value.forEach(item => { if (item.USERID == uid) item.url = url })
+                // })
             }
+            await nextTick()
+            onScrollEnd() //if (!hush.util.hasVerticalScrollbar("#orgTreeList")) 없어도 됨
         } catch (ex) {
             gst.util.showEx(ex, true)
+        }
+    }
+
+    const onScrollEnd = async (e) => { //scrollend 이벤트이므로 debounce 필요없음 //import { debounce } from 'lodash'
+        const eleInView = hush.util.getElementsInViewportByClass(".org_body")
+        for (let ele of eleInView) {
+            const idx = gst.util.getKeyIndex(orgRow, ele.id)
+            if (idx > -1) {
+                const row = orglist.value[idx]
+                if (row.nodekind == "U" && row.dispstate == "flex" && !row.url) { //한번 내린 것은 다시 내리지 않음 (다시 들어와서 내린 것은 304로 내려올 것임). display none도 내리지 않음
+                    gst.realtime.getUserImg(row, function(uid, data) {
+                        const url = (data.PICTURE) ? hush.util.getImageBlobUrl(data.PICTURE.data) : null
+                        row.url = url //orglist.value.forEach(item => { if (item.USERID == uid) item.url = url })
+                    })
+                }
+            }
         }
     }
 
@@ -238,7 +259,7 @@
         return (vips != null && vips.includes("," + userid + ",")) ? true : false
     }
 
-    function clickNode(e, row, idx) {
+    async function clickNode(e, row, idx) {
         if (e && e.target.nodeName == "INPUT") return //e.currentTarget.nodeName은 DIV로 나옴
         const hasChild = row.haschild
         const nodekind = row.nodekind
@@ -266,6 +287,10 @@
             j += 1
         }  
         if (j > 0) procExpCol(expanded, row)
+        if (!expanded) {
+            await nextTick()
+            onScrollEnd() //이미지 가져오기
+        }
     }
 
     function procExpCol(expanded, row) {
@@ -433,22 +458,22 @@
                         <div class="coImgBtn" @click="changeDepth(true)"><img :src="gst.html.getImageUrl('white_plus.png')" class="coImg16"></div>
                     </div>
                 </div>
-                <div v-show="mode == 'tree' || mode == 'mygroup'" class="chan_center_body" ref="scrollArea">
-                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyidx="idx" 
+                <div v-if="mode == 'tree' || mode == 'mygroup'" class="chan_center_body" id="orgTreeList" ref="scrollArea" @scrollend="onScrollEnd">
+                    <div v-for="(row, idx) in orglist" :key="row.key" :id="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :keyidx="idx" 
                         class="org_body" @click="(e) => clickNode(e, row, idx)" 
                         :style="{display: row.dispstate}" style="border-bottom:1px solid lightgray">
                         <div v-if="!row.USERID" :style="{ paddingLeft: row.paddingleft }"
                             style="width:calc(100% - 50px);height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" :style="{ opacity: row.haschild ? 1.0 : 0.2 }"/>
                             <img class="coImg24" :src="gst.html.getImageUrl(row.url)">
-                            <div style="margin-left:5px">{{ row.orgnm }}</div>
+                            <div style="margin-left:5px">{{ row.orgnm + '//' + row.key }}</div>
                             <span v-if="row.CNT > 0" style="margin-left:5px;color:dimgray">({{ row.CNT }})</span>
                         </div>
                         <div v-else class="coDotDot" :title="row.JOB + '/' + row.TELNO + '/' + row.EMAIL"
                             :style="{ paddingLeft: row.paddingleft }" style="width:100%;height:40px;display:flex;align-items:center">
                             <input type="checkbox" v-model="row.chk" @change="changeChk(row, idx)" />
                             <member-piceach :picUrl="row.url" sizeName="wh24"></member-piceach>
-                            <div style="margin-left:5px;font-weight:bold">{{ row.USERNM }}</div>
+                            <div style="margin-left:5px;font-weight:bold">{{ row.USERNM + '//' + row.key  }}</div>
                             <span v-if="row.isVip" class="vipMark">VIP</span>
                             <div style="margin-left:5px">{{ row.ORG }}</div>
                             <div style="margin-left:5px;color:dimgray">{{ row.JOB }}</div>                            
@@ -462,9 +487,9 @@
                             <span class="kind">입력</span>
                         </div>
                     </div>
-                </div>
-                <div v-show="mode == 'search'" class="chan_center_body" ref="scrollArea">
-                    <div v-for="(row, idx) in orglist" :key="row.key"  :keyidx="idx" 
+                </div><!-- <div v-show="mode == 'search'" class="chan_center_body" ref="scrollArea"> -->
+                <div v-else class="chan_center_body" id="orgTreeList" ref="scrollArea" @scrollend="onScrollEnd">
+                    <div v-for="(row, idx) in orglist" :key="row.key" :ref="(ele) => { orgRow[row.key] = ele }" :id="row.key" :keyidx="idx" 
                         class="org_body" @click="(e) => clickNode(e, row, idx)">
                         <div class="coDotDot" :title="row.JOB + ' ' + row.TELNO + ' ' + row.EMAIL"
                             style="width:calc(100% - 6px);height:40px;padding-left:6px;display:flex;align-items:center;border-bottom:1px solid lightgray">

@@ -1240,22 +1240,22 @@
         }
     }
 
-    function getElementsInViewportByClass(className) { //클래스에 해당하는 element가 너무 많으면 루프 돌리는데 부담이 될 것임
-        const elements = document.querySelectorAll(`.${className}`)
-        const elementsInViewport = []
-        elements.forEach(element => {
-            const rect = element.getBoundingClientRect()
-            const isVisible = (
-                rect.top >= 0 && //rect.left >= 0 &&
-                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) //&& rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-            )
-            if (isVisible) elementsInViewport.push(element)
-        })
-        return elementsInViewport
-    }
+    // function getElementsInViewportByClass(className) { //클래스에 해당하는 element가 너무 많으면 루프 돌리는데 부담이 될 것임
+    //     const elements = document.querySelectorAll(`.${className}`)
+    //     const elementsInViewport = []
+    //     elements.forEach(element => {
+    //         const rect = element.getBoundingClientRect()
+    //         const isVisible = (
+    //             rect.top >= 0 && //rect.left >= 0 &&
+    //             rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) //&& rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    //         )
+    //         if (isVisible) elementsInViewport.push(element)
+    //     })
+    //     return elementsInViewport
+    // }
 
     async function readMsgToBeSeen() { //메시지가 사용자 눈에 (화면에) 보이면 읽음 처리하는 것임
-        const eleInView = getElementsInViewportByClass("msg_body")
+        const eleInView = hush.util.getElementsInViewportByClass(".msg_body")
         for (let ele of eleInView) {
             const idx = gst.util.getKeyIndex(msgRow, ele.id)
             if (idx > -1) {
@@ -1269,7 +1269,7 @@
                     console.log(ele.id + " notyet")
                 }
             }
-        }        
+        }
     }
 
     // async function readMsgToBeSeen() { //getTopMsgBody()를 사용하면 id가 msgid인 element를 정확하게 가져와야 하는데 많은 노력이 필요함
