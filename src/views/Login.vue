@@ -8,7 +8,7 @@
     const route = useRoute()
     const gst = GeneralStore()    
     
-    let uid = ref(''), pwd = ref(''), saveId = ref(true), nextOk = ref(false), mailOtp = ref('')
+    let uid = ref(''), pwd = ref(''), saveId = ref(false), nextOk = ref(false), mailOtp = ref('')
     let uidRef = ref(null), pwdRef = ref(null) //for focusing
     
     let list = ref([]), userRow = ref({}) //Test ID 제공
@@ -70,9 +70,9 @@
         }
     }
 
-    function chkSaveId() {
-        saveId.value = !saveId.value
-    }
+    // function chkSaveId() {
+    //     saveId.value = !saveId.value
+    // }
 
     async function qry() {
         try {
@@ -100,17 +100,18 @@
                 <div style="margin-left:5px;font-size:22px;font-weight:bold;cursor:pointer">WiSEBand</div>
             </div>
             <div class="center_row">
-                <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="아이디/이메일" spellcheck=false autocomplete=off style="width:190px"/> 
+                <input type="text" v-model="uid" ref="uidRef" @keyup.enter="goLogin" placeholder="아이디/이메일" spellcheck=false autocomplete=off style="width:190px" /> 
                 <div class="btn_basic" @click="goLogin" :style="{ opacity: (mailOtp == 'Y') ? 1.0 : 0 }">확인</div>
             </div>
             <div class="center_body" style="height:100px">
                 <div class="center_row">
-                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="비밀번호/인증번호(6자리)" spellcheck=false autocomplete=off style="width:190px"/>
+                    <input type="password" v-model="pwd" ref="pwdRef" @keyup.enter="goLoginNext" placeholder="비밀번호/인증번호(6자리)" spellcheck=false autocomplete=off style="width:190px" />
                     <div class="btn_basic" @click="goLoginNext">인증</div>
                 </div>
                 <div>
                     <div class="center_row">
-                        <input type=checkbox v-model="saveId"/><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label>
+                        <!-- <input type=checkbox v-model="saveId" id="chk_save" /><label @click="chkSaveId" id="lbl_save" for="chk_save" style="cursor:pointer">아이디 저장</label> -->
+                        <input type=checkbox v-model="saveId" id="chk_save" /><label id="lbl_save" for="chk_save">아이디저장</label>
                     </div>
                 </div>
                 <div v-if="mailOtp=='Y'" style="width:330px;margin-top:10px">
@@ -152,7 +153,7 @@
 
 <style scoped>
 
-    input { width:190px;height:28px;border:1px solid dimgray;border-radius:4px }
+    input { height:28px;border:1px solid dimgray;border-radius:4px }
     input[type=text]:focus { outline:2px solid lightgreen }
     input[type=password]:focus { outline:2px solid lightgreen }
     input[type=checkbox] { width:18px;height:18px }
