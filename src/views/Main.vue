@@ -186,7 +186,6 @@
                 gst.selSideMenu = id                
                 localStorage.wiseband_lastsel_menu = id
             }
-            debugger
             procMenu[id].call(null, row, onMounted)
         } catch (ex) {
             gst.util.showEx(ex, true)

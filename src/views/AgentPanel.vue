@@ -1,4 +1,20 @@
 <script setup>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     import { ref, onMounted, onActivated } from 'vue' 
     import { useRoute } from 'vue-router'
     import axios from 'axios'
