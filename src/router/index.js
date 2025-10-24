@@ -7,6 +7,7 @@ import DmPanel from '/src/views/DmPanel.vue'
 import ActivityPanel from '/src/views/ActivityPanel.vue'
 import LaterPanel from '/src/views/LaterPanel.vue'
 import FixedPanel from '/src/views/FixedPanel.vue'
+import AgentPanel from '/src/views/AgentPanel.vue'
 import GroupPanel from '/src/views/GroupPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
 import UserList from '/src/views/UserList.vue'
@@ -126,6 +127,23 @@ const router = createRouter({
                             component: DummySkeleton
                         }
                     ]                  
+                },
+                {                    
+                    path: 'agent',
+                    name: 'agent',
+                    component: AgentPanel,
+                    children: [
+                        {
+                            path: 'home_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
+                            name: 'home_body',
+                            component: MsgList,
+                        },
+                        {
+                            path: 'dummy_skeleton',
+                            name: 'agent_dumskel',
+                            component: DummySkeleton
+                        }
+                    ]
                 },
                 {                    
                     path: 'group',

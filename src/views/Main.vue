@@ -186,6 +186,7 @@
                 gst.selSideMenu = id                
                 localStorage.wiseband_lastsel_menu = id
             }
+            debugger
             procMenu[id].call(null, row, onMounted)
         } catch (ex) {
             gst.util.showEx(ex, true)
@@ -430,6 +431,7 @@
         ["mnuActivity"] : async (row, onMounted) => { await goRoute({ name: 'activity' }, onMounted) },
         ["mnuLater"] : async (row, onMounted) => { await goRoute({ name: 'later' }, onMounted) },
         ["mnuFixed"] : async (row, onMounted) => { await goRoute({ name: 'fixed' }, onMounted) },
+        ["mnuAgent"] : async (row, onMounted) => { await goRoute({ name: 'agent' }, onMounted) },
         ["mnuGroup"] : async (row, onMounted) => { await goRoute({ name: 'group' }, onMounted) }
     }
     
