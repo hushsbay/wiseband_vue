@@ -1,0 +1,90 @@
+[
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112400",
+		"CATENM" : "IT일반",
+		"SEQ" : "0001",
+		"DEPTH" : 0
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112401",
+		"CATENM" : "GIT",
+		"SEQ" : "0002",
+		"DEPTH" : 1
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112402",
+		"CATENM" : "AWS",
+		"SEQ" : "0003",
+		"DEPTH" : 1
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112500",
+		"CATENM" : "Javascript",
+		"SEQ" : "0011",
+		"DEPTH" : 0
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112501",
+		"CATENM" : "SPA",
+		"SEQ" : "0012",
+		"DEPTH" : 1
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112502",
+		"CATENM" : "React",
+		"SEQ" : "0013",
+		"DEPTH" : 2
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112503",
+		"CATENM" : "Vue",
+		"SEQ" : "0014",
+		"DEPTH" : 2
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112601",
+		"CATENM" : "Node.js",
+		"SEQ" : "0021",
+		"DEPTH" : 1
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112602",
+		"CATENM" : "Express",
+		"SEQ" : "0022",
+		"DEPTH" : 2
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112603",
+		"CATENM" : "Nest",
+		"SEQ" : "0023",
+		"DEPTH" : 2
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112604",
+		"CATENM" : "Socket.io",
+		"SEQ" : "0024",
+		"DEPTH" : 2
+	}
+]

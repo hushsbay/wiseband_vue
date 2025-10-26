@@ -10,6 +10,7 @@ import FixedPanel from '/src/views/FixedPanel.vue'
 import AgentPanel from '/src/views/AgentPanel.vue'
 import GroupPanel from '/src/views/GroupPanel.vue'
 import MsgList from '/src/views/MsgList.vue'
+import DocList from '/src/views/DocList.vue'
 import UserList from '/src/views/UserList.vue'
 import DummySkeleton from '/src/components/DummySkeleton.vue'
 import GeneralStore from '/src/stores/GeneralStore.js'
@@ -134,9 +135,9 @@ const router = createRouter({
                     component: AgentPanel,
                     children: [
                         {
-                            path: 'home_body/:chanid/:msgid', //msgid 있으면 안읽은 메시지. 0이면 모두 읽은 것임
-                            name: 'home_body',
-                            component: MsgList,
+                            path: 'agent_list/:cateid/:docid',
+                            name: 'agent_list',
+                            component: DocList,
                         },
                         {
                             path: 'dummy_skeleton',
