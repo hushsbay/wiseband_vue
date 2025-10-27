@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue' 
-    import { useRouter } from 'vue-router'
+    import { useRouter, useRoute } from 'vue-router'
     import axios from 'axios'
     import hush from '/src/stores/Common.js'
     import GeneralStore from '/src/stores/GeneralStore.js'
@@ -13,6 +13,7 @@
 
     const gst = GeneralStore()
     const router = useRouter()
+    const route = useRoute()
 
     const g_userid = gst.auth.getCookie("userid")
 
@@ -180,6 +181,8 @@
                 if (listSel.value[i].sel) listSel.value[i].sel = false
             }
             row.sel = true
+            // If we're already showing a child route of this panel (e.g. agent_list), avoid re-routing to panel root
+            if (id === 'mnuAgent' && route.fullPath.includes('/agent_list/')) return
             if (!onMounted && id == gst.selSideMenu) return //사용자 최초 시작시엔 무조건 HomePanel 호출
             if (popupId != "mnuSeeMore") {
                 console.log("Main 메뉴 클릭 gst.selSideMenu.." + gst.selSideMenu)

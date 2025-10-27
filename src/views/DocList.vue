@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import S_CATE from '/src/testdata/S_CATE.json'
 import { useRoute, useRouter } from 'vue-router'
 import GeneralStore from '/src/stores/GeneralStore.js'
@@ -16,11 +16,37 @@ const docs = ref([])
 
 onMounted(() => {
   // load sample docs filtered by cate
+  // ensure we pick up current route params (may include query forcing reload)
+  cateid.value = route.params.cateid ?? ''
+  docidParam.value = route.params.docid ?? '0'
+  console.log('[DocList] onMounted', { fullPath: route.fullPath, params: route.params })
+  loadDocs()
+})
+
+// react to route param changes (makes reload/restore reliable)
+watch(() => route.params.cateid, (nv) => {
+  cateid.value = nv ?? ''
+  console.log('[DocList] watch params.cateid ->', cateid.value)
+  loadDocs()
+})
+watch(() => route.params.docid, (nv) => {
+  docidParam.value = nv ?? '0'
+  console.log('[DocList] watch params.docid ->', docidParam.value)
+  loadDocs()
+})
+
+// also reload when fullPath changes (covers query-only changes used to force reload)
+watch(() => route.fullPath, (nv) => {
+  // refresh local params then reload
+  cateid.value = route.params.cateid ?? ''
+  docidParam.value = route.params.docid ?? '0'
   loadDocs()
 })
 
 function loadDocs() {
+  console.log('[DocList] loadDocs start', { cateid: cateid.value, docidParam: docidParam.value })
   docs.value = S_DOCMST.filter(d => d.CATEID == cateid.value)
+  console.log('[DocList] loadDocs result count', docs.value.length)
   // if docidParam is passed (from drop), mark classification
   if (docidParam.value && docidParam.value != '0') {
     const idx = docs.value.findIndex(d => d.DOCID == docidParam.value)
@@ -183,9 +209,11 @@ function formatCdt(cdt) {
         <!-- response card (left aligned) -->
         <div class="msg_row rs_row">
           <div class="doc_card rs_card">
-            <div class="drop_tag" @dragover.prevent @drop="(e) => handleNodeDrop(e, item)" draggable="true" @dragstart="(e) => tagDragStart(e,item)">{{ item.CATETAG || 'drag to tree node' }}</div>
+            <div class="drop_tag" @dragover.prevent @drop="(e) => handleNodeDrop(e, item)" draggable="true" @dragstart="(e) => tagDragStart(e,item)">
+                {{ item.CATETAG || 'drag & drop tree node here' }}
+            </div>
             <div class="doc_body">
-              <div class="rs_text">{{ item.RSTEXT }}</div>
+                <div class="rs_text">{{ item.RSTEXT }}</div>
             </div>
           </div>
         </div>

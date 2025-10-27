@@ -2,6 +2,14 @@
 	{
 		"MASTERID" : "L411189",
 		"MASTERNM" : "이상병",
+		"CATEID" : "20251025112300",
+		"CATENM" : "Blank(미분류)",
+		"SEQ" : "0000",
+		"DEPTH" : 0
+	},
+	{
+		"MASTERID" : "L411189",
+		"MASTERNM" : "이상병",
 		"CATEID" : "20251025112400",
 		"CATENM" : "IT일반",
 		"SEQ" : "0001",
