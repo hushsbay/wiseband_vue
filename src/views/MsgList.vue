@@ -1756,9 +1756,23 @@
                     evToPanel({ kind: "refreshPanel" })
                 }
             }
+            // let chat_rag = "" //ai test
+            // if (bodytext.startsWith("#")) chat_rag = bodytext.substring(1) //ai test
             msgbody.value = ""
             setTimeout(function() { gst.sockToSend.push({ sendTo: "room", data: { ev: "sendMsg", roomid: chanId, msgid: editMsgId.value, from: "saveMsg" }}) }, 500) 
-            editMsgId.value = null            
+            editMsgId.value = null
+            // if (chat_rag != "") { //ai test => nest.js에서 테스트함
+            //     setTimeout(async function() { 
+            //         const res = await axios.post('http://localhost:8000/gigwork_doc_search', { query: chat_rag })
+            //         debugger
+            //         const json = JSON.parse(res.data.reply.replace("\n", ""))
+            //         const text = json.answer
+            //         //const rs = gst.util.chkAxiosCode(res.data)
+            //         //if (!rs) return
+            //         msgbody.value = "AI Replied:\n" + text
+            //         saveMsg()
+            //     }, 100)
+            // }
         } catch (ex) { 
             gst.util.showEx(ex, true)
         }
