@@ -1763,7 +1763,7 @@
             editMsgId.value = null
             // if (chat_rag != "") { //ai test => nest.js에서 테스트함
             //     setTimeout(async function() { 
-            //         const res = await axios.post('http://localhost:8000/gigwork_doc_search', { query: chat_rag })
+            //         const res = await axios.post('http://localhost:8000/gigwork/doc_search', { query: chat_rag })
             //         debugger
             //         const json = JSON.parse(res.data.reply.replace("\n", ""))
             //         const text = json.answer
