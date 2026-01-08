@@ -1,6 +1,6 @@
 - 개발 진척도 : 약 90%
 - 개발자 : 이상병 (hushsbay@gmail.com)
-- 테스트 서버 : https://hushsbay.com:446/login (테스트용 아이디 제공)
+- 테스트 서버 : https://albahero.com:549/login (테스트용 아이디 제공)
 
 # wiseband_vue (프론트엔드) + wiseband_nest (백엔드)
 
